@@ -1,5 +1,6 @@
 using ErrorOr;
 using ExchangeMapper.Application.DTOs.Requests;
+using ExchangeMapper.Application.Interfaces;
 using ExchangeMapper.Application.Interfaces.Repositories;
 using ExchangeMapper.Application.Interfaces.Services;
 using ExchangeMapper.Domain.Entities;
@@ -8,6 +9,7 @@ using ExchangeMapper.Domain.Enums;
 namespace ExchangeMapper.Application.Services;
 
 public class UserService(
+    IUnitOfWork unitOfWork,
     IUserRepository userRepository,
     IUserInstitutionRepository userInstitutionRepository,
     IExchangeRepository exchangeRepository,
@@ -15,7 +17,7 @@ public class UserService(
     IStudyProgramRepository studyProgramRepository,
     IStudyProfileRepository studyProfileRepository) : IUserService
 {
-    public async Task<ErrorOr<User>> SyncUserAsync(string externalId, string email, string name)
+    public async Task<ErrorOr<User>> SyncUserAsync(string externalId, string email, string name, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(externalId))
         {
@@ -27,7 +29,7 @@ public class UserService(
             return Error.Validation("INVALID_EMAIL", "Email is required.");
         }
 
-        var existingUser = await userRepository.GetByExternalIdAsync(externalId);
+        var existingUser = await userRepository.GetByExternalIdAsync(externalId, ct);
         if (existingUser is not null)
         {
             return existingUser;
@@ -35,46 +37,45 @@ public class UserService(
 
         var user = new User
         {
-            Id = Guid.NewGuid(),
             ExternalId = externalId,
             Email = email,
             Name = name,
             Role = UserRole.Student,
-            IsOnboarded = false,
-            CreatedAt = DateTime.UtcNow
+            IsOnboarded = false
         };
 
         await userRepository.AddAsync(user);
+        await unitOfWork.SaveChangesAsync(ct);
         return user;
     }
 
-    public async Task<ErrorOr<User>> GetByExternalIdAsync(string externalId)
+    public async Task<ErrorOr<User>> GetByExternalIdAsync(string externalId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(externalId))
         {
             return Error.Validation("INVALID_EXTERNAL_ID", "External id is required.");
         }
 
-        var user = await userRepository.GetByExternalIdAsync(externalId);
+        var user = await userRepository.GetByExternalIdAsync(externalId, ct);
         return user is null
             ? Error.NotFound("USER_NOT_FOUND", "User not found.")
             : user;
     }
 
-    public async Task<ErrorOr<User>> GetByExternalIdWithDetailsAsync(string externalId)
+    public async Task<ErrorOr<User>> GetByExternalIdWithDetailsAsync(string externalId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(externalId))
         {
             return Error.Validation("INVALID_EXTERNAL_ID", "External id is required.");
         }
 
-        var user = await userRepository.GetByExternalIdWithDetailsAsync(externalId);
+        var user = await userRepository.GetByExternalIdWithDetailsAsync(externalId, ct);
         return user is null
             ? Error.NotFound("USER_NOT_FOUND", "User not found.")
             : user;
     }
 
-    public async Task<ErrorOr<Success>> CompleteOnboardingAsync(Guid userId, OnboardingRequestDto request)
+    public async Task<ErrorOr<Success>> CompleteOnboardingAsync(Guid userId, OnboardingRequestDto request, CancellationToken ct = default)
     {
         if (!Enum.IsDefined(typeof(UserRole), request.Role))
         {
@@ -111,16 +112,21 @@ public class UserService(
             }
         }
 
-        var user = await userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId, ct);
         if (user is null)
         {
             return Error.NotFound("USER_NOT_FOUND", "User not found.");
         }
 
+        if (user.IsOnboarded)
+        {
+            return Error.Conflict("ALREADY_ONBOARDED", "User has already completed onboarding.");
+        }
+
         var userInstitutions = new List<UserInstitution>();
         foreach (var entry in request.Institutions)
         {
-            var assignment = await ResolveInstitutionAssignmentAsync(entry, request.Role);
+            var assignment = await ResolveInstitutionAssignmentAsync(entry, request.Role, ct);
             if (assignment.IsError)
             {
                 return assignment.Errors;
@@ -135,11 +141,9 @@ public class UserService(
 
             userInstitutions.Add(new UserInstitution
             {
-                Id = Guid.NewGuid(),
                 UserId = userId,
                 InstitutionId = assignment.Value.InstitutionId,
-                StudyProfileId = assignment.Value.StudyProfileId,
-                CreatedAt = DateTime.UtcNow
+                StudyProfileId = assignment.Value.StudyProfileId
             });
         }
 
@@ -152,17 +156,18 @@ public class UserService(
         user.IsOnboarded = true;
         await userRepository.UpdateAsync(user);
 
+        await unitOfWork.SaveChangesAsync(ct);
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Success>> AddInstitutionAsync(Guid userId, InstitutionEntryDto request, UserRole role)
+    public async Task<ErrorOr<Success>> AddInstitutionAsync(Guid userId, InstitutionEntryDto request, UserRole role, CancellationToken ct = default)
     {
         if (!Enum.IsDefined(typeof(UserRole), role))
         {
             return Error.Validation("INVALID_ROLE", "Provided role is not valid.");
         }
 
-        var user = await userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId, ct);
         if (user is null)
         {
             return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -173,13 +178,13 @@ public class UserService(
             return Error.Validation("INVALID_ROLE", "Request role does not match current user role.");
         }
 
-        var assignment = await ResolveInstitutionAssignmentAsync(request, role);
+        var assignment = await ResolveInstitutionAssignmentAsync(request, role, ct);
         if (assignment.IsError)
         {
             return assignment.Errors;
         }
 
-        var existingUserInstitutions = await userInstitutionRepository.GetByUserIdAsync(userId);
+        var existingUserInstitutions = await userInstitutionRepository.GetByUserIdAsync(userId, ct);
         var duplicateExists = existingUserInstitutions.Any(ui =>
             ui.InstitutionId == assignment.Value.InstitutionId && ui.StudyProfileId == assignment.Value.StudyProfileId);
         if (duplicateExists)
@@ -189,14 +194,13 @@ public class UserService(
 
         var userInstitution = new UserInstitution
         {
-            Id = Guid.NewGuid(),
             UserId = userId,
             InstitutionId = assignment.Value.InstitutionId,
-            StudyProfileId = assignment.Value.StudyProfileId,
-            CreatedAt = DateTime.UtcNow
+            StudyProfileId = assignment.Value.StudyProfileId
         };
 
         await userInstitutionRepository.AddAsync(userInstitution);
+        await unitOfWork.SaveChangesAsync(ct);
         return Result.Success;
     }
 
@@ -204,7 +208,8 @@ public class UserService(
         Guid userId,
         Guid userInstitutionId,
         InstitutionEntryDto request,
-        UserRole role)
+        UserRole role,
+        CancellationToken ct = default)
     {
         if (userInstitutionId == Guid.Empty)
         {
@@ -216,7 +221,7 @@ public class UserService(
             return Error.Validation("INVALID_ROLE", "Provided role is not valid.");
         }
 
-        var existing = await userInstitutionRepository.GetByIdAsync(userInstitutionId);
+        var existing = await userInstitutionRepository.GetByIdAsync(userInstitutionId, ct);
         if (existing is null)
         {
             return Error.NotFound("USER_INSTITUTION_NOT_FOUND", "Institution association not found.");
@@ -227,19 +232,19 @@ public class UserService(
             return Error.Forbidden("FORBIDDEN", "You do not have permission to edit this institution.");
         }
 
-        var hasActiveExchanges = await exchangeRepository.ExistsForUserInstitutionAsync(userInstitutionId);
+        var hasActiveExchanges = await exchangeRepository.ExistsForUserInstitutionAsync(userInstitutionId, ct);
         if (hasActiveExchanges)
         {
             return Error.Conflict("HAS_ACTIVE_EXCHANGES", "Cannot edit institution with active exchanges.");
         }
 
-        var assignment = await ResolveInstitutionAssignmentAsync(request, role);
+        var assignment = await ResolveInstitutionAssignmentAsync(request, role, ct);
         if (assignment.IsError)
         {
             return assignment.Errors;
         }
 
-        var existingUserInstitutions = await userInstitutionRepository.GetByUserIdAsync(userId);
+        var existingUserInstitutions = await userInstitutionRepository.GetByUserIdAsync(userId, ct);
         var duplicateExists = existingUserInstitutions.Any(ui =>
             ui.Id != userInstitutionId
             && ui.InstitutionId == assignment.Value.InstitutionId
@@ -253,17 +258,18 @@ public class UserService(
         existing.StudyProfileId = assignment.Value.StudyProfileId;
 
         await userInstitutionRepository.UpdateAsync(existing);
+        await unitOfWork.SaveChangesAsync(ct);
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Success>> RemoveInstitutionAsync(Guid userId, Guid userInstitutionId)
+    public async Task<ErrorOr<Success>> RemoveInstitutionAsync(Guid userId, Guid userInstitutionId, CancellationToken ct = default)
     {
         if (userInstitutionId == Guid.Empty)
         {
             return Error.Validation("INVALID_USER_INSTITUTION_ID", "User institution id is required.");
         }
 
-        var userInstitution = await userInstitutionRepository.GetByIdAsync(userInstitutionId);
+        var userInstitution = await userInstitutionRepository.GetByIdAsync(userInstitutionId, ct);
         if (userInstitution is null)
         {
             return Error.NotFound("USER_INSTITUTION_NOT_FOUND", "Institution association not found.");
@@ -274,19 +280,20 @@ public class UserService(
             return Error.Forbidden("FORBIDDEN", "You do not have permission to remove this institution.");
         }
 
-        var hasActiveExchanges = await exchangeRepository.ExistsForUserInstitutionAsync(userInstitutionId);
+        var hasActiveExchanges = await exchangeRepository.ExistsForUserInstitutionAsync(userInstitutionId, ct);
         if (hasActiveExchanges)
         {
             return Error.Conflict("HAS_ACTIVE_EXCHANGES", "Cannot remove institution with active exchanges.");
         }
 
         await userInstitutionRepository.DeleteAsync(userInstitution);
+        await unitOfWork.SaveChangesAsync(ct);
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Success>> MakeCoordinatorAsync(Guid userId)
+    public async Task<ErrorOr<Success>> MakeCoordinatorAsync(Guid userId, CancellationToken ct = default)
     {
-        var user = await userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId, ct);
         if (user is null)
         {
             return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -295,12 +302,14 @@ public class UserService(
         user.Role = UserRole.Coordinator;
         user.IsOnboarded = true;
         await userRepository.UpdateAsync(user);
+        await unitOfWork.SaveChangesAsync(ct);
         return Result.Success;
     }
 
     private async Task<ErrorOr<(Guid InstitutionId, Guid? StudyProfileId)>> ResolveInstitutionAssignmentAsync(
         InstitutionEntryDto entry,
-        UserRole role)
+        UserRole role,
+        CancellationToken ct)
     {
         if (entry.NewInstitution is not null)
         {
@@ -314,14 +323,12 @@ public class UserService(
 
             var institution = new Institution
             {
-                Id = Guid.NewGuid(),
                 Name = entry.NewInstitution.Name,
                 NameEn = entry.NewInstitution.NameEn?.Trim() ?? entry.NewInstitution.Name,
                 Country = entry.NewInstitution.Country,
                 City = entry.NewInstitution.City,
                 ErasmusCode = entry.NewInstitution.ErasmusCode,
-                IsHome = true,
-                CreatedAt = DateTime.UtcNow
+                IsHome = true
             };
             await institutionRepository.AddAsync(institution);
 
@@ -341,22 +348,18 @@ public class UserService(
 
             var studyProgram = new StudyProgram
             {
-                Id = Guid.NewGuid(),
                 InstitutionId = institution.Id,
                 Name = entry.NewInstitution.ProgramName,
                 NameEn = entry.NewInstitution.ProgramNameEn?.Trim() ?? entry.NewInstitution.ProgramName,
-                IscedCode = entry.NewInstitution.IscedCode,
-                CreatedAt = DateTime.UtcNow
+                IscedCode = entry.NewInstitution.IscedCode
             };
             await studyProgramRepository.AddAsync(studyProgram);
 
             var studyProfile = new StudyProfile
             {
-                Id = Guid.NewGuid(),
                 StudyProgramId = studyProgram.Id,
                 Name = entry.NewInstitution.ProfileName,
-                NameEn = entry.NewInstitution.ProfileNameEn?.Trim() ?? entry.NewInstitution.ProfileName,
-                CreatedAt = DateTime.UtcNow
+                NameEn = entry.NewInstitution.ProfileNameEn?.Trim() ?? entry.NewInstitution.ProfileName
             };
             await studyProfileRepository.AddAsync(studyProfile);
 
@@ -370,13 +373,13 @@ public class UserService(
                 return Error.Validation("INVALID_NEW_STUDY_PROFILE", "Study program id and profile name are required.");
             }
 
-            var institution = await institutionRepository.GetByIdAsync(entry.ExistingInstitutionId.Value);
+            var institution = await institutionRepository.GetByIdAsync(entry.ExistingInstitutionId.Value, ct);
             if (institution is null)
             {
                 return Error.NotFound("INSTITUTION_NOT_FOUND", "Institution not found.");
             }
 
-            var studyProgram = await studyProgramRepository.GetByIdAsync(entry.NewStudyProfile.StudyProgramId);
+            var studyProgram = await studyProgramRepository.GetByIdAsync(entry.NewStudyProfile.StudyProgramId, ct);
             if (studyProgram is null || studyProgram.InstitutionId != institution.Id)
             {
                 return Error.Validation("INVALID_STUDY_PROGRAM", "Study program does not belong to the selected institution.");
@@ -384,11 +387,9 @@ public class UserService(
 
             var studyProfile = new StudyProfile
             {
-                Id = Guid.NewGuid(),
                 StudyProgramId = entry.NewStudyProfile.StudyProgramId,
                 Name = entry.NewStudyProfile.ProfileName,
-                NameEn = entry.NewStudyProfile.ProfileNameEn?.Trim() ?? entry.NewStudyProfile.ProfileName,
-                CreatedAt = DateTime.UtcNow
+                NameEn = entry.NewStudyProfile.ProfileNameEn?.Trim() ?? entry.NewStudyProfile.ProfileName
             };
             await studyProfileRepository.AddAsync(studyProfile);
 
@@ -397,13 +398,13 @@ public class UserService(
 
         if (entry.ExistingStudyProfileId.HasValue)
         {
-            var profile = await studyProfileRepository.GetByIdAsync(entry.ExistingStudyProfileId.Value);
+            var profile = await studyProfileRepository.GetByIdAsync(entry.ExistingStudyProfileId.Value, ct);
             if (profile is null)
             {
                 return Error.NotFound("STUDY_PROFILE_NOT_FOUND", "Study profile not found.");
             }
 
-            var program = await studyProgramRepository.GetByIdAsync(profile.StudyProgramId);
+            var program = await studyProgramRepository.GetByIdAsync(profile.StudyProgramId, ct);
             if (program is null)
             {
                 return Error.NotFound("STUDY_PROGRAM_NOT_FOUND", "Study program not found.");
@@ -414,7 +415,7 @@ public class UserService(
 
         if (role == UserRole.Coordinator && entry.ExistingInstitutionId.HasValue)
         {
-            var institution = await institutionRepository.GetByIdAsync(entry.ExistingInstitutionId.Value);
+            var institution = await institutionRepository.GetByIdAsync(entry.ExistingInstitutionId.Value, ct);
             if (institution is null)
             {
                 return Error.NotFound("INSTITUTION_NOT_FOUND", "Institution not found.");

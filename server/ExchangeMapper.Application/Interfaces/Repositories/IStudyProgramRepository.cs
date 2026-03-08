@@ -4,7 +4,7 @@ namespace ExchangeMapper.Application.Interfaces.Repositories;
 
 public interface IStudyProgramRepository
 {
-    Task<StudyProgram?> GetByIdAsync(Guid id);
-    Task<List<StudyProgram>> GetByInstitutionIdAsync(Guid institutionId);
+    Task<StudyProgram?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<StudyProgram>> GetByInstitutionIdAsync(Guid institutionId, CancellationToken ct = default);
     Task AddAsync(StudyProgram program);
 }

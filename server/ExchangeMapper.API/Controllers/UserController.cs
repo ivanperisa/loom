@@ -12,7 +12,7 @@ namespace ExchangeMapper.API.Controllers;
 public class UserController(IUserService userService) : ApiController
 {
     [HttpPost("onboarding")]
-    public async Task<IActionResult> Onboarding([FromBody] OnboardingRequestDto request)
+    public async Task<IActionResult> Onboarding([FromBody] OnboardingRequestDto request, CancellationToken ct)
     {
         var userId = GetCurrentUserId();
         if (userId is null)
@@ -20,12 +20,12 @@ public class UserController(IUserService userService) : ApiController
             return Unauthorized();
         }
 
-        var result = await userService.CompleteOnboardingAsync(userId.Value, request);
+        var result = await userService.CompleteOnboardingAsync(userId.Value, request, ct);
         return Match(result, _ => Ok());
     }
 
     [HttpPost("institution")]
-    public async Task<IActionResult> AddInstitution([FromBody] InstitutionEntryDto request)
+    public async Task<IActionResult> AddInstitution([FromBody] InstitutionEntryDto request, CancellationToken ct)
     {
         var userId = GetCurrentUserId();
         if (userId is null)
@@ -39,12 +39,12 @@ public class UserController(IUserService userService) : ApiController
             return Unauthorized();
         }
 
-        var result = await userService.AddInstitutionAsync(userId.Value, request, role);
+        var result = await userService.AddInstitutionAsync(userId.Value, request, role, ct);
         return Match(result, _ => Ok());
     }
 
     [HttpPut("institution/{userInstitutionId:guid}")]
-    public async Task<IActionResult> UpdateInstitution(Guid userInstitutionId, [FromBody] InstitutionEntryDto request)
+    public async Task<IActionResult> UpdateInstitution(Guid userInstitutionId, [FromBody] InstitutionEntryDto request, CancellationToken ct)
     {
         var userId = GetCurrentUserId();
         if (userId is null)
@@ -58,12 +58,12 @@ public class UserController(IUserService userService) : ApiController
             return Unauthorized();
         }
 
-        var result = await userService.UpdateInstitutionAsync(userId.Value, userInstitutionId, request, role);
+        var result = await userService.UpdateInstitutionAsync(userId.Value, userInstitutionId, request, role, ct);
         return Match(result, _ => Ok());
     }
 
     [HttpDelete("institution/{userInstitutionId:guid}")]
-    public async Task<IActionResult> RemoveInstitution(Guid userInstitutionId)
+    public async Task<IActionResult> RemoveInstitution(Guid userInstitutionId, CancellationToken ct)
     {
         var userId = GetCurrentUserId();
         if (userId is null)
@@ -71,7 +71,7 @@ public class UserController(IUserService userService) : ApiController
             return Unauthorized();
         }
 
-        var result = await userService.RemoveInstitutionAsync(userId.Value, userInstitutionId);
+        var result = await userService.RemoveInstitutionAsync(userId.Value, userInstitutionId, ct);
         return Match(result, _ => NoContent());
     }
 }

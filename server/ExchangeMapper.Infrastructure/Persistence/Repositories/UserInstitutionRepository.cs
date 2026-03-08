@@ -7,39 +7,40 @@ namespace ExchangeMapper.Infrastructure.Persistence.Repositories;
 
 public class UserInstitutionRepository(AppDbContext context) : IUserInstitutionRepository
 {
-    public async Task<List<UserInstitution>> GetByUserIdAsync(Guid userId)
+    public async Task<List<UserInstitution>> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
     {
         return await context.UserInstitutions
+            .AsNoTracking()
             .Include(ui => ui.Institution)
             .Include(ui => ui.StudyProfile)
                 .ThenInclude(sp => sp!.StudyProgram)
             .Include(ui => ui.Exchanges)
             .Where(ui => ui.UserId == userId)
             .OrderBy(ui => ui.CreatedAt)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public async Task<UserInstitution?> GetByIdAsync(Guid id)
+    public async Task<UserInstitution?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await context.UserInstitutions
-            .FirstOrDefaultAsync(ui => ui.Id == id);
+            .FirstOrDefaultAsync(ui => ui.Id == id, ct);
     }
 
-    public async Task AddAsync(UserInstitution userInstitution)
+    public Task AddAsync(UserInstitution userInstitution)
     {
-        await context.UserInstitutions.AddAsync(userInstitution);
-        await context.SaveChangesAsync();
+        context.UserInstitutions.Add(userInstitution);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(UserInstitution userInstitution)
+    public Task UpdateAsync(UserInstitution userInstitution)
     {
         context.UserInstitutions.Update(userInstitution);
-        await context.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteAsync(UserInstitution userInstitution)
+    public Task DeleteAsync(UserInstitution userInstitution)
     {
         context.UserInstitutions.Remove(userInstitution);
-        await context.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 }

@@ -1,12 +1,12 @@
+using ExchangeMapper.Domain.Common;
+
 namespace ExchangeMapper.Domain.Entities;
 
-public class StudyProfile
+public class StudyProfile : EntityBase
 {
-    public Guid Id { get; set; }
     public Guid StudyProgramId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string NameEn { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
 
     public StudyProgram StudyProgram { get; set; } = null!;
     public ICollection<UserInstitution> UserInstitutions { get; set; } = [];

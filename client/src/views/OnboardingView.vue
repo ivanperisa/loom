@@ -10,8 +10,7 @@ import type { ProblemDetails } from '@/types/api.types'
 import type { OnboardingRequestDto } from '@/types/user.types'
 import type { LocalInstitutionEntry } from '@/types/onboarding.types'
 import { toInstitutionEntryDto } from '@/types/onboarding.types'
-
-type UserRole = 'Student' | 'Coordinator'
+import type { UserRole } from '@/types/auth.types'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -38,8 +37,8 @@ function toggleLocale() {
   localStorage.setItem('locale', locale.value)
 }
 
-function logout() {
-  window.location.href = `${import.meta.env.VITE_API_URL}/auth/logout`
+async function logout() {
+  await authStore.logout()
 }
 
 function isDuplicate(entry: LocalInstitutionEntry): boolean {
@@ -62,7 +61,7 @@ function addEntry(entry: LocalInstitutionEntry) {
     return
   }
 
-  selectedInstitutions.value.push(entry)
+  selectedInstitutions.value.push({ ...entry, id: crypto.randomUUID() })
 }
 
 function removeEntry(index: number) {
@@ -221,7 +220,7 @@ async function finishOnboarding() {
             <p class="mb-3 text-sm font-semibold">{{ t('onboarding.institutions.added') }}</p>
             <p v-if="selectedInstitutions.length === 0" class="text-sm text-slate-300">{{ t('onboarding.institutions.empty') }}</p>
             <ul v-else class="space-y-2 text-sm">
-              <li v-for="(entry, index) in selectedInstitutions" :key="`${entry.institutionName}-${index}`" class="flex items-center justify-between gap-3">
+              <li v-for="(entry, index) in selectedInstitutions" :key="entry.id" class="flex items-center justify-between gap-3">
                 <span>
                   {{ entry.institutionName }}
                   <template v-if="entry.programName"> - {{ entry.programName }}</template>
@@ -252,7 +251,7 @@ async function finishOnboarding() {
             <p><span class="text-[#8AC4ED]">{{ t('onboarding.confirm.role') }}:</span> {{ selectedRoleLabel }}</p>
             <p class="text-[#8AC4ED]">{{ t('onboarding.institutions.added') }}:</p>
             <ul class="space-y-1">
-              <li v-for="(entry, index) in selectedInstitutions" :key="`${entry.institutionName}-confirm-${index}`">
+              <li v-for="entry in selectedInstitutions" :key="entry.id">
                 {{ entry.institutionName }}
                 <template v-if="entry.programName"> - {{ entry.programName }}</template>
                 <template v-if="entry.profileName"> - {{ entry.profileName }}</template>

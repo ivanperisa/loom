@@ -7,14 +7,15 @@ namespace ExchangeMapper.Infrastructure.Persistence.Repositories;
 
 public class UserRepository(AppDbContext context) : IUserRepository
 {
-    public async Task<User?> GetByExternalIdAsync(string externalId)
+    public async Task<User?> GetByExternalIdAsync(string externalId, CancellationToken ct = default)
     {
-        return await context.Users.FirstOrDefaultAsync(x => x.ExternalId == externalId);
+        return await context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.ExternalId == externalId, ct);
     }
 
-    public async Task<User?> GetByExternalIdWithDetailsAsync(string externalId)
+    public async Task<User?> GetByExternalIdWithDetailsAsync(string externalId, CancellationToken ct = default)
     {
         return await context.Users
+            .AsNoTracking()
             .Include(u => u.UserInstitutions)
                 .ThenInclude(ui => ui.Institution)
             .Include(u => u.UserInstitutions)
@@ -22,23 +23,23 @@ public class UserRepository(AppDbContext context) : IUserRepository
                     .ThenInclude(sp => sp!.StudyProgram)
             .Include(u => u.UserInstitutions)
                 .ThenInclude(ui => ui.Exchanges)
-            .FirstOrDefaultAsync(u => u.ExternalId == externalId);
+            .FirstOrDefaultAsync(u => u.ExternalId == externalId, ct);
     }
 
-    public async Task<User?> GetByIdAsync(Guid id)
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await context.Users.FirstOrDefaultAsync(x => x.Id == id);
+        return await context.Users.FirstOrDefaultAsync(x => x.Id == id, ct);
     }
 
-    public async Task AddAsync(User user)
+    public Task AddAsync(User user)
     {
-        await context.Users.AddAsync(user);
-        await context.SaveChangesAsync();
+        context.Users.Add(user);
+        return Task.CompletedTask;
     }
 
-    public async Task UpdateAsync(User user)
+    public Task UpdateAsync(User user)
     {
         context.Users.Update(user);
-        await context.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 }

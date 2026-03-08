@@ -6,22 +6,23 @@ namespace ExchangeMapper.Infrastructure.Persistence.Repositories;
 
 public class StudyProfileRepository(AppDbContext context) : IStudyProfileRepository
 {
-    public async Task<StudyProfile?> GetByIdAsync(Guid id)
+    public async Task<StudyProfile?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await context.StudyProfiles.FirstOrDefaultAsync(x => x.Id == id);
+        return await context.StudyProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
     }
 
-    public async Task<List<StudyProfile>> GetByProgramIdAsync(Guid programId)
+    public async Task<List<StudyProfile>> GetByProgramIdAsync(Guid programId, CancellationToken ct = default)
     {
         return await context.StudyProfiles
+            .AsNoTracking()
             .Where(x => x.StudyProgramId == programId)
             .OrderBy(x => x.Name)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public async Task AddAsync(StudyProfile profile)
+    public Task AddAsync(StudyProfile profile)
     {
-        await context.StudyProfiles.AddAsync(profile);
-        await context.SaveChangesAsync();
+        context.StudyProfiles.Add(profile);
+        return Task.CompletedTask;
     }
 }

@@ -1,8 +1,5 @@
 import { api } from '@/services/api'
-
-export interface MakeCoordinatorRequest {
-  userId: string
-}
+import type { MakeCoordinatorRequest } from '@/types/admin.types'
 
 export const adminService = {
   makeCoordinator(request: MakeCoordinatorRequest) {

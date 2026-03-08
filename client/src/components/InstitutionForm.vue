@@ -38,19 +38,30 @@ const newInstitutionProgramName = ref('')
 const newInstitutionProfileName = ref('')
 
 const isStudent = computed(() => props.role === 'Student')
+const loadError = ref<string | null>(null)
 
 function localizedName(name: string, nameEn: string) {
   return locale.value === 'en' ? nameEn || name : name || nameEn
 }
 
 async function loadInstitutions() {
-  const response = await api.get<InstitutionDto[]>('/institutions')
-  institutions.value = response.data ?? []
+  try {
+    loadError.value = null
+    const response = await api.get<InstitutionDto[]>('/institutions')
+    institutions.value = response.data ?? []
+  } catch {
+    loadError.value = t('errors.unexpected')
+  }
 }
 
 async function loadPrograms(institutionId: string) {
-  const response = await api.get<StudyProgramDto[]>(`/institutions/${institutionId}/programs`)
-  programs.value = response.data ?? []
+  try {
+    loadError.value = null
+    const response = await api.get<StudyProgramDto[]>(`/institutions/${institutionId}/programs`)
+    programs.value = response.data ?? []
+  } catch {
+    loadError.value = t('errors.unexpected')
+  }
 }
 
 async function loadProfiles(programId: string) {
@@ -59,10 +70,15 @@ async function loadProfiles(programId: string) {
     return
   }
 
-  const response = await api.get<StudyProfileDto[]>(
-    `/institutions/${selectedInstitutionId.value}/programs/${programId}/profiles`
-  )
-  profiles.value = response.data ?? []
+  try {
+    loadError.value = null
+    const response = await api.get<StudyProfileDto[]>(
+      `/institutions/${selectedInstitutionId.value}/programs/${programId}/profiles`
+    )
+    profiles.value = response.data ?? []
+  } catch {
+    loadError.value = t('errors.unexpected')
+  }
 }
 
 async function onInstitutionChanged() {
@@ -188,7 +204,7 @@ function submit() {
   }
 }
 
-function applyPrefill() {
+async function applyPrefill() {
   const prefill = props.prefill
   if (!prefill) {
     return
@@ -209,19 +225,21 @@ function applyPrefill() {
 
   if (prefill.existingInstitutionId) {
     selectedInstitutionId.value = prefill.existingInstitutionId
-    onInstitutionChanged().then(() => {
+    try {
+      await onInstitutionChanged()
       if (prefill.existingProgramId || prefill.newStudyProfile?.studyProgramId) {
         selectedProgramId.value = prefill.existingProgramId ?? prefill.newStudyProfile?.studyProgramId ?? null
-        onProgramChanged().then(() => {
-          if (prefill.newStudyProfile) {
-            useNewProfile.value = true
-            newProfileName.value = prefill.newStudyProfile.profileName ?? ''
-          } else if (prefill.existingStudyProfileId) {
-            selectedProfileId.value = prefill.existingStudyProfileId
-          }
-        })
+        await onProgramChanged()
+        if (prefill.newStudyProfile) {
+          useNewProfile.value = true
+          newProfileName.value = prefill.newStudyProfile.profileName ?? ''
+        } else if (prefill.existingStudyProfileId) {
+          selectedProfileId.value = prefill.existingStudyProfileId
+        }
       }
-    })
+    } catch {
+      loadError.value = t('errors.unexpected')
+    }
   }
 }
 
@@ -338,6 +356,8 @@ onMounted(async () => {
         </div>
       </template>
     </div>
+
+    <p v-if="loadError" class="text-red-400 text-sm mt-2">{{ loadError }}</p>
 
     <div class="flex flex-wrap gap-2">
       <button type="button" class="cta-btn" :disabled="!canSubmit" @click="submit">

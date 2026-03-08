@@ -21,7 +21,7 @@ export default {
     welcome: 'Dobrodošli, {name}',
     noExchange: 'Nemate aktivnu razmjenu. Krenite ispod.',
     startExchange: 'Postavi razmjenu',
-    institution: 'Maticni fakultet',
+    institution: 'Matični fakultet',
     studyProgram: 'Studijski program',
     studyProfile: 'Studijski profil'
   },
@@ -106,7 +106,7 @@ export default {
       program: 'Program',
       profile: 'Profil',
       edit: 'Uredi',
-      editDisabledTooltip: 'Nije moguce urediti instituciju s aktivnim razmjenama.',
+      editDisabledTooltip: 'Nije moguće urediti instituciju s aktivnim razmjenama.',
       save: 'Spremi',
       cancel: 'Odustani',
       remove: 'Ukloni',

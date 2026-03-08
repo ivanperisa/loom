@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ExchangeMapper.API.Middleware;
 
-public class ExceptionHandlingMiddleware(RequestDelegate next)
+public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -12,6 +12,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next)
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -37,7 +38,9 @@ public class ExceptionHandlingMiddleware(RequestDelegate next)
         {
             Status = statusCode,
             Title = title,
-            Detail = exception.Message
+            Detail = statusCode == StatusCodes.Status500InternalServerError
+                ? "An unexpected error occurred."
+                : exception.Message
         };
         problemDetails.Extensions["code"] = code;
 

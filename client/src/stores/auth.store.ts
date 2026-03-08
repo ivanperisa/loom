@@ -3,14 +3,15 @@ import { defineStore } from 'pinia'
 import { authService } from '@/services/auth.service'
 import { userService } from '@/services/user.service'
 import { api } from '@/services/api'
-import type { AuthMeResponse } from '@/types/auth.types'
+import router from '@/router'
+import type { AuthMeResponse, UserRole } from '@/types/auth.types'
 import type { InstitutionEntryDto, UserInstitutionDto } from '@/types/user.types'
 
 export const useAuthStore = defineStore('auth', () => {
-  const initialized = ref(false)
+  let initPromise: Promise<void> | null = null
   const user = ref<AuthMeResponse | null>(null)
   const isOnboarded = ref<boolean>(false)
-  const role = ref<string | null>(null)
+  const role = ref<UserRole | null>(null)
   const institutions = ref<UserInstitutionDto[]>([])
 
   const isLoggedIn = computed(() => user.value?.isAuthenticated === true)
@@ -19,43 +20,48 @@ export const useAuthStore = defineStore('auth', () => {
   const sub = computed(() => user.value?.sub ?? null)
 
   async function init(force = false) {
-    if (initialized.value && !force) {
-      return
-    }
+    if (initPromise && !force) return initPromise
 
-    initialized.value = true
-
-    try {
-      const response = await api.get<AuthMeResponse>('/auth/me')
-      const data = response.data
-      if (data.isAuthenticated) {
-        user.value = data
-        isOnboarded.value = data.isOnboarded
-        role.value = data.role ?? null
-        institutions.value = data.institutions ?? []
-        return
+    initPromise = (async () => {
+      try {
+        const response = await api.get<AuthMeResponse>('/auth/me')
+        const data = response.data
+        if (data.isAuthenticated) {
+          user.value = data
+          isOnboarded.value = data.isOnboarded
+          role.value = (data.role as UserRole) ?? null
+          institutions.value = data.institutions ?? []
+          return
+        }
+      } catch {
+        // keep defaults below
       }
-    } catch {
-      // keep defaults below
-    }
 
+      reset()
+    })()
+
+    return initPromise
+  }
+
+  function reset() {
     user.value = null
     isOnboarded.value = false
     role.value = null
     institutions.value = []
+    initPromise = null
   }
 
   function login() {
     authService.login()
   }
 
-  function logout() {
-    initialized.value = false
-    user.value = null
-    isOnboarded.value = false
-    role.value = null
-    institutions.value = []
-    authService.logout()
+  async function logout() {
+    try {
+      await authService.logout()
+    } finally {
+      reset()
+      router.push('/')
+    }
   }
 
   async function addInstitution(request: InstitutionEntryDto): Promise<void> {
@@ -70,10 +76,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function removeInstitution(userInstitutionId: string): Promise<void> {
     await userService.removeInstitution(userInstitutionId)
-    institutions.value = institutions.value.filter((i) => i.userInstitutionId !== userInstitutionId)
-    if (user.value) {
-      user.value = { ...user.value, institutions: institutions.value }
-    }
+    await init(true)
   }
 
   return {

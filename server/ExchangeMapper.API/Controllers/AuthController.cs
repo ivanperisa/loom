@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ExchangeMapper.API.Controllers;
 
@@ -16,6 +17,7 @@ public class AuthController(
     IUserService userService) : ApiController
 {
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpGet("login")]
     public IActionResult Login([FromQuery] string? returnUrl = "/")
     {
@@ -46,7 +48,7 @@ public class AuthController(
 
     [AllowAnonymous]
     [HttpGet("me")]
-    public async Task<IActionResult> Me()
+    public async Task<IActionResult> Me(CancellationToken ct)
     {
         var sub = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                ?? User.FindFirst("sub")?.Value;
@@ -56,22 +58,13 @@ public class AuthController(
             return Ok(UserMapper.ToUnauthenticatedDto());
         }
 
-        var user = await userService.GetByExternalIdWithDetailsAsync(sub);
+        var user = await userService.GetByExternalIdWithDetailsAsync(sub, ct);
         if (user.IsError)
         {
             return Ok(UserMapper.ToUnauthenticatedDto());
         }
 
         return Ok(user.Value.ToAuthMeResponseDto());
-    }
-
-    [AllowAnonymous]
-    [HttpGet("logout")]
-    public IActionResult LogoutRedirect()
-    {
-        return SignOut(
-            new AuthenticationProperties { RedirectUri = configuration.BuildFrontendUrl("/") },
-            CookieAuthenticationDefaults.AuthenticationScheme);
     }
 
     [Authorize]
