@@ -18,10 +18,15 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
-builder.Services.AddOpenApi();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+//builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddMemoryCache();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -104,7 +109,9 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
+    //app.MapOpenApi();
 }
 
 app.Use(async (context, next) =>
