@@ -2,9 +2,10 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
 const authStore = useAuthStore()
-const { locale, t } = useI18n()
+const { t } = useI18n()
 
 const displayName = computed(() => authStore.name?.trim() || t('common.user'))
 const displayEmail = computed(() => authStore.email?.trim() || t('common.na'))
@@ -19,10 +20,7 @@ const initials = computed(() => {
   return parts || 'U'
 })
 
-function toggleLocale() {
-  locale.value = locale.value === 'hr' ? 'en' : 'hr'
-  localStorage.setItem('locale', locale.value)
-}
+
 </script>
 
 <template>
@@ -46,13 +44,7 @@ function toggleLocale() {
       </div>
 
       <div class="flex items-center gap-3">
-        <button
-          type="button"
-          class="inline-flex items-center rounded-full bg-[#218CD9] px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
-          @click="toggleLocale"
-        >
-          {{ locale.toUpperCase() }}
-        </button>
+        <LanguageSwitcher variant="dark" />
 
         <div class="group relative">
           <button

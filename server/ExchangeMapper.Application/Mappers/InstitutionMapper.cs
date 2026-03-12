@@ -20,6 +20,8 @@ public static class InstitutionMapper
         Id = program.Id,
         Name = program.Name,
         NameEn = program.NameEn,
+        Level = program.Level.ToString(),
+        DurationSemesters = program.DurationSemesters,
         IscedCode = program.IscedCode
     };
 
@@ -27,7 +29,24 @@ public static class InstitutionMapper
     {
         Id = profile.Id,
         Name = profile.Name,
-        NameEn = profile.NameEn
+        NameEn = profile.NameEn,
+        ExchangeSemesters = profile.ExchangeSemesters,
+        ExchangeSemesterType = profile.ExchangeSemesterType,
+        ExchangeSpots = profile.ExchangeSpots
+    };
+
+    public static CourseDto ToCourseDto(this Course course) => new()
+    {
+        Id = course.Id,
+        Code = course.Code,
+        Name = course.Name,
+        NameEn = course.NameEn,
+        Ects = course.Ects,
+        Type = course.Type.ToString(),
+        Status = course.Status.ToString(),
+        LecturesHours = course.LecturesHours,
+        AuditoryHours = course.AuditoryHours,
+        LabHours = course.LabHours
     };
 
     public static UserInstitutionDto ToUserInstitutionDto(this UserInstitution ui) => new()

@@ -6,6 +6,7 @@ import { AxiosError } from 'axios'
 import { userService } from '@/services/user.service'
 import { useAuthStore } from '@/stores/auth.store'
 import InstitutionForm from '@/components/InstitutionForm.vue'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import type { ProblemDetails } from '@/types/api.types'
 import type { OnboardingRequestDto } from '@/types/user.types'
 import type { LocalInstitutionEntry } from '@/types/onboarding.types'
@@ -14,7 +15,7 @@ import type { UserRole } from '@/types/auth.types'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { locale, t } = useI18n()
+const { t } = useI18n()
 
 const steps = [
   { id: 1, key: 'onboarding.steps.role' },
@@ -31,11 +32,6 @@ const isSubmitting = ref(false)
 const selectedRoleLabel = computed(() =>
   selectedRole.value === 'Coordinator' ? t('onboarding.role.coordinator') : t('onboarding.role.student')
 )
-
-function toggleLocale() {
-  locale.value = locale.value === 'hr' ? 'en' : 'hr'
-  localStorage.setItem('locale', locale.value)
-}
 
 async function logout() {
   await authStore.logout()
@@ -135,13 +131,7 @@ async function finishOnboarding() {
       <div class="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
         <span class="text-lg font-bold text-white">{{ t('common.appName') }}</span>
         <div class="flex items-center gap-3">
-          <button
-            type="button"
-            class="inline-flex items-center rounded-full bg-[#218CD9] px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
-            @click="toggleLocale"
-          >
-            {{ locale.toUpperCase() }}
-          </button>
+          <LanguageSwitcher variant="dark" />
           <button
             type="button"
             class="text-sm font-semibold text-[#CAE4F7] transition hover:text-red-300"

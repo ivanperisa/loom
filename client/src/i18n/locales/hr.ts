@@ -136,5 +136,30 @@ export default {
       hr: 'Hrvatski',
       en: 'English'
     }
+  },
+  studyProgramLevels: {
+    Undergraduate: 'Preddiplomski',
+    Graduate: 'Diplomski',
+    Postgraduate: 'Poslijediplomski'
+  },
+  courseTypes: {
+    Mandatory: 'Obvezni predmet',
+    CoreElective: 'Jezgreni predmet profila',
+    ProfileElective: 'Izborni predmet profila',
+    FreeElective: 'Izborni predmet',
+    Transversal: 'Transverzalni predmet',
+    Seminar: 'Seminar',
+    ResearchSeminar: 'Istraživački seminar',
+    Project: 'Projekt',
+    Thesis: 'Diplomski rad'
+  },
+  courseStatuses: {
+    Active: 'Aktivan',
+    Inactive: 'Neaktivan',
+    Historical: 'Arhiviran'
+  },
+  exchangeSemesters: {
+    Winter: 'Zimski',
+    Summer: 'Ljetni'
   }
 }

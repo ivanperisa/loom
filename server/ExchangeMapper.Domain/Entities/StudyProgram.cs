@@ -1,4 +1,5 @@
 using ExchangeMapper.Domain.Common;
+using ExchangeMapper.Domain.Enums;
 
 namespace ExchangeMapper.Domain.Entities;
 
@@ -7,7 +8,9 @@ public class StudyProgram : EntityBase
     public Guid InstitutionId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string NameEn { get; set; } = string.Empty;
-    public string IscedCode { get; set; } = string.Empty;
+    public StudyProgramLevel Level { get; set; }
+    public int DurationSemesters { get; set; }
+    public string? IscedCode { get; set; }
 
     public Institution Institution { get; set; } = null!;
     public ICollection<StudyProfile> StudyProfiles { get; set; } = [];

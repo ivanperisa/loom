@@ -5,7 +5,11 @@ import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '@/stores/auth.store'
 
 const authStore = useAuthStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+function localizedName(item: { name: string; nameEn?: string }): string {
+  return locale.value === 'en' && item.nameEn ? item.nameEn : item.name
+}
 
 const displayName = computed(() => authStore.name?.trim() || t('common.user'))
 const isCoordinator = computed(() => authStore.role === 'Coordinator')
@@ -56,7 +60,7 @@ function initialsFrom(name?: string | null) {
                 <li v-for="it in authStore.institutions" :key="it.userInstitutionId" class="flex items-center gap-3">
                   <div class="avatar-mini">{{ initialsFrom(it.institution.name) }}</div>
                   <div>
-                    <div class="text-sm font-semibold text-[#CAE4F7]">{{ it.institution.name }}</div>
+                    <div class="text-sm font-semibold text-[#CAE4F7]">{{ localizedName(it.institution) }}</div>
                     <div class="text-xs text-slate-300">{{ it.institution.country }}</div>
                   </div>
                 </li>
@@ -72,7 +76,7 @@ function initialsFrom(name?: string | null) {
             </div>
             <p class="text-xs uppercase tracking-wide text-[#8AC4ED]">{{ t('home.studyProgram') }}</p>
             <p class="mt-1 text-lg font-semibold text-[#CAE4F7]">
-              {{ firstInstitution?.studyProgram?.name ?? t('common.na') }}
+              {{ firstInstitution?.studyProgram ? localizedName(firstInstitution.studyProgram) : t('common.na') }}
             </p>
           </article>
 
@@ -86,7 +90,7 @@ function initialsFrom(name?: string | null) {
             </div>
             <p class="text-xs uppercase tracking-wide text-[#8AC4ED]">{{ t('home.studyProfile') }}</p>
             <p class="mt-1 text-lg font-semibold text-[#CAE4F7]">
-              {{ firstInstitution?.studyProfile?.name ?? t('common.na') }}
+              {{ firstInstitution?.studyProfile ? localizedName(firstInstitution.studyProfile) : t('common.na') }}
             </p>
           </article>
         </div>

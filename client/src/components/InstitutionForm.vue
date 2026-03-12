@@ -40,8 +40,8 @@ const newInstitutionProfileName = ref('')
 const isStudent = computed(() => props.role === 'Student')
 const loadError = ref<string | null>(null)
 
-function localizedName(name: string, nameEn: string) {
-  return locale.value === 'en' ? nameEn || name : name || nameEn
+function localizedName(name: string, nameEn?: string) {
+  return locale.value === 'en' ? nameEn || name : name || nameEn || ''
 }
 
 async function loadInstitutions() {
@@ -301,25 +301,25 @@ onMounted(async () => {
         </div>
 
         <div v-if="selectedProgramId">
-          <label class="form-label">{{ t('onboarding.institutions.selectProfile') }}</label>
-          <select v-model="selectedProfileId" class="form-control" :disabled="useNewProfile">
-            <option :value="null">{{ t('onboarding.institutions.selectProfile') }}</option>
-            <option v-for="profile in profiles" :key="profile.id" :value="profile.id">
-              {{ localizedName(profile.name, profile.nameEn) }}
-            </option>
-          </select>
+          <template v-if="!useNewProfile">
+            <label class="form-label">{{ t('onboarding.institutions.selectProfile') }}</label>
+            <select v-model="selectedProfileId" class="form-control">
+              <option :value="null">{{ t('onboarding.institutions.selectProfile') }}</option>
+              <option v-for="profile in profiles" :key="profile.id" :value="profile.id">
+                {{ localizedName(profile.name, profile.nameEn) }}
+              </option>
+            </select>
+          </template>
+          <input
+            v-else
+            v-model="newProfileName"
+            class="form-control"
+            :placeholder="t('onboarding.institutions.newProfilePlaceholder')"
+          />
+          <button type="button" class="mode-pill mode-pill-idle mt-2" @click="useNewProfile = !useNewProfile">
+            {{ useNewProfile ? t('onboarding.institutions.selectProfile') : t('onboarding.institutions.newProfileOption') }}
+          </button>
         </div>
-
-        <button type="button" class="mode-pill mode-pill-idle" @click="useNewProfile = !useNewProfile">
-          {{ t('onboarding.institutions.newProfileOption') }}
-        </button>
-
-        <input
-          v-if="useNewProfile"
-          v-model="newProfileName"
-          class="form-control"
-          :placeholder="t('onboarding.institutions.newProfilePlaceholder')"
-        />
       </template>
     </div>
 
@@ -391,14 +391,20 @@ onMounted(async () => {
   border-radius: 8px;
   border: 1px solid rgba(202, 228, 247, 0.15);
   background: rgba(255, 255, 255, 0.05);
-  color: var(--color-dark);
+  color: var(--color-light);
   padding: 10px 14px;
   font-size: 0.9rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.form-control option {
+  background: #0a2235;
+  color: var(--color-light);
+}
+
 .form-control::placeholder {
   color: rgba(202, 228, 247, 0.4);
+  opacity: 1;
 }
 
 .form-control:focus {

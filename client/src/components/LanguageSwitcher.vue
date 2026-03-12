@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 import type { AppLocale } from '@/i18n/index'
 import '@/styles/language-switcher.css'
 
+const props = withDefaults(defineProps<{ variant?: 'light' | 'dark' }>(), { variant: 'light' })
+
 const { t, locale } = useI18n()
 const isOpen = ref(false)
 const rootElement = ref<HTMLElement | null>(null)
@@ -16,6 +18,7 @@ const defaultLocaleItem = localeItems[0] as { code: AppLocale; flagClass: string
 
 function setLocale(nextLocale: AppLocale) {
   locale.value = nextLocale
+  localStorage.setItem('locale', nextLocale)
   isOpen.value = false
 }
 
@@ -59,7 +62,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section ref="rootElement" class="language-switcher" :aria-label="t('common.language')">
+  <section ref="rootElement" class="language-switcher" :class="{ 'variant-dark': props.variant === 'dark' }" :aria-label="t('common.language')">
     <button
       type="button"
       class="dropdown-button"

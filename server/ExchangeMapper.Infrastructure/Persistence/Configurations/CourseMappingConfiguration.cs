@@ -15,8 +15,10 @@ public class CourseMappingConfiguration : IEntityTypeConfiguration<CourseMapping
         builder.Property(x => x.Id).HasColumnName("id").HasDefaultValueSql("gen_random_uuid()");
         builder.Property(x => x.ExchangeCourseId).HasColumnName("exchange_course_id").IsRequired();
         builder.Property(x => x.CourseId).HasColumnName("course_id").IsRequired();
-        builder.Property(x => x.Status).HasColumnName("status").IsRequired();
+        builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(50);
         builder.Property(x => x.CoordinatorNote).HasColumnName("coordinator_note");
+        builder.Property(x => x.AwardedEcts).HasColumnName("awarded_ects").HasColumnType("numeric(4,1)");
+        builder.Property(x => x.ConvertedGrade).HasColumnName("converted_grade").HasMaxLength(10);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()").IsRequired();
 

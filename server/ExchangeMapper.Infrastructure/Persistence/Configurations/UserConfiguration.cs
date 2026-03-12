@@ -23,6 +23,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasDefaultValue(UserRole.Student)
             .IsRequired();
         builder.Property(x => x.IsOnboarded).HasColumnName("is_onboarded").IsRequired();
+        builder.Property(x => x.Jmbag).HasColumnName("jmbag").HasMaxLength(10);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
 
         builder.HasIndex(x => x.ExternalId).IsUnique();

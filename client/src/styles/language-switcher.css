@@ -68,3 +68,31 @@
 .language-switcher .dropdown-item.active {
   background: #eaf2ff;
 }
+
+/* Dark variant — for use on dark backgrounds (AppHeader, OnboardingView) */
+.language-switcher.variant-dark {
+  background: rgba(7, 28, 44, 0.85);
+  border-color: rgba(202, 228, 247, 0.2);
+  box-shadow: none;
+}
+
+.language-switcher.variant-dark .dropdown-button {
+  background: transparent;
+  border-color: rgba(202, 228, 247, 0.2);
+  color: #cae4f7;
+}
+
+.language-switcher.variant-dark .dropdown-list {
+  background: #071c2c;
+  border-color: rgba(33, 140, 217, 0.4);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.language-switcher.variant-dark .dropdown-item {
+  color: #cae4f7;
+}
+
+.language-switcher.variant-dark .dropdown-item:hover,
+.language-switcher.variant-dark .dropdown-item.active {
+  background: rgba(33, 140, 217, 0.15);
+}

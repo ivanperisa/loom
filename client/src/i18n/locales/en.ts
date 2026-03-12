@@ -136,5 +136,30 @@ export default {
       hr: 'Croatian',
       en: 'English'
     }
+  },
+  studyProgramLevels: {
+    Undergraduate: 'Undergraduate',
+    Graduate: 'Graduate',
+    Postgraduate: 'Postgraduate'
+  },
+  courseTypes: {
+    Mandatory: 'Mandatory',
+    CoreElective: 'Core profile elective',
+    ProfileElective: 'Profile elective',
+    FreeElective: 'Free elective',
+    Transversal: 'Transversal',
+    Seminar: 'Seminar',
+    ResearchSeminar: 'Research seminar',
+    Project: 'Project',
+    Thesis: 'Thesis'
+  },
+  courseStatuses: {
+    Active: 'Active',
+    Inactive: 'Inactive',
+    Historical: 'Historical'
+  },
+  exchangeSemesters: {
+    Winter: 'Winter',
+    Summer: 'Summer'
   }
 }

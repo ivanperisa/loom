@@ -20,8 +20,8 @@ const showAddForm = ref(false)
 const editingUserInstitutionId = ref<string | null>(null)
 const isLoading = ref(true)
 
-function localizedName(name: string, nameEn: string) {
-  return locale.value === 'en' ? nameEn || name : name || nameEn
+function localizedName(name: string, nameEn?: string) {
+  return locale.value === 'en' ? nameEn || name : name || nameEn || ''
 }
 
 const initials = computed(() => {

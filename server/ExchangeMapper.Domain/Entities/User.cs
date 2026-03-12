@@ -10,6 +10,7 @@ public class User : EntityBase
     public string Name { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public bool IsOnboarded { get; set; }
+    public string? Jmbag { get; set; }
 
     public ICollection<UserInstitution> UserInstitutions { get; set; } = [];
     public ICollection<Exchange> StudentExchanges { get; set; } = [];
