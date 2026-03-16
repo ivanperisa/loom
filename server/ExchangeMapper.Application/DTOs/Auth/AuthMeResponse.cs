@@ -1,6 +1,8 @@
-namespace ExchangeMapper.Application.DTOs.Responses;
+using ExchangeMapper.Application.DTOs.Institution;
 
-public class AuthMeResponseDto
+namespace ExchangeMapper.Application.DTOs.Auth;
+
+public class AuthMeResponse
 {
     public bool IsAuthenticated { get; set; }
     public string? Sub { get; set; }
@@ -8,5 +10,5 @@ public class AuthMeResponseDto
     public string? Name { get; set; }
     public string? Role { get; set; }
     public bool IsOnboarded { get; set; }
-    public List<UserInstitutionDto> Institutions { get; set; } = [];
+    public List<UserInstitutionResponse> Institutions { get; set; } = [];
 }

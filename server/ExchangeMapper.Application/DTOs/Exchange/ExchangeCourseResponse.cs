@@ -1,10 +1,11 @@
-namespace ExchangeMapper.Application.DTOs.Responses;
+namespace ExchangeMapper.Application.DTOs.Exchange;
 
-public class ExchangeCourseDto
+public class ExchangeCourseResponse
 {
     public Guid Id { get; set; }
     public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string NameEn { get; set; } = string.Empty;
     public string? NameHr { get; set; }
     public decimal? Ects { get; set; }
     public string Status { get; set; } = string.Empty;
@@ -14,4 +15,5 @@ public class ExchangeCourseDto
     public string? OriginalGrade { get; set; }
     public string? EctsGrade { get; set; }
     public DateOnly? ExamDate { get; set; }
+    public List<CourseMappingResponse> Mappings { get; set; } = [];
 }

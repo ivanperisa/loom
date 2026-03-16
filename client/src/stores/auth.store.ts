@@ -5,14 +5,14 @@ import { userService } from '@/services/user.service'
 import { api } from '@/services/api'
 import router from '@/router'
 import type { AuthMeResponse, UserRole } from '@/types/auth.types'
-import type { InstitutionEntryDto, UserInstitutionDto } from '@/types/user.types'
+import type { InstitutionEntryDto, UserInstitutionResponse } from '@/types/user.types'
 
 export const useAuthStore = defineStore('auth', () => {
   let initPromise: Promise<void> | null = null
   const user = ref<AuthMeResponse | null>(null)
   const isOnboarded = ref<boolean>(false)
   const role = ref<UserRole | null>(null)
-  const institutions = ref<UserInstitutionDto[]>([])
+  const institutions = ref<UserInstitutionResponse[]>([])
 
   const isLoggedIn = computed(() => user.value?.isAuthenticated === true)
   const email = computed(() => user.value?.email ?? null)

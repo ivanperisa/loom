@@ -22,6 +22,8 @@ public class CourseMappingConfiguration : IEntityTypeConfiguration<CourseMapping
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()").IsRequired();
 
+        builder.HasIndex(x => new { x.ExchangeCourseId, x.CourseId }).IsUnique();
+
         builder.HasOne(x => x.ExchangeCourse)
             .WithMany(x => x.CourseMappings)
             .HasForeignKey(x => x.ExchangeCourseId)

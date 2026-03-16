@@ -1,4 +1,5 @@
-using ExchangeMapper.Application.DTOs.Requests;
+using ExchangeMapper.Application.DTOs.Auth;
+using ExchangeMapper.Application.DTOs.Institution;
 using ExchangeMapper.Application.Interfaces.Services;
 using ExchangeMapper.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +13,7 @@ namespace ExchangeMapper.API.Controllers;
 public class UserController(IUserService userService) : ApiController
 {
     [HttpPost("onboarding")]
-    public async Task<IActionResult> Onboarding([FromBody] OnboardingRequestDto request, CancellationToken ct)
+    public async Task<IActionResult> Onboarding([FromBody] OnboardingRequest request, CancellationToken ct)
     {
         var userId = GetCurrentUserId();
         if (userId is null)
@@ -25,7 +26,7 @@ public class UserController(IUserService userService) : ApiController
     }
 
     [HttpPost("institution")]
-    public async Task<IActionResult> AddInstitution([FromBody] InstitutionEntryDto request, CancellationToken ct)
+    public async Task<IActionResult> AddInstitution([FromBody] InstitutionEntryRequest request, CancellationToken ct)
     {
         var userId = GetCurrentUserId();
         if (userId is null)
@@ -44,7 +45,7 @@ public class UserController(IUserService userService) : ApiController
     }
 
     [HttpPut("institution/{userInstitutionId:guid}")]
-    public async Task<IActionResult> UpdateInstitution(Guid userInstitutionId, [FromBody] InstitutionEntryDto request, CancellationToken ct)
+    public async Task<IActionResult> UpdateInstitution(Guid userInstitutionId, [FromBody] InstitutionEntryRequest request, CancellationToken ct)
     {
         var userId = GetCurrentUserId();
         if (userId is null)

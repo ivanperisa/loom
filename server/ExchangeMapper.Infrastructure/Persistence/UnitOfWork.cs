@@ -12,7 +12,7 @@ public class UnitOfWork(AppDbContext context) : IUnitOfWork
         {
             if (entry.State == EntityState.Modified)
             {
-                entry.Entity.UpdatedAt = DateTime.Now;
+                entry.Entity.UpdatedAt = DateTime.UtcNow;
             }
         }
         return context.SaveChangesAsync(ct);

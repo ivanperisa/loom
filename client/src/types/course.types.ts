@@ -11,7 +11,7 @@ export type CourseType =
 
 export type CourseStatus = 'Active' | 'Inactive' | 'Historical'
 
-export interface CourseDto {
+export interface CourseResponse {
   id: string
   code?: string
   name: string

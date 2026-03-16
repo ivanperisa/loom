@@ -1,6 +1,6 @@
-namespace ExchangeMapper.Application.DTOs.Responses;
+namespace ExchangeMapper.Application.DTOs.Institution;
 
-public class StudyProfileResponseDto
+public class StudyProfileResponse
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;

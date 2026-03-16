@@ -1,4 +1,4 @@
-import type { UserInstitutionDto } from '@/types/user.types'
+import type { UserInstitutionResponse } from '@/types/user.types'
 
 export type UserRole = 'Student' | 'Coordinator'
 
@@ -9,5 +9,5 @@ export interface AuthMeResponse {
   name?: string
   role?: string
   isOnboarded: boolean
-  institutions: UserInstitutionDto[]
+  institutions: UserInstitutionResponse[]
 }

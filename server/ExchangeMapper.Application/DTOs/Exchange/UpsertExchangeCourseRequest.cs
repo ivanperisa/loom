@@ -1,13 +1,12 @@
-namespace ExchangeMapper.Application.DTOs.Responses;
+namespace ExchangeMapper.Application.DTOs.Exchange;
 
-public class CourseDto
+public class UpsertExchangeCourseRequest
 {
-    public Guid Id { get; set; }
     public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string? NameEn { get; set; }
-    public int Ects { get; set; }
-    public string Type { get; set; } = string.Empty;
+    public string NameEn { get; set; } = string.Empty;
+    public string? NameHr { get; set; }
+    public decimal? Ects { get; set; }
     public string Status { get; set; } = string.Empty;
     public int? LecturesHours { get; set; }
     public int? AuditoryHours { get; set; }

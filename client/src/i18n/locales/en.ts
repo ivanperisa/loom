@@ -119,12 +119,79 @@ export default {
     }
   },
   exchange: {
-    title: 'Exchange Setup',
-    placeholder: 'This page is a placeholder and will be implemented next.'
+    title: 'My Exchange',
+    noExchange: 'No active exchange',
+    create: 'Create Exchange',
+    submit: 'Submit for Review',
+    academicYear: 'Academic Year',
+    semester: 'Semester',
+    duration: 'Duration (months)',
+    mentor: 'Mentor',
+    foreignInstitution: 'Foreign Institution',
+    deleteConfirm: 'Are you sure you want to delete this exchange?',
+    deleteSuccess: 'Exchange deleted.',
+    submitConfirm: 'Are you sure you want to submit this exchange for review?',
+    retract: 'Retract',
+    retractConfirm: 'Are you sure you want to retract this exchange back to draft?'
+  },
+  exchangeStatus: {
+    Draft: 'Draft',
+    Submitted: 'Submitted',
+    Approved: 'Approved',
+    Rejected: 'Rejected',
+    Completed: 'Completed'
+  },
+  exchangeCourse: {
+    add: 'Add Course',
+    edit: 'Edit Course',
+    remove: 'Remove Course',
+    removeConfirm: 'Are you sure you want to remove this course?',
+    code: 'Course Code',
+    nameEn: 'Name (English)',
+    nameHr: 'Name (Croatian)',
+    ects: 'ECTS Credits',
+    hoursFormat: 'Hours (L/A/Lab)',
+    lecturesHours: 'Lectures',
+    auditoryHours: 'Auditory',
+    labHours: 'Lab',
+    originalGrade: 'Original Grade',
+    ectsGrade: 'ECTS Grade',
+    examDate: 'Exam Date',
+    addGrades: 'Enter Grades',
+    saveGrades: 'Save Grades'
+  },
+  exchangeCourseStatus: {
+    OriginallyEnrolled: 'Originally Enrolled',
+    Additional: 'Additional'
+  },
+  mapping: {
+    title: 'Mapping',
+    propose: 'Propose Mapping',
+    addMapping: 'Add Mapping',
+    awardedEcts: 'Awarded ECTS',
+    convertedGrade: 'Croatian Grade',
+    coordinatorNote: 'Coordinator Note',
+    ectsWarning: 'Awarded ECTS exceeds total course ECTS',
+    history: 'History',
+    save: 'Save Mapping',
+    noMappings: 'No mappings proposed yet.',
+    approve: 'Approve',
+    reject: 'Reject'
+  },
+  mappingStatus: {
+    Pending: 'Pending',
+    Approved: 'Approved',
+    Rejected: 'Rejected'
+  },
+  mappingHistory: {
+    title: 'Mapping History',
+    noHistory: 'No changes recorded',
+    changedBy: 'Changed by'
   },
   historyPage: {
-    title: 'History',
-    placeholder: 'This page is a placeholder and will be implemented next.'
+    title: 'Mapping History',
+    selectStudent: 'Select student',
+    noStudents: 'No students with an active exchange'
   },
   callback: {
     signingIn: 'Signing in...',
