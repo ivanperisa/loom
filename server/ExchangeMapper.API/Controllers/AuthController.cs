@@ -14,7 +14,7 @@ namespace ExchangeMapper.API.Controllers;
 [Route("[controller]")]
 public class AuthController(
     IConfiguration configuration,
-    IUserService userService) : ApiController
+    IUserSyncService userSyncService) : ApiController
 {
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
@@ -55,16 +55,16 @@ public class AuthController(
 
         if (sub is null)
         {
-            return Ok(UserMapper.ToUnauthenticatedDto());
+            return Ok(UserMapper.ToUnauthenticatedResponse());
         }
 
-        var user = await userService.GetByExternalIdWithDetailsAsync(sub, ct);
+        var user = await userSyncService.GetByExternalIdWithDetailsAsync(sub, ct);
         if (user.IsError)
         {
-            return Ok(UserMapper.ToUnauthenticatedDto());
+            return Ok(UserMapper.ToUnauthenticatedResponse());
         }
 
-        return Ok(user.Value.ToAuthMeResponseDto());
+        return Ok(user.Value.ToAuthMeResponse());
     }
 
     [Authorize]

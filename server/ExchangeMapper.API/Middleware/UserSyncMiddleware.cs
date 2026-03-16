@@ -10,7 +10,7 @@ public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
     private record CachedUser(Guid Id, UserRole Role);
 
-    public async Task InvokeAsync(HttpContext context, IUserService userService)
+    public async Task InvokeAsync(HttpContext context, IUserSyncService userSyncService)
     {
         if (context.User.Identity?.IsAuthenticated != true)
         {
@@ -37,7 +37,7 @@ public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
                 ?? context.User.FindFirst("name")?.Value
                 ?? email;
 
-            var syncResult = await userService.SyncUserAsync(sub, email, name);
+            var syncResult = await userSyncService.SyncUserAsync(sub, email, name);
             if (syncResult.IsError)
             {
                 await next(context);

@@ -1,6 +1,6 @@
-namespace ExchangeMapper.Application.DTOs.Requests;
+namespace ExchangeMapper.Application.DTOs.Institution;
 
-public class NewInstitutionRequestDto
+public class NewInstitutionRequest
 {
     public string Name { get; set; } = string.Empty;
     public string? NameEn { get; set; }

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '@/services/api'
-import type { InstitutionDto, StudyProgramDto, StudyProfileDto } from '@/types/institution.types'
+import type { InstitutionResponse, StudyProgramResponse, StudyProfileResponse } from '@/types/institution.types'
 import type { LocalInstitutionEntry } from '@/types/onboarding.types'
 
 const props = defineProps<{
@@ -19,9 +19,9 @@ const emit = defineEmits<{
 const { t, locale } = useI18n()
 
 const mode = ref<'existing' | 'new'>('existing')
-const institutions = ref<InstitutionDto[]>([])
-const programs = ref<StudyProgramDto[]>([])
-const profiles = ref<StudyProfileDto[]>([])
+const institutions = ref<InstitutionResponse[]>([])
+const programs = ref<StudyProgramResponse[]>([])
+const profiles = ref<StudyProfileResponse[]>([])
 
 const selectedInstitutionId = ref<string | null>(null)
 const selectedProgramId = ref<string | null>(null)
@@ -47,7 +47,7 @@ function localizedName(name: string, nameEn?: string) {
 async function loadInstitutions() {
   try {
     loadError.value = null
-    const response = await api.get<InstitutionDto[]>('/institutions')
+    const response = await api.get<InstitutionResponse[]>('/institutions')
     institutions.value = response.data ?? []
   } catch {
     loadError.value = t('errors.unexpected')
@@ -57,7 +57,7 @@ async function loadInstitutions() {
 async function loadPrograms(institutionId: string) {
   try {
     loadError.value = null
-    const response = await api.get<StudyProgramDto[]>(`/institutions/${institutionId}/programs`)
+    const response = await api.get<StudyProgramResponse[]>(`/institutions/${institutionId}/programs`)
     programs.value = response.data ?? []
   } catch {
     loadError.value = t('errors.unexpected')
@@ -72,7 +72,7 @@ async function loadProfiles(programId: string) {
 
   try {
     loadError.value = null
-    const response = await api.get<StudyProfileDto[]>(
+    const response = await api.get<StudyProfileResponse[]>(
       `/institutions/${selectedInstitutionId.value}/programs/${programId}/profiles`
     )
     profiles.value = response.data ?? []

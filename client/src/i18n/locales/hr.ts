@@ -119,12 +119,79 @@ export default {
     }
   },
   exchange: {
-    title: 'Postavljanje razmjene',
-    placeholder: 'Ova stranica je privremena i bit će implementirana uskoro.'
+    title: 'Moja razmjena',
+    noExchange: 'Nemate aktivne razmjene',
+    create: 'Kreiraj razmjenu',
+    submit: 'Predaj na pregled',
+    academicYear: 'Akademska godina',
+    semester: 'Semestar',
+    duration: 'Trajanje (mjeseci)',
+    mentor: 'Mentor',
+    foreignInstitution: 'Strani fakultet',
+    deleteConfirm: 'Jeste li sigurni da želite izbrisati ovu razmjenu?',
+    deleteSuccess: 'Razmjena izbrisana.',
+    submitConfirm: 'Jeste li sigurni da želite predati ovu razmjenu na pregled?',
+    retract: 'Povuci prijavu',
+    retractConfirm: 'Jeste li sigurni da želite povući razmjenu natrag u nacrt?'
+  },
+  exchangeStatus: {
+    Draft: 'Nacrt',
+    Submitted: 'Predano',
+    Approved: 'Odobreno',
+    Rejected: 'Odbijeno',
+    Completed: 'Završeno'
+  },
+  exchangeCourse: {
+    add: 'Dodaj predmet',
+    edit: 'Uredi predmet',
+    remove: 'Ukloni predmet',
+    removeConfirm: 'Jeste li sigurni da želite ukloniti ovaj predmet?',
+    code: 'Šifra predmeta',
+    nameEn: 'Naziv (engleski)',
+    nameHr: 'Naziv (hrvatski)',
+    ects: 'ECTS bodovi',
+    hoursFormat: 'Sati (P/A/L)',
+    lecturesHours: 'Predavanja',
+    auditoryHours: 'Auditorne vježbe',
+    labHours: 'Laboratorijske vježbe',
+    originalGrade: 'Originalna ocjena',
+    ectsGrade: 'ECTS ocjena',
+    examDate: 'Datum ispita',
+    addGrades: 'Unesi ocjene',
+    saveGrades: 'Spremi ocjene'
+  },
+  exchangeCourseStatus: {
+    OriginallyEnrolled: 'Izvorno upisan',
+    Additional: 'Dodatni'
+  },
+  mapping: {
+    title: 'Mapiranje',
+    propose: 'Predloži mapiranje',
+    addMapping: 'Dodaj mapiranje',
+    awardedEcts: 'Priznato ECTS',
+    convertedGrade: 'HR ocjena',
+    coordinatorNote: 'Napomena koordinatora',
+    ectsWarning: 'Suma ECTS-a premašuje ukupni ECTS stranog predmeta',
+    history: 'Povijest',
+    save: 'Spremi mapiranje',
+    noMappings: 'Još nema predloženih mapiranja.',
+    approve: 'Odobri',
+    reject: 'Odbij'
+  },
+  mappingStatus: {
+    Pending: 'Na čekanju',
+    Approved: 'Odobreno',
+    Rejected: 'Odbijeno'
+  },
+  mappingHistory: {
+    title: 'Povijest mapiranja',
+    noHistory: 'Nema zabilježenih promjena',
+    changedBy: 'Promijenio'
   },
   historyPage: {
-    title: 'Povijest',
-    placeholder: 'Ova stranica je privremena i bit će implementirana uskoro.'
+    title: 'Povijest mapiranja',
+    selectStudent: 'Odaberi studenta',
+    noStudents: 'Nema studenata s aktivnom razmjenom'
   },
   callback: {
     signingIn: 'Prijava u tijeku...',

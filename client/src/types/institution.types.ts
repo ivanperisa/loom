@@ -1,4 +1,4 @@
-export interface InstitutionDto {
+export interface InstitutionResponse {
   id: string
   name: string
   nameEn: string
@@ -9,7 +9,7 @@ export interface InstitutionDto {
 
 export type StudyProgramLevel = 'Undergraduate' | 'Graduate' | 'Postgraduate'
 
-export interface StudyProgramDto {
+export interface StudyProgramResponse {
   id: string
   name: string
   nameEn?: string
@@ -18,7 +18,7 @@ export interface StudyProgramDto {
   iscedCode?: string
 }
 
-export interface StudyProfileDto {
+export interface StudyProfileResponse {
   id: string
   name: string
   nameEn?: string

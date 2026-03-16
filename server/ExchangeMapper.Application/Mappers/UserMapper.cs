@@ -1,11 +1,11 @@
-using ExchangeMapper.Application.DTOs.Responses;
+using ExchangeMapper.Application.DTOs.Auth;
 using ExchangeMapper.Domain.Entities;
 
 namespace ExchangeMapper.Application.Mappers;
 
 public static class UserMapper
 {
-    public static AuthMeResponseDto ToAuthMeResponseDto(this User user) => new()
+    public static AuthMeResponse ToAuthMeResponse(this User user) => new()
     {
         IsAuthenticated = true,
         Sub = user.ExternalId,
@@ -15,11 +15,11 @@ public static class UserMapper
         IsOnboarded = user.IsOnboarded,
         Institutions = user.UserInstitutions
             .OrderBy(ui => ui.CreatedAt)
-            .Select(ui => ui.ToUserInstitutionDto())
+            .Select(ui => ui.ToResponse())
             .ToList()
     };
 
-    public static AuthMeResponseDto ToUnauthenticatedDto() => new()
+    public static AuthMeResponse ToUnauthenticatedResponse() => new()
     {
         IsAuthenticated = false
     };

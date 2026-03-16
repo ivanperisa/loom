@@ -1,11 +1,12 @@
-using ExchangeMapper.Application.DTOs.Responses;
+using ExchangeMapper.Application.DTOs.Course;
+using ExchangeMapper.Application.DTOs.Institution;
 using ExchangeMapper.Domain.Entities;
 
 namespace ExchangeMapper.Application.Mappers;
 
 public static class InstitutionMapper
 {
-    public static InstitutionResponseDto ToInstitutionDto(this Institution institution) => new()
+    public static InstitutionResponse ToResponse(this Institution institution) => new()
     {
         Id = institution.Id,
         Name = institution.Name,
@@ -15,7 +16,7 @@ public static class InstitutionMapper
         ErasmusCode = institution.ErasmusCode
     };
 
-    public static StudyProgramResponseDto ToStudyProgramDto(this StudyProgram program) => new()
+    public static StudyProgramResponse ToResponse(this StudyProgram program) => new()
     {
         Id = program.Id,
         Name = program.Name,
@@ -25,7 +26,7 @@ public static class InstitutionMapper
         IscedCode = program.IscedCode
     };
 
-    public static StudyProfileResponseDto ToStudyProfileDto(this StudyProfile profile) => new()
+    public static StudyProfileResponse ToResponse(this StudyProfile profile) => new()
     {
         Id = profile.Id,
         Name = profile.Name,
@@ -35,7 +36,7 @@ public static class InstitutionMapper
         ExchangeSpots = profile.ExchangeSpots
     };
 
-    public static CourseDto ToCourseDto(this Course course) => new()
+    public static CourseResponse ToResponse(this Course course) => new()
     {
         Id = course.Id,
         Code = course.Code,
@@ -49,15 +50,12 @@ public static class InstitutionMapper
         LabHours = course.LabHours
     };
 
-    public static UserInstitutionDto ToUserInstitutionDto(this UserInstitution ui) => new()
+    public static UserInstitutionResponse ToResponse(this UserInstitution ui) => new()
     {
         UserInstitutionId = ui.Id,
         HasActiveExchanges = ui.Exchanges.Count > 0,
-        Institution = ui.Institution.ToInstitutionDto(),
-        StudyProgram = ui.StudyProfile?.StudyProgram?.ToStudyProgramDto(),
-        StudyProfile = ui.StudyProfile?.ToStudyProfileDto()
+        Institution = ui.Institution.ToResponse(),
+        StudyProgram = ui.StudyProfile?.StudyProgram?.ToResponse(),
+        StudyProfile = ui.StudyProfile?.ToResponse()
     };
-
-    public static IEnumerable<InstitutionResponseDto> ToInstitutionDtos(this IEnumerable<Institution> institutions) =>
-        institutions.Select(ToInstitutionDto);
 }

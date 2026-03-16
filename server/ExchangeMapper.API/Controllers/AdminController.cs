@@ -1,4 +1,4 @@
-using ExchangeMapper.Application.DTOs.Requests;
+using ExchangeMapper.Application.DTOs.Auth;
 using ExchangeMapper.Application.Interfaces.Services;
 using ExchangeMapper.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +12,7 @@ namespace ExchangeMapper.API.Controllers;
 public class AdminController(IUserService userService) : ApiController
 {
     [HttpPost("make-coordinator")]
-    public async Task<IActionResult> MakeCoordinator([FromBody] MakeCoordinatorRoleRequestDto request, CancellationToken ct)
+    public async Task<IActionResult> MakeCoordinator([FromBody] MakeCoordinatorRequest request, CancellationToken ct)
     {
         var result = await userService.MakeCoordinatorAsync(request.UserId, ct);
         return Match(result, _ => Ok());

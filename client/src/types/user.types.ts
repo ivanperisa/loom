@@ -1,11 +1,11 @@
-import type { InstitutionDto, StudyProgramDto, StudyProfileDto } from '@/types/institution.types'
+import type { InstitutionResponse, StudyProgramResponse, StudyProfileResponse } from '@/types/institution.types'
 
-export interface UserInstitutionDto {
+export interface UserInstitutionResponse {
   userInstitutionId: string
   hasActiveExchanges: boolean
-  institution: InstitutionDto
-  studyProgram?: StudyProgramDto
-  studyProfile?: StudyProfileDto
+  institution: InstitutionResponse
+  studyProgram?: StudyProgramResponse
+  studyProfile?: StudyProfileResponse
 }
 
 export interface NewInstitutionRequestDto {
