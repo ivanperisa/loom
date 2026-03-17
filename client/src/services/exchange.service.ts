@@ -5,6 +5,9 @@ import type {
   CourseMappingResponse,
   MappingHistoryResponse,
   StudentExchangeSummaryResponse,
+  CoordinatorStudentSummaryResponse,
+  MappingBoardResponse,
+  ProposeBoardMappingRequest,
   CreateExchangeRequest,
   UpsertExchangeCourseRequest,
   UpdateGradesRequest,
@@ -64,5 +67,23 @@ export const exchangeService = {
     api.get<InstitutionResponse[]>('/exchange/foreign-institutions'),
 
   getAvailableCourses: (q?: string) =>
-    api.get<CourseResponse[]>('/exchange/available-courses', { params: q ? { q } : undefined })
+    api.get<CourseResponse[]>('/exchange/available-courses', { params: q ? { q } : undefined }),
+
+  // Coordinator
+  getCoordinatorStudents: () =>
+    api.get<CoordinatorStudentSummaryResponse[]>('/exchange/coordinator/students'),
+  getExchangeDetails: (exchangeId: string) =>
+    api.get<ExchangeResponse>(`/exchange/${exchangeId}/details`),
+  approveExchange: (exchangeId: string) =>
+    api.post<ExchangeResponse>(`/exchange/${exchangeId}/approve`),
+  rejectExchange: (exchangeId: string) =>
+    api.post<ExchangeResponse>(`/exchange/${exchangeId}/reject`),
+  returnExchange: (exchangeId: string) =>
+    api.post<ExchangeResponse>(`/exchange/${exchangeId}/return`),
+
+  // Mapping board
+  getMappingBoard: (exchangeId: string) =>
+    api.get<MappingBoardResponse>(`/exchange/mapping/${exchangeId}`),
+  proposeBoardMapping: (exchangeId: string, data: ProposeBoardMappingRequest) =>
+    api.post<MappingBoardResponse>(`/exchange/${exchangeId}/mapping/propose`, data)
 }

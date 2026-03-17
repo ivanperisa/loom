@@ -152,6 +152,8 @@ public class UserService(
         }
 
         user.Role = request.Role;
+        if (request.Role == UserRole.Student && !string.IsNullOrWhiteSpace(request.Jmbag))
+            user.Jmbag = request.Jmbag.Trim();
         user.IsOnboarded = true;
         await userRepository.UpdateAsync(user, ct);
 
@@ -286,6 +288,18 @@ public class UserService(
         }
 
         await userInstitutionRepository.DeleteAsync(userInstitution, ct);
+        await unitOfWork.SaveChangesAsync(ct);
+        return Result.Success;
+    }
+
+    public async Task<ErrorOr<Success>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default)
+    {
+        var user = await userRepository.GetByIdAsync(userId, ct);
+        if (user is null)
+            return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        user.Jmbag = string.IsNullOrWhiteSpace(request.Jmbag) ? null : request.Jmbag.Trim();
+        await userRepository.UpdateAsync(user, ct);
         await unitOfWork.SaveChangesAsync(ct);
         return Result.Success;
     }

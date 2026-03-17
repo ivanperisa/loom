@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ExchangeMapper.Application.DTOs.Exchange;
 using ExchangeMapper.Domain.Entities;
 
@@ -23,7 +24,6 @@ public static class ExchangeMapper
         Code = c.Code,
         Name = c.Name,
         NameEn = c.NameEn,
-        NameHr = c.NameHr,
         Ects = c.Ects,
         Status = c.Status.ToString(),
         LecturesHours = c.LecturesHours,
@@ -34,6 +34,23 @@ public static class ExchangeMapper
         ExamDate = c.ExamDate,
         Mappings = c.CourseMappings.Select(m => m.ToResponse()).ToList()
     };
+
+    public static MappingHistoryResponse ToResponse(this MappingHistory h)
+    {
+        MappingSnapshotResponse? snapshot = null;
+        try { snapshot = JsonSerializer.Deserialize<MappingSnapshotResponse>(h.Snapshot); }
+        catch { snapshot = new MappingSnapshotResponse { Status = "Unknown" }; }
+
+        return new MappingHistoryResponse
+        {
+            Id = h.Id,
+            ChangedByName = h.ChangedByUser.Name,
+            CreatedAt = h.CreatedAt,
+            ExchangeCourseName = h.CourseMapping.ExchangeCourse.NameEn ?? h.CourseMapping.ExchangeCourse.Name,
+            ExchangeCourseCode = h.CourseMapping.ExchangeCourse.Code,
+            Snapshot = snapshot!
+        };
+    }
 
     public static CourseMappingResponse ToResponse(this CourseMapping m) => new()
     {

@@ -46,4 +46,15 @@ public class ExchangeRepository(AppDbContext context) : Repository<Exchange>(con
             .OrderBy(e => e.Student.Name)
             .ToListAsync(ct);
     }
+
+    public async Task<List<Exchange>> GetByMentorNameAsync(string mentorName, CancellationToken ct = default)
+        => await DbSet
+            .AsNoTracking()
+            .Include(e => e.Student)
+            .Include(e => e.ForeignInstitution)
+            .Include(e => e.ExchangeCourses)
+                .ThenInclude(c => c.CourseMappings)
+            .Where(e => e.Mentor != null && e.Mentor == mentorName)
+            .OrderByDescending(e => e.CreatedAt)
+            .ToListAsync(ct);
 }

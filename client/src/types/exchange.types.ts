@@ -16,7 +16,6 @@ export interface ExchangeCourseResponse {
   code?: string
   name: string
   nameEn: string
-  nameHr?: string
   ects?: number
   status: ExchangeCourseStatus
   lecturesHours?: number
@@ -82,7 +81,6 @@ export interface UpsertExchangeCourseRequest {
   code?: string
   name: string
   nameEn: string
-  nameHr?: string
   ects?: number
   status: ExchangeCourseStatus
   lecturesHours?: number
@@ -111,3 +109,72 @@ export type ExchangeStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected' | '
 export type ExchangeSemester = 'Winter' | 'Summer'
 export type ExchangeCourseStatus = 'OriginallyEnrolled' | 'Additional'
 export type MappingStatus = 'Pending' | 'Approved' | 'Rejected'
+
+// Coordinator dashboard
+export interface CoordinatorStudentSummaryResponse {
+  exchangeId: string
+  studentName: string
+  studentEmail: string
+  studentJmbag?: string
+  academicYear: string
+  semester: ExchangeSemester
+  status: ExchangeStatus
+  foreignInstitutionName: string
+  foreignInstitutionCountry?: string
+  totalCourses: number
+  pendingMappings: number
+  approvedMappings: number
+}
+
+// Mapping board
+export interface MappingBoardResponse {
+  ferCourseGroups: FerCourseGroupResponse[]
+  exchangeCourses: ExchangeCourseWithMappingsResponse[]
+}
+
+export interface FerCourseGroupResponse {
+  type: string
+  courses: FerCourseResponse[]
+}
+
+export interface FerCourseResponse {
+  id: string
+  code?: string
+  name: string
+  nameEn: string
+  ects: number
+  type: string
+}
+
+export interface ExchangeCourseWithMappingsResponse {
+  id: string
+  code?: string
+  name: string
+  nameEn: string
+  ects?: number
+  status: ExchangeCourseStatus
+  mappings: MappingRowResponse[]
+}
+
+export interface MappingRowResponse {
+  id: string
+  ferCourseId: string
+  ferCourseName: string
+  ferCourseCode?: string
+  awardedEcts?: number
+  convertedGrade?: string
+  status: MappingStatus
+  coordinatorNote?: string
+}
+
+export interface ProposeBoardMappingRequest {
+  courses: {
+    exchangeCourseId: string
+    mappings: {
+      ferCourseId: string
+      awardedEcts?: number
+      convertedGrade?: string
+      coordinatorNote?: string
+    }[]
+  }[]
+}

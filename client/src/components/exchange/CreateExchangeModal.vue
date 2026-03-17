@@ -72,7 +72,7 @@ async function handleSubmit() {
             required
             class="w-full rounded-lg bg-[#071C2C] px-3 py-2 text-[#CAE4F7] border border-[#1E4A6E] focus:outline-none focus:ring-2 focus:ring-[#2E7AB5]"
           >
-            <option value="" disabled>{{ loadingInstitutions ? t('common.loading') : '— odaberi —' }}</option>
+            <option value="" disabled>{{ loadingInstitutions ? t('common.loading') : t('exchange.selectInstitution') }}</option>
             <option v-for="inst in institutions" :key="inst.id" :value="inst.id">
               {{ inst.nameEn }} ({{ inst.country }})
             </option>

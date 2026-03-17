@@ -115,6 +115,12 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
+var googleClientId = builder.Configuration["Google:ClientId"];
+var googleClientSecret = builder.Configuration["Google:ClientSecret"];
+if (string.IsNullOrWhiteSpace(googleClientId) || string.IsNullOrWhiteSpace(googleClientSecret))
+    throw new InvalidOperationException(
+        "Google OAuth is not configured. Set Google:ClientId and Google:ClientSecret.");
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -141,9 +147,9 @@ app.Use(async (context, next) =>
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors("App");
 app.UseAuthentication();
+app.UseMiddleware<UserSyncMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
-app.UseMiddleware<UserSyncMiddleware>();
 
 app.MapControllers();
 

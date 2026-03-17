@@ -22,8 +22,15 @@ const router = createRouter({
     },
     {
       path: '/exchange',
+      name: 'exchange',
       component: () => import('@/views/ExchangeView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, requiresOnboarding: true }
+    },
+    {
+      path: '/exchange/mapping',
+      name: 'exchange-mapping',
+      component: () => import('@/views/MappingBoardView.vue'),
+      meta: { requiresAuth: true, requiresOnboarding: true }
     },
     {
       path: '/history',

@@ -18,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   const email = computed(() => user.value?.email ?? null)
   const name = computed(() => user.value?.name ?? null)
   const sub = computed(() => user.value?.sub ?? null)
+  const jmbag = computed(() => user.value?.jmbag ?? null)
 
   async function init(force = false) {
     if (initPromise && !force) return initPromise
@@ -79,6 +80,11 @@ export const useAuthStore = defineStore('auth', () => {
     await init(true)
   }
 
+  async function updateJmbag(value: string | null): Promise<void> {
+    await userService.updateProfile({ jmbag: value || null })
+    await init(true)
+  }
+
   return {
     user,
     isOnboarded,
@@ -87,12 +93,15 @@ export const useAuthStore = defineStore('auth', () => {
     email,
     name,
     sub,
+    jmbag,
     isLoggedIn,
     init,
     login,
     logout,
+    reset,
     addInstitution,
     updateInstitution,
-    removeInstitution
+    removeInstitution,
+    updateJmbag
   }
 })

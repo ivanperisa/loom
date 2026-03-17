@@ -9,6 +9,7 @@ public class AuthMeResponse
     public string? Email { get; set; }
     public string? Name { get; set; }
     public string? Role { get; set; }
+    public string? Jmbag { get; set; }
     public bool IsOnboarded { get; set; }
     public List<UserInstitutionResponse> Institutions { get; set; } = [];
 }

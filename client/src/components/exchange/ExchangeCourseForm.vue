@@ -18,7 +18,6 @@ const form = ref<UpsertExchangeCourseRequest>({
   code: props.initial?.code ?? '',
   name: props.initial?.name ?? '',
   nameEn: props.initial?.nameEn ?? '',
-  nameHr: props.initial?.nameHr ?? '',
   ects: props.initial?.ects ?? undefined,
   status: (props.initial?.status ?? 'OriginallyEnrolled') as ExchangeCourseStatus,
   lecturesHours: props.initial?.lecturesHours ?? undefined,
@@ -32,7 +31,6 @@ watch(() => props.initial, (val) => {
       code: val.code ?? '',
       name: val.name,
       nameEn: val.nameEn,
-      nameHr: val.nameHr ?? '',
       ects: val.ects,
       status: val.status,
       lecturesHours: val.lecturesHours,
@@ -83,20 +81,11 @@ function handleSubmit() {
     </div>
 
     <div>
-      <label class="mb-1 block text-xs font-medium text-[#8AC4ED]">Naziv (originalni jezik)</label>
+      <label class="mb-1 block text-xs font-medium text-[#8AC4ED]">{{ t('exchangeCourse.nameOriginal') }}</label>
       <input
         v-model="form.name"
         type="text"
         :placeholder="form.nameEn"
-        class="w-full rounded-lg bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] border border-[#1E4A6E] focus:outline-none focus:ring-1 focus:ring-[#2E7AB5]"
-      />
-    </div>
-
-    <div>
-      <label class="mb-1 block text-xs font-medium text-[#8AC4ED]">{{ t('exchangeCourse.nameHr') }}</label>
-      <input
-        v-model="form.nameHr"
-        type="text"
         class="w-full rounded-lg bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] border border-[#1E4A6E] focus:outline-none focus:ring-1 focus:ring-[#2E7AB5]"
       />
     </div>
@@ -120,7 +109,7 @@ function handleSubmit() {
     </div>
 
     <div>
-      <label class="mb-1 block text-xs font-medium text-[#8AC4ED]">Status</label>
+      <label class="mb-1 block text-xs font-medium text-[#8AC4ED]">{{ t('exchangeCourse.statusLabel') }}</label>
       <select
         v-model="form.status"
         class="w-full rounded-lg bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] border border-[#1E4A6E] focus:outline-none focus:ring-1 focus:ring-[#2E7AB5]"

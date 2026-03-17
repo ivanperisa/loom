@@ -21,17 +21,6 @@ public class AuthController(
     [HttpGet("login")]
     public IActionResult Login([FromQuery] string? returnUrl = "/")
     {
-        var clientId = configuration["Google:ClientId"];
-        var clientSecret = configuration["Google:ClientSecret"];
-        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
-        {
-            return Problem(
-                detail: "Google OAuth is not configured. Set Google:ClientId and Google:ClientSecret.",
-                statusCode: StatusCodes.Status500InternalServerError,
-                title: "Configuration Error",
-                extensions: new Dictionary<string, object?> { ["code"] = "CONFIGURATION_ERROR" });
-        }
-
         var frontendTarget = configuration.BuildFrontendUrl(returnUrl);
         if (User.Identity?.IsAuthenticated == true)
         {

@@ -37,7 +37,6 @@ const showGrades = ref(false)
             {{ t(`exchangeCourseStatus.${course.status}`) }}
           </span>
         </div>
-        <div v-if="course.nameHr" class="mt-0.5 text-sm text-[#5A8AAD]">{{ course.nameHr }}</div>
         <div class="mt-1 flex flex-wrap gap-3 text-xs text-[#5A8AAD]">
           <span v-if="course.ects != null">{{ course.ects }} ECTS</span>
           <span v-if="course.lecturesHours != null || course.auditoryHours != null || course.labHours != null">

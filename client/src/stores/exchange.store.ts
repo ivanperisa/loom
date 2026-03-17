@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { i18n } from '@/i18n/index'
 import { exchangeService } from '@/services/exchange.service'
 import type {
   ExchangeResponse,
+  ExchangeCourseResponse,
   CreateExchangeRequest,
   UpsertExchangeCourseRequest,
   UpdateGradesRequest,
@@ -22,7 +24,7 @@ export const useExchangeStore = defineStore('exchange', () => {
       exchange.value = res.data
     } catch (e: any) {
       if (e.response?.status === 404) exchange.value = null
-      else error.value = e.response?.data?.title ?? 'Greška'
+      else error.value = e.response?.data?.title ?? i18n.global.t('common.error')
     } finally {
       loading.value = false
     }
@@ -84,6 +86,12 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchange.value = res.data
   }
 
+  function updateCourseById(course: ExchangeCourseResponse) {
+    if (!exchange.value) return
+    const idx = exchange.value.courses.findIndex(c => c.id === course.id)
+    if (idx !== -1) exchange.value.courses[idx] = course
+  }
+
   return {
     exchange,
     loading,
@@ -97,6 +105,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     updateGrades,
     proposeMapping,
     retract,
-    submitForReview
+    submitForReview,
+    updateCourseById
   }
 })

@@ -23,9 +23,4 @@ public class InstitutionRepository(AppDbContext context) : Repository<Institutio
             .OrderBy(i => i.Name)
             .ToListAsync(ct);
     }
-
-    public override async Task<Institution?> GetByIdAsync(Guid id, CancellationToken ct = default)
-    {
-        return await DbSet.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
-    }
 }

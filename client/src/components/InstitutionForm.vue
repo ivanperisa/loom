@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api } from '@/services/api'
+import { institutionService } from '@/services/institution.service'
 import type { InstitutionResponse, StudyProgramResponse, StudyProfileResponse } from '@/types/institution.types'
 import type { LocalInstitutionEntry } from '@/types/onboarding.types'
 
 const props = defineProps<{
-  role: 'Student' | 'Coordinator'
+  role: 'Student' | 'Coordinator' | 'Admin'
   prefill?: LocalInstitutionEntry
   submitLabel: string
 }>()
@@ -36,6 +36,8 @@ const newInstitutionErasmusCode = ref('')
 const newInstitutionIscedCode = ref('')
 const newInstitutionProgramName = ref('')
 const newInstitutionProfileName = ref('')
+const newInstitutionLevel = ref('Undergraduate')
+const newInstitutionDurationSemesters = ref<number | undefined>(undefined)
 
 const isStudent = computed(() => props.role === 'Student')
 const loadError = ref<string | null>(null)
@@ -47,7 +49,7 @@ function localizedName(name: string, nameEn?: string) {
 async function loadInstitutions() {
   try {
     loadError.value = null
-    const response = await api.get<InstitutionResponse[]>('/institutions')
+    const response = await institutionService.getHomeInstitutions()
     institutions.value = response.data ?? []
   } catch {
     loadError.value = t('errors.unexpected')
@@ -57,7 +59,7 @@ async function loadInstitutions() {
 async function loadPrograms(institutionId: string) {
   try {
     loadError.value = null
-    const response = await api.get<StudyProgramResponse[]>(`/institutions/${institutionId}/programs`)
+    const response = await institutionService.getProgramsByInstitution(institutionId)
     programs.value = response.data ?? []
   } catch {
     loadError.value = t('errors.unexpected')
@@ -72,9 +74,7 @@ async function loadProfiles(programId: string) {
 
   try {
     loadError.value = null
-    const response = await api.get<StudyProfileResponse[]>(
-      `/institutions/${selectedInstitutionId.value}/programs/${programId}/profiles`
-    )
+    const response = await institutionService.getProfilesByProgram(selectedInstitutionId.value, programId)
     profiles.value = response.data ?? []
   } catch {
     loadError.value = t('errors.unexpected')
@@ -158,7 +158,9 @@ function submit() {
         erasmusCode: newInstitutionErasmusCode.value.trim() || null,
         iscedCode: isStudent.value ? newInstitutionIscedCode.value.trim() : null,
         programName: isStudent.value ? newInstitutionProgramName.value.trim() : null,
-        profileName: isStudent.value ? newInstitutionProfileName.value.trim() : null
+        profileName: isStudent.value ? newInstitutionProfileName.value.trim() : null,
+        level: isStudent.value ? newInstitutionLevel.value : null,
+        durationSemesters: isStudent.value ? (newInstitutionDurationSemesters.value ?? 0) : null
       }
     })
     return
@@ -353,6 +355,18 @@ onMounted(async () => {
         <div class="sm:col-span-2">
           <label class="form-label">{{ t('onboarding.institutions.form.profileName') }}</label>
           <input v-model="newInstitutionProfileName" class="form-control" :placeholder="`${t('onboarding.institutions.form.profileName')} *`" />
+        </div>
+        <div>
+          <label class="form-label">{{ t('onboarding.institutions.form.level') }}</label>
+          <select v-model="newInstitutionLevel" class="form-control">
+            <option value="Undergraduate">{{ t('studyProgramLevels.Undergraduate') }}</option>
+            <option value="Graduate">{{ t('studyProgramLevels.Graduate') }}</option>
+            <option value="Postgraduate">{{ t('studyProgramLevels.Postgraduate') }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">{{ t('onboarding.institutions.form.durationSemesters') }}</label>
+          <input v-model.number="newInstitutionDurationSemesters" type="number" min="1" max="20" class="form-control" />
         </div>
       </template>
     </div>

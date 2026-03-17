@@ -103,7 +103,9 @@ public class InstitutionService(
                 InstitutionId = institution.Id,
                 Name = entry.NewInstitution.ProgramName,
                 NameEn = entry.NewInstitution.ProgramNameEn?.Trim() ?? entry.NewInstitution.ProgramName,
-                IscedCode = entry.NewInstitution.IscedCode
+                IscedCode = entry.NewInstitution.IscedCode,
+                Level = entry.NewInstitution.Level,
+                DurationSemesters = entry.NewInstitution.DurationSemesters
             };
             await studyProgramRepository.AddAsync(studyProgram, ct);
 

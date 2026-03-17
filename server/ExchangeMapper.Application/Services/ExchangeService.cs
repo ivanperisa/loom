@@ -16,7 +16,9 @@ public class ExchangeService(
     IExchangeCourseRepository exchangeCourseRepository,
     ICourseMappingRepository courseMappingRepository,
     IMappingHistoryRepository mappingHistoryRepository,
-    IUserInstitutionRepository userInstitutionRepository) : IExchangeService
+    IUserInstitutionRepository userInstitutionRepository,
+    IUserRepository userRepository,
+    ICourseRepository courseRepository) : IExchangeService
 {
     public async Task<ErrorOr<ExchangeResponse>> CreateExchangeAsync(Guid studentId, CreateExchangeRequest dto, CancellationToken ct = default)
     {
@@ -119,7 +121,6 @@ public class ExchangeService(
             Code = dto.Code,
             Name = dto.Name,
             NameEn = dto.NameEn,
-            NameHr = dto.NameHr,
             Ects = dto.Ects,
             Status = courseStatus,
             LecturesHours = dto.LecturesHours,
@@ -166,7 +167,6 @@ public class ExchangeService(
         course.Code = dto.Code;
         course.Name = dto.Name;
         course.NameEn = dto.NameEn;
-        course.NameHr = dto.NameHr;
         course.Ects = dto.Ects;
         course.Status = courseStatus;
         course.LecturesHours = dto.LecturesHours;
@@ -432,28 +432,7 @@ public class ExchangeService(
     {
         var history = await mappingHistoryRepository.GetByExchangeIdAsync(exchangeId, ct);
 
-        var result = history.Select(h =>
-        {
-            MappingSnapshotResponse? snapshot = null;
-            try
-            {
-                snapshot = JsonSerializer.Deserialize<MappingSnapshotResponse>(h.Snapshot);
-            }
-            catch
-            {
-                snapshot = new MappingSnapshotResponse { Status = "Unknown" };
-            }
-
-            return new MappingHistoryResponse
-            {
-                Id = h.Id,
-                ChangedByName = h.ChangedByUser.Name,
-                CreatedAt = h.CreatedAt,
-                ExchangeCourseName = h.CourseMapping.ExchangeCourse.NameEn ?? h.CourseMapping.ExchangeCourse.Name,
-                ExchangeCourseCode = h.CourseMapping.ExchangeCourse.Code,
-                Snapshot = snapshot!
-            };
-        }).ToList();
+        var result = history.Select(h => h.ToResponse()).ToList();
 
         return result;
     }
@@ -476,5 +455,267 @@ public class ExchangeService(
         }).ToList();
 
         return result;
+    }
+
+    // --- Coordinator dashboard ---
+
+    public async Task<ErrorOr<List<CoordinatorStudentSummaryResponse>>> GetCoordinatorStudentsAsync(Guid coordinatorId, CancellationToken ct = default)
+    {
+        var coordinator = await userRepository.GetByIdAsync(coordinatorId, ct);
+        if (coordinator is null)
+            return Error.NotFound("USER_NOT_FOUND", "Coordinator not found.");
+
+        var exchanges = await exchangeRepository.GetByMentorNameAsync(coordinator.Name, ct);
+
+        return exchanges.Select(e => new CoordinatorStudentSummaryResponse
+        {
+            ExchangeId = e.Id,
+            StudentName = e.Student.Name,
+            StudentEmail = e.Student.Email,
+            StudentJmbag = e.Student.Jmbag,
+            AcademicYear = e.AcademicYear,
+            Semester = e.Semester.ToString(),
+            Status = e.Status.ToString(),
+            ForeignInstitutionName = e.ForeignInstitution.NameEn ?? e.ForeignInstitution.Name,
+            ForeignInstitutionCountry = e.ForeignInstitution.Country,
+            TotalCourses = e.ExchangeCourses.Count,
+            PendingMappings = e.ExchangeCourses
+                .SelectMany(c => c.CourseMappings)
+                .Count(m => m.Status == CourseMappingStatus.Pending),
+            ApprovedMappings = e.ExchangeCourses
+                .SelectMany(c => c.CourseMappings)
+                .Count(m => m.Status == CourseMappingStatus.Approved)
+        }).ToList();
+    }
+
+    public async Task<ErrorOr<ExchangeResponse>> GetExchangeDetailsAsync(Guid coordinatorId, Guid exchangeId, CancellationToken ct = default)
+    {
+        var coordinator = await userRepository.GetByIdAsync(coordinatorId, ct);
+        if (coordinator is null)
+            return Error.NotFound("USER_NOT_FOUND", "Coordinator not found.");
+
+        var exchange = await exchangeRepository.GetByIdAsync(exchangeId, ct);
+        if (exchange is null)
+            return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        if (exchange.Mentor != coordinator.Name)
+            return Error.Forbidden("FORBIDDEN", "You are not the mentor for this exchange.");
+
+        return exchange.ToResponse();
+    }
+
+    public async Task<ErrorOr<ExchangeResponse>> ApproveExchangeAsync(Guid coordinatorId, Guid exchangeId, CancellationToken ct = default)
+    {
+        var coordinator = await userRepository.GetByIdAsync(coordinatorId, ct);
+        if (coordinator is null)
+            return Error.NotFound("USER_NOT_FOUND", "Coordinator not found.");
+
+        var exchange = await exchangeRepository.GetByIdAsync(exchangeId, ct);
+        if (exchange is null)
+            return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        if (exchange.Mentor != coordinator.Name)
+            return Error.Forbidden("FORBIDDEN", "You are not the mentor for this exchange.");
+
+        if (exchange.Status != ExchangeStatus.Submitted)
+            return Error.Conflict("EXCHANGE_NOT_SUBMITTABLE", "Exchange must be Submitted.");
+
+        exchange.Status = ExchangeStatus.Approved;
+        exchange.UpdatedAt = DateTime.UtcNow;
+
+        foreach (var course in exchange.ExchangeCourses)
+        foreach (var mapping in course.CourseMappings)
+        {
+            if (mapping.Status == CourseMappingStatus.Pending)
+                mapping.Status = CourseMappingStatus.Approved;
+        }
+
+        await unitOfWork.SaveChangesAsync(ct);
+        return exchange.ToResponse();
+    }
+
+    public async Task<ErrorOr<ExchangeResponse>> RejectExchangeAsync(Guid coordinatorId, Guid exchangeId, CancellationToken ct = default)
+    {
+        var coordinator = await userRepository.GetByIdAsync(coordinatorId, ct);
+        if (coordinator is null)
+            return Error.NotFound("USER_NOT_FOUND", "Coordinator not found.");
+
+        var exchange = await exchangeRepository.GetByIdAsync(exchangeId, ct);
+        if (exchange is null)
+            return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        if (exchange.Mentor != coordinator.Name)
+            return Error.Forbidden("FORBIDDEN", "You are not the mentor for this exchange.");
+
+        if (exchange.Status != ExchangeStatus.Submitted)
+            return Error.Conflict("EXCHANGE_NOT_SUBMITTABLE", "Exchange must be Submitted.");
+
+        exchange.Status = ExchangeStatus.Rejected;
+        exchange.UpdatedAt = DateTime.UtcNow;
+
+        foreach (var course in exchange.ExchangeCourses)
+        foreach (var mapping in course.CourseMappings)
+        {
+            if (mapping.Status == CourseMappingStatus.Pending)
+                mapping.Status = CourseMappingStatus.Rejected;
+        }
+
+        await unitOfWork.SaveChangesAsync(ct);
+        return exchange.ToResponse();
+    }
+
+    public async Task<ErrorOr<ExchangeResponse>> ReturnExchangeAsync(Guid coordinatorId, Guid exchangeId, CancellationToken ct = default)
+    {
+        var coordinator = await userRepository.GetByIdAsync(coordinatorId, ct);
+        if (coordinator is null)
+            return Error.NotFound("USER_NOT_FOUND", "Coordinator not found.");
+
+        var exchange = await exchangeRepository.GetByIdAsync(exchangeId, ct);
+        if (exchange is null)
+            return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        if (exchange.Mentor != coordinator.Name)
+            return Error.Forbidden("FORBIDDEN", "You are not the mentor for this exchange.");
+
+        if (exchange.Status != ExchangeStatus.Submitted)
+            return Error.Conflict("EXCHANGE_NOT_SUBMITTABLE", "Exchange must be Submitted.");
+
+        exchange.Status = ExchangeStatus.Draft;
+        exchange.UpdatedAt = DateTime.UtcNow;
+        await unitOfWork.SaveChangesAsync(ct);
+        return exchange.ToResponse();
+    }
+
+    // --- Mapping board ---
+
+    public async Task<ErrorOr<MappingBoardResponse>> GetMappingBoardAsync(Guid requesterId, Guid exchangeId, CancellationToken ct = default)
+    {
+        var exchange = await exchangeRepository.GetByIdAsync(exchangeId, ct);
+        if (exchange is null)
+            return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        var (isStudent, isCoordinator) = await CheckAccessAsync(requesterId, exchange, ct);
+        if (!isStudent && !isCoordinator)
+            return Error.Forbidden("FORBIDDEN", "Access denied.");
+
+        var homeUi = await userInstitutionRepository.GetHomeByUserIdAsync(exchange.StudentId, ct);
+        if (homeUi?.StudyProfileId is null)
+            return Error.NotFound("STUDY_PROFILE_NOT_FOUND", "Student study profile not found.");
+
+        var ferCourses = await courseRepository.GetByStudyProfileAsync(homeUi.StudyProfileId.Value, null, ct);
+
+        var typeOrder = new[]
+        {
+            "Mandatory", "CoreElective", "ProfileElective", "FreeElective",
+            "Transversal", "Seminar", "ResearchSeminar", "Project", "Thesis"
+        };
+
+        var ferGroups = typeOrder
+            .Select(type => new FerCourseGroupResponse
+            {
+                Type = type,
+                Courses = ferCourses
+                    .Where(c => c.Type.ToString() == type)
+                    .Select(c => new FerCourseResponse
+                    {
+                        Id = c.Id, Code = c.Code, Name = c.Name,
+                        NameEn = c.NameEn, Ects = c.Ects, Type = c.Type.ToString()
+                    }).ToList()
+            })
+            .Where(g => g.Courses.Count > 0)
+            .ToList();
+
+        var exchangeCourses = exchange.ExchangeCourses.Select(ec => new ExchangeCourseWithMappingsResponse
+        {
+            Id = ec.Id, Code = ec.Code, Name = ec.Name, NameEn = ec.NameEn,
+            Ects = ec.Ects, Status = ec.Status.ToString(),
+            Mappings = ec.CourseMappings.Select(m => new MappingRowResponse
+            {
+                Id = m.Id, FerCourseId = m.CourseId,
+                FerCourseName = m.Course.Name, FerCourseCode = m.Course.Code,
+                AwardedEcts = m.AwardedEcts, ConvertedGrade = m.ConvertedGrade,
+                Status = m.Status.ToString(), CoordinatorNote = m.CoordinatorNote
+            }).ToList()
+        }).ToList();
+
+        return new MappingBoardResponse { FerCourseGroups = ferGroups, ExchangeCourses = exchangeCourses };
+    }
+
+    public async Task<ErrorOr<MappingBoardResponse>> ProposeBoardMappingAsync(Guid requesterId, Guid exchangeId, ProposeBoardMappingRequest dto, CancellationToken ct = default)
+    {
+        var exchange = await exchangeRepository.GetByIdAsync(exchangeId, ct);
+        if (exchange is null)
+            return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        var (isStudent, isCoordinator) = await CheckAccessAsync(requesterId, exchange, ct);
+        if (!isStudent && !isCoordinator)
+            return Error.Forbidden("FORBIDDEN", "Access denied.");
+
+        if (isStudent && exchange.Status != ExchangeStatus.Draft && exchange.Status != ExchangeStatus.Submitted)
+            return Error.Conflict("EXCHANGE_NOT_EDITABLE", "Cannot propose mappings in current status.");
+        if (isCoordinator && exchange.Status != ExchangeStatus.Submitted)
+            return Error.Conflict("EXCHANGE_NOT_EDITABLE", "Exchange must be Submitted for coordinator review.");
+
+        foreach (var courseDto in dto.Courses)
+        {
+            var exchangeCourse = await exchangeCourseRepository.GetWithMappingsAsync(courseDto.ExchangeCourseId, ct);
+            if (exchangeCourse is null || exchangeCourse.ExchangeId != exchangeId) continue;
+
+            if (isCoordinator)
+            {
+                var pendingToDelete = exchangeCourse.CourseMappings
+                    .Where(m => m.Status == CourseMappingStatus.Pending).ToList();
+                foreach (var m in pendingToDelete)
+                {
+                    var snapshot = new MappingSnapshotResponse
+                    {
+                        CourseId = m.CourseId, CourseName = m.Course.Name,
+                        CourseCode = m.Course.Code, AwardedEcts = m.AwardedEcts,
+                        ConvertedGrade = m.ConvertedGrade, Status = m.Status.ToString(),
+                        CoordinatorNote = m.CoordinatorNote
+                    };
+                    await mappingHistoryRepository.AddAsync(new MappingHistory
+                    {
+                        Id = Guid.CreateVersion7(),
+                        CourseMappingId = m.Id,
+                        ChangedBy = requesterId,
+                        Snapshot = JsonSerializer.Serialize(snapshot)
+                    }, ct);
+                }
+            }
+
+            var pending = exchangeCourse.CourseMappings
+                .Where(m => m.Status == CourseMappingStatus.Pending).ToList();
+            await courseMappingRepository.DeleteRangeAsync(pending, ct);
+
+            foreach (var entry in courseDto.Mappings)
+            {
+                await courseMappingRepository.AddAsync(new CourseMapping
+                {
+                    Id = Guid.CreateVersion7(),
+                    ExchangeCourseId = courseDto.ExchangeCourseId,
+                    CourseId = entry.FerCourseId,
+                    Status = CourseMappingStatus.Pending,
+                    AwardedEcts = entry.AwardedEcts,
+                    ConvertedGrade = entry.ConvertedGrade,
+                    CoordinatorNote = entry.CoordinatorNote
+                }, ct);
+            }
+        }
+
+        exchange.UpdatedAt = DateTime.UtcNow;
+        await unitOfWork.SaveChangesAsync(ct);
+
+        return await GetMappingBoardAsync(requesterId, exchangeId, ct);
+    }
+
+    private async Task<(bool isStudent, bool isCoordinator)> CheckAccessAsync(Guid requesterId, Exchange exchange, CancellationToken ct)
+    {
+        var requester = await userRepository.GetByIdAsync(requesterId, ct);
+        if (requester is null) return (false, false);
+        var isStudent = exchange.StudentId == requesterId;
+        var isCoordinator = requester.Role == UserRole.Coordinator
+            && exchange.Mentor == requester.Name;
+        return (isStudent, isCoordinator);
     }
 }

@@ -60,7 +60,9 @@ export default {
         erasmusCode: 'Erasmus kod',
         iscedCode: 'ISCED kod',
         programName: 'Naziv programa',
-        profileName: 'Naziv profila'
+        profileName: 'Naziv profila',
+        level: 'Razina studijskog programa',
+        durationSemesters: 'Trajanje (semestri)'
       }
     },
     confirm: {
@@ -71,6 +73,7 @@ export default {
       program: 'Program',
       profile: 'Profil'
     },
+    jmbag: 'JMBAG',
     next: 'Sljedeći',
     back: 'Natrag',
     noResults: 'Nije pronađeno.',
@@ -90,6 +93,7 @@ export default {
     home: 'Početna',
     settings: 'Postavke',
     exchange: 'Razmjena',
+    students: 'Studenti',
     history: 'Povijest'
   },
   settings: {
@@ -98,7 +102,9 @@ export default {
       title: 'Profil',
       name: 'Ime',
       email: 'E-mail adresa',
-      role: 'Uloga'
+      role: 'Uloga',
+      jmbag: 'JMBAG',
+      jmbagSaved: 'JMBAG uspješno spremljen.'
     },
     institutions: {
       title: 'Moje institucije',
@@ -132,7 +138,8 @@ export default {
     deleteSuccess: 'Razmjena izbrisana.',
     submitConfirm: 'Jeste li sigurni da želite predati ovu razmjenu na pregled?',
     retract: 'Povuci prijavu',
-    retractConfirm: 'Jeste li sigurni da želite povući razmjenu natrag u nacrt?'
+    retractConfirm: 'Jeste li sigurni da želite povući razmjenu natrag u nacrt?',
+    selectInstitution: '— odaberi —'
   },
   exchangeStatus: {
     Draft: 'Nacrt',
@@ -148,7 +155,8 @@ export default {
     removeConfirm: 'Jeste li sigurni da želite ukloniti ovaj predmet?',
     code: 'Šifra predmeta',
     nameEn: 'Naziv (engleski)',
-    nameHr: 'Naziv (hrvatski)',
+    nameOriginal: 'Naziv (originalni jezik)',
+    statusLabel: 'Status',
     ects: 'ECTS bodovi',
     hoursFormat: 'Sati (P/A/L)',
     lecturesHours: 'Predavanja',
@@ -228,5 +236,37 @@ export default {
   exchangeSemesters: {
     Winter: 'Zimski',
     Summer: 'Ljetni'
+  },
+  coordinator: {
+    title: 'Moji studenti',
+    noStudents: 'Nema dodijeljenih studenata',
+    pendingReview: 'čekaju review',
+    viewExchange: 'Pregled',
+    backToList: 'Natrag na listu',
+    approveExchange: 'Odobri razmjenu',
+    rejectExchange: 'Odbij razmjenu',
+    returnToDraft: 'Vrati na ispravak',
+    confirmApprove: 'Jeste li sigurni da želite odobriti ovu razmjenu?',
+    confirmReject: 'Jeste li sigurni da želite odbiti ovu razmjenu?',
+    confirmReturn: 'Jeste li sigurni da želite vratiti razmjenu studentu na ispravak?',
+    openMappingBoard: 'Otvori tablicu mapiranja',
+    courseSummary: 'Sažetak predmeta',
+    foreignCourses: 'stranih predmeta',
+    mappingsCount: 'mapiranja',
+    approved: 'odobreno',
+    pending: 'na čekanju',
+    rejected: 'odbijeno'
+  },
+  mappingBoard: {
+    title: 'Tablica mapiranja',
+    ferCourses: 'FER predmeti',
+    foreignCourses: 'Strani predmeti',
+    dropHere: 'Povuci FER predmet ovdje',
+    noMappings: 'Još nema mapiranja',
+    ectsWarning: 'Suma ECTS-a premašuje ukupni ECTS',
+    unsavedChanges: 'Promjene nisu spremljene',
+    proposeStudent: 'Predloži mapiranje',
+    proposeCoordinator: 'Spremi pregled',
+    mapped: '\u25cf mapirano'
   }
 }

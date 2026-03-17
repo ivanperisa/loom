@@ -23,4 +23,15 @@ public interface IExchangeService
     Task<ErrorOr<List<MappingHistoryResponse>>> GetMyHistoryAsync(Guid studentId, CancellationToken ct = default);
     Task<ErrorOr<List<MappingHistoryResponse>>> GetExchangeHistoryAsync(Guid exchangeId, CancellationToken ct = default);
     Task<ErrorOr<List<StudentExchangeSummaryResponse>>> GetStudentsWithExchangeAsync(CancellationToken ct = default);
+
+    // Coordinator dashboard
+    Task<ErrorOr<List<CoordinatorStudentSummaryResponse>>> GetCoordinatorStudentsAsync(Guid coordinatorId, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeResponse>> GetExchangeDetailsAsync(Guid coordinatorId, Guid exchangeId, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeResponse>> ApproveExchangeAsync(Guid coordinatorId, Guid exchangeId, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeResponse>> RejectExchangeAsync(Guid coordinatorId, Guid exchangeId, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeResponse>> ReturnExchangeAsync(Guid coordinatorId, Guid exchangeId, CancellationToken ct = default);
+
+    // Mapping board
+    Task<ErrorOr<MappingBoardResponse>> GetMappingBoardAsync(Guid requesterId, Guid exchangeId, CancellationToken ct = default);
+    Task<ErrorOr<MappingBoardResponse>> ProposeBoardMappingAsync(Guid requesterId, Guid exchangeId, ProposeBoardMappingRequest dto, CancellationToken ct = default);
 }

@@ -1,3 +1,5 @@
+using ExchangeMapper.Domain.Enums;
+
 namespace ExchangeMapper.Application.DTOs.Institution;
 
 public class NewInstitutionRequest
@@ -12,4 +14,6 @@ public class NewInstitutionRequest
     public string? ProgramNameEn { get; set; }
     public string? ProfileName { get; set; }
     public string? ProfileNameEn { get; set; }
+    public StudyProgramLevel Level { get; set; } = StudyProgramLevel.Undergraduate;
+    public int DurationSemesters { get; set; } = 0;
 }

@@ -1,7 +1,7 @@
 import type { InstitutionEntryDto, NewInstitutionRequestDto, NewStudyProfileRequestDto } from '@/types/user.types'
 
 export interface LocalInstitutionEntry {
-  id: string
+  id?: string
   institutionName: string
   programName?: string
   profileName?: string

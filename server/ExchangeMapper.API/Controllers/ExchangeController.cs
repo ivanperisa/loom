@@ -175,4 +175,83 @@ public class ExchangeController(
         var result = await institutionService.GetAvailableCoursesAsync(userId.Value, q, ct);
         return Match(result, Ok);
     }
+
+    // --- Coordinator dashboard ---
+
+    [HttpGet("coordinator/students")]
+    [Authorize(Roles = Roles.Coordinator)]
+    public async Task<IActionResult> GetCoordinatorStudents(CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await exchangeService.GetCoordinatorStudentsAsync(userId.Value, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpGet("{exchangeId:guid}/details")]
+    [Authorize(Roles = Roles.Coordinator)]
+    public async Task<IActionResult> GetExchangeDetails(Guid exchangeId, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await exchangeService.GetExchangeDetailsAsync(userId.Value, exchangeId, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpPost("{exchangeId:guid}/approve")]
+    [Authorize(Roles = Roles.Coordinator)]
+    public async Task<IActionResult> ApproveExchange(Guid exchangeId, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await exchangeService.ApproveExchangeAsync(userId.Value, exchangeId, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpPost("{exchangeId:guid}/reject")]
+    [Authorize(Roles = Roles.Coordinator)]
+    public async Task<IActionResult> RejectExchange(Guid exchangeId, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await exchangeService.RejectExchangeAsync(userId.Value, exchangeId, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpPost("{exchangeId:guid}/return")]
+    [Authorize(Roles = Roles.Coordinator)]
+    public async Task<IActionResult> ReturnExchange(Guid exchangeId, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await exchangeService.ReturnExchangeAsync(userId.Value, exchangeId, ct);
+        return Match(result, Ok);
+    }
+
+    // --- Mapping board ---
+
+    [HttpGet("mapping/{exchangeId:guid}")]
+    public async Task<IActionResult> GetMappingBoard(Guid exchangeId, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await exchangeService.GetMappingBoardAsync(userId.Value, exchangeId, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpPost("{exchangeId:guid}/mapping/propose")]
+    public async Task<IActionResult> ProposeBoardMapping(Guid exchangeId, [FromBody] ProposeBoardMappingRequest dto, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await exchangeService.ProposeBoardMappingAsync(userId.Value, exchangeId, dto, ct);
+        return Match(result, Ok);
+    }
 }

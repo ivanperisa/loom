@@ -12,4 +12,5 @@ public interface IUserService
     Task<ErrorOr<Success>> UpdateInstitutionAsync(Guid userId, Guid userInstitutionId, InstitutionEntryRequest request, UserRole role, CancellationToken ct = default);
     Task<ErrorOr<Success>> RemoveInstitutionAsync(Guid userId, Guid userInstitutionId, CancellationToken ct = default);
     Task<ErrorOr<Success>> MakeCoordinatorAsync(Guid userId, CancellationToken ct = default);
+    Task<ErrorOr<Success>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default);
 }

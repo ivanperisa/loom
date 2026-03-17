@@ -17,7 +17,6 @@ public class ExchangeCourseConfiguration : IEntityTypeConfiguration<ExchangeCour
         builder.Property(x => x.Code).HasColumnName("code").HasMaxLength(50);
         builder.Property(x => x.Name).HasColumnName("name").IsRequired();
         builder.Property(x => x.NameEn).HasColumnName("name_en").IsRequired();
-        builder.Property(x => x.NameHr).HasColumnName("name_hr").HasMaxLength(255);
         builder.Property(x => x.Ects).HasColumnName("ects").HasColumnType("numeric(4,1)");
         builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.LecturesHours).HasColumnName("lectures_hours");

@@ -63,6 +63,16 @@ public class UserController(IUserService userService) : ApiController
         return Match(result, _ => Ok());
     }
 
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await userService.UpdateProfileAsync(userId.Value, request, ct);
+        return Match(result, _ => Ok());
+    }
+
     [HttpDelete("institution/{userInstitutionId:guid}")]
     public async Task<IActionResult> RemoveInstitution(Guid userInstitutionId, CancellationToken ct)
     {

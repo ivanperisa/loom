@@ -20,6 +20,24 @@ const showAddForm = ref(false)
 const editingUserInstitutionId = ref<string | null>(null)
 const isLoading = ref(true)
 
+const editingJmbag = ref(false)
+const jmbagInput = ref(authStore.jmbag ?? '')
+const jmbagSuccess = ref('')
+const jmbagError = ref('')
+
+async function saveJmbag() {
+  jmbagSuccess.value = ''
+  jmbagError.value = ''
+  try {
+    await authStore.updateJmbag(jmbagInput.value.trim() || null)
+    jmbagSuccess.value = t('settings.profile.jmbagSaved')
+    editingJmbag.value = false
+  } catch (error) {
+    const problem = (error as AxiosError<ProblemDetails>).response?.data
+    jmbagError.value = problem?.detail ?? t('errors.unexpected')
+  }
+}
+
 function localizedName(name: string, nameEn?: string) {
   return locale.value === 'en' ? nameEn || name : name || nameEn || ''
 }
@@ -177,6 +195,32 @@ onMounted(async () => {
                 {{ authStore.role === 'Coordinator' ? t('onboarding.role.coordinator') : t('onboarding.role.student') }}
               </span>
             </div>
+
+            <div v-if="authStore.role === 'Student'" class="flex items-center gap-2 text-sm text-[#CAE4F7]">
+              <svg viewBox="0 0 24 24" class="h-[18px] w-[18px] text-[#8AC4ED]" fill="none" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8" />
+                <path d="M7 10h4M7 14h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+              <span class="font-medium text-[#8AC4ED]">{{ t('settings.profile.jmbag') }}:</span>
+              <template v-if="!editingJmbag">
+                <span class="text-white">{{ authStore.jmbag ?? t('common.na') }}</span>
+                <button type="button" class="text-xs text-[#8AC4ED] hover:text-white transition ml-2" @click="editingJmbag = true; jmbagInput = authStore.jmbag ?? ''">
+                  {{ t('settings.institutions.edit') }}
+                </button>
+              </template>
+              <template v-else>
+                <input
+                  v-model="jmbagInput"
+                  type="text"
+                  maxlength="10"
+                  class="rounded-lg border border-[#1E4A6E] bg-[#0A2235] px-3 py-1 text-sm text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+                />
+                <button type="button" class="btn-edit" @click="saveJmbag">{{ t('settings.institutions.save') }}</button>
+                <button type="button" class="text-xs text-[#8AC4ED] hover:text-white transition" @click="editingJmbag = false">{{ t('settings.institutions.cancel') }}</button>
+              </template>
+            </div>
+            <p v-if="jmbagSuccess" class="mt-1 text-xs text-emerald-300">{{ jmbagSuccess }}</p>
+            <p v-if="jmbagError" class="mt-1 text-xs text-red-300">{{ jmbagError }}</p>
           </div>
         </div>
       </article>

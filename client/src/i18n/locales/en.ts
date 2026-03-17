@@ -60,7 +60,9 @@ export default {
         erasmusCode: 'Erasmus code',
         iscedCode: 'ISCED code',
         programName: 'Program name',
-        profileName: 'Profile name'
+        profileName: 'Profile name',
+        level: 'Study program level',
+        durationSemesters: 'Duration (semesters)'
       }
     },
     confirm: {
@@ -71,6 +73,7 @@ export default {
       program: 'Program',
       profile: 'Profile'
     },
+    jmbag: 'JMBAG',
     next: 'Next',
     back: 'Back',
     noResults: 'Not found.',
@@ -90,6 +93,7 @@ export default {
     home: 'Home',
     settings: 'Settings',
     exchange: 'Exchange',
+    students: 'Students',
     history: 'History'
   },
   settings: {
@@ -98,7 +102,9 @@ export default {
       title: 'Profile',
       name: 'Name',
       email: 'Email address',
-      role: 'Role'
+      role: 'Role',
+      jmbag: 'JMBAG',
+      jmbagSaved: 'JMBAG saved successfully.'
     },
     institutions: {
       title: 'My institutions',
@@ -132,7 +138,8 @@ export default {
     deleteSuccess: 'Exchange deleted.',
     submitConfirm: 'Are you sure you want to submit this exchange for review?',
     retract: 'Retract',
-    retractConfirm: 'Are you sure you want to retract this exchange back to draft?'
+    retractConfirm: 'Are you sure you want to retract this exchange back to draft?',
+    selectInstitution: '— select —'
   },
   exchangeStatus: {
     Draft: 'Draft',
@@ -148,7 +155,8 @@ export default {
     removeConfirm: 'Are you sure you want to remove this course?',
     code: 'Course Code',
     nameEn: 'Name (English)',
-    nameHr: 'Name (Croatian)',
+    nameOriginal: 'Name (original language)',
+    statusLabel: 'Status',
     ects: 'ECTS Credits',
     hoursFormat: 'Hours (L/A/Lab)',
     lecturesHours: 'Lectures',
@@ -228,5 +236,37 @@ export default {
   exchangeSemesters: {
     Winter: 'Winter',
     Summer: 'Summer'
+  },
+  coordinator: {
+    title: 'My Students',
+    noStudents: 'No assigned students',
+    pendingReview: 'pending review',
+    viewExchange: 'View',
+    backToList: 'Back to list',
+    approveExchange: 'Approve Exchange',
+    rejectExchange: 'Reject Exchange',
+    returnToDraft: 'Return for Revision',
+    confirmApprove: 'Are you sure you want to approve this exchange?',
+    confirmReject: 'Are you sure you want to reject this exchange?',
+    confirmReturn: 'Return this exchange to the student for revision?',
+    openMappingBoard: 'Open Mapping Board',
+    courseSummary: 'Course Summary',
+    foreignCourses: 'foreign courses',
+    mappingsCount: 'mappings',
+    approved: 'approved',
+    pending: 'pending',
+    rejected: 'rejected'
+  },
+  mappingBoard: {
+    title: 'Mapping Board',
+    ferCourses: 'FER Courses',
+    foreignCourses: 'Foreign Courses',
+    dropHere: 'Drag FER course here',
+    noMappings: 'No mappings yet',
+    ectsWarning: 'Awarded ECTS exceeds total',
+    unsavedChanges: 'Unsaved changes',
+    proposeStudent: 'Propose Mapping',
+    proposeCoordinator: 'Save Review',
+    mapped: '\u25cf mapped'
   }
 }

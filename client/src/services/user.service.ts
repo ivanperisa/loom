@@ -1,5 +1,5 @@
 import { api } from '@/services/api'
-import type { InstitutionEntryDto, OnboardingRequestDto } from '@/types/user.types'
+import type { InstitutionEntryDto, OnboardingRequestDto, UpdateProfileRequest } from '@/types/user.types'
 
 export const userService = {
   completeOnboarding(request: OnboardingRequestDto) {
@@ -16,5 +16,9 @@ export const userService = {
 
   removeInstitution(userInstitutionId: string) {
     return api.delete(`/user/institution/${userInstitutionId}`)
+  },
+
+  updateProfile(request: UpdateProfileRequest) {
+    return api.put('/user/profile', request)
   }
 }

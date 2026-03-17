@@ -12,6 +12,7 @@ public static class UserMapper
         Email = user.Email,
         Name = user.Name,
         Role = user.Role.ToString(),
+        Jmbag = user.Jmbag,
         IsOnboarded = user.IsOnboarded,
         Institutions = user.UserInstitutions
             .OrderBy(ui => ui.CreatedAt)

@@ -19,6 +19,8 @@ export interface NewInstitutionRequestDto {
   programNameEn?: string | null
   profileName?: string | null
   profileNameEn?: string | null
+  level?: string | null
+  durationSemesters?: number | null
 }
 
 export interface NewStudyProfileRequestDto {
@@ -28,8 +30,13 @@ export interface NewStudyProfileRequestDto {
 }
 
 export interface OnboardingRequestDto {
-  role: 'Student' | 'Coordinator'
+  role: 'Student' | 'Coordinator' | 'Admin'
+  jmbag?: string
   institutions: InstitutionEntryDto[]
+}
+
+export interface UpdateProfileRequest {
+  jmbag?: string | null
 }
 
 export interface InstitutionEntryDto {

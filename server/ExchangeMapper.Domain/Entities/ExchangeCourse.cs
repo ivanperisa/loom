@@ -9,7 +9,6 @@ public class ExchangeCourse : EntityBase
     public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
     public string NameEn { get; set; } = string.Empty;
-    public string? NameHr { get; set; }
     public decimal? Ects { get; set; }
     public ExchangeCourseStatus Status { get; set; }
     public int? LecturesHours { get; set; }

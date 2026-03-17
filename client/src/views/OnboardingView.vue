@@ -26,6 +26,7 @@ const steps = [
 const currentStep = ref(1)
 const selectedRole = ref<UserRole | null>(null)
 const selectedInstitutions = ref<LocalInstitutionEntry[]>([])
+const jmbag = ref('')
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
@@ -107,6 +108,7 @@ async function finishOnboarding() {
 
   const payload: OnboardingRequestDto = {
     role: selectedRole.value,
+    jmbag: selectedRole.value === 'Student' ? jmbag.value.trim() || undefined : undefined,
     institutions: selectedInstitutions.value.map((x) => toInstitutionEntryDto(x))
   }
 
@@ -200,6 +202,17 @@ async function finishOnboarding() {
             <h2 class="text-lg font-semibold">{{ t('onboarding.role.coordinator') }}</h2>
             <p class="mt-2 text-sm text-[#8AC4ED]">{{ t('onboarding.role.coordinatorNote') }}</p>
           </button>
+
+          <div v-if="selectedRole === 'Student'" class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium text-[#8AC4ED]">{{ t('onboarding.jmbag') }}</label>
+            <input
+              v-model="jmbag"
+              type="text"
+              maxlength="10"
+              :placeholder="t('onboarding.jmbag')"
+              class="w-full rounded-xl border border-slate-600 bg-[#0A2235] px-4 py-2 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+            />
+          </div>
         </div>
 
         <div v-if="currentStep === 2" class="mt-6 space-y-4">
