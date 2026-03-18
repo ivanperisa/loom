@@ -18,7 +18,6 @@ public class StudyProgramConfiguration : IEntityTypeConfiguration<StudyProgram>
         builder.Property(x => x.NameEn).HasColumnName("name_en").IsRequired();
         builder.Property(x => x.Level).HasColumnName("level").HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.DurationSemesters).HasColumnName("duration_semesters");
-        builder.Property(x => x.IscedCode).HasColumnName("isced_code").HasMaxLength(10);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
 
         builder.HasOne(x => x.Institution)

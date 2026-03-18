@@ -1,14 +1,12 @@
-import type { UserInstitutionResponse } from '@/types/user.types'
+export interface AuthMeResponse {
+  id: string
+  email: string
+  name: string
+  jmbag: string | null
+  role: UserRole
+  isOnboarded: boolean
+  institutionId: string | null
+  institutionName: string | null
+}
 
 export type UserRole = 'Student' | 'Coordinator' | 'Admin'
-
-export interface AuthMeResponse {
-  isAuthenticated: boolean
-  sub?: string
-  email?: string
-  name?: string
-  role?: string
-  jmbag?: string
-  isOnboarded: boolean
-  institutions: UserInstitutionResponse[]
-}

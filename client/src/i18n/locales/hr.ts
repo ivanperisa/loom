@@ -7,7 +7,9 @@ export default {
     error: 'Došlo je do greške.',
     na: 'N/A',
     language: 'Jezik',
-    user: 'Korisnik'
+    user: 'Korisnik',
+    cancel: 'Odustani',
+    confirm: 'Potvrdi'
   },
   auth: {
     signInWithGoogle: 'Prijava putem Googlea'
@@ -19,68 +21,37 @@ export default {
   },
   home: {
     welcome: 'Dobrodošli, {name}',
-    noExchange: 'Nemate aktivnu razmjenu. Krenite ispod.',
-    startExchange: 'Postavi razmjenu',
+    noExchange: 'Nemate aktivnu razmjenu.',
+    startExchange: 'Pokreni novu razmjenu',
     institution: 'Matični fakultet',
     studyProgram: 'Studijski program',
-    studyProfile: 'Studijski profil'
+    studyProfile: 'Studijski profil',
+    viewExchange: 'Pregledaj razmjenu',
+    coordinatorDashboard: 'Koordinatorska ploča',
+    foreignInstitution: 'Strani fakultet',
+    foreignProgram: 'Strani program',
+    academicYear: 'Akademska godina',
+    semester: 'Semestar',
+    status: 'Status'
   },
   onboarding: {
     title: 'Postavljanje računa',
     steps: {
-      role: 'Uloga',
-      institutions: 'Institucije',
-      confirm: 'Potvrda'
-    },
-    role: {
-      title: 'Odaberite svoju ulogu',
-      student: 'Student',
-      coordinator: 'Koordinator',
-      coordinatorNote: 'Vaša uloga bit će potvrđena.'
-    },
-    institutions: {
-      title: 'Odaberite vaše institucije',
-      subtitle: 'Dodajte sve fakultete na kojima studirate.',
-      addToList: 'Dodaj u listu',
-      added: 'Dodane institucije',
-      empty: 'Niste dodali nijednu instituciju.',
-      minOne: 'Dodajte barem jednu instituciju za nastavak.',
-      duplicate: 'Ova kombinacija institucije i profila već je dodana.',
-      existingOption: 'Postojeća institucija',
-      newOption: 'Nova institucija',
-      searchPlaceholder: 'Pretraži institucije...',
-      selectProgram: 'Odaberi program',
-      selectProfile: 'Odaberi profil',
-      newProfileOption: '+ Novi profil',
-      newProfilePlaceholder: 'Naziv novog profila',
-      form: {
-        name: 'Naziv institucije',
-        country: 'Država',
-        city: 'Grad',
-        erasmusCode: 'Erasmus kod',
-        iscedCode: 'ISCED kod',
-        programName: 'Naziv programa',
-        profileName: 'Naziv profila',
-        level: 'Razina studijskog programa',
-        durationSemesters: 'Trajanje (semestri)'
-      }
-    },
-    confirm: {
-      title: 'Pregled podataka',
-      submit: 'Završi postavljanje',
-      role: 'Uloga',
       institution: 'Institucija',
-      program: 'Program',
-      profile: 'Profil'
+      jmbag: 'JMBAG'
     },
-    jmbag: 'JMBAG',
+    selectInstitution: 'Odaberite matični fakultet',
+    selectInstitutionPlaceholder: '— odaberite instituciju —',
+    jmbagLabel: 'Unesite JMBAG',
+    jmbagPlaceholder: '0036XXXXXX',
+    jmbagHint: 'JMBAG mora imati točno 10 znamenki.',
+    submit: 'Završi postavljanje',
     next: 'Sljedeći',
     back: 'Natrag',
-    noResults: 'Nije pronađeno.',
     errors: {
-      selectRole: 'Odaberite ulogu prije nastavka.',
-      institutionRequired: 'Odaberite instituciju ili unesite podatke za novu.',
-      programProfileRequired: 'Odaberite studijski program i profil ili unesite novi profil.'
+      institutionRequired: 'Odaberite instituciju prije nastavka.',
+      jmbagRequired: 'JMBAG je obavezan.',
+      jmbagInvalid: 'JMBAG mora sadržavati točno 10 znamenki.'
     }
   },
   errors: {
@@ -131,22 +102,102 @@ export default {
     submit: 'Predaj na pregled',
     academicYear: 'Akademska godina',
     semester: 'Semestar',
-    duration: 'Trajanje (mjeseci)',
     mentor: 'Mentor',
     foreignInstitution: 'Strani fakultet',
-    deleteConfirm: 'Jeste li sigurni da želite izbrisati ovu razmjenu?',
-    deleteSuccess: 'Razmjena izbrisana.',
-    submitConfirm: 'Jeste li sigurni da želite predati ovu razmjenu na pregled?',
-    retract: 'Povuci prijavu',
-    retractConfirm: 'Jeste li sigurni da želite povući razmjenu natrag u nacrt?',
-    selectInstitution: '— odaberi —'
+    selectInstitution: '— odaberi —',
+    studySemester: 'Semestar studija',
+    noCoordinator: 'Bez koordinatora',
+    tabs: {
+      learningAgreement: 'Ugovor o učenju',
+      recognition: 'Priznavanje',
+    },
+    status: {
+      waitingApproval: 'Čeka odobrenje koordinatora',
+    },
+    actions: {
+      submit: 'Predaj na pregled',
+      backToDraft: 'Vrati u nacrt',
+      approve: 'Odobri',
+      reject: 'Odbij',
+    },
+    coordinatorView: 'Koordinatorski pregled',
+    student: 'Student',
+  },
+  createExchange: {
+    title: 'Nova razmjena',
+    steps: {
+      program: 'Program i profil',
+      foreign: 'Strani program',
+      details: 'Detalji',
+      confirm: 'Potvrda'
+    },
+    selectProgram: 'Odaberite studijski program',
+    selectProgramPlaceholder: '— odaberite program —',
+    selectProfile: 'Odaberite profil',
+    selectProfilePlaceholder: '— odaberite profil —',
+    selectForeignProgram: 'Odaberite strani program',
+    selectCoordinator: 'Odaberite koordinatora',
+    selectCoordinatorPlaceholder: '— opcija —',
+    academicYearPlaceholder: '2025/2026',
+    studySemesterHint: 'Redni broj semestra (1–10)',
+    mentorPlaceholder: 'Ime i prezime mentora',
+    summary: 'Pregled odabira',
+    summaryProgram: 'Program',
+    summaryProfile: 'Profil',
+    summaryForeignProgram: 'Strani program',
+    summaryCoordinator: 'Koordinator',
+    summaryAcademicYear: 'Ak. godina',
+    summarySemesterType: 'Semestar',
+    summaryStudySemester: 'Semestar studija',
+    summaryMentor: 'Mentor',
+    submitButton: 'Kreiraj razmjenu',
+    errors: {
+      programRequired: 'Odaberite studijski program.',
+      profileRequired: 'Odaberite profil.',
+      foreignProgramRequired: 'Odaberite strani program.',
+      academicYearRequired: 'Unesite akademsku godinu.',
+      studySemesterRequired: 'Unesite semestar studija.'
+    }
   },
   exchangeStatus: {
     Draft: 'Nacrt',
     Submitted: 'Predano',
     Approved: 'Odobreno',
     Rejected: 'Odbijeno',
-    Completed: 'Završeno'
+  },
+  exchangeSemester: {
+    Winter: 'Zimski',
+    Summer: 'Ljetni',
+  },
+  slotMode: {
+    AtHome: 'Na matičnom fakultetu',
+    AtExchange: 'Na razmjeni',
+    AfterExchange: 'Nakon razmjene',
+  },
+  courseSlotCategory: {
+    Mandatory: 'Obavezni predmet',
+    CoreElective: 'Jezgreni predmet profila',
+    ProfileElective: 'Izborni predmet profila',
+    FreeElective: 'Izborni predmet',
+    Seminar: 'Seminar / Projekt',
+    ResearchSeminar: 'Istraživački seminar',
+    Transversal: 'Transverzalni predmet',
+    Thesis: 'Diplomski rad',
+  },
+  recognition: {
+    notApproved: 'Priznavanje je dostupno tek nakon odobrenja razmjene.',
+    noEntries: 'Nema stavki za priznavanje.',
+    actions: {
+      submit: 'Predaj na pregled',
+      approve: 'Odobri',
+      reject: 'Odbij',
+    },
+  },
+  recognitionStatus: {
+    Draft: 'Nacrt',
+    Submitted: 'Predano',
+    Approved: 'Odobreno',
+    Rejected: 'Odbijeno',
   },
   exchangeCourse: {
     add: 'Dodaj predmet',
@@ -256,6 +307,20 @@ export default {
     approved: 'odobreno',
     pending: 'na čekanju',
     rejected: 'odbijeno'
+  },
+  foreignCourses: {
+    dragHint: 'Povuci predmet na ćeliju označenu kao Na razmjeni',
+    addMapping: 'Dodaj mapiranje',
+    availableEcts: 'Dostupno ECTS',
+    awardedEcts: 'Dodijeljeno ECTS',
+    mappedCourses: 'Mapirani predmeti',
+    availableCourses: 'Dostupni predmeti',
+    allMapped: 'Svi predmeti su u potpunosti mapirani.',
+    noMapped: 'Još nema mapiranih predmeta.',
+  },
+  table: {
+    semester: 'Semestar',
+    clickToChange: 'Kliknite na ćeliju za promjenu statusa',
   },
   mappingBoard: {
     title: 'Tablica mapiranja',

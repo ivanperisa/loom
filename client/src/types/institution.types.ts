@@ -1,28 +1,43 @@
 export interface InstitutionResponse {
   id: string
   name: string
-  nameEn: string
-  country: string
+  nameEn: string | null
+  country: string | null
   city: string | null
   erasmusCode: string | null
-}
-
-export type StudyProgramLevel = 'Undergraduate' | 'Graduate' | 'Postgraduate'
-
-export interface StudyProgramResponse {
-  id: string
-  name: string
-  nameEn?: string
-  level: StudyProgramLevel
-  durationSemesters: number
-  iscedCode?: string
+  isHome: boolean
 }
 
 export interface StudyProfileResponse {
   id: string
   name: string
-  nameEn?: string
-  exchangeSemesters?: number
-  exchangeSemesterType?: string
-  exchangeSpots?: number
+  nameEn: string | null
+}
+
+export interface StudyProgramResponse {
+  id: string
+  name: string
+  nameEn: string | null
+  level: string
+  durationSemesters: number
+  profiles: StudyProfileResponse[]
+}
+
+export interface ForeignProgramResponse {
+  id: string
+  name: string
+  nameEn: string | null
+  institutionId: string
+  institutionName: string
+}
+
+export interface ForeignCourseResponse {
+  id: string
+  code: string
+  nameEn: string
+  nameHr: string | null
+  ects: number
+  lecturesH: number | null
+  auditoryH: number | null
+  labH: number | null
 }

@@ -1,7 +1,5 @@
-using System.Security.Claims;
 using ExchangeMapper.API.Extensions;
 using ExchangeMapper.Application.Interfaces.Services;
-using ExchangeMapper.Application.Mappers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +12,7 @@ namespace ExchangeMapper.API.Controllers;
 [Route("[controller]")]
 public class AuthController(
     IConfiguration configuration,
-    IUserSyncService userSyncService) : ApiController
+    IUserService userService) : ApiController
 {
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
@@ -39,21 +37,19 @@ public class AuthController(
     [HttpGet("me")]
     public async Task<IActionResult> Me(CancellationToken ct)
     {
-        var sub = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-               ?? User.FindFirst("sub")?.Value;
-
-        if (sub is null)
+        var userId = TryGetCurrentUserId();
+        if (userId is null)
         {
-            return Ok(UserMapper.ToUnauthenticatedResponse());
+            return Ok(new { IsAuthenticated = false });
         }
 
-        var user = await userSyncService.GetByExternalIdWithDetailsAsync(sub, ct);
-        if (user.IsError)
+        var result = await userService.GetCurrentUserAsync(userId.Value, ct);
+        if (result.IsError)
         {
-            return Ok(UserMapper.ToUnauthenticatedResponse());
+            return Ok(new { IsAuthenticated = false });
         }
 
-        return Ok(user.Value.ToAuthMeResponse());
+        return Ok(result.Value);
     }
 
     [Authorize]

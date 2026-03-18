@@ -6,44 +6,40 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: () => import('@/views/LandingView.vue')
+      component: () => import('@/views/LandingView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/callback',
+      component: () => import('@/views/CallbackView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/onboarding',
+      component: () => import('@/views/OnboardingView.vue'),
+      meta: { requiresAuth: true, requiresOnboarding: false }
     },
     {
       path: '/home',
       name: 'home',
       component: () => import('@/views/HomeView.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/settings',
-      name: 'settings',
-      component: () => import('@/views/SettingsView.vue'),
       meta: { requiresAuth: true, requiresOnboarding: true }
     },
     {
       path: '/exchange',
-      name: 'exchange',
+      component: () => import('@/views/ExchangeRedirectView.vue'),
+      meta: { requiresAuth: true, requiresOnboarding: true }
+    },
+    {
+      path: '/exchange/:exchangeId',
       component: () => import('@/views/ExchangeView.vue'),
       meta: { requiresAuth: true, requiresOnboarding: true }
     },
     {
-      path: '/exchange/mapping',
-      name: 'exchange-mapping',
-      component: () => import('@/views/MappingBoardView.vue'),
+      path: '/coordinator',
+      component: () => import('@/views/CoordinatorDashboard.vue'),
       meta: { requiresAuth: true, requiresOnboarding: true }
-    },
-    {
-      path: '/history',
-      name: 'history',
-      component: () => import('@/views/HistoryView.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true }
-    },
-    {
-      path: '/onboarding',
-      component: () => import('@/views/OnboardingView.vue'),
-      meta: { requiresAuth: true }
-    },
-    { path: '/callback', component: () => import('@/views/CallbackView.vue') }
+    }
   ]
 })
 
@@ -53,10 +49,6 @@ router.beforeEach(async (to) => {
 
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
     return '/'
-  }
-
-  if (authStore.isLoggedIn && !authStore.isOnboarded && to.path !== '/onboarding') {
-    return '/onboarding'
   }
 
   if (to.meta.requiresOnboarding && !authStore.isOnboarded) {

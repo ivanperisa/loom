@@ -1,257 +1,99 @@
+using ExchangeMapper.Application.DTOs.CourseSlot;
 using ExchangeMapper.Application.DTOs.Exchange;
 using ExchangeMapper.Application.Interfaces.Services;
-using ExchangeMapper.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExchangeMapper.API.Controllers;
 
-[Route("exchange")]
+[Route("api/exchanges")]
 [Authorize]
-public class ExchangeController(
-    IExchangeService exchangeService,
-    IInstitutionService institutionService) : ApiController
+public class ExchangeController(IExchangeService exchangeService) : ApiController
 {
     [HttpPost]
-    public async Task<IActionResult> CreateExchange([FromBody] CreateExchangeRequest dto, CancellationToken ct)
+    public async Task<IActionResult> CreateExchange(
+        [FromBody] CreateExchangeRequest request,
+        CancellationToken ct)
     {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.CreateExchangeAsync(userId.Value, dto, ct);
-        return Match(result, exchange => CreatedAtAction(nameof(GetMyExchange), exchange));
+        var result = await exchangeService.CreateExchangeAsync(GetCurrentUserId(), request, ct);
+        return Match(result, value => CreatedAtAction(nameof(GetExchange), new { exchangeId = value.Id }, value));
     }
 
-    [HttpGet("my")]
+    [HttpGet("{exchangeId:guid}")]
+    public async Task<IActionResult> GetExchange(Guid exchangeId, CancellationToken ct)
+    {
+        var result = await exchangeService.GetExchangeAsync(exchangeId, GetCurrentUserId(), ct);
+        return Match(result, Ok);
+    }
+
+    [HttpGet("mine")]
     public async Task<IActionResult> GetMyExchange(CancellationToken ct)
     {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.GetMyExchangeAsync(userId.Value, ct);
+        var result = await exchangeService.GetMyExchangeSummaryAsync(GetCurrentUserId(), ct);
         return Match(result, Ok);
     }
 
-    [HttpDelete("{exchangeId:guid}")]
-    public async Task<IActionResult> DeleteExchange(Guid exchangeId, CancellationToken ct)
+    [HttpPatch("{exchangeId:guid}/status")]
+    public async Task<IActionResult> UpdateStatus(
+        Guid exchangeId,
+        [FromBody] UpdateExchangeStatusRequest request,
+        CancellationToken ct)
     {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.DeleteExchangeAsync(userId.Value, exchangeId, ct);
-        return Match(result, _ => NoContent());
-    }
-
-    [HttpPost("{exchangeId:guid}/courses")]
-    public async Task<IActionResult> AddCourse(Guid exchangeId, [FromBody] UpsertExchangeCourseRequest dto, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.AddCourseAsync(userId.Value, exchangeId, dto, ct);
+        var result = await exchangeService.UpdateExchangeStatusAsync(exchangeId, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
 
-    [HttpPut("{exchangeId:guid}/courses/{courseId:guid}")]
-    public async Task<IActionResult> UpdateCourse(Guid exchangeId, Guid courseId, [FromBody] UpsertExchangeCourseRequest dto, CancellationToken ct)
+    [HttpGet("{exchangeId:guid}/learning-agreement")]
+    public async Task<IActionResult> GetLearningAgreement(Guid exchangeId, CancellationToken ct)
     {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.UpdateCourseAsync(userId.Value, exchangeId, courseId, dto, ct);
+        var result = await exchangeService.GetLearningAgreementAsync(exchangeId, GetCurrentUserId(), ct);
         return Match(result, Ok);
     }
 
-    [HttpDelete("{exchangeId:guid}/courses/{courseId:guid}")]
-    public async Task<IActionResult> RemoveCourse(Guid exchangeId, Guid courseId, CancellationToken ct)
+    [HttpPost("{exchangeId:guid}/learning-agreement/slot-mode")]
+    public async Task<IActionResult> SetSlotMode(
+        Guid exchangeId,
+        [FromBody] SetSlotModeRequest request,
+        CancellationToken ct)
     {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.RemoveCourseAsync(userId.Value, exchangeId, courseId, ct);
-        return Match(result, _ => NoContent());
-    }
-
-    [HttpPut("{exchangeId:guid}/courses/{courseId:guid}/grades")]
-    public async Task<IActionResult> UpdateGrades(Guid exchangeId, Guid courseId, [FromBody] UpdateGradesRequest dto, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.UpdateGradesAsync(userId.Value, exchangeId, courseId, dto, ct);
+        var result = await exchangeService.SetSlotModeAsync(exchangeId, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
 
-    [HttpPost("{exchangeId:guid}/courses/{courseId:guid}/mappings")]
-    public async Task<IActionResult> ProposeMapping(Guid exchangeId, Guid courseId, [FromBody] ProposeMappingRequest dto, CancellationToken ct)
+    [HttpPost("{exchangeId:guid}/learning-agreement/mappings")]
+    public async Task<IActionResult> AddSlotMapping(
+        Guid exchangeId,
+        [FromBody] AddSlotMappingRequest request,
+        CancellationToken ct)
     {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.ProposeMappingAsync(userId.Value, exchangeId, courseId, dto, ct);
+        var result = await exchangeService.AddSlotMappingAsync(exchangeId, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
 
-    [HttpPut("{exchangeId:guid}/courses/{courseId:guid}/mappings/{mappingId:guid}")]
-    [Authorize(Roles = Roles.Coordinator)]
-    public async Task<IActionResult> ReviewMapping(Guid exchangeId, Guid courseId, Guid mappingId, [FromBody] ReviewMappingRequest dto, CancellationToken ct)
+    [HttpDelete("{exchangeId:guid}/learning-agreement/mappings")]
+    public async Task<IActionResult> RemoveSlotMapping(
+        Guid exchangeId,
+        [FromBody] RemoveSlotMappingRequest request,
+        CancellationToken ct)
     {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.ReviewMappingAsync(userId.Value, exchangeId, courseId, mappingId, dto, ct);
+        var result = await exchangeService.RemoveSlotMappingAsync(exchangeId, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
 
-    [HttpDelete("{exchangeId:guid}/courses/{courseId:guid}/mappings/{mappingId:guid}")]
-    public async Task<IActionResult> DeleteMapping(Guid exchangeId, Guid courseId, Guid mappingId, CancellationToken ct)
+    [HttpDelete("{exchangeId:guid}/learning-agreement/slot-state")]
+    public async Task<IActionResult> RemoveSlotState(
+        Guid exchangeId,
+        [FromBody] RemoveSlotStateRequest request,
+        CancellationToken ct)
     {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.DeleteMappingAsync(userId.Value, exchangeId, courseId, mappingId, ct);
-        return Match(result, _ => NoContent());
-    }
-
-    [HttpGet("my/history")]
-    public async Task<IActionResult> GetMyHistory(CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.GetMyHistoryAsync(userId.Value, ct);
+        var result = await exchangeService.RemoveSlotStateAsync(exchangeId, GetCurrentUserId(), request.CourseSlotId, ct);
         return Match(result, Ok);
     }
-
-    [HttpGet("{exchangeId:guid}/history")]
-    [Authorize(Roles = Roles.Coordinator)]
-    public async Task<IActionResult> GetExchangeHistory(Guid exchangeId, CancellationToken ct)
-    {
-        var result = await exchangeService.GetExchangeHistoryAsync(exchangeId, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpGet("students")]
-    [Authorize(Roles = Roles.Coordinator)]
-    public async Task<IActionResult> GetStudentsWithExchange(CancellationToken ct)
-    {
-        var result = await exchangeService.GetStudentsWithExchangeAsync(ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPost("{exchangeId:guid}/retract")]
-    public async Task<IActionResult> Retract(Guid exchangeId, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.RetractAsync(userId.Value, exchangeId, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPost("{exchangeId:guid}/submit")]
-    public async Task<IActionResult> SubmitForReview(Guid exchangeId, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.SubmitForReviewAsync(userId.Value, exchangeId, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpGet("foreign-institutions")]
-    public async Task<IActionResult> GetForeignInstitutions(CancellationToken ct)
-    {
-        var result = await institutionService.GetForeignInstitutionsAsync(ct);
-        return Match(result, Ok);
-    }
-
-    [HttpGet("available-courses")]
-    public async Task<IActionResult> GetAvailableCourses([FromQuery] string? q, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await institutionService.GetAvailableCoursesAsync(userId.Value, q, ct);
-        return Match(result, Ok);
-    }
-
-    // --- Coordinator dashboard ---
 
     [HttpGet("coordinator/students")]
-    [Authorize(Roles = Roles.Coordinator)]
-    public async Task<IActionResult> GetCoordinatorStudents(CancellationToken ct)
+    public async Task<IActionResult> GetMyStudents(CancellationToken ct)
     {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.GetCoordinatorStudentsAsync(userId.Value, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpGet("{exchangeId:guid}/details")]
-    [Authorize(Roles = Roles.Coordinator)]
-    public async Task<IActionResult> GetExchangeDetails(Guid exchangeId, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.GetExchangeDetailsAsync(userId.Value, exchangeId, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPost("{exchangeId:guid}/approve")]
-    [Authorize(Roles = Roles.Coordinator)]
-    public async Task<IActionResult> ApproveExchange(Guid exchangeId, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.ApproveExchangeAsync(userId.Value, exchangeId, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPost("{exchangeId:guid}/reject")]
-    [Authorize(Roles = Roles.Coordinator)]
-    public async Task<IActionResult> RejectExchange(Guid exchangeId, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.RejectExchangeAsync(userId.Value, exchangeId, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPost("{exchangeId:guid}/return")]
-    [Authorize(Roles = Roles.Coordinator)]
-    public async Task<IActionResult> ReturnExchange(Guid exchangeId, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.ReturnExchangeAsync(userId.Value, exchangeId, ct);
-        return Match(result, Ok);
-    }
-
-    // --- Mapping board ---
-
-    [HttpGet("mapping/{exchangeId:guid}")]
-    public async Task<IActionResult> GetMappingBoard(Guid exchangeId, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.GetMappingBoardAsync(userId.Value, exchangeId, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPost("{exchangeId:guid}/mapping/propose")]
-    public async Task<IActionResult> ProposeBoardMapping(Guid exchangeId, [FromBody] ProposeBoardMappingRequest dto, CancellationToken ct)
-    {
-        var userId = GetCurrentUserId();
-        if (userId is null) return Unauthorized();
-
-        var result = await exchangeService.ProposeBoardMappingAsync(userId.Value, exchangeId, dto, ct);
+        var result = await exchangeService.GetMyStudentsExchangesAsync(GetCurrentUserId(), ct);
         return Match(result, Ok);
     }
 }

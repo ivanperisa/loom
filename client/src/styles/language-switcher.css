@@ -71,14 +71,15 @@
 
 /* Dark variant — for use on dark backgrounds (AppHeader, OnboardingView) */
 .language-switcher.variant-dark {
-  background: rgba(7, 28, 44, 0.85);
-  border-color: rgba(202, 228, 247, 0.2);
+  background: transparent;
+  border-color: transparent;
   box-shadow: none;
 }
 
 .language-switcher.variant-dark .dropdown-button {
   background: transparent;
-  border-color: rgba(202, 228, 247, 0.2);
+  border: 1px solid #1E4A6E;
+  border-radius: 0.7rem;
   color: #cae4f7;
 }
 

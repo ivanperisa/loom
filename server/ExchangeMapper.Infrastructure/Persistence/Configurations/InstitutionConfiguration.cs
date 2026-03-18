@@ -25,15 +25,5 @@ public class InstitutionConfiguration : IEntityTypeConfiguration<Institution>
             .WithOne(x => x.Institution)
             .HasForeignKey(x => x.InstitutionId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasMany(x => x.UserInstitutions)
-            .WithOne(x => x.Institution)
-            .HasForeignKey(x => x.InstitutionId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasMany(x => x.ForeignExchanges)
-            .WithOne(x => x.ForeignInstitution)
-            .HasForeignKey(x => x.ForeignInstitutionId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -7,7 +7,9 @@ export default {
     error: 'An error occurred.',
     na: 'N/A',
     language: 'Language',
-    user: 'User'
+    user: 'User',
+    cancel: 'Cancel',
+    confirm: 'Confirm'
   },
   auth: {
     signInWithGoogle: 'Sign in with Google'
@@ -19,68 +21,37 @@ export default {
   },
   home: {
     welcome: 'Welcome back, {name}',
-    noExchange: 'You have no active exchange. Get started below.',
-    startExchange: 'Start Exchange Setup',
+    noExchange: 'You have no active exchange.',
+    startExchange: 'Start New Exchange',
     institution: 'Home Institution',
     studyProgram: 'Study Program',
-    studyProfile: 'Study Profile'
+    studyProfile: 'Study Profile',
+    viewExchange: 'View Exchange',
+    coordinatorDashboard: 'Coordinator Dashboard',
+    foreignInstitution: 'Foreign Institution',
+    foreignProgram: 'Foreign Program',
+    academicYear: 'Academic Year',
+    semester: 'Semester',
+    status: 'Status'
   },
   onboarding: {
     title: 'Account Setup',
     steps: {
-      role: 'Role',
-      institutions: 'Institutions',
-      confirm: 'Confirm'
-    },
-    role: {
-      title: 'Choose your role',
-      student: 'Student',
-      coordinator: 'Coordinator',
-      coordinatorNote: 'Your role will be confirmed.'
-    },
-    institutions: {
-      title: 'Select your institutions',
-      subtitle: 'Add all universities where you study.',
-      addToList: 'Add to list',
-      added: 'Added institutions',
-      empty: 'You have not added any institutions.',
-      minOne: 'Add at least one institution to continue.',
-      duplicate: 'This institution and profile combination is already added.',
-      existingOption: 'Existing institution',
-      newOption: 'New institution',
-      searchPlaceholder: 'Search institutions...',
-      selectProgram: 'Select program',
-      selectProfile: 'Select profile',
-      newProfileOption: '+ New profile',
-      newProfilePlaceholder: 'New profile name',
-      form: {
-        name: 'Institution name',
-        country: 'Country',
-        city: 'City',
-        erasmusCode: 'Erasmus code',
-        iscedCode: 'ISCED code',
-        programName: 'Program name',
-        profileName: 'Profile name',
-        level: 'Study program level',
-        durationSemesters: 'Duration (semesters)'
-      }
-    },
-    confirm: {
-      title: 'Review your details',
-      submit: 'Complete setup',
-      role: 'Role',
       institution: 'Institution',
-      program: 'Program',
-      profile: 'Profile'
+      jmbag: 'JMBAG'
     },
-    jmbag: 'JMBAG',
+    selectInstitution: 'Select your home institution',
+    selectInstitutionPlaceholder: '— select institution —',
+    jmbagLabel: 'Enter your JMBAG',
+    jmbagPlaceholder: '0036XXXXXX',
+    jmbagHint: 'JMBAG must be exactly 10 digits.',
+    submit: 'Complete setup',
     next: 'Next',
     back: 'Back',
-    noResults: 'Not found.',
     errors: {
-      selectRole: 'Choose your role before continuing.',
-      institutionRequired: 'Select an institution or enter details for a new one.',
-      programProfileRequired: 'Select a study program and profile or add a new profile.'
+      institutionRequired: 'Please select an institution before continuing.',
+      jmbagRequired: 'JMBAG is required.',
+      jmbagInvalid: 'JMBAG must be exactly 10 digits.'
     }
   },
   errors: {
@@ -131,22 +102,102 @@ export default {
     submit: 'Submit for Review',
     academicYear: 'Academic Year',
     semester: 'Semester',
-    duration: 'Duration (months)',
     mentor: 'Mentor',
     foreignInstitution: 'Foreign Institution',
-    deleteConfirm: 'Are you sure you want to delete this exchange?',
-    deleteSuccess: 'Exchange deleted.',
-    submitConfirm: 'Are you sure you want to submit this exchange for review?',
-    retract: 'Retract',
-    retractConfirm: 'Are you sure you want to retract this exchange back to draft?',
-    selectInstitution: '— select —'
+    selectInstitution: '— select —',
+    studySemester: 'Study Semester',
+    noCoordinator: 'No coordinator',
+    tabs: {
+      learningAgreement: 'Learning Agreement',
+      recognition: 'Recognition',
+    },
+    status: {
+      waitingApproval: 'Waiting for coordinator approval',
+    },
+    actions: {
+      submit: 'Submit for Review',
+      backToDraft: 'Back to Draft',
+      approve: 'Approve',
+      reject: 'Reject',
+    },
+    coordinatorView: 'Coordinator view',
+    student: 'Student',
+  },
+  createExchange: {
+    title: 'New Exchange',
+    steps: {
+      program: 'Program & Profile',
+      foreign: 'Foreign Program',
+      details: 'Details',
+      confirm: 'Confirm'
+    },
+    selectProgram: 'Select study program',
+    selectProgramPlaceholder: '— select program —',
+    selectProfile: 'Select profile',
+    selectProfilePlaceholder: '— select profile —',
+    selectForeignProgram: 'Select foreign program',
+    selectCoordinator: 'Select coordinator',
+    selectCoordinatorPlaceholder: '— optional —',
+    academicYearPlaceholder: '2025/2026',
+    studySemesterHint: 'Semester number (1–10)',
+    mentorPlaceholder: 'Mentor full name',
+    summary: 'Review selections',
+    summaryProgram: 'Program',
+    summaryProfile: 'Profile',
+    summaryForeignProgram: 'Foreign Program',
+    summaryCoordinator: 'Coordinator',
+    summaryAcademicYear: 'Academic Year',
+    summarySemesterType: 'Semester',
+    summaryStudySemester: 'Study Semester',
+    summaryMentor: 'Mentor',
+    submitButton: 'Create Exchange',
+    errors: {
+      programRequired: 'Please select a study program.',
+      profileRequired: 'Please select a profile.',
+      foreignProgramRequired: 'Please select a foreign program.',
+      academicYearRequired: 'Please enter an academic year.',
+      studySemesterRequired: 'Please enter a study semester.'
+    }
   },
   exchangeStatus: {
     Draft: 'Draft',
     Submitted: 'Submitted',
     Approved: 'Approved',
     Rejected: 'Rejected',
-    Completed: 'Completed'
+  },
+  exchangeSemester: {
+    Winter: 'Winter',
+    Summer: 'Summer',
+  },
+  slotMode: {
+    AtHome: 'At home institution',
+    AtExchange: 'At exchange',
+    AfterExchange: 'After exchange',
+  },
+  courseSlotCategory: {
+    Mandatory: 'Mandatory',
+    CoreElective: 'Core profile elective',
+    ProfileElective: 'Profile elective',
+    FreeElective: 'Free elective',
+    Seminar: 'Seminar / Project',
+    ResearchSeminar: 'Research seminar',
+    Transversal: 'Transversal',
+    Thesis: 'Thesis',
+  },
+  recognition: {
+    notApproved: 'Recognition is available after the exchange is approved.',
+    noEntries: 'No entries for recognition.',
+    actions: {
+      submit: 'Submit for Review',
+      approve: 'Approve',
+      reject: 'Reject',
+    },
+  },
+  recognitionStatus: {
+    Draft: 'Draft',
+    Submitted: 'Submitted',
+    Approved: 'Approved',
+    Rejected: 'Rejected',
   },
   exchangeCourse: {
     add: 'Add Course',
@@ -256,6 +307,20 @@ export default {
     approved: 'approved',
     pending: 'pending',
     rejected: 'rejected'
+  },
+  foreignCourses: {
+    dragHint: 'Drag a course onto a cell marked as At exchange',
+    addMapping: 'Add Mapping',
+    availableEcts: 'Available ECTS',
+    awardedEcts: 'Awarded ECTS',
+    mappedCourses: 'Mapped courses',
+    availableCourses: 'Available courses',
+    allMapped: 'All courses have been fully mapped.',
+    noMapped: 'No courses mapped yet.',
+  },
+  table: {
+    semester: 'Semester',
+    clickToChange: 'Click a cell to change status',
   },
   mappingBoard: {
     title: 'Mapping Board',

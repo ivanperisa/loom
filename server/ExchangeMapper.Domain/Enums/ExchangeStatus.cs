@@ -5,6 +5,5 @@ public enum ExchangeStatus
     Draft,
     Submitted,
     Approved,
-    Rejected,
-    Completed
+    Rejected
 }

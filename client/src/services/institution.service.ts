@@ -1,13 +1,21 @@
-import { api } from '@/services/api'
-import type { InstitutionResponse, StudyProgramResponse, StudyProfileResponse } from '@/types/institution.types'
+import { api } from './api'
+import type {
+  InstitutionResponse,
+  StudyProgramResponse,
+  ForeignProgramResponse,
+  ForeignCourseResponse,
+} from '@/types/institution.types'
+import type { AuthMeResponse } from '@/types/auth.types'
 
 export const institutionService = {
   getHomeInstitutions: () =>
-    api.get<InstitutionResponse[]>('/institutions'),
-
-  getProgramsByInstitution: (institutionId: string) =>
-    api.get<StudyProgramResponse[]>(`/institutions/${institutionId}/programs`),
-
-  getProfilesByProgram: (institutionId: string, programId: string) =>
-    api.get<StudyProfileResponse[]>(`/institutions/${institutionId}/programs/${programId}/profiles`)
+    api.get<InstitutionResponse[]>('/api/institutions/home'),
+  getStudyPrograms: () =>
+    api.get<StudyProgramResponse[]>('/api/institutions/study-programs'),
+  getForeignPrograms: () =>
+    api.get<ForeignProgramResponse[]>('/api/institutions/foreign-programs'),
+  getForeignCourses: (foreignProgramId: string) =>
+    api.get<ForeignCourseResponse[]>(`/api/institutions/foreign-programs/${foreignProgramId}/courses`),
+  getCoordinators: () =>
+    api.get<AuthMeResponse[]>('/api/institutions/coordinators'),
 }

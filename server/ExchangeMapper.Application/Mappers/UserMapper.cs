@@ -5,23 +5,14 @@ namespace ExchangeMapper.Application.Mappers;
 
 public static class UserMapper
 {
-    public static AuthMeResponse ToAuthMeResponse(this User user) => new()
-    {
-        IsAuthenticated = true,
-        Sub = user.ExternalId,
-        Email = user.Email,
-        Name = user.Name,
-        Role = user.Role.ToString(),
-        Jmbag = user.Jmbag,
-        IsOnboarded = user.IsOnboarded,
-        Institutions = user.UserInstitutions
-            .OrderBy(ui => ui.CreatedAt)
-            .Select(ui => ui.ToResponse())
-            .ToList()
-    };
-
-    public static AuthMeResponse ToUnauthenticatedResponse() => new()
-    {
-        IsAuthenticated = false
-    };
+    public static AuthMeResponse ToAuthMeResponse(this User user) => new(
+        user.Id,
+        user.Email,
+        user.Name,
+        user.Jmbag,
+        user.Role.ToString(),
+        user.IsOnboarded,
+        user.InstitutionId,
+        user.Institution?.Name
+    );
 }

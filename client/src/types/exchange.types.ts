@@ -1,180 +1,107 @@
-import type { InstitutionResponse } from './institution.types'
+import type { StudyProfileResponse, ForeignProgramResponse } from './institution.types'
+
+export type ExchangeStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected'
+export type ExchangeSemester = 'Winter' | 'Summer'
+export type SlotMode = 'AtHome' | 'AtExchange' | 'AfterExchange'
+export type CourseSlotCategory =
+  | 'Mandatory'
+  | 'CoreElective'
+  | 'ProfileElective'
+  | 'FreeElective'
+  | 'Seminar'
+  | 'ResearchSeminar'
+  | 'Transversal'
+  | 'Thesis'
+
+export interface CreateExchangeRequest {
+  studyProfileId: string
+  foreignProgramId: string
+  coordinatorId: string | null
+  mentor: string | null
+  academicYear: string
+  semesterType: ExchangeSemester
+  studySemester: number
+}
 
 export interface ExchangeResponse {
   id: string
-  academicYear: string
-  semester: ExchangeSemester
-  durationMonths?: number
-  mentor?: string
-  status: ExchangeStatus
-  foreignInstitution: InstitutionResponse
-  courses: ExchangeCourseResponse[]
-}
-
-export interface ExchangeCourseResponse {
-  id: string
-  code?: string
-  name: string
-  nameEn: string
-  ects?: number
-  status: ExchangeCourseStatus
-  lecturesHours?: number
-  auditoryHours?: number
-  labHours?: number
-  originalGrade?: string
-  ectsGrade?: string
-  examDate?: string
-  mappings: CourseMappingResponse[]
-}
-
-export interface CourseMappingResponse {
-  id: string
-  courseId: string
-  courseName: string
-  courseCode?: string
-  awardedEcts?: number
-  convertedGrade?: string
-  status: MappingStatus
-  coordinatorNote?: string
-}
-
-export interface MappingHistoryResponse {
-  id: string
-  changedByName: string
-  createdAt: string
-  exchangeCourseName: string
-  exchangeCourseCode?: string
-  snapshot: MappingSnapshotResponse
-}
-
-export interface StudentExchangeSummaryResponse {
-  exchangeId: string
   studentId: string
   studentName: string
-  studentEmail: string
-  studentJmbag?: string
+  studyProfile: StudyProfileResponse
+  foreignProgram: ForeignProgramResponse
+  coordinatorId: string | null
+  coordinatorName: string | null
+  mentor: string | null
   academicYear: string
-  semester: ExchangeSemester
+  semesterType: ExchangeSemester
+  studySemester: number
   status: ExchangeStatus
-  foreignInstitutionName: string
+  createdAt: string
+  updatedAt: string
 }
 
-export interface MappingSnapshotResponse {
-  courseId: string
-  courseName: string
-  courseCode?: string
-  awardedEcts?: number
-  convertedGrade?: string
-  status: MappingStatus
-  coordinatorNote?: string
-}
-
-export interface CreateExchangeRequest {
-  foreignInstitutionId: string
-  academicYear: string
-  semester: ExchangeSemester
-  durationMonths?: number
-  mentor?: string
-}
-
-export interface UpsertExchangeCourseRequest {
-  code?: string
-  name: string
-  nameEn: string
-  ects?: number
-  status: ExchangeCourseStatus
-  lecturesHours?: number
-  auditoryHours?: number
-  labHours?: number
-}
-
-export interface UpdateGradesRequest {
-  originalGrade?: string
-  ectsGrade?: string
-  examDate?: string
-}
-
-export interface ProposeMappingRequest {
-  mappings: { courseId: string; awardedEcts?: number }[]
-}
-
-export interface ReviewMappingRequest {
-  status: 'Approved' | 'Rejected'
-  coordinatorNote?: string
-  awardedEcts?: number
-  convertedGrade?: string
-}
-
-export type ExchangeStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected' | 'Completed'
-export type ExchangeSemester = 'Winter' | 'Summer'
-export type ExchangeCourseStatus = 'OriginallyEnrolled' | 'Additional'
-export type MappingStatus = 'Pending' | 'Approved' | 'Rejected'
-
-// Coordinator dashboard
-export interface CoordinatorStudentSummaryResponse {
-  exchangeId: string
+export interface ExchangeSummaryResponse {
+  id: string
   studentName: string
-  studentEmail: string
-  studentJmbag?: string
-  academicYear: string
-  semester: ExchangeSemester
-  status: ExchangeStatus
+  studentJmbag: string | null
   foreignInstitutionName: string
-  foreignInstitutionCountry?: string
-  totalCourses: number
-  pendingMappings: number
-  approvedMappings: number
+  foreignProgramName: string
+  studyProfileName: string
+  academicYear: string
+  semesterType: ExchangeSemester
+  status: ExchangeStatus
 }
 
-// Mapping board
-export interface MappingBoardResponse {
-  ferCourseGroups: FerCourseGroupResponse[]
-  exchangeCourses: ExchangeCourseWithMappingsResponse[]
-}
-
-export interface FerCourseGroupResponse {
-  type: string
-  courses: FerCourseResponse[]
-}
-
-export interface FerCourseResponse {
+export interface CourseSlotResponse {
   id: string
-  code?: string
-  name: string
-  nameEn: string
+  semester: number
+  colStart: number
   ects: number
-  type: string
+  category: CourseSlotCategory
+  courseCode: string | null
+  courseName: string
+  courseNameEn: string | null
+  color: string
 }
 
-export interface ExchangeCourseWithMappingsResponse {
+export interface SlotMappingResponse {
   id: string
-  code?: string
-  name: string
-  nameEn: string
-  ects?: number
-  status: ExchangeCourseStatus
-  mappings: MappingRowResponse[]
+  foreignCourseId: string
+  foreignCourseCode: string
+  foreignCourseNameEn: string
+  foreignCourseNameHr: string | null
+  awardedEcts: number
 }
 
-export interface MappingRowResponse {
+export interface SlotStateResponse {
   id: string
-  ferCourseId: string
-  ferCourseName: string
-  ferCourseCode?: string
-  awardedEcts?: number
-  convertedGrade?: string
-  status: MappingStatus
-  coordinatorNote?: string
+  courseSlotId: string
+  mode: SlotMode
+  mappings: SlotMappingResponse[]
 }
 
-export interface ProposeBoardMappingRequest {
-  courses: {
-    exchangeCourseId: string
-    mappings: {
-      ferCourseId: string
-      awardedEcts?: number
-      convertedGrade?: string
-      coordinatorNote?: string
-    }[]
-  }[]
+export interface LearningAgreementResponse {
+  exchangeId: string
+  status: ExchangeStatus
+  slots: CourseSlotResponse[]
+  slotStates: SlotStateResponse[]
+}
+
+export interface SetSlotModeRequest {
+  courseSlotId: string
+  mode: SlotMode
+}
+
+export interface AddSlotMappingRequest {
+  courseSlotId: string
+  foreignCourseId: string
+  awardedEcts: number
+}
+
+export interface RemoveSlotMappingRequest {
+  slotMappingId: string
+}
+
+export interface UpdateExchangeStatusRequest {
+  status: ExchangeStatus
 }

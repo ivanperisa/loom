@@ -1,111 +1,138 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { i18n } from '@/i18n/index'
 import { exchangeService } from '@/services/exchange.service'
 import type {
+  ExchangeSummaryResponse,
   ExchangeResponse,
-  ExchangeCourseResponse,
+  LearningAgreementResponse,
   CreateExchangeRequest,
-  UpsertExchangeCourseRequest,
-  UpdateGradesRequest,
-  ProposeMappingRequest
+  SetSlotModeRequest,
+  AddSlotMappingRequest,
+  RemoveSlotMappingRequest,
+  UpdateExchangeStatusRequest,
 } from '@/types/exchange.types'
+import type { ForeignCourseResponse } from '@/types/institution.types'
 
 export const useExchangeStore = defineStore('exchange', () => {
+  const summary = ref<ExchangeSummaryResponse | null>(null)
   const exchange = ref<ExchangeResponse | null>(null)
+  const learningAgreement = ref<LearningAgreementResponse | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const draggingCourse = ref<ForeignCourseResponse | null>(null)
 
-  async function fetchMyExchange() {
+  function startDrag(course: ForeignCourseResponse) {
+    draggingCourse.value = course
+  }
+
+  function endDrag() {
+    draggingCourse.value = null
+  }
+
+  async function fetchMySummary() {
     loading.value = true
     error.value = null
     try {
-      const res = await exchangeService.getMyExchange()
-      exchange.value = res.data
-    } catch (e: any) {
-      if (e.response?.status === 404) exchange.value = null
-      else error.value = e.response?.data?.title ?? i18n.global.t('common.error')
+      const res = await exchangeService.getMine()
+      summary.value = res.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri dohvatu razmjene.'
     } finally {
       loading.value = false
     }
   }
 
-  async function createExchange(data: CreateExchangeRequest) {
-    const res = await exchangeService.createExchange(data)
-    exchange.value = res.data
-  }
-
-  async function deleteExchange(exchangeId: string) {
-    await exchangeService.deleteExchange(exchangeId)
-    exchange.value = null
-  }
-
-  async function addCourse(exchangeId: string, data: UpsertExchangeCourseRequest) {
-    const res = await exchangeService.addCourse(exchangeId, data)
-    exchange.value?.courses.push(res.data)
-  }
-
-  async function updateCourse(exchangeId: string, courseId: string, data: UpsertExchangeCourseRequest) {
-    const res = await exchangeService.updateCourse(exchangeId, courseId, data)
-    if (exchange.value) {
-      const idx = exchange.value.courses.findIndex(c => c.id === courseId)
-      if (idx !== -1) exchange.value.courses[idx] = res.data
+  async function fetchExchange(exchangeId: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await exchangeService.getById(exchangeId)
+      exchange.value = res.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri dohvatu razmjene.'
+    } finally {
+      loading.value = false
     }
   }
 
-  async function removeCourse(exchangeId: string, courseId: string) {
-    await exchangeService.removeCourse(exchangeId, courseId)
-    if (exchange.value) {
-      exchange.value.courses = exchange.value.courses.filter(c => c.id !== courseId)
+  async function createExchange(request: CreateExchangeRequest) {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await exchangeService.create(request)
+      exchange.value = res.data
+      return res.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri kreiranju razmjene.'
+      return null
+    } finally {
+      loading.value = false
     }
   }
 
-  async function updateGrades(exchangeId: string, courseId: string, data: UpdateGradesRequest) {
-    const res = await exchangeService.updateGrades(exchangeId, courseId, data)
-    if (exchange.value) {
-      const idx = exchange.value.courses.findIndex(c => c.id === courseId)
-      if (idx !== -1) exchange.value.courses[idx] = res.data
+  async function fetchLearningAgreement(exchangeId: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await exchangeService.getLearningAgreement(exchangeId)
+      learningAgreement.value = res.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri dohvatu learning agreementa.'
+    } finally {
+      loading.value = false
     }
   }
 
-  async function proposeMapping(exchangeId: string, courseId: string, data: ProposeMappingRequest) {
-    const res = await exchangeService.proposeMapping(exchangeId, courseId, data)
-    if (exchange.value) {
-      const idx = exchange.value.courses.findIndex(c => c.id === courseId)
-      if (idx !== -1) exchange.value.courses[idx] = res.data
+  async function setSlotMode(exchangeId: string, request: SetSlotModeRequest) {
+    try {
+      const res = await exchangeService.setSlotMode(exchangeId, request)
+      learningAgreement.value = res.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri postavljanju stanja ćelije.'
     }
   }
 
-  async function retract(exchangeId: string) {
-    const res = await exchangeService.retract(exchangeId)
-    exchange.value = res.data
+  async function addSlotMapping(exchangeId: string, request: AddSlotMappingRequest) {
+    try {
+      const res = await exchangeService.addSlotMapping(exchangeId, request)
+      learningAgreement.value = res.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri dodavanju mapiranja.'
+    }
   }
 
-  async function submitForReview(exchangeId: string) {
-    const res = await exchangeService.submitForReview(exchangeId)
-    exchange.value = res.data
+  async function removeSlotMapping(exchangeId: string, request: RemoveSlotMappingRequest) {
+    try {
+      const res = await exchangeService.removeSlotMapping(exchangeId, request)
+      learningAgreement.value = res.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri uklanjanju mapiranja.'
+    }
   }
 
-  function updateCourseById(course: ExchangeCourseResponse) {
-    if (!exchange.value) return
-    const idx = exchange.value.courses.findIndex(c => c.id === course.id)
-    if (idx !== -1) exchange.value.courses[idx] = course
+  async function removeSlotState(exchangeId: string, courseSlotId: string) {
+    try {
+      const res = await exchangeService.removeSlotState(exchangeId, courseSlotId)
+      learningAgreement.value = res.data
+    } catch {
+      error.value = 'Greška pri uklanjanju stanja.'
+    }
+  }
+
+  async function updateStatus(exchangeId: string, request: UpdateExchangeStatusRequest) {
+    try {
+      const res = await exchangeService.updateStatus(exchangeId, request)
+      exchange.value = res.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri promjeni statusa.'
+    }
   }
 
   return {
-    exchange,
-    loading,
-    error,
-    fetchMyExchange,
-    createExchange,
-    deleteExchange,
-    addCourse,
-    updateCourse,
-    removeCourse,
-    updateGrades,
-    proposeMapping,
-    retract,
-    submitForReview,
-    updateCourseById
+    summary, exchange, learningAgreement, loading, error,
+    draggingCourse, startDrag, endDrag,
+    fetchMySummary, fetchExchange, createExchange,
+    fetchLearningAgreement, setSlotMode, addSlotMapping,
+    removeSlotMapping, removeSlotState, updateStatus,
   }
 })

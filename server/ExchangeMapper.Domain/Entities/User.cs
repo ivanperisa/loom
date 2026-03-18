@@ -12,7 +12,8 @@ public class User : EntityBase
     public bool IsOnboarded { get; set; }
     public string? Jmbag { get; set; }
 
-    public ICollection<UserInstitution> UserInstitutions { get; set; } = [];
+    public Guid? InstitutionId { get; set; }
+    public Institution? Institution { get; set; }
+
     public ICollection<Exchange> StudentExchanges { get; set; } = [];
-    public ICollection<MappingHistory> MappingHistoryChanges { get; set; } = [];
 }

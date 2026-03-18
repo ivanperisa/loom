@@ -1,16 +1,12 @@
 using ErrorOr;
 using ExchangeMapper.Application.DTOs.Auth;
-using ExchangeMapper.Application.DTOs.Institution;
-using ExchangeMapper.Domain.Enums;
+using ExchangeMapper.Application.DTOs.User;
 
 namespace ExchangeMapper.Application.Interfaces.Services;
 
 public interface IUserService
 {
-    Task<ErrorOr<Success>> CompleteOnboardingAsync(Guid userId, OnboardingRequest request, CancellationToken ct = default);
-    Task<ErrorOr<Success>> AddInstitutionAsync(Guid userId, InstitutionEntryRequest request, UserRole role, CancellationToken ct = default);
-    Task<ErrorOr<Success>> UpdateInstitutionAsync(Guid userId, Guid userInstitutionId, InstitutionEntryRequest request, UserRole role, CancellationToken ct = default);
-    Task<ErrorOr<Success>> RemoveInstitutionAsync(Guid userId, Guid userInstitutionId, CancellationToken ct = default);
-    Task<ErrorOr<Success>> MakeCoordinatorAsync(Guid userId, CancellationToken ct = default);
-    Task<ErrorOr<Success>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> GetCurrentUserAsync(Guid userId, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> CompleteOnboardingAsync(Guid userId, CompleteOnboardingRequest request, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> MakeCoordinatorAsync(Guid adminId, Guid targetUserId, CancellationToken ct = default);
 }

@@ -1,10 +1,8 @@
 using ExchangeMapper.API.Middleware;
 using ExchangeMapper.Application.Interfaces;
-using ExchangeMapper.Application.Services;
-using ExchangeMapper.Application.Interfaces.Repositories;
 using ExchangeMapper.Application.Interfaces.Services;
+using ExchangeMapper.Application.Services;
 using ExchangeMapper.Infrastructure.Persistence;
-using ExchangeMapper.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -24,29 +22,16 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
 builder.Services.AddMemoryCache();
-
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-builder.Services.AddScoped<IExchangeRepository, ExchangeRepository>();
-builder.Services.AddScoped<IExchangeCourseRepository, ExchangeCourseRepository>();
-builder.Services.AddScoped<ICourseMappingRepository, CourseMappingRepository>();
-builder.Services.AddScoped<IMappingHistoryRepository, MappingHistoryRepository>();
-builder.Services.AddScoped<IInstitutionRepository, InstitutionRepository>();
-builder.Services.AddScoped<ICourseRepository, CourseRepository>();
-builder.Services.AddScoped<IStudyProgramRepository, StudyProgramRepository>();
-builder.Services.AddScoped<IStudyProfileRepository, StudyProfileRepository>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IUserInstitutionRepository, UserInstitutionRepository>();
 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<IUserService>(sp => sp.GetRequiredService<UserService>());
 builder.Services.AddScoped<IUserSyncService>(sp => sp.GetRequiredService<UserService>());
-builder.Services.AddScoped<InstitutionService>();
-builder.Services.AddScoped<IInstitutionService>(sp => sp.GetRequiredService<InstitutionService>());
-builder.Services.AddScoped<IInstitutionResolverService>(sp => sp.GetRequiredService<InstitutionService>());
+builder.Services.AddScoped<IInstitutionService, InstitutionService>();
 builder.Services.AddScoped<IExchangeService, ExchangeService>();
+builder.Services.AddScoped<IRecognitionService, RecognitionService>();
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")

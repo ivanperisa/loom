@@ -6,3 +6,29 @@
   --color-dark: #071C2C;
   --color-light: #CAE4F7;
 }
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E4A6E;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #218CD9;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1E4A6E transparent;
+}
+
+.page-container {
+  width: 90%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}

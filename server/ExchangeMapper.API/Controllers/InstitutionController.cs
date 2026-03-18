@@ -4,30 +4,42 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ExchangeMapper.API.Controllers;
 
-[AllowAnonymous]
-[ApiController]
-[Route("institutions")]
-public class InstitutionController(
-    IInstitutionService institutionService) : ApiController
+[Route("api/institutions")]
+[Authorize]
+public class InstitutionController(IInstitutionService institutionService) : ApiController
 {
-    [HttpGet]
+    [HttpGet("home")]
     public async Task<IActionResult> GetHomeInstitutions(CancellationToken ct)
     {
         var result = await institutionService.GetHomeInstitutionsAsync(ct);
         return Match(result, Ok);
     }
 
-    [HttpGet("{id:guid}/programs")]
-    public async Task<IActionResult> GetProgramsByInstitution(Guid id, CancellationToken ct)
+    [HttpGet("foreign-programs")]
+    public async Task<IActionResult> GetForeignPrograms(CancellationToken ct)
     {
-        var result = await institutionService.GetProgramsByInstitutionAsync(id, ct);
+        var result = await institutionService.GetForeignProgramsAsync(ct);
         return Match(result, Ok);
     }
 
-    [HttpGet("{id:guid}/programs/{programId:guid}/profiles")]
-    public async Task<IActionResult> GetProfilesByProgram(Guid id, Guid programId, CancellationToken ct)
+    [HttpGet("study-programs")]
+    public async Task<IActionResult> GetStudyPrograms(CancellationToken ct)
     {
-        var result = await institutionService.GetProfilesByProgramAsync(id, programId, ct);
+        var result = await institutionService.GetStudyProgramsAsync(ct);
+        return Match(result, Ok);
+    }
+
+    [HttpGet("foreign-programs/{foreignProgramId:guid}/courses")]
+    public async Task<IActionResult> GetForeignCourses(Guid foreignProgramId, CancellationToken ct)
+    {
+        var result = await institutionService.GetForeignCoursesAsync(foreignProgramId, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpGet("coordinators")]
+    public async Task<IActionResult> GetCoordinators(CancellationToken ct)
+    {
+        var result = await institutionService.GetCoordinatorsAsync(ct);
         return Match(result, Ok);
     }
 }

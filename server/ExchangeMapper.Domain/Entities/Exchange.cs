@@ -6,16 +6,24 @@ namespace ExchangeMapper.Domain.Entities;
 public class Exchange : AuditableEntity
 {
     public Guid StudentId { get; set; }
-    public Guid UserInstitutionId { get; set; }
-    public Guid ForeignInstitutionId { get; set; }
-    public string AcademicYear { get; set; } = string.Empty;
-    public ExchangeSemester Semester { get; set; }
-    public ExchangeStatus Status { get; set; }
-    public int? DurationMonths { get; set; }
-    public string? Mentor { get; set; }
-
     public User Student { get; set; } = null!;
-    public UserInstitution UserInstitution { get; set; } = null!;
-    public Institution ForeignInstitution { get; set; } = null!;
-    public ICollection<ExchangeCourse> ExchangeCourses { get; set; } = [];
+
+    public Guid StudyProfileId { get; set; }
+    public StudyProfile StudyProfile { get; set; } = null!;
+
+    public Guid ForeignProgramId { get; set; }
+    public ForeignProgram ForeignProgram { get; set; } = null!;
+
+    public Guid? CoordinatorId { get; set; }
+    public User? Coordinator { get; set; }
+
+    public string? Mentor { get; set; }
+    public string AcademicYear { get; set; } = null!;
+    public ExchangeSemester SemesterType { get; set; }
+    public int StudySemester { get; set; }
+    public ExchangeStatus Status { get; set; }
+
+    public ICollection<SlotState> SlotStates { get; set; } = null!;
+    public Recognition? Recognition { get; set; }
+    public ICollection<ExchangeSnapshot> Snapshots { get; set; } = null!;
 }

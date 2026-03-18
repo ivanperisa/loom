@@ -18,18 +18,19 @@ public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
             return;
         }
 
-        var sub = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        // Read the external ID (Google sub) before we replace it
+        var externalId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
             ?? context.User.FindFirst("sub")?.Value;
         var email = context.User.FindFirst(ClaimTypes.Email)?.Value
             ?? context.User.FindFirst("email")?.Value;
 
-        if (string.IsNullOrWhiteSpace(sub) || string.IsNullOrWhiteSpace(email))
+        if (string.IsNullOrWhiteSpace(externalId) || string.IsNullOrWhiteSpace(email))
         {
             await next(context);
             return;
         }
 
-        var cacheKey = $"usersync:{sub}";
+        var cacheKey = $"usersync:{externalId}";
 
         if (!cache.TryGetValue(cacheKey, out CachedUser? cached))
         {
@@ -37,7 +38,7 @@ public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
                 ?? context.User.FindFirst("name")?.Value
                 ?? email;
 
-            var syncResult = await userSyncService.SyncUserAsync(sub, email, name);
+            var syncResult = await userSyncService.SyncUserAsync(externalId, email, name);
             if (syncResult.IsError)
             {
                 await next(context);
@@ -48,17 +49,17 @@ public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
             cache.Set(cacheKey, cached, CacheDuration);
         }
 
-        if (context.User.Identity is not ClaimsIdentity identity)
-        {
-            await next(context);
-            return;
-        }
+        var identity = (ClaimsIdentity)context.User.Identity!;
 
-        if (!identity.HasClaim(c => c.Type == "userId"))
-            identity.AddClaim(new Claim("userId", cached!.Id.ToString()));
+        var existingNameId = identity.FindFirst(ClaimTypes.NameIdentifier);
+        if (existingNameId is not null)
+            identity.RemoveClaim(existingNameId);
+        identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, cached!.Id.ToString()));
 
-        if (!identity.HasClaim(c => c.Type == ClaimTypes.Role))
-            identity.AddClaim(new Claim(ClaimTypes.Role, cached!.Role.ToString()));
+        var existingRole = identity.FindFirst(ClaimTypes.Role);
+        if (existingRole is not null)
+            identity.RemoveClaim(existingRole);
+        identity.AddClaim(new Claim(ClaimTypes.Role, cached!.Role.ToString()));
 
         await next(context);
     }

@@ -10,8 +10,6 @@ public class StudyProgram : EntityBase
     public string NameEn { get; set; } = string.Empty;
     public StudyProgramLevel Level { get; set; }
     public int DurationSemesters { get; set; }
-    public string? IscedCode { get; set; }
-
     public Institution Institution { get; set; } = null!;
     public ICollection<StudyProfile> StudyProfiles { get; set; } = [];
 }

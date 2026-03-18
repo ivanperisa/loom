@@ -7,10 +7,11 @@ import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 const authStore = useAuthStore()
 const { t } = useI18n()
 
-const displayName = computed(() => authStore.name?.trim() || t('common.user'))
-const displayEmail = computed(() => authStore.email?.trim() || t('common.na'))
-const isCoordinator = computed(() => authStore.role === 'Coordinator')
-const exchangeLabel = computed(() => isCoordinator.value ? t('nav.students') : t('nav.exchange'))
+const displayName = computed(() => authStore.user?.name?.trim() || t('common.user'))
+const displayEmail = computed(() => authStore.user?.email?.trim() || t('common.na'))
+const isCoordinator = computed(() => authStore.user?.role === 'Coordinator')
+const isStudent = computed(() => authStore.user?.role === 'Student')
+
 const initials = computed(() => {
   const parts = displayName.value
     .split(' ')
@@ -18,16 +19,13 @@ const initials = computed(() => {
     .slice(0, 2)
     .map((value) => value[0]?.toUpperCase() ?? '')
     .join('')
-
   return parts || 'U'
 })
-
-
 </script>
 
 <template>
   <header class="sticky top-0 z-50 w-full border-b border-[#218CD9]/40 bg-[#071C2C]/95 backdrop-blur">
-    <div class="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
+    <div class="page-container flex h-16 items-center justify-between !py-0">
       <div class="flex items-center gap-8">
         <RouterLink to="/home" class="flex items-center gap-2">
           <svg viewBox="0 0 24 24" class="h-7 w-7 text-[#218CD9]" fill="none" aria-hidden="true">
@@ -39,9 +37,8 @@ const initials = computed(() => {
 
         <nav class="hidden items-center gap-5 md:flex">
           <RouterLink to="/home" class="nav-link">{{ t('nav.home') }}</RouterLink>
-          <RouterLink to="/settings" class="nav-link">{{ t('nav.settings') }}</RouterLink>
-          <RouterLink to="/exchange" class="nav-link">{{ exchangeLabel }}</RouterLink>
-          <RouterLink to="/history" class="nav-link">{{ t('nav.history') }}</RouterLink>
+          <RouterLink v-if="isStudent" to="/exchange" class="nav-link">{{ t('nav.exchange') }}</RouterLink>
+          <RouterLink v-if="isCoordinator" to="/coordinator" class="nav-link">{{ t('nav.students') }}</RouterLink>
         </nav>
       </div>
 
@@ -83,11 +80,9 @@ const initials = computed(() => {
   padding-bottom: 2px;
   transition: color 0.2s ease, border-color 0.2s ease;
 }
-
 .nav-link:hover {
   color: #8ac4ed;
 }
-
 .router-link-active {
   border-color: #218cd9;
   color: #218cd9;

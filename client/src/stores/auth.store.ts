@@ -5,40 +5,40 @@ import { userService } from '@/services/user.service'
 import { api } from '@/services/api'
 import router from '@/router'
 import type { AuthMeResponse, UserRole } from '@/types/auth.types'
-import type { InstitutionEntryDto, UserInstitutionResponse } from '@/types/user.types'
+import type { CompleteOnboardingRequest } from '@/types/onboarding.types'
 
 export const useAuthStore = defineStore('auth', () => {
   let initPromise: Promise<void> | null = null
   const user = ref<AuthMeResponse | null>(null)
-  const isOnboarded = ref<boolean>(false)
-  const role = ref<UserRole | null>(null)
-  const institutions = ref<UserInstitutionResponse[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
 
-  const isLoggedIn = computed(() => user.value?.isAuthenticated === true)
+  const isLoggedIn = computed(() => user.value !== null)
+  const isOnboarded = computed(() => user.value?.isOnboarded ?? false)
+  const role = computed<UserRole | null>(() => user.value?.role ?? null)
   const email = computed(() => user.value?.email ?? null)
   const name = computed(() => user.value?.name ?? null)
-  const sub = computed(() => user.value?.sub ?? null)
   const jmbag = computed(() => user.value?.jmbag ?? null)
 
   async function init(force = false) {
     if (initPromise && !force) return initPromise
 
     initPromise = (async () => {
+      loading.value = true
+      error.value = null
       try {
-        const response = await api.get<AuthMeResponse>('/auth/me')
+        const response = await api.get<AuthMeResponse | { isAuthenticated: false }>('/auth/me')
         const data = response.data
-        if (data.isAuthenticated) {
-          user.value = data
-          isOnboarded.value = data.isOnboarded
-          role.value = (data.role as UserRole) ?? null
-          institutions.value = data.institutions ?? []
+        if ('isAuthenticated' in data && data.isAuthenticated === false) {
+          reset()
           return
         }
+        user.value = data as AuthMeResponse
       } catch {
-        // keep defaults below
+        reset()
+      } finally {
+        loading.value = false
       }
-
-      reset()
     })()
 
     return initPromise
@@ -46,9 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function reset() {
     user.value = null
-    isOnboarded.value = false
-    role.value = null
-    institutions.value = []
+    error.value = null
     initPromise = null
   }
 
@@ -65,43 +63,34 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function addInstitution(request: InstitutionEntryDto): Promise<void> {
-    await userService.addInstitution(request)
-    await init(true)
-  }
-
-  async function updateInstitution(userInstitutionId: string, request: InstitutionEntryDto): Promise<void> {
-    await userService.updateInstitution(userInstitutionId, request)
-    await init(true)
-  }
-
-  async function removeInstitution(userInstitutionId: string): Promise<void> {
-    await userService.removeInstitution(userInstitutionId)
-    await init(true)
-  }
-
-  async function updateJmbag(value: string | null): Promise<void> {
-    await userService.updateProfile({ jmbag: value || null })
-    await init(true)
+  async function completeOnboarding(request: CompleteOnboardingRequest) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await userService.completeOnboarding(request)
+      user.value = response.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri završetku onboardinga.'
+      throw e
+    } finally {
+      loading.value = false
+    }
   }
 
   return {
     user,
+    loading,
+    error,
+    isLoggedIn,
     isOnboarded,
     role,
-    institutions,
     email,
     name,
-    sub,
     jmbag,
-    isLoggedIn,
     init,
     login,
     logout,
     reset,
-    addInstitution,
-    updateInstitution,
-    removeInstitution,
-    updateJmbag
+    completeOnboarding,
   }
 })

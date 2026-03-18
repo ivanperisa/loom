@@ -12,6 +12,5 @@ public class Institution : EntityBase
     public bool IsHome { get; set; }
 
     public ICollection<StudyProgram> StudyPrograms { get; set; } = [];
-    public ICollection<UserInstitution> UserInstitutions { get; set; } = [];
-    public ICollection<Exchange> ForeignExchanges { get; set; } = [];
+    public ICollection<ForeignProgram> ForeignPrograms { get; set; } = null!;
 }
