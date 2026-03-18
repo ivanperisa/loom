@@ -23,7 +23,7 @@ const isCoordinator = computed(
 const isApproved = computed(() => exchangeStore.exchange?.status === 'Approved')
 const isEditable = computed(() => {
   const status = exchangeStore.exchange?.status
-  return status === 'Draft' || status === 'Rejected'
+  return status === 'Draft'
 })
 
 const statusColorClass: Record<string, string> = {
