@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import { useExchangeStore } from '@/stores/exchange.store'
 import type { StudyProgramResponse, StudyProfileResponse, ForeignProgramResponse } from '@/types/institution.types'
-import type { AuthMeResponse } from '@/types/auth.types'
 import type { ExchangeSemester } from '@/types/exchange.types'
 
 const emit = defineEmits<{
@@ -50,17 +49,9 @@ const selectedForeignProgram = computed(() =>
 )
 
 // Step 3: Details
-const coordinators = ref<AuthMeResponse[]>([])
-const loadingCoordinators = ref(true)
-const selectedCoordinatorId = ref<string | null>(null)
 const academicYear = ref('')
 const semesterType = ref<ExchangeSemester>('Winter')
 const studySemester = ref<number>(1)
-const mentor = ref('')
-
-const selectedCoordinator = computed(() =>
-  coordinators.value.find(c => c.id === selectedCoordinatorId.value) ?? null
-)
 
 // Reset profile when program changes
 watch(selectedProgramId, () => {
@@ -68,10 +59,9 @@ watch(selectedProgramId, () => {
 })
 
 onMounted(async () => {
-  const [programsRes, foreignRes, coordRes] = await Promise.allSettled([
+  const [programsRes, foreignRes] = await Promise.allSettled([
     institutionService.getStudyPrograms(),
     institutionService.getForeignPrograms(),
-    institutionService.getCoordinators()
   ])
 
   if (programsRes.status === 'fulfilled') studyPrograms.value = programsRes.value.data
@@ -79,9 +69,6 @@ onMounted(async () => {
 
   if (foreignRes.status === 'fulfilled') foreignPrograms.value = foreignRes.value.data
   loadingForeignPrograms.value = false
-
-  if (coordRes.status === 'fulfilled') coordinators.value = coordRes.value.data
-  loadingCoordinators.value = false
 })
 
 function validateStep(): boolean {
@@ -136,8 +123,6 @@ async function submitExchange() {
     const result = await exchangeStore.createExchange({
       studyProfileId: selectedProfileId.value!,
       foreignProgramId: selectedForeignProgramId.value!,
-      coordinatorId: selectedCoordinatorId.value,
-      mentor: mentor.value.trim() || null,
       academicYear: academicYear.value.trim(),
       semesterType: semesterType.value,
       studySemester: studySemester.value!
@@ -278,25 +263,6 @@ const stepKeys = [
 
         <!-- Step 3: Details -->
         <div v-if="currentStep === 3" class="space-y-4">
-          <!-- Coordinator -->
-          <div>
-            <label class="mb-1 block text-sm font-medium text-[#8AC4ED]">{{ t('createExchange.selectCoordinator') }}</label>
-            <template v-if="loadingCoordinators">
-              <div class="h-10 animate-pulse rounded-lg bg-[#1E4A6E]"></div>
-            </template>
-            <template v-else>
-              <select
-                v-model="selectedCoordinatorId"
-                class="w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
-              >
-                <option :value="null">{{ t('exchange.noCoordinator') }}</option>
-                <option v-for="coord in coordinators" :key="coord.id" :value="coord.id">
-                  {{ coord.name }} ({{ coord.email }})
-                </option>
-              </select>
-            </template>
-          </div>
-
           <!-- Academic Year -->
           <div>
             <label class="mb-1 block text-sm font-medium text-[#8AC4ED]">{{ t('exchange.academicYear') }}</label>
@@ -353,16 +319,6 @@ const stepKeys = [
             </select>
           </div>
 
-          <!-- Mentor -->
-          <div>
-            <label class="mb-1 block text-sm font-medium text-[#8AC4ED]">{{ t('exchange.mentor') }}</label>
-            <input
-              v-model="mentor"
-              type="text"
-              :placeholder="t('createExchange.mentorPlaceholder')"
-              class="w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
-            />
-          </div>
         </div>
 
         <!-- Step 4: Confirm -->
@@ -385,10 +341,6 @@ const stepKeys = [
               </dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-[#5A8AAD]">{{ t('createExchange.summaryCoordinator') }}</dt>
-              <dd class="text-right font-medium text-[#CAE4F7]">{{ selectedCoordinator?.name ?? t('exchange.noCoordinator') }}</dd>
-            </div>
-            <div class="flex justify-between">
               <dt class="text-[#5A8AAD]">{{ t('createExchange.summaryAcademicYear') }}</dt>
               <dd class="font-medium text-[#CAE4F7]">{{ academicYear }}</dd>
             </div>
@@ -399,10 +351,6 @@ const stepKeys = [
             <div class="flex justify-between">
               <dt class="text-[#5A8AAD]">{{ t('createExchange.summaryStudySemester') }}</dt>
               <dd class="font-medium text-[#CAE4F7]">{{ studySemester }}</dd>
-            </div>
-            <div v-if="mentor.trim()" class="flex justify-between">
-              <dt class="text-[#5A8AAD]">{{ t('createExchange.summaryMentor') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ mentor }}</dd>
             </div>
           </dl>
         </div>

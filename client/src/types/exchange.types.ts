@@ -16,8 +16,6 @@ export type CourseSlotCategory =
 export interface CreateExchangeRequest {
   studyProfileId: string
   foreignProgramId: string
-  coordinatorId: string | null
-  mentor: string | null
   academicYear: string
   semesterType: ExchangeSemester
   studySemester: number
@@ -27,6 +25,8 @@ export interface ExchangeResponse {
   id: string
   studentId: string
   studentName: string
+  homeInstitutionName: string
+  studyProgramName: string
   studyProfile: StudyProfileResponse
   foreignProgram: ForeignProgramResponse
   coordinatorId: string | null
@@ -36,16 +36,20 @@ export interface ExchangeResponse {
   semesterType: ExchangeSemester
   studySemester: number
   status: ExchangeStatus
+  coordinatorMessage: string | null
   createdAt: string
   updatedAt: string
 }
 
 export interface ExchangeSummaryResponse {
   id: string
+  studentId: string
   studentName: string
   studentJmbag: string | null
   foreignInstitutionName: string
   foreignProgramName: string
+  homeInstitutionName: string
+  studyProgramName: string
   studyProfileName: string
   academicYear: string
   semesterType: ExchangeSemester
@@ -104,4 +108,9 @@ export interface RemoveSlotMappingRequest {
 
 export interface UpdateExchangeStatusRequest {
   status: ExchangeStatus
+  message?: string | null
+}
+
+export interface UpdateCoordinatorMessageRequest {
+  message: string | null
 }

@@ -25,7 +25,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.IsOnboarded).HasColumnName("is_onboarded").IsRequired();
         builder.Property(x => x.Jmbag).HasColumnName("jmbag").HasMaxLength(10);
         builder.HasIndex(x => x.Jmbag).IsUnique().HasFilter("jmbag IS NOT NULL");
+        builder.Property(x => x.Mentor).HasColumnName("mentor").HasMaxLength(255);
         builder.Property(x => x.InstitutionId).HasColumnName("institution_id");
+        builder.Property(x => x.CoordinatorId).HasColumnName("coordinator_id");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
 
         builder.HasIndex(x => x.ExternalId).IsUnique();
@@ -33,6 +35,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasOne(x => x.Institution)
             .WithMany()
             .HasForeignKey(x => x.InstitutionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.Coordinator)
+            .WithMany()
+            .HasForeignKey(x => x.CoordinatorId)
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasMany(x => x.StudentExchanges)

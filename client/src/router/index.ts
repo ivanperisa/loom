@@ -36,6 +36,11 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresOnboarding: true }
     },
     {
+      path: '/settings',
+      component: () => import('@/views/SettingsView.vue'),
+      meta: { requiresAuth: true, requiresOnboarding: true }
+    },
+    {
       path: '/coordinator',
       component: () => import('@/views/CoordinatorDashboard.vue'),
       meta: { requiresAuth: true, requiresOnboarding: true }

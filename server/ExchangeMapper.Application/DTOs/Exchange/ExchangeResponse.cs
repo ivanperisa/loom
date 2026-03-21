@@ -6,6 +6,8 @@ public record ExchangeResponse(
     Guid Id,
     Guid StudentId,
     string StudentName,
+    string HomeInstitutionName,
+    string StudyProgramName,
     StudyProfileResponse StudyProfile,
     ForeignProgramResponse ForeignProgram,
     Guid? CoordinatorId,
@@ -15,6 +17,7 @@ public record ExchangeResponse(
     string SemesterType,
     int StudySemester,
     string Status,
+    string? CoordinatorMessage,
     DateTime CreatedAt,
     DateTime UpdatedAt
 );

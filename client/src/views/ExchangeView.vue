@@ -26,6 +26,10 @@ const isEditable = computed(() => {
   return status === 'Draft'
 })
 
+const coordinatorMessage = ref('')
+const isEditingMessage = ref(false)
+const isSavingMessage = ref(false)
+
 const statusColorClass: Record<string, string> = {
   Draft: 'bg-slate-500/20 text-slate-300 border-slate-400',
   Submitted: 'bg-[#218CD9]/20 text-[#8AC4ED] border-[#218CD9]',
@@ -56,13 +60,37 @@ async function approveExchange() {
 }
 
 async function rejectExchange() {
-  await exchangeStore.updateStatus(exchangeId.value, { status: 'Rejected' })
+  await exchangeStore.updateStatus(exchangeId.value, {
+    status: 'Rejected',
+    message: coordinatorMessage.value.trim() || null,
+  })
   await exchangeStore.fetchExchange(exchangeId.value)
+  isEditingMessage.value = false
+}
+
+function startEditingMessage() {
+  coordinatorMessage.value = exchangeStore.exchange?.coordinatorMessage ?? ''
+  isEditingMessage.value = true
+}
+
+function cancelEditingMessage() {
+  coordinatorMessage.value = exchangeStore.exchange?.coordinatorMessage ?? ''
+  isEditingMessage.value = false
+}
+
+async function saveMessage() {
+  isSavingMessage.value = true
+  await exchangeStore.updateCoordinatorMessage(exchangeId.value, {
+    message: coordinatorMessage.value.trim() || null,
+  })
+  isEditingMessage.value = false
+  isSavingMessage.value = false
 }
 
 function switchToRecognition() {
   if (isApproved.value) activeTab.value = 'recognition'
 }
+
 </script>
 
 <template>
@@ -90,26 +118,57 @@ function switchToRecognition() {
           {{ t('exchange.coordinatorView') }}
         </div>
 
-        <!-- Metadata card -->
-        <div class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6">
-          <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 class="text-2xl font-bold text-[#CAE4F7]">
-                {{ exchangeStore.exchange.foreignProgram.institutionName }}
-              </h1>
-              <p class="mt-1 text-sm text-[#8AC4ED]">
-                {{ exchangeStore.exchange.foreignProgram.name }}
-              </p>
-            </div>
-            <span
-              class="rounded-full border px-3 py-0.5 text-xs font-semibold"
-              :class="statusColorClass[exchangeStore.exchange.status] ?? statusColorClass.Draft"
-            >
-              {{ t(`exchangeStatus.${exchangeStore.exchange.status}`) }}
-            </span>
+        <!-- Status badge -->
+        <div class="flex items-center justify-between">
+          <h1 class="text-2xl font-bold text-[#CAE4F7]">{{ t('exchange.title') }}</h1>
+          <span
+            class="rounded-full border px-3 py-0.5 text-xs font-semibold"
+            :class="statusColorClass[exchangeStore.exchange.status] ?? statusColorClass.Draft"
+          >
+            {{ t(`exchangeStatus.${exchangeStore.exchange.status}`) }}
+          </span>
+        </div>
+
+        <!-- Two-column: Foreign (left) + Home (right) -->
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <!-- Foreign institution -->
+          <div class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-5">
+            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-[#5A8AAD]">{{ t('exchange.foreignInstitution') }}</h3>
+            <dl class="space-y-2 text-sm">
+              <div>
+                <dt class="text-[#5A8AAD]">{{ t('exchange.institution') }}</dt>
+                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.foreignProgram.institutionName }}</dd>
+              </div>
+              <div>
+                <dt class="text-[#5A8AAD]">{{ t('exchange.program') }}</dt>
+                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.foreignProgram.name }}</dd>
+              </div>
+            </dl>
           </div>
 
-          <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+          <!-- Home institution -->
+          <div class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-5">
+            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-[#5A8AAD]">{{ t('exchange.homeInstitution') }}</h3>
+            <dl class="space-y-2 text-sm">
+              <div>
+                <dt class="text-[#5A8AAD]">{{ t('exchange.institution') }}</dt>
+                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.homeInstitutionName }}</dd>
+              </div>
+              <div>
+                <dt class="text-[#5A8AAD]">{{ t('exchange.program') }}</dt>
+                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.studyProgramName }}</dd>
+              </div>
+              <div>
+                <dt class="text-[#5A8AAD]">{{ t('exchange.profile') }}</dt>
+                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.studyProfile.name }}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <!-- Exchange details -->
+        <div class="mt-4 rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-5">
+          <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
             <div>
               <dt class="text-[#5A8AAD]">{{ t('exchange.academicYear') }}</dt>
               <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.academicYear }}</dd>
@@ -122,20 +181,88 @@ function switchToRecognition() {
               <dt class="text-[#5A8AAD]">{{ t('exchange.studySemester') }}</dt>
               <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.studySemester }}</dd>
             </div>
-            <!-- Coordinator sees student name; student sees coordinator name -->
+            <!-- Coordinator sees student name -->
             <div v-if="isCoordinator && exchangeStore.exchange.studentName">
               <dt class="text-[#5A8AAD]">{{ t('exchange.student') }}</dt>
               <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.studentName }}</dd>
             </div>
-            <div v-else-if="exchangeStore.exchange.coordinatorName">
-              <dt class="text-[#5A8AAD]">{{ t('coordinator.title') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.coordinatorName }}</dd>
+          </dl>
+
+          <!-- Mentor & Coordinator (read-only, managed in Settings) -->
+          <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 border-t border-[#1E4A6E] pt-4 text-sm sm:grid-cols-4">
+            <div>
+              <dt class="text-[#5A8AAD]">{{ t('exchange.coordinatorLabel') }}</dt>
+              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.coordinatorName ?? t('exchange.noCoordinator') }}</dd>
             </div>
-            <div v-if="exchangeStore.exchange.mentor">
+            <div>
               <dt class="text-[#5A8AAD]">{{ t('exchange.mentor') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.mentor }}</dd>
+              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.mentor ?? '-' }}</dd>
             </div>
           </dl>
+
+          <!-- Coordinator message (visible to student) -->
+          <div
+            v-if="!isCoordinator && exchangeStore.exchange.coordinatorMessage"
+            class="mt-4 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3"
+          >
+            <p class="text-xs font-semibold uppercase tracking-wide text-amber-400">{{ t('exchange.coordinatorMessage') }}</p>
+            <p class="mt-1 text-sm text-amber-200 whitespace-pre-wrap">{{ exchangeStore.exchange.coordinatorMessage }}</p>
+          </div>
+
+          <!-- Coordinator message (editable by coordinator) -->
+          <div v-if="isCoordinator" class="mt-4">
+            <template v-if="isEditingMessage">
+              <label class="block text-xs font-semibold uppercase tracking-wide text-[#8AC4ED] mb-1">{{ t('exchange.coordinatorMessage') }}</label>
+              <textarea
+                v-model="coordinatorMessage"
+                rows="3"
+                class="w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] placeholder-[#5A8AAD] focus:border-[#218CD9] focus:outline-none"
+                :placeholder="t('exchange.coordinatorMessagePlaceholder')"
+              ></textarea>
+              <div class="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  class="rounded-lg bg-[#218CD9] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C] disabled:opacity-60"
+                  :disabled="isSavingMessage"
+                  @click="saveMessage"
+                >
+                  {{ isSavingMessage ? t('common.loading') : t('exchange.saveMessage') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700/40"
+                  @click="cancelEditingMessage"
+                >
+                  {{ t('common.cancel') }}
+                </button>
+              </div>
+            </template>
+            <template v-else>
+              <div v-if="exchangeStore.exchange.coordinatorMessage" class="rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-amber-400">{{ t('exchange.coordinatorMessage') }}</p>
+                    <p class="mt-1 text-sm text-amber-200 whitespace-pre-wrap">{{ exchangeStore.exchange.coordinatorMessage }}</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="shrink-0 text-xs text-[#8AC4ED] hover:text-white transition"
+                    @click="startEditingMessage"
+                  >
+                    {{ t('exchange.editMessage') }}
+                  </button>
+                </div>
+              </div>
+              <button
+                v-else
+                type="button"
+                class="text-xs text-[#5A8AAD] hover:text-[#8AC4ED] transition"
+                @click="startEditingMessage"
+              >
+                + {{ t('exchange.addMessage') }}
+              </button>
+            </template>
+          </div>
 
           <!-- Student actions -->
           <div v-if="!isCoordinator" class="mt-4">

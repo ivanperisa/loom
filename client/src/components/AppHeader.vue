@@ -37,8 +37,8 @@ const initials = computed(() => {
 
         <nav class="hidden items-center gap-5 md:flex">
           <RouterLink to="/home" class="nav-link">{{ t('nav.home') }}</RouterLink>
-          <RouterLink v-if="isStudent" to="/exchange" class="nav-link">{{ t('nav.exchange') }}</RouterLink>
           <RouterLink v-if="isCoordinator" to="/coordinator" class="nav-link">{{ t('nav.students') }}</RouterLink>
+          <RouterLink to="/settings" class="nav-link">{{ t('nav.settings') }}</RouterLink>
         </nav>
       </div>
 

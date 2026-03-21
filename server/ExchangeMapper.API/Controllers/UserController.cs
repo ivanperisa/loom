@@ -24,4 +24,13 @@ public class UserController(IUserService userService) : ApiController
         var result = await userService.CompleteOnboardingAsync(GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
+
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateProfile(
+        [FromBody] UpdateProfileRequest request,
+        CancellationToken ct)
+    {
+        var result = await userService.UpdateProfileAsync(GetCurrentUserId(), request, ct);
+        return Match(result, Ok);
+    }
 }

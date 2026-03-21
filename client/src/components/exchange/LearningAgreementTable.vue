@@ -70,8 +70,28 @@ const dragOverSlotId = ref<string | null>(null)
 const pendingDrop = ref<{ slot: CourseSlotResponse; course: ForeignCourseResponse } | null>(null)
 const pendingEcts = ref<number>(0)
 
+function alreadyMappedEcts(courseId: string): number {
+  const la = props.learningAgreement
+  let sum = 0
+  for (const state of la.slotStates) {
+    for (const m of state.mappings) {
+      if (m.foreignCourseId === courseId) sum += m.awardedEcts
+    }
+  }
+  return sum
+}
+
+const remainingEcts = computed(() => {
+  if (!pendingDrop.value) return 0
+  const course = pendingDrop.value.course
+  return Math.round((course.ects - alreadyMappedEcts(course.id)) * 10) / 10
+})
+
 watch(() => pendingDrop.value, (val) => {
-  if (val) pendingEcts.value = val.course.ects
+  if (val) {
+    const remaining = val.course.ects - alreadyMappedEcts(val.course.id)
+    pendingEcts.value = Math.round(remaining * 10) / 10
+  }
 })
 
 function cellStyle(slot: CourseSlotResponse): Record<string, string> {
@@ -300,7 +320,7 @@ async function removeMapping(slotMappingId: string) {
           {{ pendingDrop.course.code }} — {{ pendingDrop.course.nameEn }}
         </div>
         <div style="color: #5A8AAD; font-size: 11px; margin-bottom: 16px;">
-          {{ t('foreignCourses.availableEcts') }}: {{ pendingDrop.course.ects }} ECTS
+          {{ t('foreignCourses.availableEcts') }}: {{ remainingEcts }} / {{ pendingDrop.course.ects }} ECTS
         </div>
         <label style="display: block; color: #CAE4F7; font-size: 12px; margin-bottom: 6px;">
           {{ t('foreignCourses.awardedEcts') }}
@@ -309,7 +329,7 @@ async function removeMapping(slotMappingId: string) {
           v-model.number="pendingEcts"
           type="number"
           :min="0.5"
-          :max="pendingDrop.course.ects"
+          :max="remainingEcts"
           step="0.5"
           style="width: 100%; background: #071C2C; border: 1px solid #1E4A6E; color: #CAE4F7; padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 16px;"
         />

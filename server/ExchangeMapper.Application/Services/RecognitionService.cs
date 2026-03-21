@@ -14,14 +14,14 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
 {
     public async Task<ErrorOr<RecognitionResponse>> GetOrCreateRecognitionAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
     {
-        var exchange = await db.Exchanges.FindAsync([exchangeId], ct);
+        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
         var canAccess = exchange.StudentId == requesterId
-            || exchange.CoordinatorId == requesterId
+            || exchange.Student.CoordinatorId == requesterId
             || requester.Role == UserRole.Admin;
         if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
@@ -106,14 +106,14 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         if (!Enum.TryParse<RecognitionStatus>(request.Status, out var newStatus))
             return Error.Validation("INVALID_STATUS", "Invalid recognition status.");
 
-        var exchange = await db.Exchanges.FindAsync([exchangeId], ct);
+        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
         var isStudent = exchange.StudentId == requesterId;
-        var isCoordinatorOrAdmin = exchange.CoordinatorId == requesterId || requester.Role == UserRole.Admin;
+        var isCoordinatorOrAdmin = exchange.Student.CoordinatorId == requesterId || requester.Role == UserRole.Admin;
 
         if (isStudent && newStatus != RecognitionStatus.Submitted)
             return Error.Forbidden("FORBIDDEN", "Students can only submit recognition.");

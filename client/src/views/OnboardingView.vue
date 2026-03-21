@@ -11,10 +11,20 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { t, locale } = useI18n()
 
-const steps = [
-  { id: 1, key: 'onboarding.steps.institution' },
-  { id: 2, key: 'onboarding.steps.jmbag' }
-]
+const isCoordinatorOrAdmin = computed(() => {
+  const role = authStore.user?.role
+  return role === 'Coordinator' || role === 'Admin'
+})
+
+const steps = computed(() => {
+  const base = [{ id: 1, key: 'onboarding.steps.institution' }]
+  if (!isCoordinatorOrAdmin.value) {
+    base.push({ id: 2, key: 'onboarding.steps.jmbag' })
+  }
+  return base
+})
+
+const totalSteps = computed(() => steps.value.length)
 
 const currentStep = ref(1)
 const selectedInstitutionId = ref<string | null>(null)
@@ -68,20 +78,27 @@ function goBack() {
 async function finishOnboarding() {
   errorMessage.value = null
 
-  if (!jmbag.value.trim()) {
-    errorMessage.value = t('onboarding.errors.jmbagRequired')
+  if (!selectedInstitutionId.value) {
+    errorMessage.value = t('onboarding.errors.institutionRequired')
     return
   }
-  if (!isJmbagValid.value) {
-    errorMessage.value = t('onboarding.errors.jmbagInvalid')
-    return
+
+  if (!isCoordinatorOrAdmin.value) {
+    if (!jmbag.value.trim()) {
+      errorMessage.value = t('onboarding.errors.jmbagRequired')
+      return
+    }
+    if (!isJmbagValid.value) {
+      errorMessage.value = t('onboarding.errors.jmbagInvalid')
+      return
+    }
   }
 
   try {
     isSubmitting.value = true
     await authStore.completeOnboarding({
       institutionId: selectedInstitutionId.value!,
-      jmbag: jmbag.value.trim()
+      jmbag: isCoordinatorOrAdmin.value ? undefined : jmbag.value.trim()
     })
     await router.push('/home')
   } catch {
@@ -217,7 +234,7 @@ async function logout() {
             </button>
 
             <button
-              v-if="currentStep < 2"
+              v-if="currentStep < totalSteps"
               type="button"
               class="rounded-lg bg-[#218CD9] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
               @click="goNext"

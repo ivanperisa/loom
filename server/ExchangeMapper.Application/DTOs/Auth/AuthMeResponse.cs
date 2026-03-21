@@ -5,8 +5,11 @@ public record AuthMeResponse(
     string Email,
     string Name,
     string? Jmbag,
+    string? Mentor,
     string Role,
     bool IsOnboarded,
     Guid? InstitutionId,
-    string? InstitutionName
+    string? InstitutionName,
+    Guid? CoordinatorId,
+    string? CoordinatorName
 );

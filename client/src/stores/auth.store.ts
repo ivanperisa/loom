@@ -5,7 +5,7 @@ import { userService } from '@/services/user.service'
 import { api } from '@/services/api'
 import router from '@/router'
 import type { AuthMeResponse, UserRole } from '@/types/auth.types'
-import type { CompleteOnboardingRequest } from '@/types/onboarding.types'
+import type { CompleteOnboardingRequest, UpdateProfileRequest } from '@/types/onboarding.types'
 
 export const useAuthStore = defineStore('auth', () => {
   let initPromise: Promise<void> | null = null
@@ -77,6 +77,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function updateProfile(request: UpdateProfileRequest) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await userService.updateProfile(request)
+      user.value = response.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri ažuriranju profila.'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     user,
     loading,
@@ -92,5 +106,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     reset,
     completeOnboarding,
+    updateProfile,
   }
 })

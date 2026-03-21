@@ -10,11 +10,12 @@ import type {
   AddSlotMappingRequest,
   RemoveSlotMappingRequest,
   UpdateExchangeStatusRequest,
+  UpdateCoordinatorMessageRequest,
 } from '@/types/exchange.types'
 import type { ForeignCourseResponse } from '@/types/institution.types'
 
 export const useExchangeStore = defineStore('exchange', () => {
-  const summary = ref<ExchangeSummaryResponse | null>(null)
+  const summaries = ref<ExchangeSummaryResponse[]>([])
   const exchange = ref<ExchangeResponse | null>(null)
   const learningAgreement = ref<LearningAgreementResponse | null>(null)
   const loading = ref(false)
@@ -29,17 +30,22 @@ export const useExchangeStore = defineStore('exchange', () => {
     draggingCourse.value = null
   }
 
-  async function fetchMySummary() {
+  async function fetchMySummaries() {
     loading.value = true
     error.value = null
     try {
       const res = await exchangeService.getMine()
-      summary.value = res.data
+      summaries.value = res.data
     } catch (e: unknown) {
-      error.value = 'Greška pri dohvatu razmjene.'
+      error.value = 'Greška pri dohvatu razmjena.'
     } finally {
       loading.value = false
     }
+  }
+
+  async function deleteExchange(exchangeId: string) {
+    await exchangeService.deleteExchange(exchangeId)
+    summaries.value = summaries.value.filter(s => s.id !== exchangeId)
   }
 
   async function fetchExchange(exchangeId: string) {
@@ -128,11 +134,20 @@ export const useExchangeStore = defineStore('exchange', () => {
     }
   }
 
+  async function updateCoordinatorMessage(exchangeId: string, request: UpdateCoordinatorMessageRequest) {
+    try {
+      const res = await exchangeService.updateCoordinatorMessage(exchangeId, request)
+      exchange.value = res.data
+    } catch (e: unknown) {
+      error.value = 'Greška pri ažuriranju poruke.'
+    }
+  }
+
   return {
-    summary, exchange, learningAgreement, loading, error,
+    summaries, exchange, learningAgreement, loading, error,
     draggingCourse, startDrag, endDrag,
-    fetchMySummary, fetchExchange, createExchange,
+    fetchMySummaries, fetchExchange, createExchange, deleteExchange,
     fetchLearningAgreement, setSlotMode, addSlotMapping,
-    removeSlotMapping, removeSlotState, updateStatus,
+    removeSlotMapping, removeSlotState, updateStatus, updateCoordinatorMessage,
   }
 })

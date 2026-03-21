@@ -13,14 +13,14 @@ const exchangeStore = useExchangeStore()
 const { t } = useI18n()
 
 const showCreateModal = ref(false)
+const deletingId = ref<string | null>(null)
 
 const displayName = computed(() => authStore.name?.trim() || t('common.user'))
 const isCoordinator = computed(() => authStore.role === 'Coordinator')
-const hasExchange = computed(() => exchangeStore.summary !== null)
 
 onMounted(async () => {
   if (!isCoordinator.value) {
-    await exchangeStore.fetchMySummary()
+    await exchangeStore.fetchMySummaries()
   }
 })
 
@@ -35,6 +35,16 @@ function onExchangeCreated(exchangeId: string) {
 
 function goToCoordinatorDashboard() {
   router.push('/coordinator')
+}
+
+async function confirmDelete(exchangeId: string) {
+  if (!confirm(t('home.deleteConfirm'))) return
+  deletingId.value = exchangeId
+  try {
+    await exchangeStore.deleteExchange(exchangeId)
+  } finally {
+    deletingId.value = null
+  }
 }
 
 const statusColorClass: Record<string, string> = {
@@ -89,61 +99,101 @@ const statusColorClass: Record<string, string> = {
           </div>
         </div>
 
-        <!-- No exchange -->
-        <div v-else-if="!hasExchange" class="mt-8 rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6 text-center">
-          <svg class="mx-auto h-12 w-12 text-[#5A8AAD]" viewBox="0 0 24 24" fill="none">
-            <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          <p class="mt-3 text-[#5A8AAD]">{{ t('home.noExchange') }}</p>
-          <button
-            type="button"
-            class="mt-5 rounded-lg bg-[#218CD9] px-6 py-2.5 font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
-            @click="openCreateModal"
-          >
-            {{ t('home.startExchange') }}
-          </button>
-        </div>
-
-        <!-- Exchange summary -->
-        <div v-else class="mt-8 rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6">
-          <div class="flex items-start justify-between">
-            <h2 class="text-lg font-semibold text-[#CAE4F7]">{{ t('exchange.title') }}</h2>
-            <span
-              class="rounded-full border px-3 py-0.5 text-xs font-semibold"
-              :class="statusColorClass[exchangeStore.summary!.status] ?? 'bg-slate-500/20 text-slate-300 border-slate-400'"
+        <template v-else>
+          <!-- Header with title + create button -->
+          <div class="mt-8 flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-[#CAE4F7]">{{ t('home.myExchanges') }}</h2>
+            <button
+              type="button"
+              class="rounded-lg bg-[#218CD9] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
+              @click="openCreateModal"
             >
-              {{ t(`exchangeStatus.${exchangeStore.summary!.status}`) }}
-            </span>
+              + {{ t('home.createNew') }}
+            </button>
           </div>
 
-          <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-            <div>
-              <dt class="text-[#5A8AAD]">{{ t('home.foreignInstitution') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.summary!.foreignInstitutionName }}</dd>
-            </div>
-            <div>
-              <dt class="text-[#5A8AAD]">{{ t('home.foreignProgram') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.summary!.foreignProgramName }}</dd>
-            </div>
-            <div>
-              <dt class="text-[#5A8AAD]">{{ t('home.academicYear') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.summary!.academicYear }}</dd>
-            </div>
-            <div>
-              <dt class="text-[#5A8AAD]">{{ t('home.semester') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ t(`exchangeSemester.${exchangeStore.summary!.semesterType}`) }}</dd>
-            </div>
-          </dl>
+          <!-- No exchanges -->
+          <div v-if="exchangeStore.summaries.length === 0" class="mt-4 rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6 text-center">
+            <svg class="mx-auto h-12 w-12 text-[#5A8AAD]" viewBox="0 0 24 24" fill="none">
+              <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <p class="mt-3 text-[#5A8AAD]">{{ t('home.noExchange') }}</p>
+          </div>
 
-          <button
-            type="button"
-            class="mt-5 rounded-lg bg-[#218CD9] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
-            @click="router.push(`/exchange/${exchangeStore.summary!.id}`)"
-          >
-            {{ t('home.viewExchange') }}
-          </button>
-        </div>
+          <!-- Exchange cards -->
+          <div v-else class="mt-4 space-y-4">
+            <div
+              v-for="ex in exchangeStore.summaries"
+              :key="ex.id"
+              class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6 transition hover:border-[#218CD9]/40"
+            >
+              <div class="flex items-start justify-between">
+                <span class="text-xs font-medium text-[#5A8AAD]">{{ ex.academicYear }} &middot; {{ t(`exchangeSemester.${ex.semesterType}`) }}</span>
+                <span
+                  class="rounded-full border px-3 py-0.5 text-xs font-semibold"
+                  :class="statusColorClass[ex.status] ?? 'bg-slate-500/20 text-slate-300 border-slate-400'"
+                >
+                  {{ t(`exchangeStatus.${ex.status}`) }}
+                </span>
+              </div>
+
+              <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <!-- Foreign -->
+                <div class="rounded-lg border border-[#1E4A6E]/60 bg-[#071C2C]/50 px-4 py-3">
+                  <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-[#5A8AAD]">{{ t('home.foreignInstitution') }}</p>
+                  <dl class="space-y-1 text-sm">
+                    <div>
+                      <dt class="text-[#5A8AAD]">{{ t('exchange.institution') }}</dt>
+                      <dd class="font-medium text-[#CAE4F7]">{{ ex.foreignInstitutionName }}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-[#5A8AAD]">{{ t('exchange.program') }}</dt>
+                      <dd class="font-medium text-[#CAE4F7]">{{ ex.foreignProgramName }}</dd>
+                    </div>
+                  </dl>
+                </div>
+                <!-- Home -->
+                <div class="rounded-lg border border-[#1E4A6E]/60 bg-[#071C2C]/50 px-4 py-3">
+                  <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-[#5A8AAD]">{{ t('exchange.homeInstitution') }}</p>
+                  <dl class="space-y-1 text-sm">
+                    <div>
+                      <dt class="text-[#5A8AAD]">{{ t('exchange.institution') }}</dt>
+                      <dd class="font-medium text-[#CAE4F7]">{{ ex.homeInstitutionName }}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-[#5A8AAD]">{{ t('exchange.program') }}</dt>
+                      <dd class="font-medium text-[#CAE4F7]">{{ ex.studyProgramName }}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-[#5A8AAD]">{{ t('exchange.profile') }}</dt>
+                      <dd class="font-medium text-[#CAE4F7]">{{ ex.studyProfileName }}</dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+
+              <div class="mt-4 flex items-center gap-3">
+                <button
+                  type="button"
+                  class="rounded-lg bg-[#218CD9] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
+                  @click="router.push(`/exchange/${ex.id}`)"
+                >
+                  {{ t('home.viewExchange') }}
+                </button>
+                <button
+                  v-if="ex.status === 'Draft'"
+                  type="button"
+                  class="rounded-lg border border-red-400/50 px-4 py-2 text-sm font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+                  :disabled="deletingId === ex.id"
+                  @click="confirmDelete(ex.id)"
+                >
+                  {{ deletingId === ex.id ? t('common.loading') : t('home.deleteExchange') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
       </template>
     </section>
 

@@ -11,9 +11,13 @@ public class User : EntityBase
     public UserRole Role { get; set; }
     public bool IsOnboarded { get; set; }
     public string? Jmbag { get; set; }
+    public string? Mentor { get; set; }
 
     public Guid? InstitutionId { get; set; }
     public Institution? Institution { get; set; }
+
+    public Guid? CoordinatorId { get; set; }
+    public User? Coordinator { get; set; }
 
     public ICollection<Exchange> StudentExchanges { get; set; } = [];
 }

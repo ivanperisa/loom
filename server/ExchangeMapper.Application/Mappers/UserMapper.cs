@@ -10,9 +10,12 @@ public static class UserMapper
         user.Email,
         user.Name,
         user.Jmbag,
+        user.Mentor,
         user.Role.ToString(),
         user.IsOnboarded,
         user.InstitutionId,
-        user.Institution?.Name
+        user.Institution?.Name,
+        user.CoordinatorId,
+        user.Coordinator?.Name
     );
 }

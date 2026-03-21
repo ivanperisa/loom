@@ -8,6 +8,7 @@ import type {
   AddSlotMappingRequest,
   RemoveSlotMappingRequest,
   UpdateExchangeStatusRequest,
+  UpdateCoordinatorMessageRequest,
 } from '@/types/exchange.types'
 
 export const exchangeService = {
@@ -16,7 +17,9 @@ export const exchangeService = {
   getById: (exchangeId: string) =>
     api.get<ExchangeResponse>(`/api/exchanges/${exchangeId}`),
   getMine: () =>
-    api.get<ExchangeSummaryResponse>('/api/exchanges/mine'),
+    api.get<ExchangeSummaryResponse[]>('/api/exchanges/mine'),
+  deleteExchange: (exchangeId: string) =>
+    api.delete(`/api/exchanges/${exchangeId}`),
   updateStatus: (exchangeId: string, request: UpdateExchangeStatusRequest) =>
     api.patch<ExchangeResponse>(`/api/exchanges/${exchangeId}/status`, request),
   getLearningAgreement: (exchangeId: string) =>
@@ -32,6 +35,8 @@ export const exchangeService = {
       `/api/exchanges/${exchangeId}/learning-agreement/slot-state`,
       { data: { courseSlotId } }
     ),
+  updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
+    api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
   getMyStudents: () =>
     api.get<ExchangeSummaryResponse[]>('/api/exchanges/coordinator/students'),
 }
