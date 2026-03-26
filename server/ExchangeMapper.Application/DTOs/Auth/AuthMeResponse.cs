@@ -11,5 +11,6 @@ public record AuthMeResponse(
     Guid? InstitutionId,
     string? InstitutionName,
     Guid? CoordinatorId,
-    string? CoordinatorName
+    string? CoordinatorName,
+    string? CoordinatorRequestStatus
 );

@@ -1,7 +1,6 @@
 using ExchangeMapper.API.Middleware;
 using ExchangeMapper.Application.Interfaces;
 using ExchangeMapper.Application.Interfaces.Services;
-using ExchangeMapper.Application.Options;
 using ExchangeMapper.Application.Services;
 using ExchangeMapper.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -11,8 +10,6 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.Configure<RoleAssignmentOptions>(builder.Configuration.GetSection("RoleAssignment"));
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

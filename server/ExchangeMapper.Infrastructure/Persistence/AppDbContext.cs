@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Recognition> Recognitions => Set<Recognition>();
     public DbSet<RecognitionEntry> RecognitionEntries => Set<RecognitionEntry>();
     public DbSet<ExchangeSnapshot> ExchangeSnapshots => Set<ExchangeSnapshot>();
+    public DbSet<CoordinatorWhitelist> CoordinatorWhitelist => Set<CoordinatorWhitelist>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

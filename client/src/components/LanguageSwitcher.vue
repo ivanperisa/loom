@@ -62,7 +62,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section ref="rootElement" class="language-switcher" :class="{ 'variant-dark': props.variant === 'dark' }" :aria-label="t('common.language')">
+  <section ref="rootElement" class="language-switcher variant-dark" :class="{ 'variant-dark': props.variant === 'dark' }" :aria-label="t('common.language')">
     <button
       type="button"
       class="dropdown-button"

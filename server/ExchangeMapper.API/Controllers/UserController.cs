@@ -25,6 +25,13 @@ public class UserController(IUserService userService) : ApiController
         return Match(result, Ok);
     }
 
+    [HttpPost("me/coordinator-request")]
+    public async Task<IActionResult> RequestCoordinatorRole(CancellationToken ct)
+    {
+        var result = await userService.RequestCoordinatorRoleAsync(GetCurrentUserId(), ct);
+        return Match(result, Ok);
+    }
+
     [HttpPut("me")]
     public async Task<IActionResult> UpdateProfile(
         [FromBody] UpdateProfileRequest request,

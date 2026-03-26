@@ -17,7 +17,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const savingEntryId = ref<string | null>(null)
 
-const isCoordinator = ref(authStore.role === 'Coordinator')
+const isCoordinator = ref(authStore.role === 'Coordinator' || authStore.role === 'Admin')
 
 const statusColorClass: Record<string, string> = {
   Draft: 'bg-slate-500/20 text-slate-300 border-slate-400',

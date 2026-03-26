@@ -9,7 +9,8 @@ const { t } = useI18n()
 
 const displayName = computed(() => authStore.user?.name?.trim() || t('common.user'))
 const displayEmail = computed(() => authStore.user?.email?.trim() || t('common.na'))
-const isCoordinator = computed(() => authStore.user?.role === 'Coordinator')
+const isCoordinator = computed(() => authStore.user?.role === 'Coordinator' || authStore.user?.role === 'Admin')
+const isAdmin = computed(() => authStore.user?.role === 'Admin')
 const isStudent = computed(() => authStore.user?.role === 'Student')
 
 const initials = computed(() => {
@@ -38,6 +39,7 @@ const initials = computed(() => {
         <nav class="hidden items-center gap-5 md:flex">
           <RouterLink to="/home" class="nav-link">{{ t('nav.home') }}</RouterLink>
           <RouterLink v-if="isCoordinator" to="/coordinator" class="nav-link">{{ t('nav.students') }}</RouterLink>
+          <RouterLink v-if="isAdmin" to="/admin" class="nav-link">{{ t('nav.admin') }}</RouterLink>
           <RouterLink to="/settings" class="nav-link">{{ t('nav.settings') }}</RouterLink>
         </nav>
       </div>

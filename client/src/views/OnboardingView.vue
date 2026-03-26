@@ -16,10 +16,19 @@ const isCoordinatorOrAdmin = computed(() => {
   return role === 'Coordinator' || role === 'Admin'
 })
 
+// Step 1 choice: null = not yet chosen, 'Student' | 'Coordinator'
+const roleChoice = ref<'Student' | 'Coordinator' | null>(null)
+
 const steps = computed(() => {
-  const base = [{ id: 1, key: 'onboarding.steps.institution' }]
-  if (!isCoordinatorOrAdmin.value) {
-    base.push({ id: 2, key: 'onboarding.steps.jmbag' })
+  if (isCoordinatorOrAdmin.value) {
+    return [{ id: 1, key: 'onboarding.steps.institution' }]
+  }
+  const base = [
+    { id: 1, key: 'onboarding.steps.role' },
+    { id: 2, key: 'onboarding.steps.institution' },
+  ]
+  if (roleChoice.value !== 'Coordinator') {
+    base.push({ id: 3, key: 'onboarding.steps.jmbag' })
   }
   return base
 })
@@ -39,12 +48,11 @@ function localizedName(item: { name: string; nameEn?: string | null }): string {
   return locale.value === 'en' && item.nameEn ? item.nameEn : item.name
 }
 
-const selectedInstitutionName = computed(() => {
-  const inst = institutions.value.find(i => i.id === selectedInstitutionId.value)
-  return inst ? localizedName(inst) : null
-})
-
 const isJmbagValid = computed(() => /^\d{10}$/.test(jmbag.value))
+
+// For already-coordinator/admin, institution is step 1; for students, institution is step 2
+const institutionStep = computed(() => (isCoordinatorOrAdmin.value ? 1 : 2))
+const jmbagStep = computed(() => (isCoordinatorOrAdmin.value ? -1 : 3))
 
 onMounted(async () => {
   try {
@@ -59,12 +67,22 @@ onMounted(async () => {
 
 function goNext() {
   errorMessage.value = null
-  if (currentStep.value === 1) {
+
+  if (!isCoordinatorOrAdmin.value && currentStep.value === 1) {
+    if (!roleChoice.value) {
+      errorMessage.value = t('onboarding.errors.roleRequired')
+      return
+    }
+    currentStep.value = 2
+    return
+  }
+
+  if (currentStep.value === institutionStep.value) {
     if (!selectedInstitutionId.value) {
       errorMessage.value = t('onboarding.errors.institutionRequired')
       return
     }
-    currentStep.value = 2
+    currentStep.value++
   }
 }
 
@@ -83,7 +101,9 @@ async function finishOnboarding() {
     return
   }
 
-  if (!isCoordinatorOrAdmin.value) {
+  const isRequestingCoordinator = !isCoordinatorOrAdmin.value && roleChoice.value === 'Coordinator'
+
+  if (!isRequestingCoordinator && !isCoordinatorOrAdmin.value) {
     if (!jmbag.value.trim()) {
       errorMessage.value = t('onboarding.errors.jmbagRequired')
       return
@@ -98,7 +118,8 @@ async function finishOnboarding() {
     isSubmitting.value = true
     await authStore.completeOnboarding({
       institutionId: selectedInstitutionId.value!,
-      jmbag: isCoordinatorOrAdmin.value ? undefined : jmbag.value.trim()
+      jmbag: isRequestingCoordinator || isCoordinatorOrAdmin.value ? undefined : jmbag.value.trim(),
+      requestCoordinatorRole: isRequestingCoordinator || undefined,
     })
     await router.push('/home')
   } catch {
@@ -179,8 +200,37 @@ async function logout() {
             {{ errorMessage }}
           </p>
 
-          <!-- Step 1: Institution -->
-          <div v-if="currentStep === 1" class="mt-6 space-y-4">
+          <!-- Step 1 (students only): Role choice -->
+          <div v-if="!isCoordinatorOrAdmin && currentStep === 1" class="mt-6 space-y-3">
+            <p class="text-sm font-medium text-[#8AC4ED]">{{ t('onboarding.roleQuestion') }}</p>
+
+            <button
+              type="button"
+              class="w-full rounded-xl border px-4 py-4 text-left transition"
+              :class="roleChoice === 'Student'
+                ? 'border-[#218CD9] bg-[#218CD9]/10 text-[#CAE4F7]'
+                : 'border-[#1E4A6E] bg-[#071C2C] text-[#CAE4F7] hover:border-[#218CD9]/50'"
+              @click="roleChoice = 'Student'"
+            >
+              <p class="font-semibold">{{ t('onboarding.roleStudent') }}</p>
+              <p class="mt-0.5 text-xs text-[#5A8AAD]">{{ t('onboarding.roleStudentDesc') }}</p>
+            </button>
+
+            <button
+              type="button"
+              class="w-full rounded-xl border px-4 py-4 text-left transition"
+              :class="roleChoice === 'Coordinator'
+                ? 'border-[#218CD9] bg-[#218CD9]/10 text-[#CAE4F7]'
+                : 'border-[#1E4A6E] bg-[#071C2C] text-[#CAE4F7] hover:border-[#218CD9]/50'"
+              @click="roleChoice = 'Coordinator'"
+            >
+              <p class="font-semibold">{{ t('onboarding.roleCoordinator') }}</p>
+              <p class="mt-0.5 text-xs text-[#5A8AAD]">{{ t('onboarding.roleCoordinatorDesc') }}</p>
+            </button>
+          </div>
+
+          <!-- Institution step -->
+          <div v-if="currentStep === institutionStep" class="mt-6 space-y-4">
             <label class="block text-sm font-medium text-[#8AC4ED]">
               {{ t('onboarding.selectInstitution') }}
             </label>
@@ -206,8 +256,8 @@ async function logout() {
             </template>
           </div>
 
-          <!-- Step 2: JMBAG -->
-          <div v-if="currentStep === 2" class="mt-6 space-y-4">
+          <!-- JMBAG step -->
+          <div v-if="currentStep === jmbagStep" class="mt-6 space-y-4">
             <label class="block text-sm font-medium text-[#8AC4ED]">
               {{ t('onboarding.jmbagLabel') }}
             </label>

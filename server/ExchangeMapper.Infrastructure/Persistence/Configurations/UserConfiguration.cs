@@ -28,6 +28,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.Mentor).HasColumnName("mentor").HasMaxLength(255);
         builder.Property(x => x.InstitutionId).HasColumnName("institution_id");
         builder.Property(x => x.CoordinatorId).HasColumnName("coordinator_id");
+        builder.Property(x => x.CoordinatorRequestStatus).HasColumnName("coordinator_request_status").HasMaxLength(20);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
 
         builder.HasIndex(x => x.ExternalId).IsUnique();

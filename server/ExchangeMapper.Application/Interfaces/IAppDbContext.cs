@@ -18,6 +18,7 @@ public interface IAppDbContext
     DbSet<Recognition> Recognitions { get; }
     DbSet<RecognitionEntry> RecognitionEntries { get; }
     DbSet<ExchangeSnapshot> ExchangeSnapshots { get; }
+    DbSet<CoordinatorWhitelist> CoordinatorWhitelist { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

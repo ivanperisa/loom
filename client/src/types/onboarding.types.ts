@@ -1,6 +1,7 @@
 export interface CompleteOnboardingRequest {
   institutionId: string
   jmbag?: string | null
+  requestCoordinatorRole?: boolean
 }
 
 export interface UpdateProfileRequest {

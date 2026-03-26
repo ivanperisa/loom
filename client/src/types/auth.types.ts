@@ -10,6 +10,7 @@ export interface AuthMeResponse {
   institutionName: string | null
   coordinatorId: string | null
   coordinatorName: string | null
+  coordinatorRequestStatus: 'Pending' | 'Rejected' | null
 }
 
 export type UserRole = 'Student' | 'Coordinator' | 'Admin'

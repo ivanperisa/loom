@@ -2,8 +2,6 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  padding: 0.35rem;
-  border: 1px solid #d8e1ec;
   border-radius: 0.85rem;
   background: rgb(255 255 255 / 95%);
   box-shadow: 0 8px 20px rgb(16 33 54 / 10%);

@@ -32,18 +32,28 @@ export default {
     deleteExchange: 'Obriši',
     deleteConfirm: 'Jeste li sigurni da želite obrisati ovu razmjenu?',
     coordinatorDashboard: 'Koordinatorska ploča',
+    adminPanel: 'Admin panel',
     foreignInstitution: 'Strani fakultet',
     foreignProgram: 'Strani program',
     academicYear: 'Akademska godina',
     semester: 'Semestar',
-    status: 'Status'
+    status: 'Status',
+    coordinatorRequestPending: 'Vaš zahtjev za koordinatorski pristup čeka odobrenje admina.',
+    coordinatorRequestRejected: 'Vaš zahtjev za koordinatorski pristup je odbijen.',
+    reRequestCoordinator: 'Pošalji novi zahtjev'
   },
   onboarding: {
     title: 'Postavljanje računa',
     steps: {
+      role: 'Uloga',
       institution: 'Institucija',
       jmbag: 'JMBAG'
     },
+    roleQuestion: 'Kako planirate koristiti ExchangeMapper?',
+    roleStudent: 'Student',
+    roleStudentDesc: 'Upravljam svojom Erasmus razmjenom.',
+    roleCoordinator: 'Koordinator',
+    roleCoordinatorDesc: 'Pregledavam i odobravam razmjene studenata.',
     selectInstitution: 'Odaberite matični fakultet',
     selectInstitutionPlaceholder: '— odaberite instituciju —',
     jmbagLabel: 'Unesite JMBAG',
@@ -53,6 +63,7 @@ export default {
     next: 'Sljedeći',
     back: 'Natrag',
     errors: {
+      roleRequired: 'Odaberite ulogu prije nastavka.',
       institutionRequired: 'Odaberite instituciju prije nastavka.',
       jmbagRequired: 'JMBAG je obavezan.',
       jmbagInvalid: 'JMBAG mora sadržavati točno 10 znamenki.'
@@ -69,7 +80,8 @@ export default {
     settings: 'Postavke',
     exchange: 'Razmjena',
     students: 'Studenti',
-    history: 'Povijest'
+    history: 'Povijest',
+    admin: 'Admin'
   },
   settings: {
     title: 'Postavke',
@@ -356,5 +368,35 @@ export default {
     proposeStudent: 'Predloži mapiranje',
     proposeCoordinator: 'Spremi pregled',
     mapped: '\u25cf mapirano'
+  },
+  admin: {
+    title: 'Admin panel',
+    users: {
+      title: 'Upravljanje korisnicima',
+      pending: 'Zahtjev na čekanju',
+      makeCoordinator: 'Postavi za koordinatora',
+      removeCoordinator: 'Ukloni koordinatora',
+      role: {
+        Student: 'Student',
+        Coordinator: 'Koordinator',
+        Admin: 'Admin'
+      }
+    },
+    requests: {
+      title: 'Zahtjevi za koordinatorski pristup',
+      empty: 'Nema aktivnih zahtjeva.',
+      approve: 'Odobri',
+      reject: 'Odbij'
+    },
+    whitelist: {
+      title: 'Whitelist koordinatora',
+      description: 'Korisnici s whitelistiranom adresom automatski dobivaju koordinatorsku ulogu pri prvom loginu.',
+      emailPlaceholder: 'email@fer.hr',
+      add: 'Dodaj',
+      addError: 'Greška pri dodavanju e-mail adrese.',
+      remove: 'Ukloni',
+      empty: 'Whitelist je prazan.',
+      addedOn: 'Dodano'
+    }
   }
 }

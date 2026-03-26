@@ -6,6 +6,7 @@ import AppHeader from '@/components/AppHeader.vue'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useExchangeStore } from '@/stores/exchange.store'
+import { userService } from '@/services/user.service'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -14,9 +15,12 @@ const { t } = useI18n()
 
 const showCreateModal = ref(false)
 const deletingId = ref<string | null>(null)
+const requestingCoordinator = ref(false)
 
 const displayName = computed(() => authStore.name?.trim() || t('common.user'))
-const isCoordinator = computed(() => authStore.role === 'Coordinator')
+const isCoordinator = computed(() => authStore.role === 'Coordinator' || authStore.role === 'Admin')
+const isAdmin = computed(() => authStore.role === 'Admin')
+const coordinatorRequestStatus = computed(() => authStore.user?.coordinatorRequestStatus ?? null)
 
 onMounted(async () => {
   if (!isCoordinator.value) {
@@ -35,6 +39,16 @@ function onExchangeCreated(exchangeId: string) {
 
 function goToCoordinatorDashboard() {
   router.push('/coordinator')
+}
+
+async function reRequestCoordinatorRole() {
+  requestingCoordinator.value = true
+  try {
+    const res = await userService.requestCoordinatorRole()
+    authStore.user = res.data
+  } finally {
+    requestingCoordinator.value = false
+  }
 }
 
 async function confirmDelete(exchangeId: string) {
@@ -64,7 +78,31 @@ const statusColorClass: Record<string, string> = {
         {{ t('home.welcome', { name: displayName }) }}
       </h1>
 
-      <!-- Coordinator -->
+      <!-- Pending coordinator request banner -->
+      <div
+        v-if="coordinatorRequestStatus === 'Pending'"
+        class="mt-6 rounded-lg border border-[#218CD9]/40 bg-[#218CD9]/10 px-4 py-3 text-sm text-[#8AC4ED]"
+      >
+        {{ t('home.coordinatorRequestPending') }}
+      </div>
+
+      <!-- Rejected coordinator request banner -->
+      <div
+        v-if="coordinatorRequestStatus === 'Rejected'"
+        class="mt-6 flex items-center justify-between rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3"
+      >
+        <span class="text-sm text-red-300">{{ t('home.coordinatorRequestRejected') }}</span>
+        <button
+          type="button"
+          class="ml-4 rounded-lg border border-[#218CD9]/50 px-4 py-1.5 text-xs font-semibold text-[#8AC4ED] transition hover:bg-[#218CD9]/20 disabled:opacity-50"
+          :disabled="requestingCoordinator"
+          @click="reRequestCoordinatorRole"
+        >
+          {{ requestingCoordinator ? t('common.loading') : t('home.reRequestCoordinator') }}
+        </button>
+      </div>
+
+      <!-- Coordinator / Admin -->
       <template v-if="isCoordinator">
         <div class="mt-8 rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6">
           <div class="flex items-center gap-3">
@@ -77,13 +115,23 @@ const statusColorClass: Record<string, string> = {
             <h2 class="text-xl font-semibold text-[#CAE4F7]">{{ t('home.coordinatorDashboard') }}</h2>
           </div>
           <p class="mt-2 text-sm text-[#5A8AAD]">{{ t('coordinator.title') }}</p>
-          <button
-            type="button"
-            class="mt-4 rounded-lg bg-[#218CD9] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
-            @click="goToCoordinatorDashboard"
-          >
-            {{ t('home.coordinatorDashboard') }}
-          </button>
+          <div class="mt-4 flex gap-3">
+            <button
+              type="button"
+              class="rounded-lg bg-[#218CD9] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
+              @click="goToCoordinatorDashboard"
+            >
+              {{ t('home.coordinatorDashboard') }}
+            </button>
+            <button
+              v-if="isAdmin"
+              type="button"
+              class="rounded-lg border border-[#1E4A6E] px-5 py-2.5 text-sm font-semibold text-[#CAE4F7] transition hover:border-[#218CD9]/50 hover:bg-[#218CD9]/10"
+              @click="$router.push('/admin')"
+            >
+              {{ t('home.adminPanel') }}
+            </button>
+          </div>
         </div>
       </template>
 

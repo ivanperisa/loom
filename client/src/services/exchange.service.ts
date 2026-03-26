@@ -31,10 +31,7 @@ export const exchangeService = {
   removeSlotMapping: (exchangeId: string, request: RemoveSlotMappingRequest) =>
     api.delete<LearningAgreementResponse>(`/api/exchanges/${exchangeId}/learning-agreement/mappings`, { data: request }),
   removeSlotState: (exchangeId: string, courseSlotId: string) =>
-    api.delete<LearningAgreementResponse>(
-      `/api/exchanges/${exchangeId}/learning-agreement/slot-state`,
-      { data: { courseSlotId } }
-    ),
+    api.delete<LearningAgreementResponse>(`/api/exchanges/${exchangeId}/learning-agreement/slot-state`, { data: { courseSlotId } }),
   updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
     api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
   getMyStudents: () =>

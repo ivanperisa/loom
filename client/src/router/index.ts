@@ -44,6 +44,11 @@ const router = createRouter({
       path: '/coordinator',
       component: () => import('@/views/CoordinatorDashboard.vue'),
       meta: { requiresAuth: true, requiresOnboarding: true }
+    },
+    {
+      path: '/admin',
+      component: () => import('@/views/AdminView.vue'),
+      meta: { requiresAuth: true, requiresOnboarding: true, requiresAdmin: true }
     }
   ]
 })
@@ -61,6 +66,10 @@ router.beforeEach(async (to) => {
   }
 
   if (authStore.isLoggedIn && authStore.isOnboarded && to.path === '/onboarding') {
+    return '/home'
+  }
+
+  if (to.meta.requiresAdmin && authStore.role !== 'Admin') {
     return '/home'
   }
 })

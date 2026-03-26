@@ -32,18 +32,28 @@ export default {
     deleteExchange: 'Delete',
     deleteConfirm: 'Are you sure you want to delete this exchange?',
     coordinatorDashboard: 'Coordinator Dashboard',
+    adminPanel: 'Admin Panel',
     foreignInstitution: 'Foreign Institution',
     foreignProgram: 'Foreign Program',
     academicYear: 'Academic Year',
     semester: 'Semester',
-    status: 'Status'
+    status: 'Status',
+    coordinatorRequestPending: 'Your coordinator access request is pending admin approval.',
+    coordinatorRequestRejected: 'Your coordinator access request has been rejected.',
+    reRequestCoordinator: 'Submit new request'
   },
   onboarding: {
     title: 'Account Setup',
     steps: {
+      role: 'Role',
       institution: 'Institution',
       jmbag: 'JMBAG'
     },
+    roleQuestion: 'How do you plan to use ExchangeMapper?',
+    roleStudent: 'Student',
+    roleStudentDesc: 'I manage my own Erasmus exchange.',
+    roleCoordinator: 'Coordinator',
+    roleCoordinatorDesc: 'I review and approve student exchanges.',
     selectInstitution: 'Select your home institution',
     selectInstitutionPlaceholder: '— select institution —',
     jmbagLabel: 'Enter your JMBAG',
@@ -53,6 +63,7 @@ export default {
     next: 'Next',
     back: 'Back',
     errors: {
+      roleRequired: 'Please select a role before continuing.',
       institutionRequired: 'Please select an institution before continuing.',
       jmbagRequired: 'JMBAG is required.',
       jmbagInvalid: 'JMBAG must be exactly 10 digits.'
@@ -69,7 +80,8 @@ export default {
     settings: 'Settings',
     exchange: 'Exchange',
     students: 'Students',
-    history: 'History'
+    history: 'History',
+    admin: 'Admin'
   },
   settings: {
     title: 'Settings',
@@ -356,5 +368,35 @@ export default {
     proposeStudent: 'Propose Mapping',
     proposeCoordinator: 'Save Review',
     mapped: '\u25cf mapped'
+  },
+  admin: {
+    title: 'Admin Panel',
+    users: {
+      title: 'User Management',
+      pending: 'Request pending',
+      makeCoordinator: 'Make Coordinator',
+      removeCoordinator: 'Remove Coordinator',
+      role: {
+        Student: 'Student',
+        Coordinator: 'Coordinator',
+        Admin: 'Admin'
+      }
+    },
+    requests: {
+      title: 'Coordinator Access Requests',
+      empty: 'No pending requests.',
+      approve: 'Approve',
+      reject: 'Reject'
+    },
+    whitelist: {
+      title: 'Coordinator Whitelist',
+      description: 'Users with a whitelisted email address automatically receive the coordinator role on first login.',
+      emailPlaceholder: 'email@fer.hr',
+      add: 'Add',
+      addError: 'Error adding email address.',
+      remove: 'Remove',
+      empty: 'The whitelist is empty.',
+      addedOn: 'Added'
+    }
   }
 }

@@ -16,6 +16,7 @@ public static class UserMapper
         user.InstitutionId,
         user.Institution?.Name,
         user.CoordinatorId,
-        user.Coordinator?.Name
+        user.Coordinator?.Name,
+        user.CoordinatorRequestStatus
     );
 }

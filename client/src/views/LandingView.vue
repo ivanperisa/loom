@@ -92,6 +92,15 @@ function login() {
 <style scoped>
 .landing-card {
   border-radius: 1.5rem;
+  border: 1px solid rgba(138, 196, 237, 0.15);
+}
+
+.landing-card:hover {
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.7),
+    0 0 80px rgba(33, 140, 217, 0.2);
+  transform: translateY(-2px);
+  transition: all 0.25s ease;
 }
 
 .floating {

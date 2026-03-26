@@ -19,5 +19,7 @@ public class User : EntityBase
     public Guid? CoordinatorId { get; set; }
     public User? Coordinator { get; set; }
 
+    public string? CoordinatorRequestStatus { get; set; }
+
     public ICollection<Exchange> StudentExchanges { get; set; } = [];
 }

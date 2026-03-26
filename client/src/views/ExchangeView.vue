@@ -18,7 +18,7 @@ const activeTab = ref<'la' | 'recognition'>('la')
 const exchangeId = computed(() => route.params.exchangeId as string)
 
 const isCoordinator = computed(
-  () => exchangeStore.exchange?.coordinatorId === authStore.user?.id
+  () => exchangeStore.exchange?.coordinatorId === authStore.user?.id || authStore.user?.role === 'Admin'
 )
 const isApproved = computed(() => exchangeStore.exchange?.status === 'Approved')
 const isEditable = computed(() => {

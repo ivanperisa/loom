@@ -8,4 +8,6 @@ export const userService = {
     api.post<AuthMeResponse>('/api/users/me/onboarding', request),
   updateProfile: (request: UpdateProfileRequest) =>
     api.put<AuthMeResponse>('/api/users/me', request),
+  requestCoordinatorRole: () =>
+    api.post<AuthMeResponse>('/api/users/me/coordinator-request'),
 }
