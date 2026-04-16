@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="server/ExchangeMapper.API/ExchangeMapper.API.csproj" />
-  <Project Path="server/ExchangeMapper.Application/ExchangeMapper.Application.csproj" Id="cb128b17-88ae-4285-97ca-3b12bb2073f5" />
-  <Project Path="server/ExchangeMapper.Domain/ExchangeMapper.Domain.csproj" Id="468362b4-aa39-46e1-bb3c-403a9fc78b1d" />
-  <Project Path="server/ExchangeMapper.Infrastructure/ExchangeMapper.Infrastructure.csproj" Id="08e133d4-d91e-455a-8ccf-8fb5d1fdd350" />
-</Solution>

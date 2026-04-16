@@ -1,6 +1,6 @@
 export default {
   common: {
-    appName: 'ExchangeMapper',
+    appName: 'Loom',
     signIn: 'Sign in with Google',
     signOut: 'Sign out',
     loading: 'Loading...',
@@ -49,7 +49,7 @@ export default {
       institution: 'Institution',
       jmbag: 'JMBAG'
     },
-    roleQuestion: 'How do you plan to use ExchangeMapper?',
+    roleQuestion: 'How do you plan to use Loom?',
     roleStudent: 'Student',
     roleStudentDesc: 'I manage my own Erasmus exchange.',
     roleCoordinator: 'Coordinator',
