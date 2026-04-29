@@ -117,6 +117,27 @@ export default {
       addSuccess: 'Institucija uspješno dodana.'
     }
   },
+  la: {
+    unsavedChanges: 'Imate nespremljene promjene',
+    save: 'Spremi',
+    discard: 'Odbaci promjene',
+    saveError: 'Greška pri spremanju. Pokušajte ponovo.',
+  },
+  snapshot: {
+    title: 'Povijest verzija',
+    approvedBy: 'Odobrio',
+    noSnapshots: 'Nema zabilježenih verzija.',
+    selectA: 'Verzija A',
+    selectB: 'Verzija B',
+    current: 'Trenutna verzija',
+    noDiff: 'Nema razlika između odabranih verzija.',
+    changedModes: 'Promjene u načinu izvedbe',
+    addedMappings: 'Dodana mapiranja',
+    removedMappings: 'Uklonjena mapiranja',
+    was: 'Bilo',
+    became: 'Postalo',
+    subject: 'Kolegij',
+  },
   exchange: {
     title: 'Moja razmjena',
     noExchange: 'Nemate aktivne razmjene',

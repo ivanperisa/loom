@@ -5,10 +5,9 @@ import { useI18n } from 'vue-i18n'
 import LearningAgreementTable from '@/components/exchange/LearningAgreementTable.vue'
 import ForeignCoursePanel from '@/components/exchange/ForeignCoursePanel.vue'
 import RecognitionPanel from '@/components/exchange/RecognitionPanel.vue'
+import SnapshotHistoryPanel from '@/components/exchange/SnapshotHistoryPanel.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { exchangeService } from '@/services/exchange.service'
-import type { ExchangeSnapshotResponse } from '@/types/exchange.types'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -16,8 +15,8 @@ const exchangeStore = useExchangeStore()
 const authStore = useAuthStore()
 
 const activeTab = ref<'la' | 'recognition' | 'history'>('la')
-const history = ref<ExchangeSnapshotResponse[]>([])
-const historyLoading = ref(false)
+const isSavingLa = ref(false)
+const saveError = ref<string | null>(null)
 const exchangeId = computed(() => route.params.exchangeId as string)
 
 const isCoordinator = computed(
@@ -45,9 +44,29 @@ onMounted(async () => {
     exchangeStore.fetchExchange(exchangeId.value),
     exchangeStore.fetchLearningAgreement(exchangeId.value),
   ])
+  await exchangeStore.fetchSnapshots(exchangeId.value)
 })
 
+async function saveLa() {
+  isSavingLa.value = true
+  saveError.value = null
+  try {
+    await exchangeStore.saveLearningAgreement(exchangeId.value)
+  } catch {
+    saveError.value = t('la.saveError')
+  } finally {
+    isSavingLa.value = false
+  }
+}
+
+async function discardLa() {
+  await exchangeStore.fetchLearningAgreement(exchangeId.value)
+}
+
 async function submitExchange() {
+  if (exchangeStore.isDirty) {
+    await exchangeStore.saveLearningAgreement(exchangeId.value)
+  }
   await exchangeStore.updateStatus(exchangeId.value, { status: 'Submitted' })
   await exchangeStore.fetchExchange(exchangeId.value)
 }
@@ -94,24 +113,6 @@ function switchToRecognition() {
   if (isApproved.value) activeTab.value = 'recognition'
 }
 
-async function openHistory() {
-  activeTab.value = 'history'
-  if (history.value.length > 0) return
-  historyLoading.value = true
-  try {
-    const res = await exchangeService.getHistory(exchangeId.value)
-    history.value = res.data
-  } finally {
-    historyLoading.value = false
-  }
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('hr', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
 
 </script>
 
@@ -378,10 +379,11 @@ function formatDate(iso: string) {
             {{ t('exchange.tabs.recognition') }}
           </button>
           <button
+            v-if="isApproved"
             type="button"
             class="px-4 py-2.5 text-sm font-semibold transition"
             :class="activeTab === 'history' ? 'border-b-2 border-primary text-primary' : 'text-light/60 hover:text-primary-light'"
-            @click="openHistory"
+            @click="activeTab = 'history'"
           >
             {{ t('exchange.tabs.history') }}
           </button>
@@ -390,15 +392,49 @@ function formatDate(iso: string) {
         <!-- Tab content -->
         <div class="mt-6">
           <template v-if="activeTab === 'la'">
+            <!-- Save bar — shown above the table when there are unsaved changes -->
+            <div
+              v-if="isEditable && exchangeStore.isDirty"
+              class="mb-4 flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-500/15 px-4 py-3"
+            >
+              <div class="flex items-center gap-2">
+                <svg class="shrink-0 text-amber-400" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                  <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <span class="text-sm font-medium text-amber-300">{{ t('la.unsavedChanges') }}</span>
+                <span v-if="saveError" class="ml-1 text-xs text-red-400">— {{ saveError }}</span>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700/40"
+                  :disabled="isSavingLa"
+                  @click="discardLa"
+                >
+                  {{ t('la.discard') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-semibold text-dark transition hover:bg-amber-400 disabled:opacity-60"
+                  :disabled="isSavingLa"
+                  @click="saveLa"
+                >
+                  {{ isSavingLa ? t('common.loading') : t('la.save') }}
+                </button>
+              </div>
+            </div>
+
             <!-- LA table: always full width -->
             <LearningAgreementTable
-              v-if="exchangeStore.learningAgreement"
-              :learning-agreement="exchangeStore.learningAgreement"
+              v-if="exchangeStore.serverLearningAgreement"
+              :slots="exchangeStore.slots"
+              :slot-states="exchangeStore.localSlotStates"
               :exchange-id="exchangeId"
               :readonly="!isEditable"
             />
 
-            <!-- Course panels below table (Draft/Rejected only) -->
+            <!-- Course panels below table (Draft only) -->
             <div v-if="isEditable && exchangeStore.exchange" class="mt-6 flex gap-6 items-start">
               <!-- Left: available courses -->
               <div class="min-w-0 flex-1 rounded-xl border border-primary/20 bg-dark-2 p-4">
@@ -430,57 +466,16 @@ function formatDate(iso: string) {
               v-else
               :exchange-id="exchangeId"
               :exchange="exchangeStore.exchange!"
-              :learning-agreement="exchangeStore.learningAgreement!"
+              :learning-agreement="exchangeStore.serverLearningAgreement!"
             />
           </template>
 
           <template v-else-if="activeTab === 'history'">
-            <!-- Loading -->
-            <div v-if="historyLoading" class="space-y-2">
-              <div v-for="i in 4" :key="i" class="h-12 animate-pulse rounded-lg bg-primary/20"></div>
-            </div>
-
-            <!-- Empty -->
-            <div v-else-if="history.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
-              <p class="text-light/60">{{ t('exchange.history.empty') }}</p>
-            </div>
-
-            <!-- Timeline -->
-            <div v-else class="relative space-y-0">
-              <!-- Vertical line -->
-              <div class="absolute left-[11px] top-4 bottom-4 w-px bg-primary/20"></div>
-
-              <div
-                v-for="(snap, idx) in history"
-                :key="snap.id"
-                class="relative flex gap-4 py-3"
-              >
-                <!-- Dot -->
-                <div class="mt-0.5 h-6 w-6 shrink-0 rounded-full border-2 flex items-center justify-center"
-                  :class="snap.phase === 'LearningAgreement' ? 'border-primary bg-dark' : 'border-green-500 bg-dark'"
-                >
-                  <div class="h-2 w-2 rounded-full" :class="snap.phase === 'LearningAgreement' ? 'bg-primary' : 'bg-green-500'"></div>
-                </div>
-
-                <!-- Content -->
-                <div class="flex-1 rounded-lg border border-primary/20 bg-dark-2 px-4 py-3">
-                  <div class="flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                      <span
-                        class="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
-                        :class="snap.phase === 'LearningAgreement'
-                          ? 'border-primary/40 bg-primary/10 text-primary-light'
-                          : 'border-green-500/40 bg-green-500/10 text-green-400'"
-                      >
-                        {{ t(`snapshotPhase.${snap.phase}`) }}
-                      </span>
-                      <span class="text-sm font-medium text-light">{{ snap.changedByName }}</span>
-                    </div>
-                    <span class="text-xs text-light/50">{{ formatDate(snap.createdAt) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SnapshotHistoryPanel
+              :exchange-id="exchangeId"
+              :current-slot-states="exchangeStore.serverLearningAgreement?.slotStates ?? []"
+              :slots="exchangeStore.slots"
+            />
           </template>
         </div>
       </template>

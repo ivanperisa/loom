@@ -55,6 +55,27 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, Ok);
     }
 
+    [HttpPut("{exchangeId:guid}/learning-agreement")]
+    public async Task<IActionResult> SaveLearningAgreement(Guid exchangeId, [FromBody] SaveLearningAgreementRequest request, CancellationToken ct)
+    {
+        var result = await exchangeService.SaveLearningAgreementAsync(exchangeId, GetCurrentUserId(), request, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpGet("{exchangeId:guid}/snapshots")]
+    public async Task<IActionResult> GetSnapshots(Guid exchangeId, CancellationToken ct)
+    {
+        var result = await exchangeService.GetSnapshotsAsync(exchangeId, GetCurrentUserId(), ct);
+        return Match(result, Ok);
+    }
+
+    [HttpGet("{exchangeId:guid}/snapshots/{snapshotId:guid}")]
+    public async Task<IActionResult> GetSnapshot(Guid exchangeId, Guid snapshotId, CancellationToken ct)
+    {
+        var result = await exchangeService.GetSnapshotAsync(exchangeId, snapshotId, GetCurrentUserId(), ct);
+        return Match(result, Ok);
+    }
+
     [HttpPost("{exchangeId:guid}/learning-agreement/slot-mode")]
     public async Task<IActionResult> SetSlotMode(Guid exchangeId, [FromBody] SetSlotModeRequest request, CancellationToken ct)
     {
@@ -97,10 +118,4 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, Ok);
     }
 
-    [HttpGet("{exchangeId:guid}/history")]
-    public async Task<IActionResult> GetHistory(Guid exchangeId, CancellationToken ct)
-    {
-        var result = await exchangeService.GetHistoryAsync(exchangeId, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
 }

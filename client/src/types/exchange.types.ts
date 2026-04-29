@@ -122,7 +122,46 @@ export type SnapshotPhase = 'LearningAgreement' | 'Recognition'
 
 export interface ExchangeSnapshotResponse {
   id: string
+  exchangeId: string
   phase: SnapshotPhase
+  changedById: string
   changedByName: string
   createdAt: string
+  data: LearningAgreementSnapshotData | null
+}
+
+export interface LearningAgreementSnapshotData {
+  slotStates: SlotStateResponse[]
+}
+
+// Batch save (sent to server — no IDs)
+export interface SaveLearningAgreementRequest {
+  slotStates: SlotStateUpsertDto[]
+}
+
+export interface SlotStateUpsertDto {
+  courseSlotId: string
+  mode: SlotMode
+  mappings: SlotMappingUpsertDto[]
+}
+
+export interface SlotMappingUpsertDto {
+  foreignCourseId: string
+  awardedEcts: number
+}
+
+// Local working copy (localId used only as :key, never sent to server)
+export interface LocalSlotState {
+  courseSlotId: string
+  mode: SlotMode
+  mappings: LocalSlotMapping[]
+}
+
+export interface LocalSlotMapping {
+  localId: string
+  foreignCourseId: string
+  foreignCourseCode: string
+  foreignCourseNameEn: string
+  foreignCourseNameHr: string | null
+  awardedEcts: number
 }

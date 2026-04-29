@@ -10,6 +10,7 @@ import type {
   RemoveSlotMappingRequest,
   UpdateExchangeStatusRequest,
   UpdateCoordinatorMessageRequest,
+  SaveLearningAgreementRequest,
 } from '@/types/exchange.types'
 
 export const exchangeService = {
@@ -37,6 +38,10 @@ export const exchangeService = {
     api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
   getMyStudents: () =>
     api.get<ExchangeSummaryResponse[]>('/api/exchanges/coordinator/students'),
-  getHistory: (exchangeId: string) =>
-    api.get<ExchangeSnapshotResponse[]>(`/api/exchanges/${exchangeId}/history`),
+  saveLearningAgreement: (exchangeId: string, request: SaveLearningAgreementRequest) =>
+    api.put<LearningAgreementResponse>(`/api/exchanges/${exchangeId}/learning-agreement`, request),
+  getSnapshots: (exchangeId: string) =>
+    api.get<ExchangeSnapshotResponse[]>(`/api/exchanges/${exchangeId}/snapshots`),
+  getSnapshot: (exchangeId: string, snapshotId: string) =>
+    api.get<ExchangeSnapshotResponse>(`/api/exchanges/${exchangeId}/snapshots/${snapshotId}`),
 }

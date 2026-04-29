@@ -117,6 +117,27 @@ export default {
       addSuccess: 'Institution added successfully.'
     }
   },
+  la: {
+    unsavedChanges: 'You have unsaved changes',
+    save: 'Save',
+    discard: 'Discard changes',
+    saveError: 'Error saving. Please try again.',
+  },
+  snapshot: {
+    title: 'Version History',
+    approvedBy: 'Approved by',
+    noSnapshots: 'No recorded versions.',
+    selectA: 'Version A',
+    selectB: 'Version B',
+    current: 'Current version',
+    noDiff: 'No differences between the selected versions.',
+    changedModes: 'Changed slot modes',
+    addedMappings: 'Added mappings',
+    removedMappings: 'Removed mappings',
+    was: 'Was',
+    became: 'Became',
+    subject: 'Course',
+  },
   exchange: {
     title: 'My Exchange',
     noExchange: 'No active exchange',

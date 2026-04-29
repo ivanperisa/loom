@@ -28,12 +28,10 @@ onMounted(async () => {
   }
 })
 
-// Compute mapped ECTS per foreign course from learning agreement
+// Compute mapped ECTS per foreign course from local (unsaved) state
 const mappedEctsMap = computed(() => {
   const map = new Map<string, number>()
-  const la = exchangeStore.learningAgreement
-  if (!la) return map
-  for (const state of la.slotStates) {
+  for (const state of exchangeStore.localSlotStates) {
     for (const m of state.mappings) {
       map.set(m.foreignCourseId, (map.get(m.foreignCourseId) ?? 0) + m.awardedEcts)
     }
