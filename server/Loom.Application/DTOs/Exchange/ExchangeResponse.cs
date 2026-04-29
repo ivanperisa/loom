@@ -6,6 +6,7 @@ public record ExchangeResponse(
     Guid Id,
     Guid StudentId,
     string StudentName,
+    string? StudentJmbag,
     string HomeInstitutionName,
     string StudyProgramName,
     StudyProfileResponse StudyProfile,

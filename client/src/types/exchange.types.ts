@@ -25,6 +25,7 @@ export interface ExchangeResponse {
   id: string
   studentId: string
   studentName: string
+  studentJmbag: string | null
   homeInstitutionName: string
   studyProgramName: string
   studyProfile: StudyProfileResponse
@@ -61,11 +62,13 @@ export interface CourseSlotResponse {
   semester: number
   colStart: number
   ects: number
-  category: CourseSlotCategory
+  categoryCode: string
+  categoryName: string
+  categoryNameEn: string
+  color: string
   courseCode: string | null
   courseName: string
   courseNameEn: string | null
-  color: string
 }
 
 export interface SlotMappingResponse {
@@ -113,4 +116,13 @@ export interface UpdateExchangeStatusRequest {
 
 export interface UpdateCoordinatorMessageRequest {
   message: string | null
+}
+
+export type SnapshotPhase = 'LearningAgreement' | 'Recognition'
+
+export interface ExchangeSnapshotResponse {
+  id: string
+  phase: SnapshotPhase
+  changedByName: string
+  createdAt: string
 }

@@ -18,7 +18,6 @@ public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
             return;
         }
 
-        // Read the external ID (Google sub) before we replace it
         var externalId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
             ?? context.User.FindFirst("sub")?.Value;
         var email = context.User.FindFirst(ClaimTypes.Email)?.Value

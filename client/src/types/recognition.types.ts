@@ -5,8 +5,16 @@ export interface RecognitionEntryResponse {
   slotMappingId: string
   foreignCourseCode: string
   foreignCourseNameEn: string
+  foreignCourseNameHr: string | null
+  foreignCourseEcts: number
+  foreignCourseHours: string | null
   awardedEcts: number
   courseSlotName: string
+  courseSlotCode: string | null
+  courseSlotCategoryCode: string
+  courseSlotCategoryName: string
+  courseSlotColor: string
+  courseSlotSemester: number
   enrollmentStatus: string | null
   originalGrade: string | null
   ectsGrade: string | null

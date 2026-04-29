@@ -23,5 +23,7 @@ public class ExchangeSnapshotConfiguration : IEntityTypeConfiguration<ExchangeSn
             .WithMany()
             .HasForeignKey(x => x.ChangedById);
         builder.HasIndex(x => x.ExchangeId);
+        builder.HasIndex(x => new { x.ExchangeId, x.CreatedAt });
+        builder.HasIndex(x => x.CreatedAt);
     }
 }

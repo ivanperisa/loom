@@ -25,6 +25,8 @@ public class User : EntityBase
 
     public bool IsAdmin() => Role == UserRole.Admin;
 
+    public bool CanActAsCoordinator() => Role == UserRole.Coordinator || Role == UserRole.Admin;
+
     public bool IsCoordinatorFor(Guid? studentCoordinatorId) =>
         studentCoordinatorId == Id || Role == UserRole.Admin;
 }

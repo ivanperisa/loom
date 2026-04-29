@@ -5,9 +5,11 @@ public record CourseSlotResponse(
     int Semester,
     int ColStart,
     int Ects,
-    string Category,
+    string CategoryCode,
+    string CategoryName,
+    string CategoryNameEn,
+    string Color,
     string? CourseCode,
     string CourseName,
-    string? CourseNameEn,
-    string Color
+    string? CourseNameEn
 );

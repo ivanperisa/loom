@@ -1,4 +1,5 @@
-﻿using ErrorOr;
+﻿using System.Text.Json;
+using ErrorOr;
 using Loom.Application.Mappers;
 using Loom.Domain.Entities;
 using Loom.Application.DTOs.CourseSlot;
@@ -14,7 +15,8 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 {
     private IQueryable<Exchange> ExchangeWithIncludes() => db.Exchanges
         .AsNoTracking()
-        .Include(e => e.Student).ThenInclude(s => s.Coordinator)
+        .Include(e => e.Student)
+        .Include(e => e.Coordinator)
         .Include(e => e.StudyProfile).ThenInclude(sp => sp.StudyProgram).ThenInclude(p => p.Institution)
         .Include(e => e.ForeignProgram).ThenInclude(p => p.Institution);
 
@@ -26,6 +28,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             return Error.Validation("INVALID_SEMESTER_TYPE", "Invalid semester type.");
         if (request.StudySemester < 1 || request.StudySemester > 4)
             return Error.Validation("INVALID_STUDY_SEMESTER", "Study semester must be between 1 and 4.");
+
+        var student = await db.Users.FindAsync([studentId], ct);
+        if (student is null) return Error.NotFound("USER_NOT_FOUND", "Student not found.");
 
         var studyProfile = await db.StudyProfiles.FindAsync([request.StudyProfileId], ct);
         if (studyProfile is null) return Error.NotFound("STUDY_PROFILE_NOT_FOUND", "Study profile not found.");
@@ -39,6 +44,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var exchange = new Exchange
         {
             StudentId = studentId,
+            CoordinatorId = student.CoordinatorId,
             StudyProfileId = request.StudyProfileId,
             ForeignProgramId = request.ForeignProgramId,
             AcademicYear = request.AcademicYear,
@@ -65,7 +71,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.Student.CoordinatorId);
+        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.CoordinatorId);
         if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
         return exchange.ToResponse();
@@ -98,7 +104,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
         var isStudent = exchange.StudentId == requesterId;
-        var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.Student.CoordinatorId);
+        var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.CoordinatorId);
 
         if (!isStudent && !isCoordinatorOrAdmin)
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
@@ -128,7 +134,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var saved = await ExchangeWithIncludes()
             .FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
             ?? throw new InvalidOperationException();
-        return saved.ToResponse();
+        var response = saved.ToResponse();
+        await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.LearningAgreement, response, ct);
+        return response;
     }
 
     public async Task<ErrorOr<LearningAgreementResponse>> GetLearningAgreementAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
@@ -142,11 +150,12 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.Student.CoordinatorId);
+        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.CoordinatorId);
         if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
         var slots = await db.CourseSlots
             .AsNoTracking()
+            .Include(s => s.Category)
             .Where(s => s.StudyProfileId == exchange.StudyProfileId)
             .OrderBy(s => s.Semester).ThenBy(s => s.ColStart)
             .ToListAsync(ct);
@@ -175,7 +184,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.Student.CoordinatorId))
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
         if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
             return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
@@ -202,7 +211,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         }
 
         await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+        var la = await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+        if (!la.IsError) await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.LearningAgreement, la.Value, ct);
+        return la;
     }
 
     public async Task<ErrorOr<LearningAgreementResponse>> AddSlotMappingAsync(Guid exchangeId, Guid requesterId, AddSlotMappingRequest request, CancellationToken ct = default)
@@ -214,7 +225,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.Student.CoordinatorId))
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
         if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
             return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
@@ -243,7 +254,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         db.SlotMappings.Add(mapping);
         await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+        var la = await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+        if (!la.IsError) await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.LearningAgreement, la.Value, ct);
+        return la;
     }
 
     public async Task<ErrorOr<LearningAgreementResponse>> RemoveSlotMappingAsync(Guid exchangeId, Guid requesterId, RemoveSlotMappingRequest request, CancellationToken ct = default)
@@ -252,7 +265,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.Student.CoordinatorId))
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
         if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
             return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
@@ -266,7 +279,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         db.SlotMappings.Remove(mapping);
         await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+        var la = await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+        if (!la.IsError) await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.LearningAgreement, la.Value, ct);
+        return la;
     }
 
     public async Task<ErrorOr<LearningAgreementResponse>> RemoveSlotStateAsync(Guid exchangeId, Guid requesterId, Guid courseSlotId, CancellationToken ct = default)
@@ -275,7 +290,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.Student.CoordinatorId))
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
         if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
             return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
@@ -288,7 +303,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         db.SlotMappings.RemoveRange(mappings);
         db.SlotStates.Remove(slotState);
         await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+        var la = await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+        if (!la.IsError) await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.LearningAgreement, la.Value, ct);
+        return la;
     }
 
     public async Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeId, Guid requesterId, string? message, CancellationToken ct = default)
@@ -299,7 +316,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.Student.CoordinatorId);
+        var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.CoordinatorId);
         if (!isCoordinatorOrAdmin)
             return Error.Forbidden("ACCESS_DENIED", "Only coordinators can update the message.");
 
@@ -311,7 +328,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var saved = await ExchangeWithIncludes()
             .FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
             ?? throw new InvalidOperationException();
-        return saved.ToResponse();
+        var msgResponse = saved.ToResponse();
+        await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.LearningAgreement, msgResponse, ct);
+        return msgResponse;
     }
 
     public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyStudentsExchangesAsync(Guid requesterId, CancellationToken ct = default)
@@ -354,5 +373,43 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         db.Exchanges.Remove(exchange);
         await db.SaveChangesAsync(ct);
         return Result.Deleted;
+    }
+
+    public async Task<ErrorOr<List<ExchangeSnapshotResponse>>> GetHistoryAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
+    {
+        var exchange = await db.Exchanges
+            .AsNoTracking()
+            .Include(e => e.Student)
+            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.CoordinatorId);
+        if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+
+        var snapshots = await db.ExchangeSnapshots
+            .AsNoTracking()
+            .Include(s => s.ChangedBy)
+            .Where(s => s.ExchangeId == exchangeId)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync(ct);
+
+        return snapshots.Select(s => s.ToResponse()).ToList();
+    }
+
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+    private async Task SaveSnapshotAsync(Guid exchangeId, Guid changedById, SnapshotPhase phase, object payload, CancellationToken ct)
+    {
+        db.ExchangeSnapshots.Add(new ExchangeSnapshot
+        {
+            ExchangeId = exchangeId,
+            ChangedById = changedById,
+            Phase = phase,
+            Snapshot = JsonSerializer.Serialize(payload, _jsonOptions),
+        });
+        await db.SaveChangesAsync(ct);
     }
 }

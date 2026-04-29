@@ -132,6 +132,10 @@ export default {
     tabs: {
       learningAgreement: 'Learning Agreement',
       recognition: 'Recognition',
+      history: 'History',
+    },
+    history: {
+      empty: 'No changes recorded yet.',
     },
     status: {
       waitingApproval: 'Waiting for coordinator approval',
@@ -220,6 +224,8 @@ export default {
   recognition: {
     notApproved: 'Recognition is available after the exchange is approved.',
     noEntries: 'No entries for recognition.',
+    export: 'Export to Excel',
+    totalAwarded: 'Total: {ects} ECTS',
     actions: {
       submit: 'Submit for Review',
       approve: 'Approve',
@@ -231,6 +237,10 @@ export default {
     Submitted: 'Submitted',
     Approved: 'Approved',
     Rejected: 'Rejected',
+  },
+  snapshotPhase: {
+    LearningAgreement: 'Learning Agreement',
+    Recognition: 'Recognition',
   },
   exchangeCourse: {
     add: 'Add Course',

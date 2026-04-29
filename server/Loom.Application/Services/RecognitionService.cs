@@ -1,3 +1,4 @@
+﻿using System.Text.Json;
 using ErrorOr;
 using Loom.Application.DTOs.Exchange;
 using Loom.Application.DTOs.Recognition;
@@ -21,7 +22,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
         var canAccess = exchange.StudentId == requesterId
-            || exchange.Student.CoordinatorId == requesterId
+            || exchange.CoordinatorId == requesterId
             || requester.Role == UserRole.Admin;
         if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
@@ -33,6 +34,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
                 .ThenInclude(e => e.SlotMapping)
                     .ThenInclude(m => m.SlotState)
                         .ThenInclude(s => s.CourseSlot)
+                            .ThenInclude(s => s.Category)
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
 
         if (recognition is null)
@@ -45,6 +47,38 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
             db.Recognitions.Add(recognition);
             await db.SaveChangesAsync(ct);
             recognition.Entries = new List<RecognitionEntry>();
+        }
+
+        // Auto-create empty entries for any SlotMapping not yet in Recognition
+        var existingSlotMappingIds = recognition.Entries.Select(e => e.SlotMappingId).ToHashSet();
+        var allMappingIds = await db.SlotMappings
+            .AsNoTracking()
+            .Where(m => m.SlotState.ExchangeId == exchangeId)
+            .Select(m => m.Id)
+            .ToListAsync(ct);
+
+        var missingIds = allMappingIds.Where(id => !existingSlotMappingIds.Contains(id)).ToList();
+        if (missingIds.Count > 0)
+        {
+            var newEntries = missingIds.Select(id => new RecognitionEntry
+            {
+                RecognitionId = recognition.Id,
+                SlotMappingId = id,
+            }).ToList();
+            db.RecognitionEntries.AddRange(newEntries);
+            await db.SaveChangesAsync(ct);
+
+            // Reload with full includes
+            recognition = await db.Recognitions
+                .Include(r => r.Entries)
+                    .ThenInclude(e => e.SlotMapping)
+                        .ThenInclude(m => m.ForeignCourse)
+                .Include(r => r.Entries)
+                    .ThenInclude(e => e.SlotMapping)
+                        .ThenInclude(m => m.SlotState)
+                            .ThenInclude(s => s.CourseSlot)
+                                .ThenInclude(s => s.Category)
+                .FirstAsync(r => r.ExchangeId == exchangeId, ct);
         }
 
         return recognition.ToResponse();
@@ -64,6 +98,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
                 .ThenInclude(e => e.SlotMapping)
                     .ThenInclude(m => m.SlotState)
                         .ThenInclude(s => s.CourseSlot)
+                            .ThenInclude(s => s.Category)
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Create recognition first.");
         if (recognition.Status == RecognitionStatus.Approved) return Error.Conflict("RECOGNITION_LOCKED", "Approved recognition cannot be modified.");
@@ -98,7 +133,9 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         recognition.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        return await GetOrCreateRecognitionAsync(exchangeId, studentId, ct);
+        var rec = await GetOrCreateRecognitionAsync(exchangeId, studentId, ct);
+        if (!rec.IsError) await SaveSnapshotAsync(exchangeId, studentId, SnapshotPhase.Recognition, rec.Value, ct);
+        return rec;
     }
 
     public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionStatusAsync(Guid exchangeId, Guid requesterId, UpdateExchangeStatusRequest request, CancellationToken ct = default)
@@ -113,7 +150,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
         var isStudent = exchange.StudentId == requesterId;
-        var isCoordinatorOrAdmin = exchange.Student.CoordinatorId == requesterId || requester.Role == UserRole.Admin;
+        var isCoordinatorOrAdmin = exchange.CoordinatorId == requesterId || requester.Role == UserRole.Admin;
 
         if (isStudent && newStatus != RecognitionStatus.Submitted)
             return Error.Forbidden("FORBIDDEN", "Students can only submit recognition.");
@@ -128,6 +165,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
                 .ThenInclude(e => e.SlotMapping)
                     .ThenInclude(m => m.SlotState)
                         .ThenInclude(s => s.CourseSlot)
+                            .ThenInclude(s => s.Category)
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
 
@@ -136,6 +174,22 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
 
         await db.SaveChangesAsync(ct);
 
-        return recognition.ToResponse();
+        var statusResponse = recognition.ToResponse();
+        await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.Recognition, statusResponse, ct);
+        return statusResponse;
+    }
+
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+    private async Task SaveSnapshotAsync(Guid exchangeId, Guid changedById, SnapshotPhase phase, object payload, CancellationToken ct)
+    {
+        db.ExchangeSnapshots.Add(new ExchangeSnapshot
+        {
+            ExchangeId = exchangeId,
+            ChangedById = changedById,
+            Phase = phase,
+            Snapshot = JsonSerializer.Serialize(payload, _jsonOptions),
+        });
+        await db.SaveChangesAsync(ct);
     }
 }

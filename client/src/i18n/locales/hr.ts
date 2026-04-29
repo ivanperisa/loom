@@ -132,6 +132,10 @@ export default {
     tabs: {
       learningAgreement: 'Ugovor o učenju',
       recognition: 'Priznavanje',
+      history: 'Povijest',
+    },
+    history: {
+      empty: 'Nema zabilježenih izmjena.',
     },
     status: {
       waitingApproval: 'Čeka odobrenje koordinatora',
@@ -220,6 +224,8 @@ export default {
   recognition: {
     notApproved: 'Priznavanje je dostupno tek nakon odobrenja razmjene.',
     noEntries: 'Nema stavki za priznavanje.',
+    export: 'Izvezi u Excel',
+    totalAwarded: 'Ukupno: {ects} ECTS',
     actions: {
       submit: 'Predaj na pregled',
       approve: 'Odobri',
@@ -231,6 +237,10 @@ export default {
     Submitted: 'Predano',
     Approved: 'Odobreno',
     Rejected: 'Odbijeno',
+  },
+  snapshotPhase: {
+    LearningAgreement: 'Ugovor o učenju',
+    Recognition: 'Priznavanje',
   },
   exchangeCourse: {
     add: 'Dodaj predmet',

@@ -12,6 +12,7 @@ public interface IAppDbContext
     DbSet<Exchange> Exchanges { get; }
     DbSet<ForeignProgram> ForeignPrograms { get; }
     DbSet<ForeignCourse> ForeignCourses { get; }
+    DbSet<CourseCategory> CourseCategories { get; }
     DbSet<CourseSlot> CourseSlots { get; }
     DbSet<SlotState> SlotStates { get; }
     DbSet<SlotMapping> SlotMappings { get; }

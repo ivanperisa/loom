@@ -14,6 +14,9 @@ public class Exchange : AuditableEntity
     public Guid ForeignProgramId { get; set; }
     public ForeignProgram ForeignProgram { get; set; } = null!;
 
+    public Guid? CoordinatorId { get; set; }
+    public User? Coordinator { get; set; }
+
     public string AcademicYear { get; set; } = null!;
     public ExchangeSemester SemesterType { get; set; }
     public int StudySemester { get; set; }

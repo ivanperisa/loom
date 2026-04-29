@@ -15,15 +15,17 @@ public class CourseSlotConfiguration : IEntityTypeConfiguration<CourseSlot>
         builder.Property(x => x.Semester).HasColumnName("semester");
         builder.Property(x => x.ColStart).HasColumnName("col_start");
         builder.Property(x => x.Ects).HasColumnName("ects");
-        builder.Property(x => x.Category).HasColumnName("category").HasConversion<string>();
+        builder.Property(x => x.CategoryCode).HasColumnName("category_code").HasMaxLength(20).IsRequired();
         builder.Property(x => x.CourseCode).HasColumnName("course_code");
         builder.Property(x => x.CourseName).HasColumnName("course_name").IsRequired();
         builder.Property(x => x.CourseNameEn).HasColumnName("course_name_en");
-        builder.Property(x => x.Color).HasColumnName("color").IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.HasOne(x => x.StudyProfile)
             .WithMany(x => x.CourseSlots)
             .HasForeignKey(x => x.StudyProfileId);
+        builder.HasOne(x => x.Category)
+            .WithMany(x => x.CourseSlots)
+            .HasForeignKey(x => x.CategoryCode);
         builder.HasIndex(x => x.StudyProfileId);
     }
 }

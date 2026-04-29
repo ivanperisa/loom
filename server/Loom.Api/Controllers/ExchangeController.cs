@@ -96,4 +96,11 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         var result = await exchangeService.GetMyStudentsExchangesAsync(GetCurrentUserId(), ct);
         return Match(result, Ok);
     }
+
+    [HttpGet("{exchangeId:guid}/history")]
+    public async Task<IActionResult> GetHistory(Guid exchangeId, CancellationToken ct)
+    {
+        var result = await exchangeService.GetHistoryAsync(exchangeId, GetCurrentUserId(), ct);
+        return Match(result, Ok);
+    }
 }

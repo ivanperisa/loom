@@ -7,13 +7,17 @@ import ForeignCoursePanel from '@/components/exchange/ForeignCoursePanel.vue'
 import RecognitionPanel from '@/components/exchange/RecognitionPanel.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useAuthStore } from '@/stores/auth.store'
+import { exchangeService } from '@/services/exchange.service'
+import type { ExchangeSnapshotResponse } from '@/types/exchange.types'
 
 const route = useRoute()
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
 const authStore = useAuthStore()
 
-const activeTab = ref<'la' | 'recognition'>('la')
+const activeTab = ref<'la' | 'recognition' | 'history'>('la')
+const history = ref<ExchangeSnapshotResponse[]>([])
+const historyLoading = ref(false)
 const exchangeId = computed(() => route.params.exchangeId as string)
 
 const isCoordinator = computed(
@@ -88,6 +92,25 @@ async function saveMessage() {
 
 function switchToRecognition() {
   if (isApproved.value) activeTab.value = 'recognition'
+}
+
+async function openHistory() {
+  activeTab.value = 'history'
+  if (history.value.length > 0) return
+  historyLoading.value = true
+  try {
+    const res = await exchangeService.getHistory(exchangeId.value)
+    history.value = res.data
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString('hr', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
 }
 
 </script>
@@ -354,6 +377,14 @@ function switchToRecognition() {
           >
             {{ t('exchange.tabs.recognition') }}
           </button>
+          <button
+            type="button"
+            class="px-4 py-2.5 text-sm font-semibold transition"
+            :class="activeTab === 'history' ? 'border-b-2 border-primary text-primary' : 'text-light/60 hover:text-primary-light'"
+            @click="openHistory"
+          >
+            {{ t('exchange.tabs.history') }}
+          </button>
         </div>
 
         <!-- Tab content -->
@@ -395,7 +426,61 @@ function switchToRecognition() {
             <div v-if="!isApproved" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
               <p class="text-light/60">{{ t('recognition.notApproved') }}</p>
             </div>
-            <RecognitionPanel v-else :exchange-id="exchangeId" />
+            <RecognitionPanel
+              v-else
+              :exchange-id="exchangeId"
+              :exchange="exchangeStore.exchange!"
+              :learning-agreement="exchangeStore.learningAgreement!"
+            />
+          </template>
+
+          <template v-else-if="activeTab === 'history'">
+            <!-- Loading -->
+            <div v-if="historyLoading" class="space-y-2">
+              <div v-for="i in 4" :key="i" class="h-12 animate-pulse rounded-lg bg-primary/20"></div>
+            </div>
+
+            <!-- Empty -->
+            <div v-else-if="history.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
+              <p class="text-light/60">{{ t('exchange.history.empty') }}</p>
+            </div>
+
+            <!-- Timeline -->
+            <div v-else class="relative space-y-0">
+              <!-- Vertical line -->
+              <div class="absolute left-[11px] top-4 bottom-4 w-px bg-primary/20"></div>
+
+              <div
+                v-for="(snap, idx) in history"
+                :key="snap.id"
+                class="relative flex gap-4 py-3"
+              >
+                <!-- Dot -->
+                <div class="mt-0.5 h-6 w-6 shrink-0 rounded-full border-2 flex items-center justify-center"
+                  :class="snap.phase === 'LearningAgreement' ? 'border-primary bg-dark' : 'border-green-500 bg-dark'"
+                >
+                  <div class="h-2 w-2 rounded-full" :class="snap.phase === 'LearningAgreement' ? 'bg-primary' : 'bg-green-500'"></div>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 rounded-lg border border-primary/20 bg-dark-2 px-4 py-3">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                        :class="snap.phase === 'LearningAgreement'
+                          ? 'border-primary/40 bg-primary/10 text-primary-light'
+                          : 'border-green-500/40 bg-green-500/10 text-green-400'"
+                      >
+                        {{ t(`snapshotPhase.${snap.phase}`) }}
+                      </span>
+                      <span class="text-sm font-medium text-light">{{ snap.changedByName }}</span>
+                    </div>
+                    <span class="text-xs text-light/50">{{ formatDate(snap.createdAt) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </template>
         </div>
       </template>

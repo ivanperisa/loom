@@ -11,12 +11,13 @@ public static class ExchangeMapper
         exchange.Id,
         exchange.StudentId,
         exchange.Student.Name,
+        exchange.Student.Jmbag,
         exchange.StudyProfile.StudyProgram.Institution.Name,
         exchange.StudyProfile.StudyProgram.Name,
         exchange.StudyProfile.ToResponse(),
         exchange.ForeignProgram.ToResponse(),
-        exchange.Student.CoordinatorId,
-        exchange.Student.Coordinator?.Name,
+        exchange.CoordinatorId,
+        exchange.Coordinator?.Name,
         exchange.Student.Mentor,
         exchange.AcademicYear,
         exchange.SemesterType.ToString(),
@@ -47,11 +48,13 @@ public static class ExchangeMapper
         slot.Semester,
         slot.ColStart,
         slot.Ects,
-        slot.Category.ToString(),
+        slot.CategoryCode,
+        slot.Category.Name,
+        slot.Category.NameEn,
+        slot.Category.Color,
         slot.CourseCode,
         slot.CourseName,
-        slot.CourseNameEn,
-        slot.Color
+        slot.CourseNameEn
     );
 
     public static SlotStateResponse ToResponse(this SlotState state) => new(
@@ -81,6 +84,13 @@ public static class ExchangeMapper
         course.LabH
     );
 
+    public static ExchangeSnapshotResponse ToResponse(this ExchangeSnapshot snapshot) => new(
+        snapshot.Id,
+        snapshot.Phase.ToString(),
+        snapshot.ChangedBy.Name,
+        snapshot.CreatedAt
+    );
+
     public static RecognitionResponse ToResponse(this Recognition recognition) => new(
         recognition.Id,
         recognition.ExchangeId,
@@ -90,17 +100,33 @@ public static class ExchangeMapper
         recognition.UpdatedAt
     );
 
-    public static RecognitionEntryResponse ToResponse(this RecognitionEntry entry) => new(
-        entry.Id,
-        entry.SlotMappingId,
-        entry.SlotMapping.ForeignCourse.Code,
-        entry.SlotMapping.ForeignCourse.NameEn,
-        entry.SlotMapping.AwardedEcts,
-        entry.SlotMapping.SlotState.CourseSlot.CourseName,
-        entry.EnrollmentStatus,
-        entry.OriginalGrade,
-        entry.EctsGrade,
-        entry.HrGrade,
-        entry.ExamDate
-    );
+    public static RecognitionEntryResponse ToResponse(this RecognitionEntry entry)
+    {
+        var fc = entry.SlotMapping.ForeignCourse;
+        var slot = entry.SlotMapping.SlotState.CourseSlot;
+        var hours = (fc.LecturesH.HasValue || fc.AuditoryH.HasValue || fc.LabH.HasValue)
+            ? $"{fc.LecturesH ?? 0}/{fc.AuditoryH ?? 0}/{fc.LabH ?? 0}"
+            : null;
+        return new(
+            entry.Id,
+            entry.SlotMappingId,
+            fc.Code,
+            fc.NameEn,
+            fc.NameHr,
+            fc.Ects,
+            hours,
+            entry.SlotMapping.AwardedEcts,
+            slot.CourseName,
+            slot.CourseCode,
+            slot.CategoryCode,
+            slot.Category.Name,
+            slot.Category.Color,
+            slot.Semester,
+            entry.EnrollmentStatus,
+            entry.OriginalGrade,
+            entry.EctsGrade,
+            entry.HrGrade,
+            entry.ExamDate
+        );
+    }
 }

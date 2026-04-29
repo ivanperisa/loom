@@ -32,6 +32,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
 
         builder.HasIndex(x => x.ExternalId).IsUnique();
+        builder.HasIndex(x => x.Email);
+        builder.HasIndex(x => x.CoordinatorId);
+        builder.HasIndex(x => x.InstitutionId);
 
         builder.HasOne(x => x.Institution)
             .WithMany()

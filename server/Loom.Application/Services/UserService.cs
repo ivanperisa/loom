@@ -89,10 +89,16 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         if (request.CoordinatorId.HasValue)
         {
             var coordinator = await db.Users.FindAsync([request.CoordinatorId.Value], ct);
-            if (coordinator is null || coordinator.Role != UserRole.Coordinator)
+            if (coordinator is null || !coordinator.CanActAsCoordinator())
                 return Error.NotFound("COORDINATOR_NOT_FOUND", "Coordinator not found.");
         }
         user.CoordinatorId = request.CoordinatorId;
+
+        var activeExchanges = await db.Exchanges
+            .Where(e => e.StudentId == user.Id && e.Status != ExchangeStatus.Approved && e.Status != ExchangeStatus.Rejected)
+            .ToListAsync(ct);
+        foreach (var exchange in activeExchanges)
+            exchange.CoordinatorId = request.CoordinatorId;
 
         await db.SaveChangesAsync(ct);
 

@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Exchange> Exchanges => Set<Exchange>();
     public DbSet<ForeignProgram> ForeignPrograms => Set<ForeignProgram>();
     public DbSet<ForeignCourse> ForeignCourses => Set<ForeignCourse>();
+    public DbSet<CourseCategory> CourseCategories => Set<CourseCategory>();
     public DbSet<CourseSlot> CourseSlots => Set<CourseSlot>();
     public DbSet<SlotState> SlotStates => Set<SlotState>();
     public DbSet<SlotMapping> SlotMappings => Set<SlotMapping>();

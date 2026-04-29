@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useExchangeStore } from '@/stores/exchange.store'
@@ -123,7 +123,7 @@ function cellStyle(slot: CourseSlotResponse): Record<string, string> {
     backgroundColor: bg,
     outline,
     outlineOffset: state ? '-3px' : '-1px',
-    cursor: props.readonly || slot.category === 'Thesis' ? 'default' : 'pointer',
+    cursor: props.readonly || slot.categoryCode === 'Thesis' ? 'default' : 'pointer',
   }
 }
 
@@ -170,7 +170,7 @@ function cancelDrop() {
 
 // Mode cycling
 async function cycleMode(slot: CourseSlotResponse) {
-  if (props.readonly || slot.category === 'Thesis') return
+  if (props.readonly || slot.categoryCode === 'Thesis') return
   const state = slotState(slot.id)
   if (!state) {
     await exchangeStore.setSlotMode(props.exchangeId, { courseSlotId: slot.id, mode: 'AtHome' })
@@ -239,7 +239,7 @@ async function removeMapping(slotMappingId: string) {
             <div style="font-size: 11px; font-weight: 400; color: #222; line-height: 1.3; margin-top: 1px;">
               {{ slot.courseCode
                 ? (locale === 'en' && slot.courseNameEn ? slot.courseNameEn : slot.courseName)
-                : t(`courseSlotCategory.${slot.category}`) }}
+                : t(`courseSlotCategory.${slot.categoryCode}`) }}
             </div>
 
             <!-- Mode badge -->
