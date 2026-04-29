@@ -43,7 +43,7 @@ const router = createRouter({
     {
       path: '/coordinator',
       component: () => import('@/views/CoordinatorDashboard.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true }
+      meta: { requiresAuth: true, requiresOnboarding: true, requiresCoordinator: true }
     },
     {
       path: '/admin',
@@ -69,8 +69,18 @@ router.beforeEach(async (to) => {
     return '/home'
   }
 
-  if (to.meta.requiresAdmin && authStore.role !== 'Admin') {
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
     return '/home'
+  }
+
+  if (to.meta.requiresCoordinator && !authStore.canActAsCoordinator) {
+    return '/home'
+  }
+
+  if (to.path === '/home' && authStore.isLoggedIn && authStore.isOnboarded) {
+    if (authStore.canActAsCoordinator) {
+      return '/coordinator'
+    }
   }
 })
 

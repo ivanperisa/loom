@@ -22,4 +22,9 @@ public class User : EntityBase
     public string? CoordinatorRequestStatus { get; set; }
 
     public ICollection<Exchange> StudentExchanges { get; set; } = [];
+
+    public bool IsAdmin() => Role == UserRole.Admin;
+
+    public bool IsCoordinatorFor(Guid? studentCoordinatorId) =>
+        studentCoordinatorId == Id || Role == UserRole.Admin;
 }

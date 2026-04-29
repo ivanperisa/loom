@@ -56,7 +56,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
     {
         var coordinators = await db.Users
             .AsNoTracking()
-            .Where(u => u.Role == UserRole.Coordinator)
+            .Where(u => u.Role == UserRole.Coordinator || u.Role == UserRole.Admin)
             .OrderBy(u => u.Name)
             .ToListAsync(ct);
         return coordinators.Select(u => u.ToAuthMeResponse()).ToList();

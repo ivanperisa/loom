@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+﻿<script setup lang="ts">
+import { ref, computed, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { recognitionService } from '@/services/recognition.service'
 import { useAuthStore } from '@/stores/auth.store'
@@ -17,11 +17,11 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const savingEntryId = ref<string | null>(null)
 
-const isCoordinator = ref(authStore.role === 'Coordinator' || authStore.role === 'Admin')
+const isCoordinator = computed(() => authStore.canActAsCoordinator)
 
 const statusColorClass: Record<string, string> = {
   Draft: 'bg-slate-500/20 text-slate-300 border-slate-400',
-  Submitted: 'bg-[#218CD9]/20 text-[#8AC4ED] border-[#218CD9]',
+  Submitted: 'bg-primary/20 text-primary-light border-primary',
   Approved: 'bg-green-500/20 text-green-300 border-green-400',
   Rejected: 'bg-red-500/20 text-red-300 border-red-400',
 }
@@ -116,7 +116,7 @@ async function rejectRecognition() {
   <div>
     <!-- Loading -->
     <div v-if="loading" class="space-y-3">
-      <div v-for="i in 3" :key="i" class="h-20 animate-pulse rounded-lg bg-[#1E4A6E]"></div>
+      <div v-for="i in 3" :key="i" class="h-20 animate-pulse rounded-lg bg-primary/20"></div>
     </div>
 
     <!-- Error -->
@@ -138,7 +138,7 @@ async function rejectRecognition() {
           <button
             v-if="!isCoordinator && recognition.status === 'Draft'"
             type="button"
-            class="rounded-lg bg-[#218CD9] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
+            class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
             @click="submitRecognition"
           >
             {{ t('recognition.actions.submit') }}
@@ -163,8 +163,8 @@ async function rejectRecognition() {
       </div>
 
       <!-- No entries -->
-      <div v-if="recognition.entries.length === 0" class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-8 text-center">
-        <p class="text-[#5A8AAD]">{{ t('recognition.noEntries') }}</p>
+      <div v-if="recognition.entries.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
+        <p class="text-light/60">{{ t('recognition.noEntries') }}</p>
       </div>
 
       <!-- Entries -->
@@ -172,15 +172,15 @@ async function rejectRecognition() {
         <div
           v-for="entry in recognition.entries"
           :key="entry.id"
-          class="rounded-lg border border-[#1E4A6E] bg-[#0A2235] p-4"
+          class="rounded-lg border border-primary/20 bg-dark-2 p-4"
         >
           <div class="mb-3 flex flex-wrap items-start justify-between gap-2">
             <div>
-              <div class="text-sm font-medium text-[#CAE4F7]">
-                <span class="font-mono text-[#5A8AAD]">{{ entry.foreignCourseCode }}</span>
+              <div class="text-sm font-medium text-light">
+                <span class="font-mono text-light/60">{{ entry.foreignCourseCode }}</span>
                 {{ entry.foreignCourseNameEn }}
               </div>
-              <div class="text-xs text-[#5A8AAD]">
+              <div class="text-xs text-light/60">
                 {{ entry.courseSlotName }} &middot; {{ entry.awardedEcts }} ECTS
               </div>
             </div>
@@ -189,43 +189,43 @@ async function rejectRecognition() {
           <template v-if="editableEntries[entry.id]">
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
               <div>
-                <label class="mb-0.5 block text-[10px] font-medium text-[#5A8AAD]">{{ t('exchangeCourse.statusLabel') }}</label>
+                <label class="mb-0.5 block text-[10px] font-medium text-light/60">{{ t('exchangeCourse.statusLabel') }}</label>
                 <input
                   v-model="editableEntries[entry.id]!.enrollmentStatus"
                   type="text"
-                  class="w-full rounded border border-[#1E4A6E] bg-[#071C2C] px-2 py-1 text-xs text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+                  class="w-full rounded border border-primary/20 bg-dark px-2 py-1 text-xs text-light focus:border-primary focus:outline-none"
                 />
               </div>
               <div>
-                <label class="mb-0.5 block text-[10px] font-medium text-[#5A8AAD]">{{ t('exchangeCourse.originalGrade') }}</label>
+                <label class="mb-0.5 block text-[10px] font-medium text-light/60">{{ t('exchangeCourse.originalGrade') }}</label>
                 <input
                   v-model="editableEntries[entry.id]!.originalGrade"
                   type="text"
-                  class="w-full rounded border border-[#1E4A6E] bg-[#071C2C] px-2 py-1 text-xs text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+                  class="w-full rounded border border-primary/20 bg-dark px-2 py-1 text-xs text-light focus:border-primary focus:outline-none"
                 />
               </div>
               <div>
-                <label class="mb-0.5 block text-[10px] font-medium text-[#5A8AAD]">{{ t('exchangeCourse.ectsGrade') }}</label>
+                <label class="mb-0.5 block text-[10px] font-medium text-light/60">{{ t('exchangeCourse.ectsGrade') }}</label>
                 <input
                   v-model="editableEntries[entry.id]!.ectsGrade"
                   type="text"
-                  class="w-full rounded border border-[#1E4A6E] bg-[#071C2C] px-2 py-1 text-xs text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+                  class="w-full rounded border border-primary/20 bg-dark px-2 py-1 text-xs text-light focus:border-primary focus:outline-none"
                 />
               </div>
               <div>
-                <label class="mb-0.5 block text-[10px] font-medium text-[#5A8AAD]">{{ t('mapping.convertedGrade') }}</label>
+                <label class="mb-0.5 block text-[10px] font-medium text-light/60">{{ t('mapping.convertedGrade') }}</label>
                 <input
                   v-model="editableEntries[entry.id]!.hrGrade"
                   type="text"
-                  class="w-full rounded border border-[#1E4A6E] bg-[#071C2C] px-2 py-1 text-xs text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+                  class="w-full rounded border border-primary/20 bg-dark px-2 py-1 text-xs text-light focus:border-primary focus:outline-none"
                 />
               </div>
               <div>
-                <label class="mb-0.5 block text-[10px] font-medium text-[#5A8AAD]">{{ t('exchangeCourse.examDate') }}</label>
+                <label class="mb-0.5 block text-[10px] font-medium text-light/60">{{ t('exchangeCourse.examDate') }}</label>
                 <input
                   v-model="editableEntries[entry.id]!.examDate"
                   type="date"
-                  class="w-full rounded border border-[#1E4A6E] bg-[#071C2C] px-2 py-1 text-xs text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+                  class="w-full rounded border border-primary/20 bg-dark px-2 py-1 text-xs text-light focus:border-primary focus:outline-none"
                 />
               </div>
             </div>
@@ -233,7 +233,7 @@ async function rejectRecognition() {
               <button
                 type="button"
                 :disabled="savingEntryId === entry.id"
-                class="rounded bg-[#218CD9] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C] disabled:opacity-50"
+                class="rounded bg-primary px-3 py-1 text-xs font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
                 @click="saveEntry(entry)"
               >
                 {{ savingEntryId === entry.id ? t('common.loading') : t('settings.institutions.save') }}

@@ -4,16 +4,16 @@
   align-items: center;
   border-radius: 0.85rem;
   background: rgb(255 255 255 / 95%);
-  box-shadow: 0 8px 20px rgb(16 33 54 / 10%);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 10%);
   backdrop-filter: blur(8px);
 }
 
 .language-switcher .dropdown-button {
-  border: 1px solid #c7d4e4;
+  border: 1px solid rgb(0 0 0 / 15%);
   border-radius: 0.7rem;
   padding: 0.4rem 0.5rem;
   background: var(--color-light);
-  color: #102136;
+  color: var(--color-dark);
   cursor: pointer;
   font: inherit;
   display: inline-flex;
@@ -26,7 +26,7 @@
   height: 0.85rem;
   display: inline-block;
   border-radius: 0.15rem;
-  box-shadow: 0 0 0 1px rgb(16 33 54 / 14%);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 14%);
   background-size: cover;
   background-position: center;
 }
@@ -40,10 +40,10 @@
   margin: 0;
   padding: 0.25rem;
   list-style: none;
-  border: 1px solid #c7d4e4;
+  border: 1px solid rgb(0 0 0 / 15%);
   border-radius: 0.75rem;
   background: var(--color-light);
-  box-shadow: 0 12px 24px rgb(16 33 54 / 14%);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 14%);
   z-index: 60;
 }
 
@@ -55,7 +55,7 @@
   font: inherit;
   text-align: left;
   background: transparent;
-  color: #102136;
+  color: var(--color-dark);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -64,7 +64,7 @@
 
 .language-switcher .dropdown-item:hover,
 .language-switcher .dropdown-item.active {
-  background: #eaf2ff;
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 /* Dark variant — for use on dark backgrounds (AppHeader, OnboardingView) */
@@ -76,22 +76,22 @@
 
 .language-switcher.variant-dark .dropdown-button {
   background: transparent;
-  border: 1px solid #1E4A6E;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
   border-radius: 0.7rem;
-  color: #cae4f7;
+  color: var(--color-light);
 }
 
 .language-switcher.variant-dark .dropdown-list {
-  background: #071c2c;
-  border-color: rgba(33, 140, 217, 0.4);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  background: var(--color-dark);
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 40%);
 }
 
 .language-switcher.variant-dark .dropdown-item {
-  color: #cae4f7;
+  color: var(--color-light);
 }
 
 .language-switcher.variant-dark .dropdown-item:hover,
 .language-switcher.variant-dark .dropdown-item.active {
-  background: rgba(33, 140, 217, 0.15);
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
 }

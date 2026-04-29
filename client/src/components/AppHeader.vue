@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
@@ -9,9 +9,7 @@ const { t } = useI18n()
 
 const displayName = computed(() => authStore.user?.name?.trim() || t('common.user'))
 const displayEmail = computed(() => authStore.user?.email?.trim() || t('common.na'))
-const isCoordinator = computed(() => authStore.user?.role === 'Coordinator' || authStore.user?.role === 'Admin')
-const isAdmin = computed(() => authStore.user?.role === 'Admin')
-const isStudent = computed(() => authStore.user?.role === 'Student')
+const homeRoute = computed(() => authStore.canActAsCoordinator ? '/coordinator' : '/home')
 
 const initials = computed(() => {
   const parts = displayName.value
@@ -25,21 +23,17 @@ const initials = computed(() => {
 </script>
 
 <template>
-  <header class="sticky top-0 z-50 w-full border-b border-[#218CD9]/40 bg-[#071C2C]/95 backdrop-blur">
+  <header class="sticky top-0 z-50 w-full border-b border-primary/40 bg-dark/95 backdrop-blur">
     <div class="page-container flex h-16 items-center justify-between !py-0">
       <div class="flex items-center gap-8">
-        <RouterLink to="/home" class="flex items-center gap-2">
-          <svg viewBox="0 0 24 24" class="h-7 w-7 text-[#218CD9]" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" />
-            <path d="M7 14h3l2-4 2 6 3-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <span class="text-lg font-bold text-white">{{ t('common.appName') }}</span>
+        <RouterLink :to="homeRoute" class="text-lg font-bold text-primary">
+          {{ t('common.appName') }}
         </RouterLink>
 
         <nav class="hidden items-center gap-5 md:flex">
-          <RouterLink to="/home" class="nav-link">{{ t('nav.home') }}</RouterLink>
-          <RouterLink v-if="isCoordinator" to="/coordinator" class="nav-link">{{ t('nav.students') }}</RouterLink>
-          <RouterLink v-if="isAdmin" to="/admin" class="nav-link">{{ t('nav.admin') }}</RouterLink>
+          <RouterLink v-if="authStore.isStudent" to="/home" class="nav-link">{{ t('nav.home') }}</RouterLink>
+          <RouterLink v-if="authStore.canActAsCoordinator" to="/coordinator" class="nav-link">{{ t('nav.students') }}</RouterLink>
+          <RouterLink v-if="authStore.isAdmin" to="/admin" class="nav-link">{{ t('nav.admin') }}</RouterLink>
           <RouterLink to="/settings" class="nav-link">{{ t('nav.settings') }}</RouterLink>
         </nav>
       </div>
@@ -50,21 +44,21 @@ const initials = computed(() => {
         <div class="group relative">
           <button
             type="button"
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-[#218CD9] text-sm font-bold text-white"
+            class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-white"
           >
             {{ initials }}
           </button>
           <div
-            class="invisible absolute right-0 top-12 w-56 rounded-xl border border-[#218CD9]/40 bg-[#071C2C] p-3 text-sm text-[#CAE4F7] opacity-0 shadow-lg shadow-black/40 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+            class="invisible absolute right-0 top-12 w-56 rounded-xl border border-primary/40 bg-dark p-3 text-sm text-light opacity-0 shadow-lg shadow-black/40 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
           >
             <p class="font-semibold text-white">{{ displayName }}</p>
-            <p class="truncate text-[#8AC4ED]">{{ displayEmail }}</p>
+            <p class="truncate text-primary-light">{{ displayEmail }}</p>
           </div>
         </div>
 
         <button
           type="button"
-          class="text-sm font-semibold text-[#CAE4F7] transition hover:text-red-300"
+          class="text-sm font-semibold text-light transition hover:text-red-300"
           @click="authStore.logout()"
         >
           {{ t('common.signOut') }}
@@ -77,16 +71,16 @@ const initials = computed(() => {
 <style scoped>
 .nav-link {
   border-bottom: 2px solid transparent;
-  color: #cae4f7;
+  color: var(--color-light);
   font-weight: 600;
   padding-bottom: 2px;
   transition: color 0.2s ease, border-color 0.2s ease;
 }
 .nav-link:hover {
-  color: #8ac4ed;
+  color: var(--color-primary-light);
 }
 .router-link-active {
-  border-color: #218cd9;
-  color: #218cd9;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 </style>

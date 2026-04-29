@@ -1,7 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { institutionService } from '@/services/institution.service'
 import type { InstitutionResponse } from '@/types/institution.types'
@@ -64,60 +63,58 @@ async function save() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-[#071C2C]">
-    <AppHeader />
-
+  <main class="min-h-screen bg-dark">
     <section class="page-container max-w-2xl">
-      <h1 class="text-2xl font-bold text-[#CAE4F7]">{{ t('settings.title') }}</h1>
+      <h1 class="text-2xl font-bold text-light">{{ t('settings.title') }}</h1>
 
       <!-- Profile card -->
-      <div class="mt-6 rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6">
-        <h2 class="mb-4 text-lg font-semibold text-[#CAE4F7]">{{ t('settings.profile.title') }}</h2>
+      <div class="mt-6 rounded-xl border border-primary/20 bg-dark-2 p-6">
+        <h2 class="mb-4 text-lg font-semibold text-light">{{ t('settings.profile.title') }}</h2>
 
         <div class="space-y-4">
           <!-- Email (read-only) -->
           <div>
-            <label class="block text-sm text-[#5A8AAD]">{{ t('settings.profile.email') }}</label>
-            <p class="mt-1 text-sm font-medium text-[#CAE4F7]/60">{{ authStore.email }}</p>
+            <label class="block text-sm text-light/60">{{ t('settings.profile.email') }}</label>
+            <p class="mt-1 text-sm font-medium text-light/60">{{ authStore.email }}</p>
           </div>
 
           <!-- Role (read-only) -->
           <div>
-            <label class="block text-sm text-[#5A8AAD]">{{ t('settings.profile.role') }}</label>
-            <p class="mt-1 text-sm font-medium text-[#CAE4F7]/60">{{ authStore.role }}</p>
+            <label class="block text-sm text-light/60">{{ t('settings.profile.role') }}</label>
+            <p class="mt-1 text-sm font-medium text-light/60">{{ authStore.role }}</p>
           </div>
 
           <!-- Name -->
           <div>
-            <label for="name" class="block text-sm text-[#5A8AAD]">{{ t('settings.profile.name') }}</label>
+            <label for="name" class="block text-sm text-light/60">{{ t('settings.profile.name') }}</label>
             <input
               id="name"
               v-model="name"
               type="text"
-              class="mt-1 w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+              class="mt-1 w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light focus:border-primary focus:outline-none"
             />
           </div>
 
           <!-- JMBAG (student only) -->
           <div v-if="isStudent">
-            <label for="jmbag" class="block text-sm text-[#5A8AAD]">{{ t('settings.profile.jmbag') }}</label>
+            <label for="jmbag" class="block text-sm text-light/60">{{ t('settings.profile.jmbag') }}</label>
             <input
               id="jmbag"
               v-model="jmbag"
               type="text"
               maxlength="10"
               :placeholder="t('onboarding.jmbagPlaceholder')"
-              class="mt-1 w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] placeholder-[#5A8AAD] focus:border-[#218CD9] focus:outline-none"
+              class="mt-1 w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder-light/60 focus:border-primary focus:outline-none"
             />
           </div>
 
           <!-- Institution -->
           <div>
-            <label for="institution" class="block text-sm text-[#5A8AAD]">{{ t('settings.profile.institution') }}</label>
+            <label for="institution" class="block text-sm text-light/60">{{ t('settings.profile.institution') }}</label>
             <select
               id="institution"
               v-model="institutionId"
-              class="mt-1 w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+              class="mt-1 w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light focus:border-primary focus:outline-none"
             >
               <option v-for="inst in institutions" :key="inst.id" :value="inst.id">
                 {{ inst.name }}
@@ -127,23 +124,23 @@ async function save() {
 
           <!-- Mentor (student only) -->
           <div v-if="isStudent">
-            <label for="mentor" class="block text-sm text-[#5A8AAD]">{{ t('settings.profile.mentor') }}</label>
+            <label for="mentor" class="block text-sm text-light/60">{{ t('settings.profile.mentor') }}</label>
             <input
               id="mentor"
               v-model="mentor"
               type="text"
               :placeholder="t('createExchange.mentorPlaceholder')"
-              class="mt-1 w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] placeholder-[#5A8AAD] focus:border-[#218CD9] focus:outline-none"
+              class="mt-1 w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder-light/60 focus:border-primary focus:outline-none"
             />
           </div>
 
           <!-- Coordinator (student only) -->
           <div v-if="isStudent">
-            <label for="coordinator" class="block text-sm text-[#5A8AAD]">{{ t('settings.profile.coordinator') }}</label>
+            <label for="coordinator" class="block text-sm text-light/60">{{ t('settings.profile.coordinator') }}</label>
             <select
               id="coordinator"
               v-model="coordinatorId"
-              class="mt-1 w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+              class="mt-1 w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light focus:border-primary focus:outline-none"
             >
               <option :value="null">{{ t('exchange.noCoordinator') }}</option>
               <option v-for="c in coordinators" :key="c.id" :value="c.id">{{ c.name }}</option>
@@ -155,7 +152,7 @@ async function save() {
         <div class="mt-6 flex items-center gap-3">
           <button
             type="button"
-            class="rounded-lg bg-[#218CD9] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C] disabled:opacity-50"
+            class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
             :disabled="saving"
             @click="save"
           >
@@ -163,7 +160,7 @@ async function save() {
           </button>
           <button
             type="button"
-            class="rounded-lg border border-[#1E4A6E] px-4 py-2 text-sm text-[#5A8AAD] transition hover:text-[#CAE4F7]"
+            class="rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60 transition hover:text-light"
             @click="resetForm"
           >
             {{ t('common.cancel') }}

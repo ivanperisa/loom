@@ -58,7 +58,7 @@ function slotState(courseSlotId: string): SlotStateResponse | undefined {
 
 const modeOutlineColor: Record<SlotMode, string> = {
   AtHome: '#64748b',
-  AtExchange: '#218CD9',
+  AtExchange: 'var(--color-primary)',
   AfterExchange: '#f59e0b',
 }
 
@@ -101,8 +101,8 @@ function cellStyle(slot: CourseSlotResponse): Record<string, string> {
   // Drag-over highlight
   if (dragOverSlotId.value === slot.id && state?.mode === 'AtExchange') {
     return {
-      backgroundColor: '#218CD933',
-      outline: '2px dashed #218CD9',
+      backgroundColor: 'color-mix(in srgb, var(--color-primary) 20%, transparent)',
+      outline: '2px dashed var(--color-primary)',
       outlineOffset: '-2px',
       cursor: 'copy',
     }
@@ -112,7 +112,7 @@ function cellStyle(slot: CourseSlotResponse): Record<string, string> {
   if (isDragging.value && state?.mode === 'AtExchange') {
     return {
       backgroundColor: bg,
-      outline: '2px dashed #218CD9',
+      outline: '2px dashed var(--color-primary)',
       outlineOffset: '-2px',
       cursor: 'copy',
     }
@@ -275,7 +275,7 @@ async function removeMapping(slotMappingId: string) {
             >
               <span style="color: #000; line-height: 1.3;">
                 <span style="font-weight: 700;">{{ mapping.foreignCourseCode }}</span><br/>
-                <span style="font-size: 10px; color: #5A8AAD;">{{ locale === 'hr' && mapping.foreignCourseNameEn }}</span><br/>
+                <span style="font-size: 10px; color: var(--color-primary-light);">{{ locale === 'hr' && mapping.foreignCourseNameEn }}</span><br/>
                 <span style="color: #555;">{{ mapping.awardedEcts }} ECTS</span>
               </span>
               <button
@@ -299,9 +299,9 @@ async function removeMapping(slotMappingId: string) {
           style="display: inline-block; width: 12px; height: 12px;"
           :style="{ background: modeOutlineColor[mode] }"
         />
-        <span style="font-size: 11px; color: #8AC4ED;">{{ t(`slotMode.${mode}`) }}</span>
+        <span style="font-size: 11px; color: var(--color-primary-light);">{{ t(`slotMode.${mode}`) }}</span>
       </div>
-      <span style="font-size: 11px; color: #5A8AAD; margin-left: 8px;">
+      <span style="font-size: 11px; color: var(--color-light); opacity: 0.6; margin-left: 8px;">
         {{ t('table.clickToChange') }}
       </span>
     </div>
@@ -312,17 +312,17 @@ async function removeMapping(slotMappingId: string) {
       style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50;"
       @mousedown.self="cancelDrop"
     >
-      <div style="background: #0A2235; border: 1px solid #1E4A6E; border-radius: 8px; padding: 24px; min-width: 320px;">
-        <h3 style="color: #CAE4F7; font-size: 14px; font-weight: 600; margin-bottom: 16px;">
+      <div style="background: var(--color-dark-2); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); border-radius: 8px; padding: 24px; min-width: 320px;">
+        <h3 style="color: var(--color-light); font-size: 14px; font-weight: 600; margin-bottom: 16px;">
           {{ t('foreignCourses.addMapping') }}
         </h3>
-        <div style="color: #8AC4ED; font-size: 12px; margin-bottom: 4px;">
+        <div style="color: var(--color-primary-light); font-size: 12px; margin-bottom: 4px;">
           {{ pendingDrop.course.code }} — {{ pendingDrop.course.nameEn }}
         </div>
-        <div style="color: #5A8AAD; font-size: 11px; margin-bottom: 16px;">
+        <div style="color: var(--color-light); opacity: 0.6; font-size: 11px; margin-bottom: 16px;">
           {{ t('foreignCourses.availableEcts') }}: {{ remainingEcts }} / {{ pendingDrop.course.ects }} ECTS
         </div>
-        <label style="display: block; color: #CAE4F7; font-size: 12px; margin-bottom: 6px;">
+        <label style="display: block; color: var(--color-light); font-size: 12px; margin-bottom: 6px;">
           {{ t('foreignCourses.awardedEcts') }}
         </label>
         <input
@@ -331,19 +331,19 @@ async function removeMapping(slotMappingId: string) {
           :min="0.5"
           :max="remainingEcts"
           step="0.5"
-          style="width: 100%; background: #071C2C; border: 1px solid #1E4A6E; color: #CAE4F7; padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 16px;"
+          style="width: 100%; background: var(--color-dark); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); color: var(--color-light); padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 16px;"
         />
         <div style="display: flex; gap: 8px; justify-content: flex-end;">
           <button
             type="button"
-            style="padding: 8px 16px; border: 1px solid #1E4A6E; background: transparent; color: #8AC4ED; border-radius: 4px; cursor: pointer; font-size: 13px;"
+            style="padding: 8px 16px; border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); background: transparent; color: var(--color-primary-light); border-radius: 4px; cursor: pointer; font-size: 13px;"
             @click="cancelDrop"
           >
             {{ t('common.cancel') }}
           </button>
           <button
             type="button"
-            style="padding: 8px 16px; background: #218CD9; border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;"
+            style="padding: 8px 16px; background: var(--color-primary); border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;"
             @click="confirmDrop"
           >
             {{ t('common.confirm') }}

@@ -1,8 +1,7 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import AppHeader from '@/components/AppHeader.vue'
 import LearningAgreementTable from '@/components/exchange/LearningAgreementTable.vue'
 import ForeignCoursePanel from '@/components/exchange/ForeignCoursePanel.vue'
 import RecognitionPanel from '@/components/exchange/RecognitionPanel.vue'
@@ -18,7 +17,7 @@ const activeTab = ref<'la' | 'recognition'>('la')
 const exchangeId = computed(() => route.params.exchangeId as string)
 
 const isCoordinator = computed(
-  () => exchangeStore.exchange?.coordinatorId === authStore.user?.id || authStore.user?.role === 'Admin'
+  () => exchangeStore.exchange?.coordinatorId === authStore.user?.id || authStore.isAdmin
 )
 const isApproved = computed(() => exchangeStore.exchange?.status === 'Approved')
 const isEditable = computed(() => {
@@ -32,7 +31,7 @@ const isSavingMessage = ref(false)
 
 const statusColorClass: Record<string, string> = {
   Draft: 'bg-slate-500/20 text-slate-300 border-slate-400',
-  Submitted: 'bg-[#218CD9]/20 text-[#8AC4ED] border-[#218CD9]',
+  Submitted: 'bg-primary/20 text-primary-light border-primary',
   Approved: 'bg-green-500/20 text-green-300 border-green-400',
   Rejected: 'bg-red-500/20 text-red-300 border-red-400',
 }
@@ -94,19 +93,17 @@ function switchToRecognition() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-[#071C2C]">
-    <AppHeader />
-
+  <main class="min-h-screen bg-dark">
     <section class="page-container">
       <!-- Loading skeleton -->
       <div v-if="exchangeStore.loading && !exchangeStore.exchange" class="space-y-4">
-        <div class="animate-pulse rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6">
-          <div class="h-6 w-64 rounded bg-[#1E4A6E]"></div>
-          <div class="mt-3 h-4 w-96 rounded bg-[#1E4A6E]"></div>
+        <div class="animate-pulse rounded-xl border border-primary/20 bg-dark-2 p-6">
+          <div class="h-6 w-64 rounded bg-primary/20"></div>
+          <div class="mt-3 h-4 w-96 rounded bg-primary/20"></div>
           <div class="mt-4 grid grid-cols-3 gap-4">
-            <div class="h-4 rounded bg-[#1E4A6E]"></div>
-            <div class="h-4 rounded bg-[#1E4A6E]"></div>
-            <div class="h-4 rounded bg-[#1E4A6E]"></div>
+            <div class="h-4 rounded bg-primary/20"></div>
+            <div class="h-4 rounded bg-primary/20"></div>
+            <div class="h-4 rounded bg-primary/20"></div>
           </div>
         </div>
       </div>
@@ -114,13 +111,13 @@ function switchToRecognition() {
       <!-- Exchange loaded -->
       <template v-else-if="exchangeStore.exchange">
         <!-- Coordinator badge -->
-        <div v-if="isCoordinator" class="mb-4 rounded-lg border border-[#218CD9]/30 bg-[#218CD9]/10 px-4 py-2 text-sm font-medium text-[#8AC4ED]">
+        <div v-if="isCoordinator" class="mb-4 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary-light">
           {{ t('exchange.coordinatorView') }}
         </div>
 
         <!-- Status badge -->
         <div class="flex items-center justify-between">
-          <h1 class="text-2xl font-bold text-[#CAE4F7]">{{ t('exchange.title') }}</h1>
+          <h1 class="text-2xl font-bold text-light">{{ t('exchange.title') }}</h1>
           <span
             class="rounded-full border px-3 py-0.5 text-xs font-semibold"
             :class="statusColorClass[exchangeStore.exchange.status] ?? statusColorClass.Draft"
@@ -132,71 +129,71 @@ function switchToRecognition() {
         <!-- Two-column: Foreign (left) + Home (right) -->
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
           <!-- Foreign institution -->
-          <div class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-5">
-            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-[#5A8AAD]">{{ t('exchange.foreignInstitution') }}</h3>
+          <div class="rounded-xl border border-primary/20 bg-dark-2 p-5">
+            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-light/60">{{ t('exchange.foreignInstitution') }}</h3>
             <dl class="space-y-2 text-sm">
               <div>
-                <dt class="text-[#5A8AAD]">{{ t('exchange.institution') }}</dt>
-                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.foreignProgram.institutionName }}</dd>
+                <dt class="text-light/60">{{ t('exchange.institution') }}</dt>
+                <dd class="font-medium text-light">{{ exchangeStore.exchange.foreignProgram.institutionName }}</dd>
               </div>
               <div>
-                <dt class="text-[#5A8AAD]">{{ t('exchange.program') }}</dt>
-                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.foreignProgram.name }}</dd>
+                <dt class="text-light/60">{{ t('exchange.program') }}</dt>
+                <dd class="font-medium text-light">{{ exchangeStore.exchange.foreignProgram.name }}</dd>
               </div>
             </dl>
           </div>
 
           <!-- Home institution -->
-          <div class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-5">
-            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-[#5A8AAD]">{{ t('exchange.homeInstitution') }}</h3>
+          <div class="rounded-xl border border-primary/20 bg-dark-2 p-5">
+            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-light/60">{{ t('exchange.homeInstitution') }}</h3>
             <dl class="space-y-2 text-sm">
               <div>
-                <dt class="text-[#5A8AAD]">{{ t('exchange.institution') }}</dt>
-                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.homeInstitutionName }}</dd>
+                <dt class="text-light/60">{{ t('exchange.institution') }}</dt>
+                <dd class="font-medium text-light">{{ exchangeStore.exchange.homeInstitutionName }}</dd>
               </div>
               <div>
-                <dt class="text-[#5A8AAD]">{{ t('exchange.program') }}</dt>
-                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.studyProgramName }}</dd>
+                <dt class="text-light/60">{{ t('exchange.program') }}</dt>
+                <dd class="font-medium text-light">{{ exchangeStore.exchange.studyProgramName }}</dd>
               </div>
               <div>
-                <dt class="text-[#5A8AAD]">{{ t('exchange.profile') }}</dt>
-                <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.studyProfile.name }}</dd>
+                <dt class="text-light/60">{{ t('exchange.profile') }}</dt>
+                <dd class="font-medium text-light">{{ exchangeStore.exchange.studyProfile.name }}</dd>
               </div>
             </dl>
           </div>
         </div>
 
         <!-- Exchange details -->
-        <div class="mt-4 rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-5">
+        <div class="mt-4 rounded-xl border border-primary/20 bg-dark-2 p-5">
           <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
             <div>
-              <dt class="text-[#5A8AAD]">{{ t('exchange.academicYear') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.academicYear }}</dd>
+              <dt class="text-light/60">{{ t('exchange.academicYear') }}</dt>
+              <dd class="font-medium text-light">{{ exchangeStore.exchange.academicYear }}</dd>
             </div>
             <div>
-              <dt class="text-[#5A8AAD]">{{ t('exchange.semester') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ t(`exchangeSemester.${exchangeStore.exchange.semesterType}`) }}</dd>
+              <dt class="text-light/60">{{ t('exchange.semester') }}</dt>
+              <dd class="font-medium text-light">{{ t(`exchangeSemester.${exchangeStore.exchange.semesterType}`) }}</dd>
             </div>
             <div>
-              <dt class="text-[#5A8AAD]">{{ t('exchange.studySemester') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.studySemester }}</dd>
+              <dt class="text-light/60">{{ t('exchange.studySemester') }}</dt>
+              <dd class="font-medium text-light">{{ exchangeStore.exchange.studySemester }}</dd>
             </div>
             <!-- Coordinator sees student name -->
             <div v-if="isCoordinator && exchangeStore.exchange.studentName">
-              <dt class="text-[#5A8AAD]">{{ t('exchange.student') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.studentName }}</dd>
+              <dt class="text-light/60">{{ t('exchange.student') }}</dt>
+              <dd class="font-medium text-light">{{ exchangeStore.exchange.studentName }}</dd>
             </div>
           </dl>
 
           <!-- Mentor & Coordinator (read-only, managed in Settings) -->
-          <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 border-t border-[#1E4A6E] pt-4 text-sm sm:grid-cols-4">
+          <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 border-t border-primary/20 pt-4 text-sm sm:grid-cols-4">
             <div>
-              <dt class="text-[#5A8AAD]">{{ t('exchange.coordinatorLabel') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.coordinatorName ?? t('exchange.noCoordinator') }}</dd>
+              <dt class="text-light/60">{{ t('exchange.coordinatorLabel') }}</dt>
+              <dd class="font-medium text-light">{{ exchangeStore.exchange.coordinatorName ?? t('exchange.noCoordinator') }}</dd>
             </div>
             <div>
-              <dt class="text-[#5A8AAD]">{{ t('exchange.mentor') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ exchangeStore.exchange.mentor ?? '-' }}</dd>
+              <dt class="text-light/60">{{ t('exchange.mentor') }}</dt>
+              <dd class="font-medium text-light">{{ exchangeStore.exchange.mentor ?? '-' }}</dd>
             </div>
           </dl>
 
@@ -212,17 +209,17 @@ function switchToRecognition() {
           <!-- Coordinator message (editable by coordinator) -->
           <div v-if="isCoordinator" class="mt-4">
             <template v-if="isEditingMessage">
-              <label class="block text-xs font-semibold uppercase tracking-wide text-[#8AC4ED] mb-1">{{ t('exchange.coordinatorMessage') }}</label>
+              <label class="block text-xs font-semibold uppercase tracking-wide text-primary-light mb-1">{{ t('exchange.coordinatorMessage') }}</label>
               <textarea
                 v-model="coordinatorMessage"
                 rows="3"
-                class="w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-sm text-[#CAE4F7] placeholder-[#5A8AAD] focus:border-[#218CD9] focus:outline-none"
+                class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder-light/60 focus:border-primary focus:outline-none"
                 :placeholder="t('exchange.coordinatorMessagePlaceholder')"
               ></textarea>
               <div class="mt-2 flex gap-2">
                 <button
                   type="button"
-                  class="rounded-lg bg-[#218CD9] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C] disabled:opacity-60"
+                  class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
                   :disabled="isSavingMessage"
                   @click="saveMessage"
                 >
@@ -246,7 +243,7 @@ function switchToRecognition() {
                   </div>
                   <button
                     type="button"
-                    class="shrink-0 text-xs text-[#8AC4ED] hover:text-white transition"
+                    class="shrink-0 text-xs text-primary-light hover:text-white transition"
                     @click="startEditingMessage"
                   >
                     {{ t('exchange.editMessage') }}
@@ -256,7 +253,7 @@ function switchToRecognition() {
               <button
                 v-else
                 type="button"
-                class="text-xs text-[#5A8AAD] hover:text-[#8AC4ED] transition"
+                class="text-xs text-light/60 hover:text-primary-light transition"
                 @click="startEditingMessage"
               >
                 + {{ t('exchange.addMessage') }}
@@ -269,17 +266,26 @@ function switchToRecognition() {
             <button
               v-if="exchangeStore.exchange.status === 'Draft'"
               type="button"
-              class="rounded-lg bg-[#218CD9] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
+              class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
               @click="submitExchange"
             >
               {{ t('exchange.actions.submit') }}
             </button>
-            <span
+            <div
               v-else-if="exchangeStore.exchange.status === 'Submitted'"
-              class="inline-block rounded-lg border border-[#1E4A6E] px-4 py-2 text-sm text-[#5A8AAD]"
+              class="flex items-center gap-3"
             >
-              {{ t('exchange.status.waitingApproval') }}
-            </span>
+              <span class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60">
+                {{ t('exchange.status.waitingApproval') }}
+              </span>
+              <button
+                type="button"
+                class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
+                @click="backToDraft"
+              >
+                {{ t('exchange.actions.backToDraft') }}
+              </button>
+            </div>
             <button
               v-else-if="exchangeStore.exchange.status === 'Rejected'"
               type="button"
@@ -320,14 +326,14 @@ function switchToRecognition() {
         </div>
 
         <!-- Tabs -->
-        <div class="mt-6 flex border-b border-[#1E4A6E]">
+        <div class="mt-6 flex border-b border-primary/20">
           <button
             type="button"
             class="px-4 py-2.5 text-sm font-semibold transition"
             :class="
               activeTab === 'la'
-                ? 'border-b-2 border-[#218CD9] text-[#218CD9]'
-                : 'text-[#5A8AAD] hover:text-[#8AC4ED]'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-light/60 hover:text-primary-light'
             "
             @click="activeTab = 'la'"
           >
@@ -338,9 +344,9 @@ function switchToRecognition() {
             class="px-4 py-2.5 text-sm font-semibold transition"
             :class="
               activeTab === 'recognition'
-                ? 'border-b-2 border-[#218CD9] text-[#218CD9]'
+                ? 'border-b-2 border-primary text-primary'
                 : isApproved
-                  ? 'text-[#5A8AAD] hover:text-[#8AC4ED]'
+                  ? 'text-light/60 hover:text-primary-light'
                   : 'cursor-not-allowed text-slate-600'
             "
             :disabled="!isApproved"
@@ -364,9 +370,9 @@ function switchToRecognition() {
             <!-- Course panels below table (Draft/Rejected only) -->
             <div v-if="isEditable && exchangeStore.exchange" class="mt-6 flex gap-6 items-start">
               <!-- Left: available courses -->
-              <div class="min-w-0 flex-1 rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-4">
-                <h3 class="mb-2 text-sm font-semibold text-[#8AC4ED]">{{ t('foreignCourses.availableCourses') }}</h3>
-                <p class="mb-3 text-xs text-[#5A8AAD]">{{ t('foreignCourses.dragHint') }}</p>
+              <div class="min-w-0 flex-1 rounded-xl border border-primary/20 bg-dark-2 p-4">
+                <h3 class="mb-2 text-sm font-semibold text-primary-light">{{ t('foreignCourses.availableCourses') }}</h3>
+                <p class="mb-3 text-xs text-light/60">{{ t('foreignCourses.dragHint') }}</p>
                 <ForeignCoursePanel
                   :foreign-program-id="exchangeStore.exchange.foreignProgram.id"
                   :exchange-id="exchangeId"
@@ -374,7 +380,7 @@ function switchToRecognition() {
                 />
               </div>
               <!-- Right: mapped courses -->
-              <div class="w-80 shrink-0 rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-4">
+              <div class="w-80 shrink-0 rounded-xl border border-primary/20 bg-dark-2 p-4">
                 <h3 class="mb-2 text-sm font-semibold text-green-400">{{ t('foreignCourses.mappedCourses') }}</h3>
                 <ForeignCoursePanel
                   :foreign-program-id="exchangeStore.exchange.foreignProgram.id"
@@ -386,8 +392,8 @@ function switchToRecognition() {
           </template>
 
           <template v-else-if="activeTab === 'recognition'">
-            <div v-if="!isApproved" class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-8 text-center">
-              <p class="text-[#5A8AAD]">{{ t('recognition.notApproved') }}</p>
+            <div v-if="!isApproved" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
+              <p class="text-light/60">{{ t('recognition.notApproved') }}</p>
             </div>
             <RecognitionPanel v-else :exchange-id="exchangeId" />
           </template>

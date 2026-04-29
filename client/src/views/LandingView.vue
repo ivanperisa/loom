@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { authService } from '@/services/auth.service'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
@@ -11,24 +11,24 @@ function login() {
 </script>
 
 <template>
-  <main class="relative min-h-screen overflow-hidden text-[#CAE4F7]">
+  <main class="relative min-h-screen overflow-hidden text-light">
     <div class="absolute right-4 top-4 z-20">
       <LanguageSwitcher />
     </div>
 
     <div class="absolute inset-0 flex">
-      <div class="w-full bg-[#071C2C] lg:w-1/3"></div>
-      <div class="hidden w-2/3 bg-gradient-to-br from-[#071C2C] via-[#0a2a42] to-[#071C2C] lg:block"></div>
+      <div class="w-full bg-dark lg:w-1/3"></div>
+      <div class="hidden w-2/3 bg-gradient-to-br from-dark via-dark to-dark lg:block"></div>
     </div>
 
     <div class="relative z-10 flex min-h-screen flex-col lg:flex-row">
       <section class="relative flex w-full items-center px-6 py-12 lg:w-1/3 lg:px-12">
         <article
-          class="landing-card w-full max-w-xl bg-[#071C2C] p-8 shadow-[24px_0_45px_rgba(7,28,44,0.65)] lg:translate-x-[80px] lg:rounded-[0_30px_30px_0]"
+          class="landing-card w-full max-w-xl bg-dark p-8 shadow-[24px_0_45px_rgba(7,28,44,0.65)] lg:translate-x-[80px] lg:rounded-[0_30px_30px_0]"
         >
           <h1 class="text-4xl font-black tracking-tight text-white sm:text-5xl">{{ t('common.appName') }}</h1>
-          <p class="mt-4 text-lg font-semibold text-[#8AC4ED]">{{ t('landing.tagline') }}</p>
-          <p class="mt-5 max-w-md text-sm leading-7 text-[#CAE4F7] sm:text-base">
+          <p class="mt-4 text-lg font-semibold text-primary-light">{{ t('landing.tagline') }}</p>
+          <p class="mt-5 max-w-md text-sm leading-7 text-light sm:text-base">
             {{ t('landing.description') }}
           </p>
 
@@ -49,7 +49,7 @@ function login() {
 
       <section class="relative flex w-full flex-1 items-center justify-center overflow-hidden p-8">
         <svg viewBox="0 0 1000 700" class="network-svg absolute inset-0 h-full w-full opacity-70" aria-hidden="true">
-          <g fill="none" stroke="#8AC4ED" stroke-width="2">
+          <g fill="none" stroke="#FB923C" stroke-width="2">
             <path d="M110 140 L320 200 L520 120 L760 220 L900 150" />
             <path d="M150 360 L350 300 L520 420 L730 340 L880 450" />
             <path d="M110 540 L310 470 L540 560 L760 500 L900 580" />
@@ -57,7 +57,7 @@ function login() {
             <path d="M520 120 L520 420 L540 560" />
             <path d="M760 220 L730 340 L760 500" />
           </g>
-          <g fill="#CAE4F7">
+          <g fill="#FFF7ED">
             <circle cx="110" cy="140" r="6" />
             <circle cx="320" cy="200" r="6" />
             <circle cx="520" cy="120" r="6" />
@@ -81,7 +81,7 @@ function login() {
         <div class="floating floating-c"></div>
         <div class="floating floating-d"></div>
 
-        <h2 class="relative z-10 max-w-3xl text-center text-3xl font-black uppercase tracking-[0.2em] text-[#CAE4F7] sm:text-5xl">
+        <h2 class="relative z-10 max-w-3xl text-center text-3xl font-black uppercase tracking-[0.2em] text-light sm:text-5xl">
           {{ t('landing.visualTitle') }}
         </h2>
       </section>

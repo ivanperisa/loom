@@ -1,8 +1,7 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import AppHeader from '@/components/AppHeader.vue'
 import { exchangeService } from '@/services/exchange.service'
 import type { ExchangeSummaryResponse } from '@/types/exchange.types'
 
@@ -16,7 +15,7 @@ const expandedStudentId = ref<string | null>(null)
 
 const statusColorClass: Record<string, string> = {
   Draft: 'bg-slate-500/20 text-slate-300 border-slate-400',
-  Submitted: 'bg-[#218CD9]/20 text-[#8AC4ED] border-[#218CD9]',
+  Submitted: 'bg-primary/20 text-primary-light border-primary',
   Approved: 'bg-green-500/20 text-green-300 border-green-400',
   Rejected: 'bg-red-500/20 text-red-300 border-red-400',
 }
@@ -67,17 +66,15 @@ function viewExchange(exchangeId: string) {
 </script>
 
 <template>
-  <main class="min-h-screen bg-[#071C2C]">
-    <AppHeader />
-
+  <main class="min-h-screen bg-dark">
     <section class="page-container">
-      <h1 class="mb-6 text-2xl font-bold text-[#CAE4F7]">{{ t('coordinator.title') }}</h1>
+      <h1 class="mb-6 text-2xl font-bold text-light">{{ t('coordinator.title') }}</h1>
 
       <!-- Loading skeleton -->
       <div v-if="loading" class="space-y-4">
-        <div v-for="i in 3" :key="i" class="animate-pulse rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-5">
-          <div class="h-5 w-48 rounded bg-[#1E4A6E]"></div>
-          <div class="mt-3 h-4 w-72 rounded bg-[#1E4A6E]"></div>
+        <div v-for="i in 3" :key="i" class="animate-pulse rounded-xl border border-primary/20 bg-dark-2 p-5">
+          <div class="h-5 w-48 rounded bg-primary/20"></div>
+          <div class="mt-3 h-4 w-72 rounded bg-primary/20"></div>
         </div>
       </div>
 
@@ -87,12 +84,12 @@ function viewExchange(exchangeId: string) {
       </div>
 
       <!-- Empty -->
-      <div v-else-if="students.length === 0" class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-8 text-center">
-        <svg class="mx-auto h-12 w-12 text-[#5A8AAD]" viewBox="0 0 24 24" fill="none">
+      <div v-else-if="students.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
+        <svg class="mx-auto h-12 w-12 text-light/60" viewBox="0 0 24 24" fill="none">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/>
         </svg>
-        <p class="mt-3 text-[#5A8AAD]">{{ t('coordinator.noStudents') }}</p>
+        <p class="mt-3 text-light/60">{{ t('coordinator.noStudents') }}</p>
       </div>
 
       <!-- Student list -->
@@ -100,45 +97,45 @@ function viewExchange(exchangeId: string) {
         <div
           v-for="student in students"
           :key="student.studentId"
-          class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] transition"
-          :class="{ 'border-[#218CD9]': expandedStudentId === student.studentId }"
+          class="rounded-xl border border-primary/20 bg-dark-2 transition"
+          :class="{ 'border-primary': expandedStudentId === student.studentId }"
         >
           <!-- Student row (clickable) -->
           <button
             type="button"
-            class="flex w-full items-center justify-between rounded-xl p-5 text-left transition hover:bg-[#0D2A40]"
+            class="flex w-full items-center justify-between rounded-xl p-5 text-left transition hover:bg-dark"
             @click="toggleStudent(student.studentId)"
           >
             <div class="flex items-center gap-3">
               <svg
-                class="h-4 w-4 text-[#5A8AAD] transition-transform"
+                class="h-4 w-4 text-light/60 transition-transform"
                 :class="{ 'rotate-90': expandedStudentId === student.studentId }"
                 viewBox="0 0 20 20" fill="currentColor"
               >
                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
               </svg>
               <div>
-                <h3 class="text-lg font-semibold text-[#CAE4F7]">{{ student.studentName }}</h3>
-                <p v-if="student.studentJmbag" class="mt-0.5 font-mono text-sm text-[#5A8AAD]">{{ student.studentJmbag }}</p>
+                <h3 class="text-lg font-semibold text-light">{{ student.studentName }}</h3>
+                <p v-if="student.studentJmbag" class="mt-0.5 font-mono text-sm text-light/60">{{ student.studentJmbag }}</p>
               </div>
             </div>
-            <span class="rounded-full bg-[#1E4A6E] px-3 py-1 text-xs font-medium text-[#8AC4ED]">
+            <span class="rounded-full bg-primary/20 px-3 py-1 text-xs font-medium text-primary-light">
               {{ student.exchanges.length }} {{ student.exchanges.length === 1 ? t('coordinator.exchangeCount') : t('coordinator.exchangesCount') }}
             </span>
           </button>
 
           <!-- Expanded: exchange list -->
-          <div v-if="expandedStudentId === student.studentId" class="border-t border-[#1E4A6E] px-5 pb-4 pt-3">
+          <div v-if="expandedStudentId === student.studentId" class="border-t border-primary/20 px-5 pb-4 pt-3">
             <div class="space-y-2">
               <div
                 v-for="ex in student.exchanges"
                 :key="ex.id"
-                class="flex cursor-pointer items-center justify-between rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-4 py-3 transition hover:border-[#5A8AAD]"
+                class="flex cursor-pointer items-center justify-between rounded-lg border border-primary/20 bg-dark px-4 py-3 transition hover:border-light/60"
                 @click="viewExchange(ex.id)"
               >
                 <div class="flex-1">
                   <div class="flex items-center gap-2">
-                    <span class="font-medium text-[#CAE4F7]">{{ ex.foreignInstitutionName }}</span>
+                    <span class="font-medium text-light">{{ ex.foreignInstitutionName }}</span>
                     <span
                       class="rounded-full border px-2 py-0.5 text-xs font-medium"
                       :class="statusColorClass[ex.status] ?? statusColorClass.Draft"
@@ -146,7 +143,7 @@ function viewExchange(exchangeId: string) {
                       {{ t(`exchangeStatus.${ex.status}`) }}
                     </span>
                   </div>
-                  <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-[#5A8AAD]">
+                  <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-light/60">
                     <span>{{ ex.foreignProgramName }}</span>
                     <span>&middot;</span>
                     <span>{{ ex.academicYear }}</span>
@@ -154,7 +151,7 @@ function viewExchange(exchangeId: string) {
                     <span>{{ t(`exchangeSemester.${ex.semesterType}`) }}</span>
                   </div>
                 </div>
-                <svg class="h-5 w-5 text-[#5A8AAD]" viewBox="0 0 20 20" fill="currentColor">
+                <svg class="h-5 w-5 text-light/60" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
                 </svg>
               </div>

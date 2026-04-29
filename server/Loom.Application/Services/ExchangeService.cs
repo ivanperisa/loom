@@ -1,4 +1,4 @@
-using ErrorOr;
+﻿using ErrorOr;
 using Loom.Application.Mappers;
 using Loom.Domain.Entities;
 using Loom.Application.DTOs.CourseSlot;
@@ -65,9 +65,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        var canAccess = exchange.StudentId == requesterId
-            || exchange.Student.CoordinatorId == requesterId
-            || requester.Role == UserRole.Admin;
+        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.Student.CoordinatorId);
         if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
         return exchange.ToResponse();
@@ -100,7 +98,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
         var isStudent = exchange.StudentId == requesterId;
-        var isCoordinatorOrAdmin = exchange.Student.CoordinatorId == requesterId || requester.Role == UserRole.Admin;
+        var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.Student.CoordinatorId);
 
         if (!isStudent && !isCoordinatorOrAdmin)
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
@@ -144,9 +142,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        var canAccess = exchange.StudentId == requesterId
-            || exchange.Student.CoordinatorId == requesterId
-            || requester.Role == UserRole.Admin;
+        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.Student.CoordinatorId);
         if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
         var slots = await db.CourseSlots
@@ -177,7 +173,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-        if (exchange.StudentId != requesterId && exchange.Student.CoordinatorId != requesterId)
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.Student.CoordinatorId))
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
         if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
             return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
@@ -214,7 +212,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-        if (exchange.StudentId != requesterId && exchange.Student.CoordinatorId != requesterId)
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.Student.CoordinatorId))
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
         if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
             return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
@@ -250,7 +250,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
     {
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-        if (exchange.StudentId != requesterId && exchange.Student.CoordinatorId != requesterId)
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.Student.CoordinatorId))
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
         if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
             return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
@@ -271,7 +273,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
     {
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-        if (exchange.StudentId != requesterId && exchange.Student.CoordinatorId != requesterId)
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.Student.CoordinatorId))
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
         if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
             return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
@@ -295,7 +299,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        var isCoordinatorOrAdmin = exchange.Student.CoordinatorId == requesterId || requester.Role == UserRole.Admin;
+        var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.Student.CoordinatorId);
         if (!isCoordinatorOrAdmin)
             return Error.Forbidden("ACCESS_DENIED", "Only coordinators can update the message.");
 
@@ -310,16 +314,22 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return saved.ToResponse();
     }
 
-    public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyStudentsExchangesAsync(Guid coordinatorId, CancellationToken ct = default)
+    public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyStudentsExchangesAsync(Guid requesterId, CancellationToken ct = default)
     {
-        var exchanges = await db.Exchanges
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        var query = db.Exchanges
             .AsNoTracking()
             .Include(e => e.Student)
             .Include(e => e.ForeignProgram).ThenInclude(p => p.Institution)
-            .Include(e => e.StudyProfile).ThenInclude(sp => sp.StudyProgram).ThenInclude(p => p.Institution)
-            .Where(e => e.Student.CoordinatorId == coordinatorId)
-            .OrderByDescending(e => e.CreatedAt)
-            .ToListAsync(ct);
+            .Include(e => e.StudyProfile).ThenInclude(sp => sp.StudyProgram).ThenInclude(p => p.Institution);
+
+        var filtered = requester.IsAdmin()
+            ? query
+            : query.Where(e => e.Student.CoordinatorId == requesterId);
+
+        var exchanges = await filtered.OrderByDescending(e => e.CreatedAt).ToListAsync(ct);
         return exchanges.Select(e => e.ToSummaryResponse()).ToList();
     }
 

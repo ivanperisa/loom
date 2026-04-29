@@ -81,7 +81,7 @@ export default {
     exchange: 'Exchange',
     students: 'Students',
     history: 'History',
-    admin: 'Admin'
+    admin: 'Users'
   },
   settings: {
     title: 'Settings',

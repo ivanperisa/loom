@@ -1,7 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import AppHeader from '@/components/AppHeader.vue'
 import { adminService, type CoordinatorRequestResponse, type CoordinatorWhitelistEntryResponse, type UserListResponse } from '@/services/admin.service'
 
 const { t } = useI18n()
@@ -130,23 +129,21 @@ function formatDate(iso: string) {
 </script>
 
 <template>
-  <main class="min-h-screen bg-[#071C2C]">
-    <AppHeader />
-
+  <main class="min-h-screen bg-dark">
     <section class="page-container space-y-10">
-      <h1 class="text-3xl font-bold text-[#CAE4F7]">{{ t('admin.title') }}</h1>
+      <h1 class="text-3xl font-bold text-light">{{ t('admin.title') }}</h1>
 
       <!-- Section A: Pending coordinator requests -->
       <div>
-        <h2 class="mb-4 text-xl font-semibold text-[#CAE4F7]">{{ t('admin.requests.title') }}</h2>
+        <h2 class="mb-4 text-xl font-semibold text-light">{{ t('admin.requests.title') }}</h2>
 
         <div v-if="loadingRequests" class="space-y-3">
-          <div v-for="i in 2" :key="i" class="h-16 animate-pulse rounded-xl bg-[#0A2235]"></div>
+          <div v-for="i in 2" :key="i" class="h-16 animate-pulse rounded-xl bg-dark-2"></div>
         </div>
 
         <div
           v-else-if="requests.length === 0"
-          class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6 text-center text-[#5A8AAD]"
+          class="rounded-xl border border-primary/20 bg-dark-2 p-6 text-center text-light/60"
         >
           {{ t('admin.requests.empty') }}
         </div>
@@ -155,17 +152,17 @@ function formatDate(iso: string) {
           <div
             v-for="req in requests"
             :key="req.id"
-            class="flex items-center justify-between rounded-xl border border-[#1E4A6E] bg-[#0A2235] px-5 py-4"
+            class="flex items-center justify-between rounded-xl border border-primary/20 bg-dark-2 px-5 py-4"
           >
             <div>
-              <p class="font-semibold text-[#CAE4F7]">{{ req.name }}</p>
-              <p class="text-sm text-[#5A8AAD]">{{ req.email }}</p>
-              <p v-if="req.institutionName" class="text-xs text-[#5A8AAD]">{{ req.institutionName }}</p>
+              <p class="font-semibold text-light">{{ req.name }}</p>
+              <p class="text-sm text-light/60">{{ req.email }}</p>
+              <p v-if="req.institutionName" class="text-xs text-light/60">{{ req.institutionName }}</p>
             </div>
             <div class="flex gap-2">
               <button
                 type="button"
-                class="rounded-lg bg-[#218CD9] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C] disabled:opacity-50"
+                class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
                 :disabled="actionLoadingId === req.id"
                 @click="approve(req.id)"
               >
@@ -186,33 +183,33 @@ function formatDate(iso: string) {
 
       <!-- Section B: User management -->
       <div>
-        <h2 class="mb-4 text-xl font-semibold text-[#CAE4F7]">{{ t('admin.users.title') }}</h2>
+        <h2 class="mb-4 text-xl font-semibold text-light">{{ t('admin.users.title') }}</h2>
 
         <div v-if="loadingUsers" class="space-y-2">
-          <div v-for="i in 4" :key="i" class="h-14 animate-pulse rounded-xl bg-[#0A2235]"></div>
+          <div v-for="i in 4" :key="i" class="h-14 animate-pulse rounded-xl bg-dark-2"></div>
         </div>
 
         <div v-else class="space-y-2">
           <div
             v-for="u in users"
             :key="u.id"
-            class="flex items-center justify-between rounded-xl border border-[#1E4A6E] bg-[#0A2235] px-5 py-3"
+            class="flex items-center justify-between rounded-xl border border-primary/20 bg-dark-2 px-5 py-3"
           >
             <div>
-              <p class="font-medium text-[#CAE4F7]">{{ u.name }} <span class="ml-1 text-xs text-[#5A8AAD]">{{ u.email }}</span></p>
-              <p class="text-xs text-[#5A8AAD]">
+              <p class="font-medium text-light">{{ u.name }} <span class="ml-1 text-xs text-light/60">{{ u.email }}</span></p>
+              <p class="text-xs text-light/60">
                 {{ u.institutionName ?? '—' }}
                 <span v-if="u.coordinatorRequestStatus" class="ml-2 rounded-full border border-yellow-400/40 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-300">{{ t('admin.users.pending') }}</span>
               </p>
             </div>
             <div class="flex items-center gap-2">
               <span class="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-                :class="u.role === 'Admin' ? 'border-purple-400/40 bg-purple-500/10 text-purple-300' : u.role === 'Coordinator' ? 'border-[#218CD9]/40 bg-[#218CD9]/10 text-[#8AC4ED]' : 'border-[#1E4A6E] text-[#5A8AAD]'"
+                :class="u.role === 'Admin' ? 'border-purple-400/40 bg-purple-500/10 text-purple-300' : u.role === 'Coordinator' ? 'border-primary/40 bg-primary/10 text-primary-light' : 'border-primary/20 text-light/60'"
               >{{ t(`admin.users.role.${u.role}`) }}</span>
               <button
                 v-if="u.role === 'Student'"
                 type="button"
-                class="rounded-lg bg-[#218CD9]/20 px-3 py-1.5 text-xs font-semibold text-[#8AC4ED] transition hover:bg-[#218CD9]/40 disabled:opacity-50"
+                class="rounded-lg bg-primary/20 px-3 py-1.5 text-xs font-semibold text-primary-light transition hover:bg-primary/40 disabled:opacity-50"
                 :disabled="userActionId === u.id"
                 @click="makeCoordinatorFromList(u.id)"
               >
@@ -234,8 +231,8 @@ function formatDate(iso: string) {
 
       <!-- Section C: Coordinator whitelist -->
       <div>
-        <h2 class="mb-4 text-xl font-semibold text-[#CAE4F7]">{{ t('admin.whitelist.title') }}</h2>
-        <p class="mb-4 text-sm text-[#5A8AAD]">{{ t('admin.whitelist.description') }}</p>
+        <h2 class="mb-4 text-xl font-semibold text-light">{{ t('admin.whitelist.title') }}</h2>
+        <p class="mb-4 text-sm text-light/60">{{ t('admin.whitelist.description') }}</p>
 
         <!-- Add email form -->
         <div class="mb-6 flex gap-3">
@@ -243,12 +240,12 @@ function formatDate(iso: string) {
             v-model="newEmail"
             type="email"
             :placeholder="t('admin.whitelist.emailPlaceholder')"
-            class="flex-1 rounded-xl border border-[#1E4A6E] bg-[#071C2C] px-4 py-2.5 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+            class="flex-1 rounded-xl border border-primary/20 bg-dark px-4 py-2.5 text-light focus:border-primary focus:outline-none"
             @keydown.enter.prevent="addEmail"
           />
           <button
             type="button"
-            class="rounded-xl bg-[#218CD9] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C] disabled:opacity-50"
+            class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
             :disabled="addingEmail || !newEmail.trim()"
             @click="addEmail"
           >
@@ -261,12 +258,12 @@ function formatDate(iso: string) {
         </p>
 
         <div v-if="loadingWhitelist" class="space-y-2">
-          <div v-for="i in 3" :key="i" class="h-12 animate-pulse rounded-xl bg-[#0A2235]"></div>
+          <div v-for="i in 3" :key="i" class="h-12 animate-pulse rounded-xl bg-dark-2"></div>
         </div>
 
         <div
           v-else-if="whitelist.length === 0"
-          class="rounded-xl border border-[#1E4A6E] bg-[#0A2235] p-6 text-center text-[#5A8AAD]"
+          class="rounded-xl border border-primary/20 bg-dark-2 p-6 text-center text-light/60"
         >
           {{ t('admin.whitelist.empty') }}
         </div>
@@ -275,11 +272,11 @@ function formatDate(iso: string) {
           <div
             v-for="entry in whitelist"
             :key="entry.id"
-            class="flex items-center justify-between rounded-xl border border-[#1E4A6E] bg-[#0A2235] px-5 py-3"
+            class="flex items-center justify-between rounded-xl border border-primary/20 bg-dark-2 px-5 py-3"
           >
             <div>
-              <p class="text-sm font-medium text-[#CAE4F7]">{{ entry.email }}</p>
-              <p class="text-xs text-[#5A8AAD]">{{ t('admin.whitelist.addedOn') }} {{ formatDate(entry.createdAt) }}</p>
+              <p class="text-sm font-medium text-light">{{ entry.email }}</p>
+              <p class="text-xs text-light/60">{{ t('admin.whitelist.addedOn') }} {{ formatDate(entry.createdAt) }}</p>
             </div>
             <button
               type="button"

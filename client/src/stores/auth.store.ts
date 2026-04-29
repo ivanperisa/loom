@@ -19,6 +19,9 @@ export const useAuthStore = defineStore('auth', () => {
   const email = computed(() => user.value?.email ?? null)
   const name = computed(() => user.value?.name ?? null)
   const jmbag = computed(() => user.value?.jmbag ?? null)
+  const isAdmin = computed(() => user.value?.role === 'Admin')
+  const isStudent = computed(() => user.value?.role === 'Student')
+  const canActAsCoordinator = computed(() => user.value?.role === 'Coordinator' || user.value?.role === 'Admin')
 
   async function init(force = false) {
     if (initPromise && !force) return initPromise
@@ -101,6 +104,9 @@ export const useAuthStore = defineStore('auth', () => {
     email,
     name,
     jmbag,
+    isAdmin,
+    isStudent,
+    canActAsCoordinator,
     init,
     login,
     logout,

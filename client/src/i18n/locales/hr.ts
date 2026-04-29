@@ -81,7 +81,7 @@ export default {
     exchange: 'Razmjena',
     students: 'Studenti',
     history: 'Povijest',
-    admin: 'Admin'
+    admin: 'Korisnici'
   },
   settings: {
     title: 'Postavke',

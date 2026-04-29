@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
@@ -149,13 +149,13 @@ const stepKeys = [
 
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" @mousedown.self="emit('close')">
-    <div class="w-full max-w-lg rounded-xl border border-[#1E4A6E] bg-[#0A2235] shadow-xl">
+    <div class="w-full max-w-lg rounded-xl border border-primary/20 bg-dark-2 shadow-xl">
       <!-- Header -->
-      <div class="flex items-center justify-between border-b border-[#1E4A6E] px-6 py-4">
-        <h2 class="text-lg font-semibold text-[#CAE4F7]">{{ t('createExchange.title') }}</h2>
+      <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
+        <h2 class="text-lg font-semibold text-light">{{ t('createExchange.title') }}</h2>
         <button
           type="button"
-          class="text-xl text-[#5A8AAD] transition hover:text-white"
+          class="text-xl text-light/60 transition hover:text-white"
           @click="emit('close')"
         >
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
@@ -169,10 +169,10 @@ const stepKeys = [
             class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold"
             :class="
               index + 1 < currentStep
-                ? 'bg-[#8AC4ED] text-[#071C2C]'
+                ? 'bg-primary-light text-dark'
                 : index + 1 === currentStep
-                  ? 'bg-[#218CD9] text-white'
-                  : 'bg-[#1E4A6E] text-slate-400'
+                  ? 'bg-primary text-white'
+                  : 'bg-primary/20 text-slate-400'
             "
           >
             <template v-if="index + 1 < currentStep">
@@ -180,10 +180,10 @@ const stepKeys = [
             </template>
             <template v-else>{{ index + 1 }}</template>
           </div>
-          <span class="text-xs" :class="index + 1 <= currentStep ? 'text-[#CAE4F7]' : 'text-slate-500'">
+          <span class="text-xs" :class="index + 1 <= currentStep ? 'text-light' : 'text-slate-500'">
             {{ t(key) }}
           </span>
-          <div v-if="index < stepKeys.length - 1" class="h-px flex-1 bg-[#1E4A6E]"></div>
+          <div v-if="index < stepKeys.length - 1" class="h-px flex-1 bg-primary/20"></div>
         </template>
       </div>
 
@@ -199,14 +199,14 @@ const stepKeys = [
         <!-- Step 1: Program & Profile -->
         <div v-if="currentStep === 1" class="space-y-4">
           <div>
-            <label class="mb-1 block text-sm font-medium text-[#8AC4ED]">{{ t('createExchange.selectProgram') }}</label>
+            <label class="mb-1 block text-sm font-medium text-primary-light">{{ t('createExchange.selectProgram') }}</label>
             <template v-if="loadingPrograms">
-              <div class="h-10 animate-pulse rounded-lg bg-[#1E4A6E]"></div>
+              <div class="h-10 animate-pulse rounded-lg bg-primary/20"></div>
             </template>
             <template v-else>
               <select
                 v-model="selectedProgramId"
-                class="w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+                class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-light focus:border-primary focus:outline-none"
               >
                 <option :value="null" disabled>{{ t('createExchange.selectProgramPlaceholder') }}</option>
                 <option v-for="prog in studyPrograms" :key="prog.id" :value="prog.id">
@@ -217,11 +217,11 @@ const stepKeys = [
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-[#8AC4ED]">{{ t('createExchange.selectProfile') }}</label>
+            <label class="mb-1 block text-sm font-medium text-primary-light">{{ t('createExchange.selectProfile') }}</label>
             <select
               v-model="selectedProfileId"
               :disabled="!selectedProgramId"
-              class="w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none disabled:opacity-50"
+              class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-light focus:border-primary focus:outline-none disabled:opacity-50"
             >
               <option :value="null" disabled>{{ t('createExchange.selectProfilePlaceholder') }}</option>
               <option v-for="prof in availableProfiles" :key="prof.id" :value="prof.id">
@@ -233,11 +233,11 @@ const stepKeys = [
 
         <!-- Step 2: Foreign Program -->
         <div v-if="currentStep === 2" class="space-y-4">
-          <label class="block text-sm font-medium text-[#8AC4ED]">{{ t('createExchange.selectForeignProgram') }}</label>
+          <label class="block text-sm font-medium text-primary-light">{{ t('createExchange.selectForeignProgram') }}</label>
           <template v-if="loadingForeignPrograms">
             <div class="space-y-2">
-              <div class="h-10 animate-pulse rounded-lg bg-[#1E4A6E]"></div>
-              <div class="h-10 animate-pulse rounded-lg bg-[#1E4A6E]"></div>
+              <div class="h-10 animate-pulse rounded-lg bg-primary/20"></div>
+              <div class="h-10 animate-pulse rounded-lg bg-primary/20"></div>
             </div>
           </template>
           <template v-else>
@@ -249,13 +249,13 @@ const stepKeys = [
                 class="w-full rounded-lg border px-3 py-2.5 text-left text-sm transition"
                 :class="
                   selectedForeignProgramId === fp.id
-                    ? 'border-[#218CD9] bg-[#123451]'
-                    : 'border-[#1E4A6E] bg-[#071C2C] hover:border-[#5A8AAD]'
+                    ? 'border-primary bg-dark-2'
+                    : 'border-primary/20 bg-dark hover:border-light/60'
                 "
                 @click="selectedForeignProgramId = fp.id"
               >
-                <span class="font-medium text-[#CAE4F7]">{{ localizedName(fp) }}</span>
-                <span class="block text-xs text-[#5A8AAD]">{{ fp.institutionName }}</span>
+                <span class="font-medium text-light">{{ localizedName(fp) }}</span>
+                <span class="block text-xs text-light/60">{{ fp.institutionName }}</span>
               </button>
             </div>
           </template>
@@ -265,26 +265,26 @@ const stepKeys = [
         <div v-if="currentStep === 3" class="space-y-4">
           <!-- Academic Year -->
           <div>
-            <label class="mb-1 block text-sm font-medium text-[#8AC4ED]">{{ t('exchange.academicYear') }}</label>
+            <label class="mb-1 block text-sm font-medium text-primary-light">{{ t('exchange.academicYear') }}</label>
             <input
               v-model="academicYear"
               type="text"
               :placeholder="t('createExchange.academicYearPlaceholder')"
-              class="w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+              class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-light focus:border-primary focus:outline-none"
             />
           </div>
 
           <!-- Semester Type -->
           <div>
-            <label class="mb-1 block text-sm font-medium text-[#8AC4ED]">{{ t('exchange.semester') }}</label>
+            <label class="mb-1 block text-sm font-medium text-primary-light">{{ t('exchange.semester') }}</label>
             <div class="flex gap-3">
               <button
                 type="button"
                 class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition"
                 :class="
                   semesterType === 'Winter'
-                    ? 'border-[#218CD9] bg-[#123451] text-white'
-                    : 'border-[#1E4A6E] bg-[#071C2C] text-[#5A8AAD] hover:border-[#5A8AAD]'
+                    ? 'border-primary bg-dark-2 text-white'
+                    : 'border-primary/20 bg-dark text-light/60 hover:border-light/60'
                 "
                 @click="semesterType = 'Winter'"
               >
@@ -295,8 +295,8 @@ const stepKeys = [
                 class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition"
                 :class="
                   semesterType === 'Summer'
-                    ? 'border-[#218CD9] bg-[#123451] text-white'
-                    : 'border-[#1E4A6E] bg-[#071C2C] text-[#5A8AAD] hover:border-[#5A8AAD]'
+                    ? 'border-primary bg-dark-2 text-white'
+                    : 'border-primary/20 bg-dark text-light/60 hover:border-light/60'
                 "
                 @click="semesterType = 'Summer'"
               >
@@ -307,10 +307,10 @@ const stepKeys = [
 
           <!-- Study Semester -->
           <div>
-            <label class="mb-1 block text-sm font-medium text-[#8AC4ED]">{{ t('exchange.studySemester') }}</label>
+            <label class="mb-1 block text-sm font-medium text-primary-light">{{ t('exchange.studySemester') }}</label>
             <select
               v-model.number="studySemester"
-              class="w-full rounded-lg border border-[#1E4A6E] bg-[#071C2C] px-3 py-2 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+              class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-light focus:border-primary focus:outline-none"
             >
               <option :value="1">1</option>
               <option :value="2">2</option>
@@ -323,41 +323,41 @@ const stepKeys = [
 
         <!-- Step 4: Confirm -->
         <div v-if="currentStep === 4" class="space-y-3">
-          <h3 class="text-sm font-semibold text-[#8AC4ED]">{{ t('createExchange.summary') }}</h3>
+          <h3 class="text-sm font-semibold text-primary-light">{{ t('createExchange.summary') }}</h3>
           <dl class="space-y-2 text-sm">
             <div class="flex justify-between">
-              <dt class="text-[#5A8AAD]">{{ t('createExchange.summaryProgram') }}</dt>
-              <dd class="text-right font-medium text-[#CAE4F7]">{{ selectedProgram ? localizedName(selectedProgram) : '' }}</dd>
+              <dt class="text-light/60">{{ t('createExchange.summaryProgram') }}</dt>
+              <dd class="text-right font-medium text-light">{{ selectedProgram ? localizedName(selectedProgram) : '' }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-[#5A8AAD]">{{ t('createExchange.summaryProfile') }}</dt>
-              <dd class="text-right font-medium text-[#CAE4F7]">{{ selectedProfile ? localizedName(selectedProfile) : '' }}</dd>
+              <dt class="text-light/60">{{ t('createExchange.summaryProfile') }}</dt>
+              <dd class="text-right font-medium text-light">{{ selectedProfile ? localizedName(selectedProfile) : '' }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-[#5A8AAD]">{{ t('createExchange.summaryForeignProgram') }}</dt>
-              <dd class="text-right font-medium text-[#CAE4F7]">
+              <dt class="text-light/60">{{ t('createExchange.summaryForeignProgram') }}</dt>
+              <dd class="text-right font-medium text-light">
                 {{ selectedForeignProgram ? localizedName(selectedForeignProgram) : '' }}
-                <span v-if="selectedForeignProgram" class="block text-xs text-[#5A8AAD]">{{ selectedForeignProgram.institutionName }}</span>
+                <span v-if="selectedForeignProgram" class="block text-xs text-light/60">{{ selectedForeignProgram.institutionName }}</span>
               </dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-[#5A8AAD]">{{ t('createExchange.summaryAcademicYear') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ academicYear }}</dd>
+              <dt class="text-light/60">{{ t('createExchange.summaryAcademicYear') }}</dt>
+              <dd class="font-medium text-light">{{ academicYear }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-[#5A8AAD]">{{ t('createExchange.summarySemesterType') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ t(`exchangeSemester.${semesterType}`) }}</dd>
+              <dt class="text-light/60">{{ t('createExchange.summarySemesterType') }}</dt>
+              <dd class="font-medium text-light">{{ t(`exchangeSemester.${semesterType}`) }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-[#5A8AAD]">{{ t('createExchange.summaryStudySemester') }}</dt>
-              <dd class="font-medium text-[#CAE4F7]">{{ studySemester }}</dd>
+              <dt class="text-light/60">{{ t('createExchange.summaryStudySemester') }}</dt>
+              <dd class="font-medium text-light">{{ studySemester }}</dd>
             </div>
           </dl>
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between border-t border-[#1E4A6E] px-6 py-4">
+      <div class="flex items-center justify-between border-t border-primary/20 px-6 py-4">
         <button
           type="button"
           class="rounded-lg border border-slate-500 px-4 py-2 text-sm text-slate-200 transition hover:bg-slate-700/40 disabled:opacity-40"
@@ -370,7 +370,7 @@ const stepKeys = [
         <button
           v-if="currentStep < TOTAL_STEPS"
           type="button"
-          class="rounded-lg bg-[#218CD9] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
+          class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
           @click="goNext"
         >
           {{ t('onboarding.next') }}
@@ -379,7 +379,7 @@ const stepKeys = [
         <button
           v-else
           type="button"
-          class="rounded-lg bg-[#218CD9] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C] disabled:opacity-60"
+          class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
           :disabled="isSubmitting"
           @click="submitExchange"
         >

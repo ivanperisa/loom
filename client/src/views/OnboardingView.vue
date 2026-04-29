@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -11,10 +11,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { t, locale } = useI18n()
 
-const isCoordinatorOrAdmin = computed(() => {
-  const role = authStore.user?.role
-  return role === 'Coordinator' || role === 'Admin'
-})
+const isCoordinatorOrAdmin = computed(() => authStore.canActAsCoordinator)
 
 // Step 1 choice: null = not yet chosen, 'Student' | 'Coordinator'
 const roleChoice = ref<'Student' | 'Coordinator' | null>(null)
@@ -135,15 +132,15 @@ async function logout() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-[#071C2C] text-[#CAE4F7]">
-    <header class="sticky top-0 z-40 w-full border-b border-[#218CD9] bg-[#071C2C]">
+  <main class="min-h-screen bg-dark text-light">
+    <header class="sticky top-0 z-40 w-full border-b border-primary bg-dark">
       <div class="page-container flex h-16 items-center justify-between !py-0">
         <span class="text-lg font-bold text-white">{{ t('common.appName') }}</span>
         <div class="flex items-center gap-3">
           <LanguageSwitcher variant="dark" />
           <button
             type="button"
-            class="text-sm font-semibold text-[#CAE4F7] transition hover:text-red-300"
+            class="text-sm font-semibold text-light transition hover:text-red-300"
             @click="logout"
           >
             {{ t('common.signOut') }}
@@ -161,9 +158,9 @@ async function logout() {
               class="flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold"
               :class="
                 index + 1 < currentStep
-                  ? 'border-[#8AC4ED] bg-[#8AC4ED] text-[#071C2C]'
+                  ? 'border-primary-light bg-primary-light text-dark'
                   : index + 1 === currentStep
-                    ? 'border-[#218CD9] bg-[#218CD9] text-white'
+                    ? 'border-primary bg-primary text-white'
                     : 'border-slate-500 bg-transparent text-slate-300'
               "
             >
@@ -172,7 +169,7 @@ async function logout() {
               </template>
               <template v-else>{{ index + 1 }}</template>
             </div>
-            <span class="text-sm" :class="index + 1 <= currentStep ? 'text-[#CAE4F7]' : 'text-slate-400'">
+            <span class="text-sm" :class="index + 1 <= currentStep ? 'text-light' : 'text-slate-400'">
               {{ t(step.key) }}
             </span>
             <div v-if="index < steps.length - 1" class="h-px w-10 bg-slate-600"></div>
@@ -180,10 +177,10 @@ async function logout() {
         </div>
 
         <!-- Card -->
-        <div class="rounded-2xl border border-[#1E4A6E] bg-[#0A2235] p-6 shadow-xl sm:p-8">
+        <div class="rounded-2xl border border-primary/20 bg-dark-2 p-6 shadow-xl sm:p-8">
           <!-- Logo placeholder -->
           <div class="mb-6 flex justify-center">
-            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[#218CD9]">
+            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-primary">
               <svg class="h-7 w-7 text-white" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
                 <path d="M7 14h3l2-4 2 6 3-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -202,46 +199,46 @@ async function logout() {
 
           <!-- Step 1 (students only): Role choice -->
           <div v-if="!isCoordinatorOrAdmin && currentStep === 1" class="mt-6 space-y-3">
-            <p class="text-sm font-medium text-[#8AC4ED]">{{ t('onboarding.roleQuestion') }}</p>
+            <p class="text-sm font-medium text-primary-light">{{ t('onboarding.roleQuestion') }}</p>
 
             <button
               type="button"
               class="w-full rounded-xl border px-4 py-4 text-left transition"
               :class="roleChoice === 'Student'
-                ? 'border-[#218CD9] bg-[#218CD9]/10 text-[#CAE4F7]'
-                : 'border-[#1E4A6E] bg-[#071C2C] text-[#CAE4F7] hover:border-[#218CD9]/50'"
+                ? 'border-primary bg-primary/10 text-light'
+                : 'border-primary/20 bg-dark text-light hover:border-primary/50'"
               @click="roleChoice = 'Student'"
             >
               <p class="font-semibold">{{ t('onboarding.roleStudent') }}</p>
-              <p class="mt-0.5 text-xs text-[#5A8AAD]">{{ t('onboarding.roleStudentDesc') }}</p>
+              <p class="mt-0.5 text-xs text-light/60">{{ t('onboarding.roleStudentDesc') }}</p>
             </button>
 
             <button
               type="button"
               class="w-full rounded-xl border px-4 py-4 text-left transition"
               :class="roleChoice === 'Coordinator'
-                ? 'border-[#218CD9] bg-[#218CD9]/10 text-[#CAE4F7]'
-                : 'border-[#1E4A6E] bg-[#071C2C] text-[#CAE4F7] hover:border-[#218CD9]/50'"
+                ? 'border-primary bg-primary/10 text-light'
+                : 'border-primary/20 bg-dark text-light hover:border-primary/50'"
               @click="roleChoice = 'Coordinator'"
             >
               <p class="font-semibold">{{ t('onboarding.roleCoordinator') }}</p>
-              <p class="mt-0.5 text-xs text-[#5A8AAD]">{{ t('onboarding.roleCoordinatorDesc') }}</p>
+              <p class="mt-0.5 text-xs text-light/60">{{ t('onboarding.roleCoordinatorDesc') }}</p>
             </button>
           </div>
 
           <!-- Institution step -->
           <div v-if="currentStep === institutionStep" class="mt-6 space-y-4">
-            <label class="block text-sm font-medium text-[#8AC4ED]">
+            <label class="block text-sm font-medium text-primary-light">
               {{ t('onboarding.selectInstitution') }}
             </label>
 
             <template v-if="loadingInstitutions">
-              <div class="h-11 animate-pulse rounded-xl bg-[#1E4A6E]"></div>
+              <div class="h-11 animate-pulse rounded-xl bg-primary/20"></div>
             </template>
             <template v-else>
               <select
                 v-model="selectedInstitutionId"
-                class="w-full rounded-xl border border-[#1E4A6E] bg-[#071C2C] px-4 py-2.5 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+                class="w-full rounded-xl border border-primary/20 bg-dark px-4 py-2.5 text-light focus:border-primary focus:outline-none"
               >
                 <option :value="null" disabled>{{ t('onboarding.selectInstitutionPlaceholder') }}</option>
                 <option
@@ -258,7 +255,7 @@ async function logout() {
 
           <!-- JMBAG step -->
           <div v-if="currentStep === jmbagStep" class="mt-6 space-y-4">
-            <label class="block text-sm font-medium text-[#8AC4ED]">
+            <label class="block text-sm font-medium text-primary-light">
               {{ t('onboarding.jmbagLabel') }}
             </label>
             <input
@@ -267,9 +264,9 @@ async function logout() {
               inputmode="numeric"
               maxlength="10"
               :placeholder="t('onboarding.jmbagPlaceholder')"
-              class="w-full rounded-xl border border-[#1E4A6E] bg-[#071C2C] px-4 py-2.5 text-[#CAE4F7] focus:border-[#218CD9] focus:outline-none"
+              class="w-full rounded-xl border border-primary/20 bg-dark px-4 py-2.5 text-light focus:border-primary focus:outline-none"
             />
-            <p class="text-xs text-[#5A8AAD]">{{ t('onboarding.jmbagHint') }}</p>
+            <p class="text-xs text-light/60">{{ t('onboarding.jmbagHint') }}</p>
           </div>
 
           <!-- Navigation buttons -->
@@ -286,7 +283,7 @@ async function logout() {
             <button
               v-if="currentStep < totalSteps"
               type="button"
-              class="rounded-lg bg-[#218CD9] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C]"
+              class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
               @click="goNext"
             >
               {{ t('onboarding.next') }}
@@ -295,7 +292,7 @@ async function logout() {
             <button
               v-else
               type="button"
-              class="rounded-lg bg-[#218CD9] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#8AC4ED] hover:text-[#071C2C] disabled:opacity-60"
+              class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
               :disabled="isSubmitting"
               @click="finishOnboarding"
             >
