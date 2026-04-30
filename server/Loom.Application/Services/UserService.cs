@@ -13,12 +13,14 @@ namespace Loom.Application.Services;
 
 public class UserService(IAppDbContext db) : IUserService, IUserSyncService
 {
+    private IQueryable<User> UsersWithIncludes() => db.Users
+        .Include(u => u.Institution)
+        .Include(u => u.Coordinator);
+
     public async Task<ErrorOr<AuthMeResponse>> GetCurrentUserAsync(Guid userId, CancellationToken ct = default)
     {
-        var user = await db.Users
+        var user = await UsersWithIncludes()
             .AsNoTracking()
-            .Include(u => u.Institution)
-            .Include(u => u.Coordinator)
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
         return user.ToAuthMeResponse();
@@ -50,10 +52,8 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
 
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.Users
+        var saved = await UsersWithIncludes()
             .AsNoTracking()
-            .Include(u => u.Institution)
-            .Include(u => u.Coordinator)
             .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new InvalidOperationException("User not found after save.");
         return saved.ToAuthMeResponse();
@@ -102,10 +102,8 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
 
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.Users
+        var saved = await UsersWithIncludes()
             .AsNoTracking()
-            .Include(u => u.Institution)
-            .Include(u => u.Coordinator)
             .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new InvalidOperationException("User not found after save.");
         return saved.ToAuthMeResponse();
@@ -123,10 +121,8 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         user.CoordinatorRequestStatus = "Pending";
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.Users
+        var saved = await UsersWithIncludes()
             .AsNoTracking()
-            .Include(u => u.Institution)
-            .Include(u => u.Coordinator)
             .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new InvalidOperationException("User not found after save.");
         return saved.ToAuthMeResponse();
@@ -183,10 +179,8 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         target.CoordinatorRequestStatus = null;
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.Users
+        var saved = await UsersWithIncludes()
             .AsNoTracking()
-            .Include(u => u.Institution)
-            .Include(u => u.Coordinator)
             .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
             ?? throw new InvalidOperationException();
         return saved.ToAuthMeResponse();
@@ -206,10 +200,8 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         target.CoordinatorRequestStatus = "Rejected";
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.Users
+        var saved = await UsersWithIncludes()
             .AsNoTracking()
-            .Include(u => u.Institution)
-            .Include(u => u.Coordinator)
             .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
             ?? throw new InvalidOperationException();
         return saved.ToAuthMeResponse();
@@ -230,10 +222,8 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         target.CoordinatorRequestStatus = null;
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.Users
+        var saved = await UsersWithIncludes()
             .AsNoTracking()
-            .Include(u => u.Institution)
-            .Include(u => u.Coordinator)
             .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
             ?? throw new InvalidOperationException();
         return saved.ToAuthMeResponse();

@@ -58,9 +58,9 @@ function slotState(courseSlotId: string): LocalSlotState | undefined {
 }
 
 const modeOutlineColor: Record<SlotMode, string> = {
-  AtHome: '#64748b',
-  AtExchange: 'var(--color-primary)',
-  AfterExchange: '#f59e0b',
+  AtHome: '#4472C4',
+  AtExchange: '#FF0000',
+  AfterExchange: '#000000',
 }
 
 const isDragging = computed(() => !!exchangeStore.draggingCourse)

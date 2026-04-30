@@ -20,6 +20,7 @@ export interface RecognitionEntryResponse {
   ectsGrade: string | null
   hrGrade: string | null
   examDate: string | null
+  isRecognized: boolean | null
 }
 
 export interface RecognitionResponse {
@@ -38,4 +39,8 @@ export interface UpsertRecognitionEntryRequest {
   ectsGrade: string | null
   hrGrade: string | null
   examDate: string | null
+}
+
+export interface SaveRecognitionRequest {
+  entries: UpsertRecognitionEntryRequest[]
 }

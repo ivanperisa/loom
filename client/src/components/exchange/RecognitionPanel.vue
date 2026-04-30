@@ -13,13 +13,27 @@ const props = defineProps<{
   learningAgreement: LearningAgreementResponse
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const authStore = useAuthStore()
 
 const recognition = ref<RecognitionResponse | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const savingGroup = ref<string | null>(null)
+const isSaving = ref(false)
+const hasUnsavedChanges = computed(() => {
+  if (!recognition.value) return false
+  return courseGroups.value.some(g => {
+    const e = editableGrades[g.foreignCourseCode]
+    if (!e) return false
+    return g.entries.some(x => 
+      x.enrollmentStatus !== (e.enrollmentStatus || null) ||
+      x.originalGrade !== (e.originalGrade || null) ||
+      x.ectsGrade !== (e.ectsGrade || null) ||
+      x.hrGrade !== (e.hrGrade || null) ||
+      x.examDate !== (e.examDate || null)
+    )
+  })
+})
 
 const isCoordinator = computed(() => authStore.canActAsCoordinator)
 
@@ -73,9 +87,9 @@ const courseGroups = computed<CourseGroup[]>(() => {
   return Array.from(map.values())
 })
 
-const totalAwardedEcts = computed(() =>
-  courseGroups.value.reduce((s, g) => s + g.totalAwardedEcts, 0)
-)
+function groupIsRejected(group: CourseGroup): boolean {
+  return group.entries.some(e => e.isRecognized === false)
+}
 
 function initGrades(rec: RecognitionResponse) {
   const seen = new Set<string>()
@@ -104,28 +118,53 @@ onMounted(async () => {
   }
 })
 
-async function saveGroup(group: CourseGroup) {
-  const grades = editableGrades[group.foreignCourseCode]
-  if (!grades) return
-  savingGroup.value = group.foreignCourseCode
+async function saveAll() {
+  isSaving.value = true
   try {
-    let lastData: RecognitionResponse | null = null
-    for (const entry of group.entries) {
-      const res = await recognitionService.upsertEntry(props.exchangeId, {
-        slotMappingId:    entry.slotMappingId,
+    const entriesToSave = courseGroups.value.flatMap(g => {
+      const grades = editableGrades[g.foreignCourseCode]
+      if (!grades) return []
+      return g.entries.map(e => ({
+        slotMappingId: e.slotMappingId,
         enrollmentStatus: grades.enrollmentStatus || null,
-        originalGrade:    grades.originalGrade || null,
-        ectsGrade:        grades.ectsGrade || null,
-        hrGrade:          grades.hrGrade || null,
-        examDate:         grades.examDate || null,
-      })
-      lastData = res.data
+        originalGrade: grades.originalGrade || null,
+        ectsGrade: grades.ectsGrade || null,
+        hrGrade: grades.hrGrade || null,
+        examDate: grades.examDate || null
+      }))
+    })
+    const res = await recognitionService.saveRecognition(props.exchangeId, { entries: entriesToSave })
+    recognition.value = res.data
+    initGrades(res.data)
+  } catch {
+    error.value = t("common.error")
+  } finally {
+    isSaving.value = false
+  }
+}
+
+async function toggleGroupRecognition(group: CourseGroup) {
+  if (!isCoordinator.value || !recognition.value) return
+  
+  const isCurrentlyRejected = groupIsRejected(group)
+  const newValue = isCurrentlyRejected
+  
+  try {
+    isSaving.value = true
+    
+    const promises = group.entries.map(entry => 
+      recognitionService.setEntryRecognized(props.exchangeId, entry.id, newValue)
+    )
+    
+    const results = await Promise.all(promises)
+    
+    if (results.length > 0) {
+      recognition.value = results[results.length - 1].data
     }
-    if (lastData) { recognition.value = lastData; initGrades(lastData) }
   } catch {
     error.value = t('common.error')
   } finally {
-    savingGroup.value = null
+    isSaving.value = false
   }
 }
 
@@ -138,20 +177,30 @@ async function approveRecognition() {
 async function rejectRecognition() {
   try { const res = await recognitionService.updateStatus(props.exchangeId, { status: 'Rejected' }); recognition.value = res.data } catch { error.value = t('common.error') }
 }
+async function backToRecognitionDraft() {
+  try { const res = await recognitionService.updateStatus(props.exchangeId, { status: 'Draft' }); recognition.value = res.data } catch { error.value = t('common.error') }
+}
+function discardChanges() {
+  if (recognition.value) initGrades(recognition.value)
+}
+
 function doExport() {
   if (!recognition.value) return
-  exportRecognitionExcel(recognition.value, props.learningAgreement, props.exchange)
+  exportRecognitionExcel(recognition.value, props.learningAgreement, props.exchange, locale.value)
 }
+
+const totalCols = computed(() => 16)
+
+const thStyle = 'border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: bold; color: #000;'
+const rejectedBg = '#FFCCCC'
 </script>
 
 <template>
   <div>
-    <!-- Loading -->
     <div v-if="loading" class="space-y-3">
       <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded bg-primary/20"></div>
     </div>
 
-    <!-- Error -->
     <div v-else-if="error" class="rounded-xl border border-red-400/30 bg-red-900/20 p-6 text-center">
       <p class="text-red-300">{{ error }}</p>
     </div>
@@ -159,209 +208,255 @@ function doExport() {
     <template v-else-if="recognition">
       <!-- Status + actions bar -->
       <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <span
-          class="rounded-full border px-3 py-0.5 text-xs font-semibold"
-          :class="statusColorClass[recognition.status] ?? statusColorClass.Draft"
-        >
-          {{ t(`recognitionStatus.${recognition.status}`) }}
-        </span>
-        <div class="flex gap-2">
-          <button
-            type="button"
-            class="rounded-lg border border-primary/40 px-4 py-2 text-sm font-medium text-primary-light transition hover:bg-primary/10"
-            @click="doExport"
-          >
+        <div class="flex items-center gap-3">
+          <span class="rounded-full border px-3 py-0.5 text-xs font-semibold" :class="statusColorClass[recognition.status] ?? statusColorClass.Draft">
+            {{ t(`recognitionStatus.${recognition.status}`) }}
+          </span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="rounded-lg border border-primary/40 px-4 py-2 text-sm font-medium text-primary-light transition hover:bg-primary/10" @click="doExport">
             {{ t('recognition.export') }}
           </button>
-          <button
-            v-if="!isCoordinator && recognition.status === 'Draft'"
-            type="button"
-            class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
-            @click="submitRecognition"
-          >
-            {{ t('recognition.actions.submit') }}
-          </button>
-          <template v-if="isCoordinator && recognition.status === 'Submitted'">
-            <button type="button" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700" @click="approveRecognition">
-              {{ t('recognition.actions.approve') }}
+          <!-- Student actions -->
+          <template v-if="!isCoordinator">
+            <button v-if="recognition.status === 'Draft'" type="button" class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark" @click="submitRecognition">
+              {{ t('recognition.actions.submit') }}
             </button>
-            <button type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700" @click="rejectRecognition">
-              {{ t('recognition.actions.reject') }}
+            <template v-else-if="recognition.status === 'Submitted'">
+              <span class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60">
+                {{ t('recognition.status.waitingApproval') }}
+              </span>
+              <button type="button" class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40" @click="backToRecognitionDraft">
+                {{ t('recognition.actions.backToDraft') }}
+              </button>
+            </template>
+            <button v-else-if="recognition.status === 'Rejected'" type="button" class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40" @click="backToRecognitionDraft">
+              {{ t('recognition.actions.backToDraft') }}
+            </button>
+          </template>
+          <!-- Coordinator actions -->
+          <template v-if="isCoordinator">
+            <template v-if="recognition.status === 'Submitted'">
+              <button type="button" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500" @click="approveRecognition">{{ t('recognition.actions.approve') }}</button>
+              <button type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500" @click="rejectRecognition">{{ t('recognition.actions.reject') }}</button>
+            </template>
+            <button v-if="recognition.status === 'Approved' || recognition.status === 'Rejected'" type="button" class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40" @click="backToRecognitionDraft">
+              {{ t('recognition.actions.backToDraft') }}
             </button>
           </template>
         </div>
       </div>
 
-      <!-- No entries -->
+      <!-- Unsaved changes bar -->
+      <div
+        v-if="hasUnsavedChanges"
+        class="mb-4 flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-500/15 px-4 py-3"
+      >
+        <div class="flex items-center gap-2">
+          <svg class="shrink-0 text-amber-400" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span class="text-sm font-medium text-amber-300">{{ t('la.unsavedChanges') }}</span>
+        </div>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700/40"
+            :disabled="isSaving"
+            @click="discardChanges"
+          >
+            {{ t('la.discard') }}
+          </button>
+          <button
+            type="button"
+            class="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-semibold text-dark transition hover:bg-amber-400 disabled:opacity-60"
+            :disabled="isSaving"
+            @click="saveAll"
+          >
+            {{ isSaving ? t('common.loading') : t('la.save') }}
+          </button>
+        </div>
+      </div>
+
       <div v-if="courseGroups.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
         <p class="text-light/60">{{ t('recognition.noEntries') }}</p>
       </div>
 
       <!-- Recognition table -->
       <div v-else class="overflow-x-auto" style="font-family: Calibri, Arial, sans-serif;">
-        <table style="border-collapse: collapse; width: 100%; min-width: 1100px; font-size: 11px; color: #000;">
-
-          <!-- Section title row -->
+        <table style="border-collapse: collapse; width: 100%; min-width: 1200px; font-size: 11px; color: #000;">
           <thead>
+            <!-- Row 1: super-headers + rowspanned headers -->
             <tr>
-              <th colspan="17" style="border: 1px solid #aaa; background: #bfbfbf; padding: 4px 6px; text-align: left; font-size: 11px; font-weight: bold; color: #000;">
-                Predmeti koji se uznaju za predmete/obveze iz nastavnog programa
+              <th rowspan="2" :style="thStyle" style="min-width:70px;">{{ t('recognition.col.foreignCode') }}</th>
+              <th rowspan="2" :style="thStyle" style="min-width:160px;">{{ t('recognition.col.foreignNameEn') }}</th>
+              <th rowspan="2" :style="thStyle" style="min-width:90px;">{{ t('recognition.col.enrollmentStatus') }}</th>
+              <th rowspan="2" :style="thStyle" style="min-width:140px;">{{ t('recognition.col.foreignNameHr') }}</th>
+              <th rowspan="2" :style="thStyle" style="min-width:70px;">{{ t('recognition.col.hours') }}</th>
+              <th rowspan="2" :style="thStyle" style="min-width:40px;">{{ t('recognition.col.ects') }}</th>
+              <th rowspan="2" :style="thStyle" style="min-width:28px;">{{ t('recognition.col.rbr') }}</th>
+
+              <!-- Super-header spanning 5 cols (H–L) -->
+              <th colspan="5" :style="thStyle" style="font-size:10px;">
+                {{ t('recognition.col.recognizedAs') }}
               </th>
+
+              <th rowspan="2" :style="thStyle" style="min-width:60px;">{{ t('recognition.col.originalGrade') }}</th>
+              <th rowspan="2" :style="thStyle" style="min-width:55px;">{{ t('recognition.col.ectsGrade') }}</th>
+              <th rowspan="2" :style="thStyle" style="min-width:55px;">{{ t('recognition.col.hrGrade') }}</th>
+              <th rowspan="2" :style="thStyle" style="min-width:80px;">{{ t('recognition.col.examDate') }}</th>
             </tr>
 
-            <!-- Column group headers -->
+            <!-- Row 2: sub-headers -->
             <tr>
-              <th colspan="6" style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 10px; font-weight: bold; color: #000;">
-                Strani predmet
+              <th :style="thStyle" style="min-width:130px; border-top: none;">
+                {{ t('recognition.col.slotName') }}
               </th>
-              <th colspan="6" style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 10px; font-weight: bold; color: #000;">
-                Priznaje se za predmet
+              <th :style="thStyle" style="min-width:55px; border-top: none;">
+                {{ t('recognition.col.slotCode') }}
               </th>
-              <th colspan="4" style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 10px; font-weight: bold; color: #000;">
-                Ocjene
+              <th :style="thStyle" style="min-width:110px; border-top: none;">
+                {{ t('recognition.col.slotCategory') }}
               </th>
-              <th rowspan="2" style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 10px; font-weight: bold; color: #000; vertical-align: middle;">
+              <th :style="thStyle" style="min-width:38px; border-top: none;">
+                {{ t('recognition.col.semester') }}
               </th>
-            </tr>
-
-            <!-- Column headers -->
-            <tr>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 70px;">Šifra predmeta</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 160px;">Naziv engleski</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 90px;">Status predmeta</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 140px;">Naziv - hrvatski</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 65px;">Sati (P/A/L)</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 40px;">ECTS</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 30px;">Rbr.</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 130px;">Naziv</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 55px;">Šifra grupe</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 110px;">Kategorija</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 40px;">Sem.</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 50px;">ECTS prizn.</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 60px;">Ocjena orig.</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 55px;">Ocjena ECTS</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 55px;">Ocjena hrv.</th>
-              <th style="border: 1px solid #aaa; background: #d9d9d9; padding: 3px 4px; text-align: center; font-size: 9px; font-weight: normal; color: #000; min-width: 80px;">Datum polag.</th>
+              <th :style="thStyle" style="min-width:50px; border-top: none;">
+                {{ t('recognition.col.awardedEcts') }}
+              </th>
             </tr>
           </thead>
 
           <tbody>
-            <template v-for="(group, gi) in courseGroups" :key="group.foreignCourseCode">
-              <!-- First entry row (rowspanned for foreign course + grade columns) -->
-              <tr>
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; text-align: center; background: #fff; font-weight: bold;">
-                  {{ group.foreignCourseCode }}
+            <template v-for="group in courseGroups" :key="group.foreignCourseCode">
+              <tr v-for="(entry, idx) in group.entries" :key="entry.slotMappingId">
+
+                <!-- A–F: foreign course data, rowspanned -->
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                    style="border: 1px solid #aaa; padding: 4px; vertical-align: middle; text-align: center; font-weight: bold;"
+                    :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                    
+                    <div class="mb-1">{{ group.foreignCourseCode }}</div>
+
+                    <!-- Gumb vidljiv samo koordinatoru -->
+                    <div v-if="isCoordinator">
+                      <button 
+                        type="button"
+                        @click="toggleGroupRecognition(group)"
+                        class="w-full rounded border py-1 px-0.5 text-[9px] uppercase tracking-tighter transition-all active:scale-95"
+                        :class="groupIsRejected(group) 
+                          ? 'bg-green-600 border-green-700 text-white shadow-sm' 
+                          : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white'"
+                      >
+                        {{ groupIsRejected(group) 
+                          ? t('recognition.actions.approve') 
+                          : t('recognition.actions.reject') 
+                        }}
+                      </button>
+                    </div>
                 </td>
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; background: #fff;">
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                  style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
                   {{ group.foreignCourseNameEn }}
-                  <div v-if="group.foreignCourseNameHr" style="font-size: 9px; color: #555; font-style: italic;">{{ group.foreignCourseNameHr }}</div>
+                  <div v-if="group.foreignCourseNameHr" style="font-size:9px;color:#555;font-style:italic;">{{ group.foreignCourseNameHr }}</div>
                 </td>
-                <!-- Status input — rowspanned -->
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 2px 3px; vertical-align: middle; background: #fff;">
-                  <input
-                    v-if="editableGrades[group.foreignCourseCode]"
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                  style="border: 1px solid #aaa; padding: 2px 3px; vertical-align: middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                  <input v-if="editableGrades[group.foreignCourseCode]"
                     v-model="editableGrades[group.foreignCourseCode]!.enrollmentStatus"
-                    type="text"
-                    :disabled="isCoordinator"
-                    style="width: 100%; border: none; outline: none; font-family: Calibri, Arial, sans-serif; font-size: 11px; background: transparent; text-align: center;"
-                    placeholder="—"
-                  />
+                    type="text" :disabled="isCoordinator"
+                    style="width:100%;border:none;outline:none;font-family:Calibri,Arial,sans-serif;font-size:11px;background:transparent;text-align:center;" placeholder="—" />
                 </td>
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; background: #fff; font-size: 10px; color: #555;">
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                  style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; text-align:center; font-size:10px; color:#555;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
                   {{ group.foreignCourseNameHr ?? '—' }}
                 </td>
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; text-align: center; background: #fff;">
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                  style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; text-align:center;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
                   {{ group.foreignCourseHours ?? '—' }}
                 </td>
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; text-align: center; background: #fff; font-weight: bold;">
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                  style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; text-align:center; font-weight:bold;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
                   {{ group.foreignCourseEcts }}
                 </td>
 
-                <!-- First slot row -->
-                <td style="border: 1px solid #aaa; padding: 3px 4px; text-align: center; vertical-align: middle;" :style="{ background: group.entries[0].courseSlotColor }">1</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle;" :style="{ background: group.entries[0].courseSlotColor }">{{ group.entries[0].courseSlotName }}</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; text-align: center; vertical-align: middle;" :style="{ background: group.entries[0].courseSlotColor }">{{ group.entries[0].courseSlotCode ?? '—' }}</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; font-size: 10px;" :style="{ background: group.entries[0].courseSlotColor }">{{ group.entries[0].courseSlotCategoryName }}</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; text-align: center; vertical-align: middle;" :style="{ background: group.entries[0].courseSlotColor }">{{ group.entries[0].courseSlotSemester }}</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; text-align: center; vertical-align: middle; font-weight: bold;" :style="{ background: group.entries[0].courseSlotColor }">{{ group.entries[0].awardedEcts }}</td>
+                <!-- G: Rbr. per slot -->
+                <td style="border:1px solid #aaa;padding:3px 4px;text-align:center;vertical-align:middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor }">
+                  {{ idx + 1 }}
+                </td>
 
-                <!-- Grade inputs — rowspanned -->
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 2px 3px; vertical-align: middle; background: #fff;">
-                  <input
-                    v-if="editableGrades[group.foreignCourseCode]"
+                <!-- H: slot name -->
+                <td style="border:1px solid #aaa;padding:3px 4px;vertical-align:middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor }">
+                  {{ entry.courseSlotName }}
+                </td>
+
+                <!-- I: slot code -->
+                <td style="border:1px solid #aaa;padding:3px 4px;text-align:center;vertical-align:middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor }">
+                  {{ entry.courseSlotCode ?? '—' }}
+                </td>
+
+                <!-- J: category name -->
+                <td style="border:1px solid #aaa;padding:3px 4px;vertical-align:middle;font-size:10px;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor }">
+                  {{ entry.courseSlotCategoryName }}
+                </td>
+
+                <!-- K: semester -->
+                <td style="border:1px solid #aaa;padding:3px 4px;text-align:center;vertical-align:middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor }">
+                  {{ entry.courseSlotSemester }}
+                </td>
+
+                <!-- L: awarded ECTS -->
+                <td style="border:1px solid #aaa;padding:3px 4px;text-align:center;vertical-align:middle;font-weight:bold;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor }">
+                  {{ entry.awardedEcts }}
+                </td>
+
+                <!-- M–P: grades, rowspanned -->
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                  style="border:1px solid #aaa;padding:2px 3px;vertical-align:middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                  <input v-if="editableGrades[group.foreignCourseCode]"
                     v-model="editableGrades[group.foreignCourseCode]!.originalGrade"
-                    type="text"
-                    :disabled="isCoordinator"
-                    style="width: 100%; border: none; outline: none; font-family: Calibri, Arial, sans-serif; font-size: 11px; background: transparent; text-align: center;"
-                    placeholder="—"
-                  />
+                    type="text" :disabled="isCoordinator"
+                    style="width:100%;border:none;outline:none;font-family:Calibri,Arial,sans-serif;font-size:11px;background:transparent;text-align:center;" placeholder="—" />
                 </td>
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 2px 3px; vertical-align: middle; background: #fff;">
-                  <input
-                    v-if="editableGrades[group.foreignCourseCode]"
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                  style="border:1px solid #aaa;padding:2px 3px;vertical-align:middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                  <input v-if="editableGrades[group.foreignCourseCode]"
                     v-model="editableGrades[group.foreignCourseCode]!.ectsGrade"
-                    type="text"
-                    :disabled="isCoordinator"
-                    style="width: 100%; border: none; outline: none; font-family: Calibri, Arial, sans-serif; font-size: 11px; background: transparent; text-align: center;"
-                    placeholder="—"
-                  />
+                    type="text" :disabled="isCoordinator"
+                    style="width:100%;border:none;outline:none;font-family:Calibri,Arial,sans-serif;font-size:11px;background:transparent;text-align:center;" placeholder="—" />
                 </td>
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 2px 3px; vertical-align: middle; background: #fff;">
-                  <input
-                    v-if="editableGrades[group.foreignCourseCode]"
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                  style="border:1px solid #aaa;padding:2px 3px;vertical-align:middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                  <input v-if="editableGrades[group.foreignCourseCode]"
                     v-model="editableGrades[group.foreignCourseCode]!.hrGrade"
-                    type="text"
-                    :disabled="isCoordinator"
-                    style="width: 100%; border: none; outline: none; font-family: Calibri, Arial, sans-serif; font-size: 11px; background: transparent; text-align: center;"
-                    placeholder="—"
-                  />
+                    type="text" :disabled="isCoordinator"
+                    style="width:100%;border:none;outline:none;font-family:Calibri,Arial,sans-serif;font-size:11px;background:transparent;text-align:center;" placeholder="—" />
                 </td>
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 2px 3px; vertical-align: middle; background: #fff;">
-                  <input
-                    v-if="editableGrades[group.foreignCourseCode]"
+                <td v-if="idx === 0" :rowspan="group.entries.length"
+                  style="border:1px solid #aaa;padding:2px 3px;vertical-align:middle;"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                  <input v-if="editableGrades[group.foreignCourseCode]"
                     v-model="editableGrades[group.foreignCourseCode]!.examDate"
-                    type="date"
-                    :disabled="isCoordinator"
-                    style="width: 100%; border: none; outline: none; font-family: Calibri, Arial, sans-serif; font-size: 11px; background: transparent;"
-                  />
+                    type="date" :disabled="isCoordinator"
+                    style="width:100%;border:none;outline:none;font-family:Calibri,Arial,sans-serif;font-size:11px;background:transparent;" />
                 </td>
-
-                <!-- Save button — rowspanned -->
-                <td :rowspan="group.entries.length" style="border: 1px solid #aaa; padding: 3px; vertical-align: middle; text-align: center; background: #fff;">
-                  <button
-                    v-if="!isCoordinator"
-                    type="button"
-                    :disabled="savingGroup === group.foreignCourseCode"
-                    style="font-family: Calibri, Arial, sans-serif; font-size: 10px; padding: 3px 8px; cursor: pointer; background: #EA580C; color: #fff; border: none; border-radius: 3px;"
-                    :style="savingGroup === group.foreignCourseCode ? { opacity: '0.5', cursor: 'default' } : {}"
-                    @click="saveGroup(group)"
-                  >
-                    {{ savingGroup === group.foreignCourseCode ? '...' : t('settings.institutions.save') }}
-                  </button>
-                </td>
-              </tr>
-
-              <!-- Additional slot rows (no foreign course / grade cells — those are rowspanned) -->
-              <tr v-for="(entry, idx) in group.entries.slice(1)" :key="entry.slotMappingId">
-                <td style="border: 1px solid #aaa; padding: 3px 4px; text-align: center; vertical-align: middle;" :style="{ background: entry.courseSlotColor }">{{ idx + 2 }}</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle;" :style="{ background: entry.courseSlotColor }">{{ entry.courseSlotName }}</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; text-align: center; vertical-align: middle;" :style="{ background: entry.courseSlotColor }">{{ entry.courseSlotCode ?? '—' }}</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; vertical-align: middle; font-size: 10px;" :style="{ background: entry.courseSlotColor }">{{ entry.courseSlotCategoryName }}</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; text-align: center; vertical-align: middle;" :style="{ background: entry.courseSlotColor }">{{ entry.courseSlotSemester }}</td>
-                <td style="border: 1px solid #aaa; padding: 3px 4px; text-align: center; vertical-align: middle; font-weight: bold;" :style="{ background: entry.courseSlotColor }">{{ entry.awardedEcts }}</td>
               </tr>
             </template>
-
-            <!-- UKUPNO row -->
-            <tr>
-              <td colspan="11" style="border: 1px solid #aaa; padding: 3px 6px; background: #d9d9d9; font-weight: bold; font-size: 11px; color: #000; text-align: right;">
-                UKUPNO
-              </td>
-              <td style="border: 1px solid #aaa; padding: 3px 4px; background: #d9d9d9; font-weight: bold; text-align: center; color: #000;">
-                {{ totalAwardedEcts }}
-              </td>
-              <td colspan="5" style="border: 1px solid #aaa; background: #d9d9d9;"></td>
-            </tr>
           </tbody>
         </table>
       </div>

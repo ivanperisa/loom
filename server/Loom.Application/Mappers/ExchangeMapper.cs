@@ -40,7 +40,8 @@ public static class ExchangeMapper
         exchange.StudyProfile.Name,
         exchange.AcademicYear,
         exchange.SemesterType.ToString(),
-        exchange.Status.ToString()
+        exchange.Status.ToString(),
+        exchange.Recognition?.Status.ToString()
     );
 
     public static CourseSlotResponse ToResponse(this CourseSlot slot) => new(
@@ -129,7 +130,8 @@ public static class ExchangeMapper
             entry.OriginalGrade,
             entry.EctsGrade,
             entry.HrGrade,
-            entry.ExamDate
+            entry.ExamDate,
+            entry.IsRecognized
         );
     }
 }

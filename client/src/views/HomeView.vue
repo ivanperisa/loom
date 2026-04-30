@@ -130,14 +130,25 @@ const statusColorClass: Record<string, string> = {
               :key="ex.id"
               class="rounded-xl border border-primary/20 bg-dark-2 p-6 transition hover:border-primary/40"
             >
-              <div class="flex items-start justify-between">
+              <div class="flex items-start justify-between gap-3">
                 <span class="text-xs font-medium text-light/60">{{ ex.academicYear }} &middot; {{ t(`exchangeSemester.${ex.semesterType}`) }}</span>
-                <span
-                  class="rounded-full border px-3 py-0.5 text-xs font-semibold"
-                  :class="statusColorClass[ex.status] ?? 'bg-slate-500/20 text-slate-300 border-slate-400'"
-                >
-                  {{ t(`exchangeStatus.${ex.status}`) }}
-                </span>
+                <div class="flex flex-wrap gap-1.5">
+                  <span
+                    class="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                    :class="statusColorClass[ex.status] ?? 'bg-slate-500/20 text-slate-300 border-slate-400'"
+                    :title="t('exchange.tabs.learningAgreement')"
+                  >
+                    {{ t('exchange.tabs.learningAgreement') }}: {{ t(`exchangeStatus.${ex.status}`) }}
+                  </span>
+                  <span
+                    v-if="ex.status === 'Approved' || ex.recognitionStatus"
+                    class="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                    :class="statusColorClass[ex.recognitionStatus ?? 'Draft'] ?? 'bg-slate-500/20 text-slate-300 border-slate-400'"
+                    :title="t('exchange.tabs.recognition')"
+                  >
+                    {{ t('exchange.tabs.recognition') }}: {{ t(`recognitionStatus.${ex.recognitionStatus ?? 'Draft'}`) }}
+                  </span>
+                </div>
               </div>
 
               <div class="mt-3 grid gap-3 sm:grid-cols-2">

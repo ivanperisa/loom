@@ -55,6 +55,7 @@ export interface ExchangeSummaryResponse {
   academicYear: string
   semesterType: ExchangeSemester
   status: ExchangeStatus
+  recognitionStatus: string | null
 }
 
 export interface CourseSlotResponse {

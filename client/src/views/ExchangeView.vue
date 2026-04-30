@@ -139,16 +139,7 @@ function switchToRecognition() {
           {{ t('exchange.coordinatorView') }}
         </div>
 
-        <!-- Status badge -->
-        <div class="flex items-center justify-between">
-          <h1 class="text-2xl font-bold text-light">{{ t('exchange.title') }}</h1>
-          <span
-            class="rounded-full border px-3 py-0.5 text-xs font-semibold"
-            :class="statusColorClass[exchangeStore.exchange.status] ?? statusColorClass.Draft"
-          >
-            {{ t(`exchangeStatus.${exchangeStore.exchange.status}`) }}
-          </span>
-        </div>
+        <h1 class="text-2xl font-bold text-light">{{ t('exchange.title') }}</h1>
 
         <!-- Two-column: Foreign (left) + Home (right) -->
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
@@ -285,68 +276,6 @@ function switchToRecognition() {
             </template>
           </div>
 
-          <!-- Student actions -->
-          <div v-if="!isCoordinator" class="mt-4">
-            <button
-              v-if="exchangeStore.exchange.status === 'Draft'"
-              type="button"
-              class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
-              @click="submitExchange"
-            >
-              {{ t('exchange.actions.submit') }}
-            </button>
-            <div
-              v-else-if="exchangeStore.exchange.status === 'Submitted'"
-              class="flex items-center gap-3"
-            >
-              <span class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60">
-                {{ t('exchange.status.waitingApproval') }}
-              </span>
-              <button
-                type="button"
-                class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
-                @click="backToDraft"
-              >
-                {{ t('exchange.actions.backToDraft') }}
-              </button>
-            </div>
-            <button
-              v-else-if="exchangeStore.exchange.status === 'Rejected'"
-              type="button"
-              class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
-              @click="backToDraft"
-            >
-              {{ t('exchange.actions.backToDraft') }}
-            </button>
-          </div>
-
-          <!-- Coordinator actions -->
-          <div v-if="isCoordinator" class="mt-4 flex gap-3">
-            <template v-if="exchangeStore.exchange.status === 'Submitted'">
-              <button
-                type="button"
-                class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
-                @click="approveExchange"
-              >
-                {{ t('exchange.actions.approve') }}
-              </button>
-              <button
-                type="button"
-                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
-                @click="rejectExchange"
-              >
-                {{ t('exchange.actions.reject') }}
-              </button>
-            </template>
-            <button
-              v-if="exchangeStore.exchange.status === 'Approved' || exchangeStore.exchange.status === 'Rejected'"
-              type="button"
-              class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
-              @click="backToDraft"
-            >
-              {{ t('exchange.actions.backToDraft') }}
-            </button>
-          </div>
         </div>
 
         <!-- Tabs -->
@@ -392,6 +321,36 @@ function switchToRecognition() {
         <!-- Tab content -->
         <div class="mt-6">
           <template v-if="activeTab === 'la'">
+            <!-- LA Status + Actions bar -->
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="rounded-full border px-3 py-0.5 text-xs font-semibold" :class="statusColorClass[exchangeStore.exchange.status] ?? statusColorClass.Draft">
+                  {{ t(`exchangeStatus.${exchangeStore.exchange.status}`) }}
+                </span>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <!-- Student actions -->
+                <template v-if="!isCoordinator">
+                  <button v-if="exchangeStore.exchange.status === 'Draft'" type="button" class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark" @click="submitExchange">
+                    {{ t('exchange.actions.submit') }}
+                  </button>
+                  <template v-else-if="exchangeStore.exchange.status === 'Submitted'">
+                    <span class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60">{{ t('exchange.status.waitingApproval') }}</span>
+                    <button type="button" class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40" @click="backToDraft">{{ t('exchange.actions.backToDraft') }}</button>
+                  </template>
+                  <button v-else-if="exchangeStore.exchange.status === 'Rejected'" type="button" class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40" @click="backToDraft">{{ t('exchange.actions.backToDraft') }}</button>
+                </template>
+                <!-- Coordinator actions -->
+                <template v-if="isCoordinator">
+                  <template v-if="exchangeStore.exchange.status === 'Submitted'">
+                    <button type="button" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500" @click="approveExchange">{{ t('exchange.actions.approve') }}</button>
+                    <button type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500" @click="rejectExchange">{{ t('exchange.actions.reject') }}</button>
+                  </template>
+                  <button v-if="exchangeStore.exchange.status === 'Approved' || exchangeStore.exchange.status === 'Rejected'" type="button" class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40" @click="backToDraft">{{ t('exchange.actions.backToDraft') }}</button>
+                </template>
+              </div>
+            </div>
+
             <!-- Save bar — shown above the table when there are unsaved changes -->
             <div
               v-if="isEditable && exchangeStore.isDirty"

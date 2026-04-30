@@ -19,5 +19,6 @@ public record RecognitionEntryResponse(
     string? OriginalGrade,
     string? EctsGrade,
     string? HrGrade,
-    DateOnly? ExamDate
+    DateOnly? ExamDate,
+    bool? IsRecognized
 );

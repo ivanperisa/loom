@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using ErrorOr;
 using Loom.Application.DTOs.Exchange;
 using Loom.Application.DTOs.Recognition;
@@ -13,6 +13,16 @@ namespace Loom.Application.Services;
 
 public class RecognitionService(IAppDbContext db) : IRecognitionService
 {
+    private IQueryable<Recognition> RecognitionsWithIncludes() => db.Recognitions
+        .Include(r => r.Entries)
+            .ThenInclude(e => e.SlotMapping)
+                .ThenInclude(m => m.ForeignCourse)
+        .Include(r => r.Entries)
+            .ThenInclude(e => e.SlotMapping)
+                .ThenInclude(m => m.SlotState)
+                    .ThenInclude(s => s.CourseSlot)
+                        .ThenInclude(s => s.Category);
+
     public async Task<ErrorOr<RecognitionResponse>> GetOrCreateRecognitionAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
     {
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
@@ -26,15 +36,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
             || requester.Role == UserRole.Admin;
         if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
-        var recognition = await db.Recognitions
-            .Include(r => r.Entries)
-                .ThenInclude(e => e.SlotMapping)
-                    .ThenInclude(m => m.ForeignCourse)
-            .Include(r => r.Entries)
-                .ThenInclude(e => e.SlotMapping)
-                    .ThenInclude(m => m.SlotState)
-                        .ThenInclude(s => s.CourseSlot)
-                            .ThenInclude(s => s.Category)
+        var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
 
         if (recognition is null)
@@ -49,7 +51,6 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
             recognition.Entries = new List<RecognitionEntry>();
         }
 
-        // Auto-create empty entries for any SlotMapping not yet in Recognition
         var existingSlotMappingIds = recognition.Entries.Select(e => e.SlotMappingId).ToHashSet();
         var allMappingIds = await db.SlotMappings
             .AsNoTracking()
@@ -68,73 +69,59 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
             db.RecognitionEntries.AddRange(newEntries);
             await db.SaveChangesAsync(ct);
 
-            // Reload with full includes
-            recognition = await db.Recognitions
-                .Include(r => r.Entries)
-                    .ThenInclude(e => e.SlotMapping)
-                        .ThenInclude(m => m.ForeignCourse)
-                .Include(r => r.Entries)
-                    .ThenInclude(e => e.SlotMapping)
-                        .ThenInclude(m => m.SlotState)
-                            .ThenInclude(s => s.CourseSlot)
-                                .ThenInclude(s => s.Category)
+            recognition = await RecognitionsWithIncludes()
                 .FirstAsync(r => r.ExchangeId == exchangeId, ct);
         }
 
         return recognition.ToResponse();
     }
 
-    public async Task<ErrorOr<RecognitionResponse>> UpsertEntryAsync(Guid exchangeId, Guid studentId, UpsertRecognitionEntryRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<RecognitionResponse>> SaveRecognitionAsync(Guid exchangeId, Guid studentId, SaveRecognitionRequest request, CancellationToken ct = default)
     {
         var exchange = await db.Exchanges.FindAsync([exchangeId], ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
         if (exchange.StudentId != studentId) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
-        var recognition = await db.Recognitions
-            .Include(r => r.Entries)
-                .ThenInclude(e => e.SlotMapping)
-                    .ThenInclude(m => m.ForeignCourse)
-            .Include(r => r.Entries)
-                .ThenInclude(e => e.SlotMapping)
-                    .ThenInclude(m => m.SlotState)
-                        .ThenInclude(s => s.CourseSlot)
-                            .ThenInclude(s => s.Category)
+        var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Create recognition first.");
         if (recognition.Status == RecognitionStatus.Approved) return Error.Conflict("RECOGNITION_LOCKED", "Approved recognition cannot be modified.");
 
-        var mapping = await db.SlotMappings.FindAsync([request.SlotMappingId], ct);
-        if (mapping is null) return Error.NotFound("MAPPING_NOT_FOUND", "Slot mapping not found.");
+        var mappingIds = request.Entries.Select(e => e.SlotMappingId).ToList();
+        var mappings = await db.SlotMappings.Where(m => mappingIds.Contains(m.Id)).ToListAsync(ct);
+        if (mappings.Count != mappingIds.Count) return Error.NotFound("MAPPING_NOT_FOUND", "Some slot mappings were not found.");
 
-        var existing = recognition.Entries.FirstOrDefault(e => e.SlotMappingId == request.SlotMappingId);
-        if (existing is null)
+        foreach (var entryReq in request.Entries)
         {
-            var entry = new RecognitionEntry
+            var existing = recognition.Entries.FirstOrDefault(e => e.SlotMappingId == entryReq.SlotMappingId);
+            if (existing is null)
             {
-                RecognitionId = recognition.Id,
-                SlotMappingId = request.SlotMappingId,
-                EnrollmentStatus = request.EnrollmentStatus,
-                OriginalGrade = request.OriginalGrade,
-                EctsGrade = request.EctsGrade,
-                HrGrade = request.HrGrade,
-                ExamDate = request.ExamDate
-            };
-            db.RecognitionEntries.Add(entry);
-        }
-        else
-        {
-            existing.EnrollmentStatus = request.EnrollmentStatus;
-            existing.OriginalGrade = request.OriginalGrade;
-            existing.EctsGrade = request.EctsGrade;
-            existing.HrGrade = request.HrGrade;
-            existing.ExamDate = request.ExamDate;
+                var entry = new RecognitionEntry
+                {
+                    RecognitionId = recognition.Id,
+                    SlotMappingId = entryReq.SlotMappingId,
+                    EnrollmentStatus = entryReq.EnrollmentStatus,
+                    OriginalGrade = entryReq.OriginalGrade,
+                    EctsGrade = entryReq.EctsGrade,
+                    HrGrade = entryReq.HrGrade,
+                    ExamDate = entryReq.ExamDate
+                };
+                db.RecognitionEntries.Add(entry);
+            }
+            else
+            {
+                existing.EnrollmentStatus = entryReq.EnrollmentStatus;
+                existing.OriginalGrade = entryReq.OriginalGrade;
+                existing.EctsGrade = entryReq.EctsGrade;
+                existing.HrGrade = entryReq.HrGrade;
+                existing.ExamDate = entryReq.ExamDate;
+            }
         }
 
         recognition.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
         var rec = await GetOrCreateRecognitionAsync(exchangeId, studentId, ct);
-        if (!rec.IsError) await SaveSnapshotAsync(exchangeId, studentId, SnapshotPhase.Recognition, rec.Value, ct);
         return rec;
     }
 
@@ -152,22 +139,17 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         var isStudent = exchange.StudentId == requesterId;
         var isCoordinatorOrAdmin = exchange.CoordinatorId == requesterId || requester.Role == UserRole.Admin;
 
-        if (isStudent && newStatus != RecognitionStatus.Submitted)
-            return Error.Forbidden("FORBIDDEN", "Students can only submit recognition.");
+        if (isStudent && newStatus != RecognitionStatus.Submitted && newStatus != RecognitionStatus.Draft)
+            return Error.Forbidden("FORBIDDEN", "Students can only submit or revert recognition to draft.");
         if (!isStudent && !isCoordinatorOrAdmin)
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
-        var recognition = await db.Recognitions
-            .Include(r => r.Entries)
-                .ThenInclude(e => e.SlotMapping)
-                    .ThenInclude(m => m.ForeignCourse)
-            .Include(r => r.Entries)
-                .ThenInclude(e => e.SlotMapping)
-                    .ThenInclude(m => m.SlotState)
-                        .ThenInclude(s => s.CourseSlot)
-                            .ThenInclude(s => s.Category)
+        var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
+
+        if (isStudent && newStatus == RecognitionStatus.Draft && recognition.Status == RecognitionStatus.Approved)
+            return Error.Forbidden("FORBIDDEN", "Cannot revert an approved recognition to draft.");
 
         recognition.Status = newStatus;
         recognition.UpdatedAt = DateTime.UtcNow;
@@ -175,8 +157,33 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         await db.SaveChangesAsync(ct);
 
         var statusResponse = recognition.ToResponse();
-        await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.Recognition, statusResponse, ct);
+        if (newStatus == RecognitionStatus.Approved) await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.Recognition, statusResponse, ct);
         return statusResponse;
+    }
+
+    public async Task<ErrorOr<RecognitionResponse>> SetEntryRecognizedAsync(Guid exchangeId, Guid entryId, Guid coordinatorId, SetEntryRecognizedRequest request, CancellationToken ct = default)
+    {
+        var exchange = await db.Exchanges.FindAsync([exchangeId], ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        var requester = await db.Users.FindAsync([coordinatorId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        var isCoordinatorOrAdmin = exchange.CoordinatorId == coordinatorId || requester.Role == UserRole.Admin;
+        if (!isCoordinatorOrAdmin) return Error.Forbidden("ACCESS_DENIED", "Only coordinators can mark entries.");
+
+        var recognition = await db.Recognitions
+            .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
+        if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
+
+        var entry = await db.RecognitionEntries.FindAsync([entryId], ct);
+        if (entry is null || entry.RecognitionId != recognition.Id)
+            return Error.NotFound("ENTRY_NOT_FOUND", "Recognition entry not found.");
+
+        entry.IsRecognized = request.IsRecognized;
+        await db.SaveChangesAsync(ct);
+
+        return await GetOrCreateRecognitionAsync(exchangeId, coordinatorId, ct);
     }
 
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };

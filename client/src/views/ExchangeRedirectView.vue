@@ -8,8 +8,9 @@ const router = useRouter()
 onMounted(async () => {
   try {
     const res = await exchangeService.getMine()
-    if (res.data.length === 1) {
-      router.replace(`/exchange/${res.data[0].id}`)
+    const firstEx = res.data[0]
+    if (res.data.length === 1 && firstEx) {
+      router.replace(`/exchange/${firstEx.id}`)
     } else {
       router.replace('/home')
     }

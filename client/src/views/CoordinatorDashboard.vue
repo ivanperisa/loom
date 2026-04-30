@@ -134,13 +134,20 @@ function viewExchange(exchangeId: string) {
                 @click="viewExchange(ex.id)"
               >
                 <div class="flex-1">
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
                     <span class="font-medium text-light">{{ ex.foreignInstitutionName }}</span>
                     <span
                       class="rounded-full border px-2 py-0.5 text-xs font-medium"
                       :class="statusColorClass[ex.status] ?? statusColorClass.Draft"
                     >
-                      {{ t(`exchangeStatus.${ex.status}`) }}
+                      {{ t('exchange.tabs.learningAgreement') }}: {{ t(`exchangeStatus.${ex.status}`) }}
+                    </span>
+                    <span
+                      v-if="ex.status === 'Approved' || ex.recognitionStatus"
+                      class="rounded-full border px-2 py-0.5 text-xs font-medium"
+                      :class="statusColorClass[ex.recognitionStatus ?? 'Draft'] ?? statusColorClass.Draft"
+                    >
+                      {{ t('exchange.tabs.recognition') }}: {{ t(`recognitionStatus.${ex.recognitionStatus ?? 'Draft'}`) }}
                     </span>
                   </div>
                   <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-light/60">

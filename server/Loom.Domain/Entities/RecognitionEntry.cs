@@ -13,4 +13,5 @@ public class RecognitionEntry : EntityBase
     public string? EctsGrade { get; set; }
     public string? HrGrade { get; set; }
     public DateOnly? ExamDate { get; set; }
+    public bool? IsRecognized { get; set; }
 }

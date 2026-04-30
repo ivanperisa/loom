@@ -18,6 +18,7 @@ public class RecognitionEntryConfiguration : IEntityTypeConfiguration<Recognitio
         builder.Property(x => x.EctsGrade).HasColumnName("ects_grade");
         builder.Property(x => x.HrGrade).HasColumnName("hr_grade");
         builder.Property(x => x.ExamDate).HasColumnName("exam_date");
+        builder.Property(x => x.IsRecognized).HasColumnName("is_recognized");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.HasOne(x => x.Recognition)
             .WithMany(x => x.Entries)

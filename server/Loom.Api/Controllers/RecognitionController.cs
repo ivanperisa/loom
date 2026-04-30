@@ -18,12 +18,12 @@ public class RecognitionController(IRecognitionService recognitionService) : Api
     }
 
     [HttpPut("entries")]
-    public async Task<IActionResult> UpsertEntry(
+    public async Task<IActionResult> SaveRecognition(
         Guid exchangeId,
-        [FromBody] UpsertRecognitionEntryRequest request,
+        [FromBody] SaveRecognitionRequest request,
         CancellationToken ct)
     {
-        var result = await recognitionService.UpsertEntryAsync(exchangeId, GetCurrentUserId(), request, ct);
+        var result = await recognitionService.SaveRecognitionAsync(exchangeId, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
 
@@ -34,6 +34,17 @@ public class RecognitionController(IRecognitionService recognitionService) : Api
         CancellationToken ct)
     {
         var result = await recognitionService.UpdateRecognitionStatusAsync(exchangeId, GetCurrentUserId(), request, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpPatch("entries/{entryId:guid}/recognized")]
+    public async Task<IActionResult> SetEntryRecognized(
+        Guid exchangeId,
+        Guid entryId,
+        [FromBody] SetEntryRecognizedRequest request,
+        CancellationToken ct)
+    {
+        var result = await recognitionService.SetEntryRecognizedAsync(exchangeId, entryId, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
 }

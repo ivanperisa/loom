@@ -12,5 +12,6 @@ public record ExchangeSummaryResponse(
     string StudyProfileName,
     string AcademicYear,
     string SemesterType,
-    string Status
+    string Status,
+    string? RecognitionStatus
 );
