@@ -95,7 +95,10 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         user.CoordinatorId = request.CoordinatorId;
 
         var activeExchanges = await db.Exchanges
-            .Where(e => e.StudentId == user.Id && e.Status != ExchangeStatus.Approved && e.Status != ExchangeStatus.Rejected)
+            .Where(e => e.StudentId == user.Id &&
+                e.LearningAgreement != null &&
+                e.LearningAgreement.Status != DocumentStatus.Approved &&
+                e.LearningAgreement.Status != DocumentStatus.Rejected)
             .ToListAsync(ct);
         foreach (var exchange in activeExchanges)
             exchange.CoordinatorId = request.CoordinatorId;

@@ -12,6 +12,7 @@ public class LearningAgreementConfiguration : IEntityTypeConfiguration<LearningA
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.ExchangeId).HasColumnName("exchange_id");
+        builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.HasOne(x => x.Exchange)

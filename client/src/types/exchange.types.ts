@@ -1,6 +1,6 @@
 import type { StudyProfileResponse, ForeignProgramResponse } from './institution.types'
 
-export type ExchangeStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected'
+export type DocumentStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected'
 export type ExchangeSemester = 'Winter' | 'Summer'
 export type SlotMode = 'AtHome' | 'AtExchange' | 'AfterExchange'
 export type CourseSlotCategory =
@@ -36,7 +36,6 @@ export interface ExchangeResponse {
   academicYear: string
   semesterType: ExchangeSemester
   studySemester: number
-  status: ExchangeStatus
   coordinatorMessage: string | null
   createdAt: string
   updatedAt: string
@@ -54,7 +53,7 @@ export interface ExchangeSummaryResponse {
   studyProfileName: string
   academicYear: string
   semesterType: ExchangeSemester
-  status: ExchangeStatus
+  learningAgreementStatus: DocumentStatus
   recognitionStatus: string | null
 }
 
@@ -85,13 +84,13 @@ export interface LearningAgreementEntryResponse {
 
 export interface LearningAgreementResponse {
   exchangeId: string
-  status: ExchangeStatus
+  status: DocumentStatus
   slots: CourseSlotResponse[]
   entries: LearningAgreementEntryResponse[]
 }
 
-export interface UpdateExchangeStatusRequest {
-  status: ExchangeStatus
+export interface UpdateLearningAgreementStatusRequest {
+  status: DocumentStatus
   message?: string | null
 }
 

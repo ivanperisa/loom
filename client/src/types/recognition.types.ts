@@ -1,4 +1,4 @@
-export type RecognitionStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected'
+import type { DocumentStatus } from './exchange.types'
 
 export interface RecognitionEntryResponse {
   id: string
@@ -26,7 +26,7 @@ export interface RecognitionEntryResponse {
 export interface RecognitionResponse {
   id: string
   exchangeId: string
-  status: RecognitionStatus
+  status: DocumentStatus
   entries: RecognitionEntryResponse[]
   createdAt: string
   updatedAt: string
@@ -46,5 +46,5 @@ export interface SaveRecognitionRequest {
 }
 
 export interface UpdateRecognitionStatusRequest {
-  status: RecognitionStatus
+  status: DocumentStatus
 }

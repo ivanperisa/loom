@@ -216,7 +216,7 @@ export default {
       studySemesterRequired: 'Please enter a study semester.'
     }
   },
-  exchangeStatus: {
+  documentStatus: {
     Draft: 'Draft',
     Submitted: 'Submitted',
     Approved: 'Approved',
@@ -299,12 +299,6 @@ export default {
       sheetRecognition: 'Recognition',
       sheetLA: 'Learning Agreement',
     },
-  },
-  recognitionStatus: {
-    Draft: 'Draft',
-    Submitted: 'Submitted',
-    Approved: 'Approved',
-    Rejected: 'Rejected',
   },
   snapshotPhase: {
     LearningAgreement: 'Learning Agreement',

@@ -22,7 +22,6 @@ public static class ExchangeMapper
         exchange.AcademicYear,
         exchange.SemesterType.ToString(),
         exchange.StudySemester,
-        exchange.Status.ToString(),
         exchange.CoordinatorMessage,
         exchange.CreatedAt,
         exchange.UpdatedAt
@@ -40,7 +39,7 @@ public static class ExchangeMapper
         exchange.StudyProfile.Name,
         exchange.AcademicYear,
         exchange.SemesterType.ToString(),
-        exchange.Status.ToString(),
+        exchange.LearningAgreement!.Status.ToString(),
         exchange.Recognition?.Status.ToString()
     );
 

@@ -17,7 +17,6 @@ public record ExchangeResponse(
     string AcademicYear,
     string SemesterType,
     int StudySemester,
-    string Status,
     string? CoordinatorMessage,
     DateTime CreatedAt,
     DateTime UpdatedAt

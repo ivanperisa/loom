@@ -1,3 +1,3 @@
 namespace Loom.Application.DTOs.Exchange;
 
-public record UpdateExchangeStatusRequest(string Status, string? Message = null);
+public record UpdateLearningAgreementStatusRequest(string Status, string? Message = null);

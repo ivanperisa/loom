@@ -19,7 +19,8 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         .Include(e => e.Student)
         .Include(e => e.Coordinator)
         .Include(e => e.StudyProfile).ThenInclude(sp => sp.StudyProgram).ThenInclude(p => p.Institution)
-        .Include(e => e.ForeignProgram).ThenInclude(p => p.Institution);
+        .Include(e => e.ForeignProgram).ThenInclude(p => p.Institution)
+        .Include(e => e.LearningAgreement);
 
     private async Task<ErrorOr<(Exchange exchange, User requester)>> CheckExchangeAccessAsync(
         Guid exchangeId, Guid requesterId, bool requireStudentInclude = false, CancellationToken ct = default)
@@ -39,14 +40,14 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return (exchange, requester);
     }
 
-    private static bool IsExchangeLocked(Exchange exchange) =>
-        exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted;
+    private static bool IsLaLocked(DocumentStatus laStatus) =>
+        laStatus is DocumentStatus.Approved or DocumentStatus.Submitted;
 
     private async Task<LearningAgreement> GetOrCreateLaAsync(Guid exchangeId, CancellationToken ct)
     {
         var la = await db.LearningAgreements.FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
         if (la is not null) return la;
-        la = new LearningAgreement { ExchangeId = exchangeId };
+        la = new LearningAgreement { ExchangeId = exchangeId, Status = DocumentStatus.Draft };
         db.LearningAgreements.Add(la);
         await db.SaveChangesAsync(ct);
         la.Entries = new List<LearningAgreementEntry>();
@@ -87,12 +88,11 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             AcademicYear = request.AcademicYear,
             SemesterType = semesterType,
             StudySemester = request.StudySemester,
-            Status = ExchangeStatus.Draft
         };
         db.Exchanges.Add(exchange);
         await db.SaveChangesAsync(ct);
 
-        db.LearningAgreements.Add(new LearningAgreement { ExchangeId = exchange.Id });
+        db.LearningAgreements.Add(new LearningAgreement { ExchangeId = exchange.Id, Status = DocumentStatus.Draft });
         await db.SaveChangesAsync(ct);
 
         var saved = await ExchangeWithIncludes()
@@ -122,6 +122,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             .Include(e => e.Student)
             .Include(e => e.ForeignProgram).ThenInclude(p => p.Institution)
             .Include(e => e.StudyProfile).ThenInclude(sp => sp.StudyProgram).ThenInclude(p => p.Institution)
+            .Include(e => e.LearningAgreement)
             .Include(e => e.Recognition)
             .Where(e => e.StudentId == studentId)
             .OrderByDescending(e => e.CreatedAt)
@@ -129,10 +130,10 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return exchanges.Select(e => e.ToSummaryResponse()).ToList();
     }
 
-    public async Task<ErrorOr<ExchangeResponse>> UpdateExchangeStatusAsync(Guid exchangeId, Guid requesterId, UpdateExchangeStatusRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<ExchangeResponse>> UpdateLearningAgreementStatusAsync(Guid exchangeId, Guid requesterId, UpdateLearningAgreementStatusRequest request, CancellationToken ct = default)
     {
-        if (!Enum.TryParse<ExchangeStatus>(request.Status, out var newStatus))
-            return Error.Validation("INVALID_STATUS", "Invalid exchange status.");
+        if (!Enum.TryParse<DocumentStatus>(request.Status, out var newStatus))
+            return Error.Validation("INVALID_STATUS", "Invalid status.");
 
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
@@ -145,32 +146,38 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         if (!isStudent && !isCoordinatorOrAdmin)
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
-        if (isStudent && newStatus != ExchangeStatus.Submitted && newStatus != ExchangeStatus.Draft)
-            return Error.Forbidden("FORBIDDEN", "Students can only submit or revert to draft.");
-        if (isStudent && newStatus == ExchangeStatus.Draft && exchange.Status == ExchangeStatus.Approved)
-            return Error.Forbidden("FORBIDDEN", "Cannot revert an approved exchange to draft.");
 
-        if (newStatus == ExchangeStatus.Approved)
+        var la = await db.LearningAgreements.FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+        if (la is null) return Error.NotFound("LA_NOT_FOUND", "Learning agreement not found.");
+
+        if (isStudent && newStatus != DocumentStatus.Submitted && newStatus != DocumentStatus.Draft)
+            return Error.Forbidden("FORBIDDEN", "Students can only submit or revert to draft.");
+        if (isStudent && newStatus == DocumentStatus.Draft && la.Status == DocumentStatus.Approved)
+            return Error.Forbidden("FORBIDDEN", "Cannot revert an approved learning agreement to draft.");
+
+        if (newStatus == DocumentStatus.Approved)
         {
-            var hasApproved = await db.Exchanges
-                .AnyAsync(e => e.StudentId == exchange.StudentId && e.Id != exchangeId && e.Status == ExchangeStatus.Approved, ct);
+            var hasApproved = await db.LearningAgreements
+                .AnyAsync(l => l.Exchange.StudentId == exchange.StudentId && l.ExchangeId != exchangeId && l.Status == DocumentStatus.Approved, ct);
             if (hasApproved)
-                return Error.Conflict("ALREADY_HAS_APPROVED", "Student already has an approved exchange.");
+                return Error.Conflict("ALREADY_HAS_APPROVED", "Student already has an approved learning agreement.");
         }
 
-        exchange.Status = newStatus;
-        exchange.UpdatedAt = DateTime.UtcNow;
+        la.Status = newStatus;
+        la.UpdatedAt = DateTime.UtcNow;
 
         if (isCoordinatorOrAdmin && request.Message is not null)
             exchange.CoordinatorMessage = string.IsNullOrWhiteSpace(request.Message) ? null : request.Message.Trim();
-        if (newStatus == ExchangeStatus.Approved)
+        if (newStatus == DocumentStatus.Approved)
             exchange.CoordinatorMessage = null;
 
-        if (newStatus == ExchangeStatus.Approved)
+        exchange.UpdatedAt = DateTime.UtcNow;
+
+        if (newStatus == DocumentStatus.Approved)
         {
-            var la = await LaWithEntries().AsNoTracking().FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+            var laWithEntries = await LaWithEntries().AsNoTracking().FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
             var snapshotData = new LearningAgreementSnapshotData(
-                la?.Entries.Select(e => e.ToResponse()).ToList() ?? []);
+                laWithEntries?.Entries.Select(e => e.ToResponse()).ToList() ?? []);
             db.ExchangeSnapshots.Add(new ExchangeSnapshot
             {
                 ExchangeId = exchangeId,
@@ -204,7 +211,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         return new LearningAgreementResponse(
             exchangeId,
-            exchange.Status.ToString(),
+            la?.Status.ToString() ?? DocumentStatus.Draft.ToString(),
             slots.Select(s => s.ToResponse()).ToList(),
             la?.Entries.Select(e => e.ToResponse()).ToList() ?? []
         );
@@ -215,8 +222,10 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
         var (exchange, _) = accessCheck.Value;
-        if (IsExchangeLocked(exchange))
-            return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
+
+        var la = await db.LearningAgreements.FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
+        if (la is not null && IsLaLocked(la.Status))
+            return Error.Conflict("LA_LOCKED", "Learning agreement cannot be modified in current status.");
 
         var validationError = ValidateEntryRequest(request);
         if (validationError is not null) return validationError.Value;
@@ -236,9 +245,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var ectsError = await ValidateForeignCourseEctsAsync(request, ct);
         if (ectsError is not null) return ectsError.Value;
 
-        var la = await GetOrCreateLaAsync(exchangeId, ct);
-        await DeleteExistingEntriesAsync(la.Id, ct);
-        await CreateNewEntriesAsync(la.Id, request, ct);
+        var laEntity = await GetOrCreateLaAsync(exchangeId, ct);
+        await DeleteExistingEntriesAsync(laEntity.Id, ct);
+        await CreateNewEntriesAsync(laEntity.Id, request, ct);
 
         await db.SaveChangesAsync(ct);
         return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
@@ -333,6 +342,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             .Include(e => e.Student)
             .Include(e => e.ForeignProgram).ThenInclude(p => p.Institution)
             .Include(e => e.StudyProfile).ThenInclude(sp => sp.StudyProgram).ThenInclude(p => p.Institution)
+            .Include(e => e.LearningAgreement)
             .Include(e => e.Recognition);
 
         var filtered = requester.IsAdmin()
@@ -368,7 +378,10 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var exchange = await db.Exchanges.FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
         if (exchange.StudentId != requesterId) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
-        if (exchange.Status != ExchangeStatus.Draft) return Error.Conflict("NOT_DRAFT", "Only draft exchanges can be deleted.");
+
+        var la = await db.LearningAgreements.FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
+        if (la?.Status != DocumentStatus.Draft)
+            return Error.Conflict("NOT_DRAFT", "Only draft exchanges can be deleted.");
 
         db.ExchangeSnapshots.RemoveRange(
             await db.ExchangeSnapshots.Where(s => s.ExchangeId == exchangeId).ToListAsync(ct));

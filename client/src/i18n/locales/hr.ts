@@ -216,7 +216,7 @@ export default {
       studySemesterRequired: 'Unesite semestar studija.'
     }
   },
-  exchangeStatus: {
+  documentStatus: {
     Draft: 'Nacrt',
     Submitted: 'Predano',
     Approved: 'Odobreno',
@@ -299,12 +299,6 @@ export default {
       sheetRecognition: 'Priznavanje',
       sheetLA: 'Ugovor o učenju',
     },
-  },
-  recognitionStatus: {
-    Draft: 'Nacrt',
-    Submitted: 'Predano',
-    Approved: 'Odobreno',
-    Rejected: 'Odbijeno',
   },
   snapshotPhase: {
     LearningAgreement: 'Ugovor o učenju',

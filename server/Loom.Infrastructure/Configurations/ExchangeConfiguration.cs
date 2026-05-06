@@ -19,7 +19,6 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
         builder.Property(x => x.AcademicYear).HasColumnName("academic_year").IsRequired();
         builder.Property(x => x.SemesterType).HasColumnName("semester_type").HasConversion<string>().HasMaxLength(10);
         builder.Property(x => x.StudySemester).HasColumnName("study_semester").IsRequired();
-        builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(50);
         builder.Property(x => x.CoordinatorId).HasColumnName("coordinator_id");
         builder.Property(x => x.CoordinatorMessage).HasColumnName("coordinator_message");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
@@ -43,7 +42,5 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
         builder.HasIndex(x => x.StudentId);
         builder.HasIndex(x => x.CoordinatorId);
         builder.HasIndex(x => x.ForeignProgramId);
-        builder.HasIndex(x => new { x.StudentId, x.Status });
-        builder.HasIndex(x => new { x.Status, x.CreatedAt });
     }
 }

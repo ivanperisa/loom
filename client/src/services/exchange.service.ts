@@ -5,7 +5,7 @@ import type {
   ExchangeSnapshotResponse,
   ExchangeSummaryResponse,
   LearningAgreementResponse,
-  UpdateExchangeStatusRequest,
+  UpdateLearningAgreementStatusRequest,
   UpdateCoordinatorMessageRequest,
   SaveLearningAgreementRequest,
 } from '@/types/exchange.types'
@@ -19,8 +19,8 @@ export const exchangeService = {
     api.get<ExchangeSummaryResponse[]>('/api/exchanges/mine'),
   deleteExchange: (exchangeId: string) =>
     api.delete(`/api/exchanges/${exchangeId}`),
-  updateStatus: (exchangeId: string, request: UpdateExchangeStatusRequest) =>
-    api.patch<ExchangeResponse>(`/api/exchanges/${exchangeId}/status`, request),
+  updateLearningAgreementStatus: (exchangeId: string, request: UpdateLearningAgreementStatusRequest) =>
+    api.patch<ExchangeResponse>(`/api/exchanges/${exchangeId}/learning-agreement/status`, request),
   getLearningAgreement: (exchangeId: string) =>
     api.get<LearningAgreementResponse>(`/api/exchanges/${exchangeId}/learning-agreement`),
   saveLearningAgreement: (exchangeId: string, request: SaveLearningAgreementRequest) =>

@@ -11,8 +11,8 @@ export function useExchangePermissions() {
       exchangeStore.exchange?.coordinatorId === authStore.user?.id ||
       authStore.isAdmin,
   )
-  const isApproved = computed(() => exchangeStore.exchange?.status === 'Approved')
-  const isEditable = computed(() => exchangeStore.exchange?.status === 'Draft')
+  const isApproved = computed(() => exchangeStore.serverLearningAgreement?.status === 'Approved')
+  const isEditable = computed(() => exchangeStore.serverLearningAgreement?.status === 'Draft')
 
   return { isCoordinator, isApproved, isEditable }
 }

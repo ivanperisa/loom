@@ -130,18 +130,18 @@ async function confirmDelete(exchangeId: string) {
                 <div class="flex flex-wrap gap-1.5">
                   <span
                     class="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-                    :class="statusColorClass[ex.status] ?? 'bg-slate-500/20 text-slate-300 border-slate-400'"
+                    :class="statusColorClass[ex.learningAgreementStatus] ?? 'bg-slate-500/20 text-slate-300 border-slate-400'"
                     :title="t('exchange.tabs.learningAgreement')"
                   >
-                    {{ t('exchange.tabs.learningAgreement') }}: {{ t(`exchangeStatus.${ex.status}`) }}
+                    {{ t('exchange.tabs.learningAgreement') }}: {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
                   </span>
                   <span
-                    v-if="ex.status === 'Approved' || ex.recognitionStatus"
+                    v-if="ex.learningAgreementStatus === 'Approved' || ex.recognitionStatus"
                     class="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                     :class="statusColorClass[ex.recognitionStatus ?? 'Draft'] ?? 'bg-slate-500/20 text-slate-300 border-slate-400'"
                     :title="t('exchange.tabs.recognition')"
                   >
-                    {{ t('exchange.tabs.recognition') }}: {{ t(`recognitionStatus.${ex.recognitionStatus ?? 'Draft'}`) }}
+                    {{ t('exchange.tabs.recognition') }}: {{ t(`documentStatus.${ex.recognitionStatus ?? 'Draft'}`) }}
                   </span>
                 </div>
               </div>

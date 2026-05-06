@@ -41,7 +41,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
             recognition = new Recognition
             {
                 ExchangeId = exchangeId,
-                Status = RecognitionStatus.Draft
+                Status = DocumentStatus.Draft
             };
             db.Recognitions.Add(recognition);
             await db.SaveChangesAsync(ct);
@@ -82,7 +82,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Create recognition first.");
-        if (recognition.Status == RecognitionStatus.Approved) return Error.Conflict("RECOGNITION_LOCKED", "Approved recognition cannot be modified.");
+        if (recognition.Status == DocumentStatus.Approved) return Error.Conflict("RECOGNITION_LOCKED", "Approved recognition cannot be modified.");
 
         var entryIds = request.Entries.Select(e => e.LearningAgreementEntryId).ToList();
         var entries = await db.LearningAgreementEntries.Where(e => entryIds.Contains(e.Id)).ToListAsync(ct);
@@ -122,7 +122,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
 
     public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionStatusAsync(Guid exchangeId, Guid requesterId, UpdateRecognitionStatusRequest request, CancellationToken ct = default)
     {
-        if (!Enum.TryParse<RecognitionStatus>(request.Status, out var newStatus))
+        if (!Enum.TryParse<DocumentStatus>(request.Status, out var newStatus))
             return Error.Validation("INVALID_STATUS", "Invalid recognition status.");
 
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
@@ -134,7 +134,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         var isStudent = exchange.StudentId == requesterId;
         var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.CoordinatorId);
 
-        if (isStudent && newStatus != RecognitionStatus.Submitted && newStatus != RecognitionStatus.Draft)
+        if (isStudent && newStatus != DocumentStatus.Submitted && newStatus != DocumentStatus.Draft)
             return Error.Forbidden("FORBIDDEN", "Students can only submit or revert recognition to draft.");
         if (!isStudent && !isCoordinatorOrAdmin)
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
@@ -143,7 +143,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
 
-        if (isStudent && newStatus == RecognitionStatus.Draft && recognition.Status == RecognitionStatus.Approved)
+        if (isStudent && newStatus == DocumentStatus.Draft && recognition.Status == DocumentStatus.Approved)
             return Error.Forbidden("FORBIDDEN", "Cannot revert an approved recognition to draft.");
 
         recognition.Status = newStatus;
@@ -152,7 +152,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         await db.SaveChangesAsync(ct);
 
         var statusResponse = recognition.ToResponse();
-        if (newStatus == RecognitionStatus.Approved)
+        if (newStatus == DocumentStatus.Approved)
             await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.Recognition, statusResponse, ct);
         return statusResponse;
     }

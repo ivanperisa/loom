@@ -164,16 +164,16 @@ async function toggleGroupRecognition(group: CourseGroup) {
 }
 
 async function submitRecognition() {
-  try { const res = await recognitionService.updateStatus(props.exchangeId, { status: 'Submitted' }); recognition.value = res.data } catch { error.value = t('common.error') }
+  try { const res = await recognitionService.updateRecognitionStatus(props.exchangeId, { status: 'Submitted' }); recognition.value = res.data } catch { error.value = t('common.error') }
 }
 async function approveRecognition() {
-  try { const res = await recognitionService.updateStatus(props.exchangeId, { status: 'Approved' }); recognition.value = res.data } catch { error.value = t('common.error') }
+  try { const res = await recognitionService.updateRecognitionStatus(props.exchangeId, { status: 'Approved' }); recognition.value = res.data } catch { error.value = t('common.error') }
 }
 async function rejectRecognition() {
-  try { const res = await recognitionService.updateStatus(props.exchangeId, { status: 'Rejected' }); recognition.value = res.data } catch { error.value = t('common.error') }
+  try { const res = await recognitionService.updateRecognitionStatus(props.exchangeId, { status: 'Rejected' }); recognition.value = res.data } catch { error.value = t('common.error') }
 }
 async function backToRecognitionDraft() {
-  try { const res = await recognitionService.updateStatus(props.exchangeId, { status: 'Draft' }); recognition.value = res.data } catch { error.value = t('common.error') }
+  try { const res = await recognitionService.updateRecognitionStatus(props.exchangeId, { status: 'Draft' }); recognition.value = res.data } catch { error.value = t('common.error') }
 }
 function discardChanges() {
   if (recognition.value) initGrades(recognition.value)
@@ -204,7 +204,7 @@ const rejectedBg = '#FFCCCC'
       <!-- Status + actions bar -->
       <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <StatusBadge :status="recognition.status" i18n-prefix="recognitionStatus" />
+          <StatusBadge :status="recognition.status" />
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" class="rounded-lg border border-primary/40 px-4 py-2 text-sm font-medium text-primary-light transition hover:bg-primary/10" @click="doExport">

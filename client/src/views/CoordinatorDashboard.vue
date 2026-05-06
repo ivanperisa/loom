@@ -133,16 +133,16 @@ function viewExchange(exchangeId: string) {
                     <span class="font-medium text-light">{{ ex.foreignInstitutionName }}</span>
                     <span
                       class="rounded-full border px-2 py-0.5 text-xs font-medium"
-                      :class="statusColorClass[ex.status] ?? statusColorClass.Draft"
+                      :class="statusColorClass[ex.learningAgreementStatus] ?? statusColorClass.Draft"
                     >
-                      {{ t('exchange.tabs.learningAgreement') }}: {{ t(`exchangeStatus.${ex.status}`) }}
+                      {{ t('exchange.tabs.learningAgreement') }}: {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
                     </span>
                     <span
-                      v-if="ex.status === 'Approved' || ex.recognitionStatus"
+                      v-if="ex.learningAgreementStatus === 'Approved' || ex.recognitionStatus"
                       class="rounded-full border px-2 py-0.5 text-xs font-medium"
                       :class="statusColorClass[ex.recognitionStatus ?? 'Draft'] ?? statusColorClass.Draft"
                     >
-                      {{ t('exchange.tabs.recognition') }}: {{ t(`recognitionStatus.${ex.recognitionStatus ?? 'Draft'}`) }}
+                      {{ t('exchange.tabs.recognition') }}: {{ t(`documentStatus.${ex.recognitionStatus ?? 'Draft'}`) }}
                     </span>
                   </div>
                   <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-light/60">

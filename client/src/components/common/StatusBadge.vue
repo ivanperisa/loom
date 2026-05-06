@@ -15,6 +15,6 @@ defineProps<{
     class="rounded-full border px-3 py-0.5 text-xs font-semibold"
     :class="statusColorClass[status] ?? statusColorClass['Draft']"
   >
-    {{ t(`${i18nPrefix ?? 'exchangeStatus'}.${status}`) }}
+    {{ t(`${i18nPrefix ?? 'documentStatus'}.${status}`) }}
   </span>
 </template>

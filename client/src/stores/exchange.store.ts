@@ -7,7 +7,7 @@ import type {
   ExchangeResponse,
   LearningAgreementResponse,
   CreateExchangeRequest,
-  UpdateExchangeStatusRequest,
+  UpdateLearningAgreementStatusRequest,
   UpdateCoordinatorMessageRequest,
   LocalSlotState,
   LocalSlotMapping,
@@ -183,10 +183,13 @@ export const useExchangeStore = defineStore('exchange', () => {
 
   // ── Status & coordinator ──────────────────────────────────────────────────
 
-  async function updateStatus(exchangeId: string, request: UpdateExchangeStatusRequest) {
+  async function updateLearningAgreementStatus(exchangeId: string, request: UpdateLearningAgreementStatusRequest) {
     try {
-      const res = await exchangeService.updateStatus(exchangeId, request)
+      const res = await exchangeService.updateLearningAgreementStatus(exchangeId, request)
       exchange.value = res.data
+      if (serverLearningAgreement.value) {
+        serverLearningAgreement.value = { ...serverLearningAgreement.value, status: request.status }
+      }
     } catch {
       error.value = t('common.error')
     }
@@ -230,7 +233,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     localSetSlotMode, localRemoveSlotState, localAddSlotMapping, localRemoveSlotMapping,
     fetchMySummaries, fetchExchange, createExchange, deleteExchange,
     fetchLearningAgreement, saveLearningAgreement,
-    updateStatus, updateCoordinatorMessage,
+    updateLearningAgreementStatus, updateCoordinatorMessage,
     fetchSnapshots, fetchSnapshot,
   }
 })

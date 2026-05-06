@@ -37,27 +37,6 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, _ => NoContent());
     }
 
-    [HttpPatch("{exchangeId:guid}/status")]
-    public async Task<IActionResult> UpdateStatus(Guid exchangeId, [FromBody] UpdateExchangeStatusRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.UpdateExchangeStatusAsync(exchangeId, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpGet("{exchangeId:guid}/learning-agreement")]
-    public async Task<IActionResult> GetLearningAgreement(Guid exchangeId, CancellationToken ct)
-    {
-        var result = await exchangeService.GetLearningAgreementAsync(exchangeId, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPut("{exchangeId:guid}/learning-agreement")]
-    public async Task<IActionResult> SaveLearningAgreement(Guid exchangeId, [FromBody] SaveLearningAgreementRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.SaveLearningAgreementAsync(exchangeId, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
     [HttpGet("{exchangeId:guid}/snapshots")]
     public async Task<IActionResult> GetSnapshots(Guid exchangeId, CancellationToken ct)
     {

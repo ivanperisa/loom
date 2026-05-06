@@ -1,6 +1,6 @@
 namespace Loom.Domain.Enums;
 
-public enum ExchangeStatus
+public enum DocumentStatus
 {
     Draft,
     Submitted,
