@@ -12,7 +12,7 @@ public class RecognitionEntryConfiguration : IEntityTypeConfiguration<Recognitio
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.RecognitionId).HasColumnName("recognition_id");
-        builder.Property(x => x.SlotMappingId).HasColumnName("slot_mapping_id");
+        builder.Property(x => x.LearningAgreementEntryId).HasColumnName("learning_agreement_entry_id");
         builder.Property(x => x.EnrollmentStatus).HasColumnName("enrollment_status");
         builder.Property(x => x.OriginalGrade).HasColumnName("original_grade");
         builder.Property(x => x.EctsGrade).HasColumnName("ects_grade");
@@ -23,10 +23,10 @@ public class RecognitionEntryConfiguration : IEntityTypeConfiguration<Recognitio
         builder.HasOne(x => x.Recognition)
             .WithMany(x => x.Entries)
             .HasForeignKey(x => x.RecognitionId);
-        builder.HasOne(x => x.SlotMapping)
+        builder.HasOne(x => x.LearningAgreementEntry)
             .WithOne(x => x.RecognitionEntry)
-            .HasForeignKey<RecognitionEntry>(x => x.SlotMappingId);
+            .HasForeignKey<RecognitionEntry>(x => x.LearningAgreementEntryId);
         builder.HasIndex(x => x.RecognitionId);
-        builder.HasIndex(x => x.SlotMappingId).IsUnique();
+        builder.HasIndex(x => x.LearningAgreementEntryId).IsUnique();
     }
 }

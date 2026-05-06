@@ -14,8 +14,8 @@ public interface IAppDbContext
     DbSet<ForeignCourse> ForeignCourses { get; }
     DbSet<CourseCategory> CourseCategories { get; }
     DbSet<CourseSlot> CourseSlots { get; }
-    DbSet<SlotState> SlotStates { get; }
-    DbSet<SlotMapping> SlotMappings { get; }
+    DbSet<LearningAgreement> LearningAgreements { get; }
+    DbSet<LearningAgreementEntry> LearningAgreementEntries { get; }
     DbSet<Recognition> Recognitions { get; }
     DbSet<RecognitionEntry> RecognitionEntries { get; }
     DbSet<ExchangeSnapshot> ExchangeSnapshots { get; }

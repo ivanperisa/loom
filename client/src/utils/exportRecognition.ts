@@ -1,6 +1,6 @@
 import XLSX from 'xlsx-js-style'
 import type { RecognitionResponse } from '@/types/recognition.types'
-import type { ExchangeResponse, LearningAgreementResponse, SlotStateResponse } from '@/types/exchange.types'
+import type { ExchangeResponse, LearningAgreementResponse, LearningAgreementEntryResponse } from '@/types/exchange.types'
 
 // ── Style helpers ─────────────────────────────────────────────────────────
 
@@ -422,8 +422,12 @@ function buildLASheet(
   const ws: Record<string, XlsxCell> = {}
   const merges: object[] = []
 
-  const stateMap = new Map<string, SlotStateResponse>()
-  for (const s of la.slotStates) stateMap.set(s.courseSlotId, s)
+  // Group flat entries by courseSlotId for quick lookup
+  const stateMap = new Map<string, { mode: string; entries: LearningAgreementEntryResponse[] }>()
+  for (const e of la.entries) {
+    if (!stateMap.has(e.courseSlotId)) stateMap.set(e.courseSlotId, { mode: e.mode, entries: [] })
+    if (e.foreignCourseId) stateMap.get(e.courseSlotId)!.entries.push(e)
+  }
 
   const BORDER_COLOR = 'BFBFBF'
   const modeBorder = { style: 'thin' as const, color: { rgb: BORDER_COLOR } }
@@ -466,15 +470,15 @@ function buildLASheet(
       const lines: string[] = []
       if (slot.courseCode) lines.push(slot.courseCode)
       lines.push(slot.courseName)
-      if (state?.mappings?.length) {
-        for (const m of state.mappings) {
+      if (state?.entries.length) {
+        for (const m of state.entries) {
           lines.push(`↳ ${m.foreignCourseCode} (${m.awardedEcts} ECTS)`)
         }
       }
       const text = lines.join('\n')
 
-      const startCol = slot.colStart          // 1-indexed position column
-      const endCol = slot.colStart + slot.ects - 1
+      const startCol = slot.slotPosition          // 1-indexed position column
+      const endCol = slot.slotPosition + slot.ects - 1
 
       const cellStyle = {
         font: { name: FONT, sz: 7, bold: false, color: { rgb: '000000' } },

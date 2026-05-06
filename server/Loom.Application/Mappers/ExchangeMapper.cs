@@ -47,7 +47,7 @@ public static class ExchangeMapper
     public static CourseSlotResponse ToResponse(this CourseSlot slot) => new(
         slot.Id,
         slot.Semester,
-        slot.ColStart,
+        slot.SlotPosition,
         slot.Ects,
         slot.CategoryCode,
         slot.Category.Name,
@@ -58,20 +58,15 @@ public static class ExchangeMapper
         slot.CourseNameEn
     );
 
-    public static SlotStateResponse ToResponse(this SlotState state) => new(
-        state.Id,
-        state.CourseSlotId,
-        state.Mode.ToString(),
-        state.SlotMappings.Select(m => m.ToResponse()).ToList()
-    );
-
-    public static SlotMappingResponse ToResponse(this SlotMapping mapping) => new(
-        mapping.Id,
-        mapping.ForeignCourseId,
-        mapping.ForeignCourse.Code,
-        mapping.ForeignCourse.NameEn,
-        mapping.ForeignCourse.NameHr,
-        mapping.AwardedEcts
+    public static LearningAgreementEntryResponse ToResponse(this LearningAgreementEntry entry) => new(
+        entry.Id,
+        entry.CourseSlotId,
+        entry.Mode.ToString(),
+        entry.ForeignCourseId,
+        entry.ForeignCourse?.Code,
+        entry.ForeignCourse?.NameEn,
+        entry.ForeignCourse?.NameHr,
+        entry.AwardedEcts
     );
 
     public static ForeignCourseResponse ToResponse(this ForeignCourse course) => new(
@@ -106,20 +101,21 @@ public static class ExchangeMapper
 
     public static RecognitionEntryResponse ToResponse(this RecognitionEntry entry)
     {
-        var fc = entry.SlotMapping.ForeignCourse;
-        var slot = entry.SlotMapping.SlotState.CourseSlot;
+        var laEntry = entry.LearningAgreementEntry;
+        var fc = laEntry.ForeignCourse!;
+        var slot = laEntry.CourseSlot;
         var hours = (fc.LecturesH.HasValue || fc.AuditoryH.HasValue || fc.LabH.HasValue)
             ? $"{fc.LecturesH ?? 0}/{fc.AuditoryH ?? 0}/{fc.LabH ?? 0}"
             : null;
         return new(
             entry.Id,
-            entry.SlotMappingId,
+            entry.LearningAgreementEntryId,
             fc.Code,
             fc.NameEn,
             fc.NameHr,
             fc.Ects,
             hours,
-            entry.SlotMapping.AwardedEcts,
+            laEntry.AwardedEcts!.Value,
             slot.CourseName,
             slot.CourseCode,
             slot.CategoryCode,

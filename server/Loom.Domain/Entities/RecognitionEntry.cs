@@ -6,8 +6,8 @@ public class RecognitionEntry : EntityBase
 {
     public Guid RecognitionId { get; set; }
     public Recognition Recognition { get; set; } = null!;
-    public Guid SlotMappingId { get; set; }
-    public SlotMapping SlotMapping { get; set; } = null!;
+    public Guid LearningAgreementEntryId { get; set; }
+    public LearningAgreementEntry LearningAgreementEntry { get; set; } = null!;
     public string? EnrollmentStatus { get; set; }
     public string? OriginalGrade { get; set; }
     public string? EctsGrade { get; set; }

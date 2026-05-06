@@ -97,7 +97,6 @@ export default {
       institution: 'Home Institution',
       mentor: 'Mentor',
       coordinator: 'Coordinator',
-      jmbagSaved: 'JMBAG saved successfully.'
     },
     institutions: {
       title: 'My institutions',
@@ -247,7 +246,6 @@ export default {
     noEntries: 'No entries for recognition.',
     export: 'Export to Excel',
     totalAwarded: 'Total: {ects} ECTS',
-    coordinatorHint: 'Click X on a row to mark it as not recognized',
     actions: {
       submit: 'Submit for Review',
       approve: 'Approve',
@@ -275,7 +273,6 @@ export default {
       ectsGrade: 'ECTS\nGrade\n(F-A)',
       hrGrade: 'Croatian\nGrade\n(1-5)',
       examDate: 'Exam Date',
-      recognized: 'Recog.',
     },
     excel: {
       title: 'ISVU-form for course recognition — Erasmus students',
@@ -336,35 +333,6 @@ export default {
   exchangeCourseStatus: {
     OriginallyEnrolled: 'Originally Enrolled',
     Additional: 'Additional'
-  },
-  mapping: {
-    title: 'Mapping',
-    propose: 'Propose Mapping',
-    addMapping: 'Add Mapping',
-    awardedEcts: 'Awarded ECTS',
-    convertedGrade: 'Croatian Grade',
-    coordinatorNote: 'Coordinator Note',
-    ectsWarning: 'Awarded ECTS exceeds total course ECTS',
-    history: 'History',
-    save: 'Save Mapping',
-    noMappings: 'No mappings proposed yet.',
-    approve: 'Approve',
-    reject: 'Reject'
-  },
-  mappingStatus: {
-    Pending: 'Pending',
-    Approved: 'Approved',
-    Rejected: 'Rejected'
-  },
-  mappingHistory: {
-    title: 'Mapping History',
-    noHistory: 'No changes recorded',
-    changedBy: 'Changed by'
-  },
-  historyPage: {
-    title: 'Mapping History',
-    selectStudent: 'Select student',
-    noStudents: 'No students with an active exchange'
   },
   callback: {
     signingIn: 'Signing in...',

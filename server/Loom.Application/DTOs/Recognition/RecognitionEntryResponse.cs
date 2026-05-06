@@ -2,7 +2,7 @@ namespace Loom.Application.DTOs.Recognition;
 
 public record RecognitionEntryResponse(
     Guid Id,
-    Guid SlotMappingId,
+    Guid LearningAgreementEntryId,
     string ForeignCourseCode,
     string ForeignCourseNameEn,
     string? ForeignCourseNameHr,

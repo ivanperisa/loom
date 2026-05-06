@@ -1,39 +1,45 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { i18n } from '@/i18n'
 import { exchangeService } from '@/services/exchange.service'
 import type {
   ExchangeSummaryResponse,
   ExchangeResponse,
   LearningAgreementResponse,
   CreateExchangeRequest,
-  SetSlotModeRequest,
-  AddSlotMappingRequest,
-  RemoveSlotMappingRequest,
   UpdateExchangeStatusRequest,
   UpdateCoordinatorMessageRequest,
   LocalSlotState,
   LocalSlotMapping,
   SlotMode,
   ExchangeSnapshotResponse,
+  LearningAgreementEntryUpsertDto,
 } from '@/types/exchange.types'
 import type { ForeignCourseResponse } from '@/types/institution.types'
 
 function buildLocalFromServer(la: LearningAgreementResponse): LocalSlotState[] {
-  return la.slotStates.map(s => ({
-    courseSlotId: s.courseSlotId,
-    mode: s.mode,
-    mappings: s.mappings.map(m => ({
-      localId: m.id,
-      foreignCourseId: m.foreignCourseId,
-      foreignCourseCode: m.foreignCourseCode,
-      foreignCourseNameEn: m.foreignCourseNameEn,
-      foreignCourseNameHr: m.foreignCourseNameHr,
-      awardedEcts: m.awardedEcts,
-    })),
-  }))
+  const map = new Map<string, LocalSlotState>()
+  for (const entry of la.entries) {
+    if (!map.has(entry.courseSlotId)) {
+      map.set(entry.courseSlotId, { courseSlotId: entry.courseSlotId, mode: entry.mode, mappings: [] })
+    }
+    if (entry.foreignCourseId !== null) {
+      map.get(entry.courseSlotId)!.mappings.push({
+        localId: entry.id,
+        foreignCourseId: entry.foreignCourseId!,
+        foreignCourseCode: entry.foreignCourseCode ?? '',
+        foreignCourseNameEn: entry.foreignCourseNameEn ?? '',
+        foreignCourseNameHr: entry.foreignCourseNameHr ?? null,
+        awardedEcts: entry.awardedEcts ?? 0,
+      })
+    }
+  }
+  return Array.from(map.values())
 }
 
 export const useExchangeStore = defineStore('exchange', () => {
+  const t = i18n.global.t
+
   const summaries = ref<ExchangeSummaryResponse[]>([])
   const exchange = ref<ExchangeResponse | null>(null)
   const serverLearningAgreement = ref<LearningAgreementResponse | null>(null)
@@ -96,8 +102,8 @@ export const useExchangeStore = defineStore('exchange', () => {
     try {
       const res = await exchangeService.getMine()
       summaries.value = res.data
-    } catch (e: unknown) {
-      error.value = 'Greška pri dohvatu razmjena.'
+    } catch {
+      error.value = t('common.error')
     } finally {
       loading.value = false
     }
@@ -114,8 +120,8 @@ export const useExchangeStore = defineStore('exchange', () => {
     try {
       const res = await exchangeService.getById(exchangeId)
       exchange.value = res.data
-    } catch (e: unknown) {
-      error.value = 'Greška pri dohvatu razmjene.'
+    } catch {
+      error.value = t('common.error')
     } finally {
       loading.value = false
     }
@@ -128,8 +134,8 @@ export const useExchangeStore = defineStore('exchange', () => {
       const res = await exchangeService.create(request)
       exchange.value = res.data
       return res.data
-    } catch (e: unknown) {
-      error.value = 'Greška pri kreiranju razmjene.'
+    } catch {
+      error.value = t('common.error')
       return null
     } finally {
       loading.value = false
@@ -144,8 +150,8 @@ export const useExchangeStore = defineStore('exchange', () => {
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
       isDirty.value = false
-    } catch (e: unknown) {
-      error.value = 'Greška pri dohvatu learning agreementa.'
+    } catch {
+      error.value = t('common.error')
     } finally {
       loading.value = false
     }
@@ -155,68 +161,23 @@ export const useExchangeStore = defineStore('exchange', () => {
 
   async function saveLearningAgreement(exchangeId: string) {
     try {
-      const res = await exchangeService.saveLearningAgreement(exchangeId, {
-        slotStates: localSlotStates.value.map(s => ({
-          courseSlotId: s.courseSlotId,
-          mode: s.mode,
-          mappings: s.mappings.map(m => ({
-            foreignCourseId: m.foreignCourseId,
-            awardedEcts: m.awardedEcts,
-          })),
-        })),
-      })
+      const entries: LearningAgreementEntryUpsertDto[] = []
+      for (const s of localSlotStates.value) {
+        if (s.mode !== 'AtExchange' || s.mappings.length === 0) {
+          entries.push({ courseSlotId: s.courseSlotId, mode: s.mode, foreignCourseId: null, awardedEcts: null })
+        } else {
+          for (const m of s.mappings) {
+            entries.push({ courseSlotId: s.courseSlotId, mode: s.mode, foreignCourseId: m.foreignCourseId, awardedEcts: m.awardedEcts })
+          }
+        }
+      }
+      const res = await exchangeService.saveLearningAgreement(exchangeId, { entries })
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
       isDirty.value = false
     } catch (e: unknown) {
-      error.value = 'Greška pri spremanju learning agreementa.'
+      error.value = t('common.error')
       throw e
-    }
-  }
-
-  // ── Legacy individual mutations (kept, unused by UI) ─────────────────────
-
-  async function setSlotMode(exchangeId: string, request: SetSlotModeRequest) {
-    try {
-      const res = await exchangeService.setSlotMode(exchangeId, request)
-      serverLearningAgreement.value = res.data
-      localSlotStates.value = buildLocalFromServer(res.data)
-      isDirty.value = false
-    } catch (e: unknown) {
-      error.value = 'Greška pri postavljanju stanja ćelije.'
-    }
-  }
-
-  async function addSlotMapping(exchangeId: string, request: AddSlotMappingRequest) {
-    try {
-      const res = await exchangeService.addSlotMapping(exchangeId, request)
-      serverLearningAgreement.value = res.data
-      localSlotStates.value = buildLocalFromServer(res.data)
-      isDirty.value = false
-    } catch (e: unknown) {
-      error.value = 'Greška pri dodavanju mapiranja.'
-    }
-  }
-
-  async function removeSlotMapping(exchangeId: string, request: RemoveSlotMappingRequest) {
-    try {
-      const res = await exchangeService.removeSlotMapping(exchangeId, request)
-      serverLearningAgreement.value = res.data
-      localSlotStates.value = buildLocalFromServer(res.data)
-      isDirty.value = false
-    } catch (e: unknown) {
-      error.value = 'Greška pri uklanjanju mapiranja.'
-    }
-  }
-
-  async function removeSlotState(exchangeId: string, courseSlotId: string) {
-    try {
-      const res = await exchangeService.removeSlotState(exchangeId, courseSlotId)
-      serverLearningAgreement.value = res.data
-      localSlotStates.value = buildLocalFromServer(res.data)
-      isDirty.value = false
-    } catch {
-      error.value = 'Greška pri uklanjanju stanja.'
     }
   }
 
@@ -226,8 +187,8 @@ export const useExchangeStore = defineStore('exchange', () => {
     try {
       const res = await exchangeService.updateStatus(exchangeId, request)
       exchange.value = res.data
-    } catch (e: unknown) {
-      error.value = 'Greška pri promjeni statusa.'
+    } catch {
+      error.value = t('common.error')
     }
   }
 
@@ -235,8 +196,8 @@ export const useExchangeStore = defineStore('exchange', () => {
     try {
       const res = await exchangeService.updateCoordinatorMessage(exchangeId, request)
       exchange.value = res.data
-    } catch (e: unknown) {
-      error.value = 'Greška pri ažuriranju poruke.'
+    } catch {
+      error.value = t('common.error')
     }
   }
 
@@ -269,7 +230,6 @@ export const useExchangeStore = defineStore('exchange', () => {
     localSetSlotMode, localRemoveSlotState, localAddSlotMapping, localRemoveSlotMapping,
     fetchMySummaries, fetchExchange, createExchange, deleteExchange,
     fetchLearningAgreement, saveLearningAgreement,
-    setSlotMode, addSlotMapping, removeSlotMapping, removeSlotState,
     updateStatus, updateCoordinatorMessage,
     fetchSnapshots, fetchSnapshot,
   }

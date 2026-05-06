@@ -1,10 +1,12 @@
 namespace Loom.Application.DTOs.CourseSlot;
 
-public record SlotMappingResponse(
+public record LearningAgreementEntryResponse(
     Guid Id,
-    Guid ForeignCourseId,
-    string ForeignCourseCode,
-    string ForeignCourseNameEn,
+    Guid CourseSlotId,
+    string Mode,
+    Guid? ForeignCourseId,
+    string? ForeignCourseCode,
+    string? ForeignCourseNameEn,
     string? ForeignCourseNameHr,
-    decimal AwardedEcts
+    decimal? AwardedEcts
 );

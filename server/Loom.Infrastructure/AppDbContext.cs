@@ -16,8 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ForeignCourse> ForeignCourses => Set<ForeignCourse>();
     public DbSet<CourseCategory> CourseCategories => Set<CourseCategory>();
     public DbSet<CourseSlot> CourseSlots => Set<CourseSlot>();
-    public DbSet<SlotState> SlotStates => Set<SlotState>();
-    public DbSet<SlotMapping> SlotMappings => Set<SlotMapping>();
+    public DbSet<LearningAgreement> LearningAgreements => Set<LearningAgreement>();
+    public DbSet<LearningAgreementEntry> LearningAgreementEntries => Set<LearningAgreementEntry>();
     public DbSet<Recognition> Recognitions => Set<Recognition>();
     public DbSet<RecognitionEntry> RecognitionEntries => Set<RecognitionEntry>();
     public DbSet<ExchangeSnapshot> ExchangeSnapshots => Set<ExchangeSnapshot>();

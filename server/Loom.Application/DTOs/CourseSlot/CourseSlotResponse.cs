@@ -3,7 +3,7 @@ namespace Loom.Application.DTOs.CourseSlot;
 public record CourseSlotResponse(
     Guid Id,
     int Semester,
-    int ColStart,
+    int SlotPosition,
     int Ects,
     string CategoryCode,
     string CategoryName,

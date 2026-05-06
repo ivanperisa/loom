@@ -6,10 +6,11 @@ import { useAuthStore } from '@/stores/auth.store'
 import { institutionService } from '@/services/institution.service'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import type { InstitutionResponse } from '@/types/institution.types'
+import { localizedName } from '@/utils/i18n.utils'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 const isCoordinatorOrAdmin = computed(() => authStore.canActAsCoordinator)
 
@@ -40,10 +41,6 @@ const isSubmitting = ref(false)
 
 const institutions = ref<InstitutionResponse[]>([])
 const loadingInstitutions = ref(true)
-
-function localizedName(item: { name: string; nameEn?: string | null }): string {
-  return locale.value === 'en' && item.nameEn ? item.nameEn : item.name
-}
 
 const isJmbagValid = computed(() => /^\d{10}$/.test(jmbag.value))
 

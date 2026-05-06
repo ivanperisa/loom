@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ErrorOr;
+using Loom.Application.Helpers;
 using Loom.Application.Mappers;
 using Loom.Domain.Entities;
 using Loom.Application.DTOs.CourseSlot;
@@ -38,6 +39,24 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return (exchange, requester);
     }
 
+    private static bool IsExchangeLocked(Exchange exchange) =>
+        exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted;
+
+    private async Task<LearningAgreement> GetOrCreateLaAsync(Guid exchangeId, CancellationToken ct)
+    {
+        var la = await db.LearningAgreements.FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+        if (la is not null) return la;
+        la = new LearningAgreement { ExchangeId = exchangeId };
+        db.LearningAgreements.Add(la);
+        await db.SaveChangesAsync(ct);
+        la.Entries = new List<LearningAgreementEntry>();
+        return la;
+    }
+
+    private IQueryable<LearningAgreement> LaWithEntries() => db.LearningAgreements
+        .Include(la => la.Entries)
+            .ThenInclude(e => e.ForeignCourse);
+
     public async Task<ErrorOr<ExchangeResponse>> CreateExchangeAsync(Guid studentId, CreateExchangeRequest request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(request.AcademicYear))
@@ -70,27 +89,28 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             StudySemester = request.StudySemester,
             Status = ExchangeStatus.Draft
         };
-
         db.Exchanges.Add(exchange);
+        await db.SaveChangesAsync(ct);
+
+        db.LearningAgreements.Add(new LearningAgreement { ExchangeId = exchange.Id });
         await db.SaveChangesAsync(ct);
 
         var saved = await ExchangeWithIncludes()
             .FirstOrDefaultAsync(e => e.Id == exchange.Id, ct)
-            ?? throw new InvalidOperationException("Exchange not found after save.");
+            ?? throw new InvalidOperationException();
         return saved.ToResponse();
     }
 
     public async Task<ErrorOr<ExchangeResponse>> GetExchangeAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
     {
-        var exchange = await ExchangeWithIncludes()
-            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        var exchange = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.CoordinatorId);
-        if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
+            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
         return exchange.ToResponse();
     }
@@ -114,9 +134,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (!Enum.TryParse<ExchangeStatus>(request.Status, out var newStatus))
             return Error.Validation("INVALID_STATUS", "Invalid exchange status.");
 
-        var exchange = await db.Exchanges
-            .Include(e => e.Student)
-            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
         var requester = await db.Users.FindAsync([requesterId], ct);
@@ -127,7 +145,6 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         if (!isStudent && !isCoordinatorOrAdmin)
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
-
         if (isStudent && newStatus != ExchangeStatus.Submitted && newStatus != ExchangeStatus.Draft)
             return Error.Forbidden("FORBIDDEN", "Students can only submit or revert to draft.");
         if (isStudent && newStatus == ExchangeStatus.Draft && exchange.Status == ExchangeStatus.Approved)
@@ -146,208 +163,164 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         if (isCoordinatorOrAdmin && request.Message is not null)
             exchange.CoordinatorMessage = string.IsNullOrWhiteSpace(request.Message) ? null : request.Message.Trim();
-
         if (newStatus == ExchangeStatus.Approved)
             exchange.CoordinatorMessage = null;
 
         if (newStatus == ExchangeStatus.Approved)
         {
-            var slotStates = await db.SlotStates
-                .AsNoTracking()
-                .Include(s => s.SlotMappings).ThenInclude(m => m.ForeignCourse)
-                .Where(s => s.ExchangeId == exchangeId)
-                .ToListAsync(ct);
-
+            var la = await LaWithEntries().AsNoTracking().FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
             var snapshotData = new LearningAgreementSnapshotData(
-                slotStates.Select(s => s.ToResponse()).ToList());
+                la?.Entries.Select(e => e.ToResponse()).ToList() ?? []);
             db.ExchangeSnapshots.Add(new ExchangeSnapshot
             {
                 ExchangeId = exchangeId,
                 ChangedById = requesterId,
                 Phase = SnapshotPhase.LearningAgreement,
-                Snapshot = JsonSerializer.Serialize(snapshotData, _jsonOptions)
+                Snapshot = JsonSerializer.Serialize(snapshotData, JsonHelper.DefaultOptions)
             });
         }
 
         await db.SaveChangesAsync(ct);
 
-        var saved = await ExchangeWithIncludes()
-            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
+        var saved = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
             ?? throw new InvalidOperationException();
         return saved.ToResponse();
     }
 
     public async Task<ErrorOr<LearningAgreementResponse>> GetLearningAgreementAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
     {
-        var exchange = await db.Exchanges
-            .AsNoTracking()
-            .Include(e => e.Student)
-            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.CoordinatorId);
-        if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
+        var (exchange, _) = accessCheck.Value;
 
         var slots = await db.CourseSlots
             .AsNoTracking()
             .Include(s => s.Category)
             .Where(s => s.StudyProfileId == exchange.StudyProfileId)
-            .OrderBy(s => s.Semester).ThenBy(s => s.ColStart)
+            .OrderBy(s => s.Semester).ThenBy(s => s.SlotPosition)
             .ToListAsync(ct);
 
-        var slotStates = await db.SlotStates
-            .AsNoTracking()
-            .Include(s => s.SlotMappings)
-                .ThenInclude(m => m.ForeignCourse)
-            .Where(s => s.ExchangeId == exchangeId)
-            .ToListAsync(ct);
+        var la = await LaWithEntries().AsNoTracking().FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
 
         return new LearningAgreementResponse(
             exchangeId,
             exchange.Status.ToString(),
             slots.Select(s => s.ToResponse()).ToList(),
-            slotStates.Select(s => s.ToResponse()).ToList()
+            la?.Entries.Select(e => e.ToResponse()).ToList() ?? []
         );
     }
 
-    public async Task<ErrorOr<LearningAgreementResponse>> SetSlotModeAsync(Guid exchangeId, Guid requesterId, SetSlotModeRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<LearningAgreementResponse>> SaveLearningAgreementAsync(Guid exchangeId, Guid requesterId, SaveLearningAgreementRequest request, CancellationToken ct = default)
     {
-        if (!Enum.TryParse<SlotMode>(request.Mode, out var mode))
-            return Error.Validation("INVALID_MODE", "Invalid slot mode.");
-
         var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
-        var (exchange, requester) = accessCheck.Value;
-
-        if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
+        var (exchange, _) = accessCheck.Value;
+        if (IsExchangeLocked(exchange))
             return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
 
-        var slot = await db.CourseSlots.FindAsync([request.CourseSlotId], ct);
-        if (slot is null || slot.StudyProfileId != exchange.StudyProfileId)
-            return Error.NotFound("SLOT_NOT_FOUND", "Course slot not found for this profile.");
+        var validationError = ValidateEntryRequest(request);
+        if (validationError is not null) return validationError.Value;
 
-        var existing = await db.SlotStates
-            .FirstOrDefaultAsync(s => s.ExchangeId == exchangeId && s.CourseSlotId == request.CourseSlotId, ct);
-        if (existing is null)
+        var profileSlotIds = await db.CourseSlots
+            .AsNoTracking()
+            .Where(s => s.StudyProfileId == exchange.StudyProfileId)
+            .Select(s => s.Id)
+            .ToHashSetAsync(ct);
+
+        foreach (var dto in request.Entries)
         {
-            var newState = new SlotState
+            if (!profileSlotIds.Contains(dto.CourseSlotId))
+                return Error.Validation("SLOT_NOT_IN_PROFILE", $"Course slot {dto.CourseSlotId} does not belong to this study profile.");
+        }
+
+        var ectsError = await ValidateForeignCourseEctsAsync(request, ct);
+        if (ectsError is not null) return ectsError.Value;
+
+        var la = await GetOrCreateLaAsync(exchangeId, ct);
+        await DeleteExistingEntriesAsync(la.Id, ct);
+        await CreateNewEntriesAsync(la.Id, request, ct);
+
+        await db.SaveChangesAsync(ct);
+        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+    }
+
+    private static ErrorOr<LearningAgreementResponse>? ValidateEntryRequest(SaveLearningAgreementRequest request)
+    {
+        foreach (var dto in request.Entries)
+        {
+            if (!Enum.TryParse<SlotMode>(dto.Mode, out var mode))
+                return Error.Validation("INVALID_MODE", $"Invalid slot mode: {dto.Mode}.");
+            if (mode == SlotMode.AtExchange && dto.ForeignCourseId is not null && dto.AwardedEcts <= 0)
+                return Error.Validation("INVALID_ECTS", "Awarded ECTS must be greater than 0.");
+            if (mode != SlotMode.AtExchange && dto.ForeignCourseId is not null)
+                return Error.Validation("INVALID_MAPPING", "Foreign courses are only allowed on slots marked as AtExchange.");
+        }
+        return null;
+    }
+
+    private async Task<ErrorOr<LearningAgreementResponse>?> ValidateForeignCourseEctsAsync(
+        SaveLearningAgreementRequest request, CancellationToken ct)
+    {
+        var allForeignCourseIds = request.Entries
+            .Where(e => e.ForeignCourseId.HasValue)
+            .Select(e => e.ForeignCourseId!.Value)
+            .Distinct().ToList();
+
+        if (allForeignCourseIds.Count == 0) return null;
+
+        var foreignCourses = await db.ForeignCourses
+            .AsNoTracking()
+            .Where(fc => allForeignCourseIds.Contains(fc.Id))
+            .ToDictionaryAsync(fc => fc.Id, fc => fc.Ects, ct);
+
+        var ectsUsage = request.Entries
+            .Where(e => e.ForeignCourseId.HasValue && e.AwardedEcts.HasValue)
+            .GroupBy(e => e.ForeignCourseId!.Value)
+            .ToDictionary(g => g.Key, g => g.Sum(e => e.AwardedEcts!.Value));
+
+        foreach (var (courseId, totalUsed) in ectsUsage)
+        {
+            if (!foreignCourses.TryGetValue(courseId, out var maxEcts))
+                return Error.NotFound("FOREIGN_COURSE_NOT_FOUND", $"Foreign course {courseId} not found.");
+            if (totalUsed > maxEcts)
+                return Error.Validation("ECTS_EXCEEDED", $"Awarded ECTS for course {courseId} exceeds available {maxEcts}.");
+        }
+        return null;
+    }
+
+    private async Task DeleteExistingEntriesAsync(Guid laId, CancellationToken ct)
+    {
+        var existingEntries = await db.LearningAgreementEntries
+            .Where(e => e.LearningAgreementId == laId)
+            .ToListAsync(ct);
+
+        var entryIds = existingEntries.Select(e => e.Id).ToList();
+        if (entryIds.Count > 0)
+        {
+            var recognitionEntries = await db.RecognitionEntries
+                .Where(re => entryIds.Contains(re.LearningAgreementEntryId))
+                .ToListAsync(ct);
+            db.RecognitionEntries.RemoveRange(recognitionEntries);
+        }
+
+        db.LearningAgreementEntries.RemoveRange(existingEntries);
+    }
+
+    private async Task CreateNewEntriesAsync(Guid laId, SaveLearningAgreementRequest request, CancellationToken ct)
+    {
+        foreach (var dto in request.Entries)
+        {
+            Enum.TryParse<SlotMode>(dto.Mode, out var mode);
+            db.LearningAgreementEntries.Add(new LearningAgreementEntry
             {
-                ExchangeId = exchangeId,
-                CourseSlotId = request.CourseSlotId,
-                Mode = mode
-            };
-            db.SlotStates.Add(newState);
+                LearningAgreementId = laId,
+                CourseSlotId = dto.CourseSlotId,
+                Mode = mode,
+                ForeignCourseId = dto.ForeignCourseId,
+                AwardedEcts = dto.AwardedEcts
+            });
         }
-        else
-        {
-            existing.Mode = mode;
-        }
-
-        await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
-    }
-
-    public async Task<ErrorOr<LearningAgreementResponse>> AddSlotMappingAsync(Guid exchangeId, Guid requesterId, AddSlotMappingRequest request, CancellationToken ct = default)
-    {
-        if (request.AwardedEcts <= 0)
-            return Error.Validation("INVALID_ECTS", "Awarded ECTS must be greater than 0.");
-
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
-        if (accessCheck.IsError) return accessCheck.Errors;
-        var (exchange, _) = accessCheck.Value;
-        if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
-            return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
-
-        var slotState = await db.SlotStates
-            .FirstOrDefaultAsync(s => s.ExchangeId == exchangeId && s.CourseSlotId == request.CourseSlotId, ct);
-        if (slotState is null) return Error.NotFound("SLOT_STATE_NOT_FOUND", "Set a slot mode before mapping a course.");
-        if (slotState.Mode != SlotMode.AtExchange) return Error.Validation("INVALID_MODE", "Can only map courses to slots marked as AtExchange.");
-
-        var foreignCourse = await db.ForeignCourses.FindAsync([request.ForeignCourseId], ct);
-        if (foreignCourse is null) return Error.NotFound("FOREIGN_COURSE_NOT_FOUND", "Foreign course not found.");
-
-        var alreadyMapped = await db.SlotMappings
-            .Where(m => m.ForeignCourseId == request.ForeignCourseId && m.SlotState.ExchangeId == exchangeId)
-            .SumAsync(m => m.AwardedEcts, ct);
-
-        if (alreadyMapped + request.AwardedEcts > foreignCourse.Ects)
-            return Error.Validation("ECTS_EXCEEDED", $"Only {foreignCourse.Ects - alreadyMapped} ECTS remaining for this course.");
-
-        var mapping = new SlotMapping
-        {
-            SlotStateId = slotState.Id,
-            ForeignCourseId = request.ForeignCourseId,
-            AwardedEcts = request.AwardedEcts
-        };
-
-        db.SlotMappings.Add(mapping);
-        await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
-    }
-
-    public async Task<ErrorOr<LearningAgreementResponse>> RemoveSlotMappingAsync(Guid exchangeId, Guid requesterId, RemoveSlotMappingRequest request, CancellationToken ct = default)
-    {
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
-        if (accessCheck.IsError) return accessCheck.Errors;
-        var (exchange, _) = accessCheck.Value;
-        if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
-            return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
-
-        var mapping = await db.SlotMappings.FindAsync([request.SlotMappingId], ct);
-        if (mapping is null) return Error.NotFound("MAPPING_NOT_FOUND", "Slot mapping not found.");
-
-        var slotState = await db.SlotStates.FindAsync([mapping.SlotStateId], ct);
-        if (slotState is null || slotState.ExchangeId != exchangeId)
-            return Error.Forbidden("ACCESS_DENIED", "Mapping does not belong to this exchange.");
-
-        db.SlotMappings.Remove(mapping);
-        await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
-    }
-
-    public async Task<ErrorOr<LearningAgreementResponse>> RemoveSlotStateAsync(Guid exchangeId, Guid requesterId, Guid courseSlotId, CancellationToken ct = default)
-    {
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
-        if (accessCheck.IsError) return accessCheck.Errors;
-        var (exchange, _) = accessCheck.Value;
-        if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
-            return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
-
-        var slotState = await db.SlotStates
-            .FirstOrDefaultAsync(s => s.ExchangeId == exchangeId && s.CourseSlotId == courseSlotId, ct);
-        if (slotState is null) return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
-
-        var mappings = await db.SlotMappings.Where(m => m.SlotStateId == slotState.Id).ToListAsync(ct);
-        db.SlotMappings.RemoveRange(mappings);
-        db.SlotStates.Remove(slotState);
-        await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
-    }
-
-    public async Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeId, Guid requesterId, string? message, CancellationToken ct = default)
-    {
-        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.CoordinatorId);
-        if (!isCoordinatorOrAdmin)
-            return Error.Forbidden("ACCESS_DENIED", "Only coordinators can update the message.");
-
-        exchange.CoordinatorMessage = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
-        exchange.UpdatedAt = DateTime.UtcNow;
-
-        await db.SaveChangesAsync(ct);
-
-        var saved = await ExchangeWithIncludes()
-            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
-            ?? throw new InvalidOperationException();
-        return saved.ToResponse();
+        await Task.CompletedTask;
     }
 
     public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyStudentsExchangesAsync(Guid requesterId, CancellationToken ct = default)
@@ -370,6 +343,26 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return exchanges.Select(e => e.ToSummaryResponse()).ToList();
     }
 
+    public async Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeId, Guid requesterId, string? message, CancellationToken ct = default)
+    {
+        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        if (!requester.IsCoordinatorFor(exchange.CoordinatorId))
+            return Error.Forbidden("ACCESS_DENIED", "Only coordinators can update the message.");
+
+        exchange.CoordinatorMessage = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
+        exchange.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        var saved = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
+            ?? throw new InvalidOperationException();
+        return saved.ToResponse();
+    }
+
     public async Task<ErrorOr<Deleted>> DeleteExchangeAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
     {
         var exchange = await db.Exchanges.FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
@@ -377,142 +370,36 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (exchange.StudentId != requesterId) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
         if (exchange.Status != ExchangeStatus.Draft) return Error.Conflict("NOT_DRAFT", "Only draft exchanges can be deleted.");
 
-        var snapshots = await db.ExchangeSnapshots.Where(s => s.ExchangeId == exchangeId).ToListAsync(ct);
-        db.ExchangeSnapshots.RemoveRange(snapshots);
+        db.ExchangeSnapshots.RemoveRange(
+            await db.ExchangeSnapshots.Where(s => s.ExchangeId == exchangeId).ToListAsync(ct));
 
-        var slotStates = await db.SlotStates
-            .Include(s => s.SlotMappings)
-            .Where(s => s.ExchangeId == exchangeId)
-            .ToListAsync(ct);
-        foreach (var state in slotStates)
-            db.SlotMappings.RemoveRange(state.SlotMappings);
-        db.SlotStates.RemoveRange(slotStates);
+        var learningAgreement = await db.LearningAgreements
+            .Include(la => la.Entries)
+            .FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+        if (learningAgreement is not null)
+        {
+            db.LearningAgreementEntries.RemoveRange(learningAgreement.Entries);
+            db.LearningAgreements.Remove(learningAgreement);
+        }
+
+        var recognition = await db.Recognitions.
+            Include(r => r.Entries).
+            FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
+        if (recognition is not null)
+        {
+            db.RecognitionEntries.RemoveRange(recognition.Entries);
+            db.Recognitions.Remove(recognition);
+        }
 
         db.Exchanges.Remove(exchange);
         await db.SaveChangesAsync(ct);
         return Result.Deleted;
     }
 
-    public async Task<ErrorOr<LearningAgreementResponse>> SaveLearningAgreementAsync(Guid exchangeId, Guid requesterId, SaveLearningAgreementRequest request, CancellationToken ct = default)
-    {
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
-        if (accessCheck.IsError) return accessCheck.Errors;
-        var (exchange, _) = accessCheck.Value;
-        if (exchange.Status is ExchangeStatus.Approved or ExchangeStatus.Submitted)
-            return Error.Conflict("EXCHANGE_LOCKED", "Exchange cannot be modified in current status.");
-
-        foreach (var dto in request.SlotStates)
-        {
-            if (!Enum.TryParse<SlotMode>(dto.Mode, out _))
-                return Error.Validation("INVALID_MODE", $"Invalid slot mode: {dto.Mode}.");
-            if (dto.Mappings.Any(m => m.AwardedEcts <= 0))
-                return Error.Validation("INVALID_ECTS", "Awarded ECTS must be greater than 0.");
-        }
-
-        var profileSlotIds = await db.CourseSlots
-            .AsNoTracking()
-            .Where(s => s.StudyProfileId == exchange.StudyProfileId)
-            .Select(s => s.Id)
-            .ToHashSetAsync(ct);
-
-        foreach (var dto in request.SlotStates)
-        {
-            if (!profileSlotIds.Contains(dto.CourseSlotId))
-                return Error.Validation("SLOT_NOT_IN_PROFILE", $"Course slot {dto.CourseSlotId} does not belong to this study profile.");
-        }
-
-        foreach (var dto in request.SlotStates)
-        {
-            Enum.TryParse<SlotMode>(dto.Mode, out var parsedMode);
-            if (parsedMode != SlotMode.AtExchange && dto.Mappings.Count > 0)
-                return Error.Validation("INVALID_MAPPING", "Mappings are only allowed on slots marked as AtExchange.");
-        }
-
-        var allForeignCourseIds = request.SlotStates
-            .SelectMany(s => s.Mappings.Select(m => m.ForeignCourseId))
-            .Distinct()
-            .ToList();
-
-        if (allForeignCourseIds.Count > 0)
-        {
-            var foreignCourses = await db.ForeignCourses
-                .AsNoTracking()
-                .Where(fc => allForeignCourseIds.Contains(fc.Id))
-                .ToDictionaryAsync(fc => fc.Id, fc => fc.Ects, ct);
-
-            var ectsUsage = request.SlotStates
-                .SelectMany(s => s.Mappings)
-                .GroupBy(m => m.ForeignCourseId)
-                .ToDictionary(g => g.Key, g => g.Sum(m => m.AwardedEcts));
-
-            foreach (var (courseId, totalUsed) in ectsUsage)
-            {
-                if (!foreignCourses.TryGetValue(courseId, out var maxEcts))
-                    return Error.NotFound("FOREIGN_COURSE_NOT_FOUND", $"Foreign course {courseId} not found.");
-                if (totalUsed > maxEcts)
-                    return Error.Validation("ECTS_EXCEEDED", $"Awarded ECTS for course {courseId} exceeds available {maxEcts}.");
-            }
-        }
-
-        var existingStates = await db.SlotStates
-            .Include(s => s.SlotMappings)
-            .Where(s => s.ExchangeId == exchangeId)
-            .ToListAsync(ct);
-
-        var mappingIds = existingStates
-            .SelectMany(s => s.SlotMappings.Select(m => m.Id))
-            .ToList();
-
-        if (mappingIds.Count > 0)
-        {
-            var recognitionEntries = await db.RecognitionEntries
-                .Where(re => mappingIds.Contains(re.SlotMappingId))
-                .ToListAsync(ct);
-            db.RecognitionEntries.RemoveRange(recognitionEntries);
-        }
-
-        foreach (var state in existingStates)
-            db.SlotMappings.RemoveRange(state.SlotMappings);
-        db.SlotStates.RemoveRange(existingStates);
-
-        foreach (var dto in request.SlotStates)
-        {
-            Enum.TryParse<SlotMode>(dto.Mode, out var mode);
-            var newState = new SlotState
-            {
-                ExchangeId = exchangeId,
-                CourseSlotId = dto.CourseSlotId,
-                Mode = mode
-            };
-            db.SlotStates.Add(newState);
-
-            foreach (var mappingDto in dto.Mappings)
-            {
-                db.SlotMappings.Add(new SlotMapping
-                {
-                    SlotState = newState,
-                    ForeignCourseId = mappingDto.ForeignCourseId,
-                    AwardedEcts = mappingDto.AwardedEcts
-                });
-            }
-        }
-
-        await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
-    }
-
     public async Task<ErrorOr<List<ExchangeSnapshotResponse>>> GetSnapshotsAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
     {
-        var exchange = await db.Exchanges
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.CoordinatorId);
-        if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
 
         var snapshots = await db.ExchangeSnapshots
             .AsNoTracking()
@@ -526,16 +413,8 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
     public async Task<ErrorOr<ExchangeSnapshotResponse>> GetSnapshotAsync(Guid exchangeId, Guid snapshotId, Guid requesterId, CancellationToken ct = default)
     {
-        var exchange = await db.Exchanges
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.CoordinatorId);
-        if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
 
         var snapshot = await db.ExchangeSnapshots
             .AsNoTracking()
@@ -543,7 +422,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             .FirstOrDefaultAsync(s => s.Id == snapshotId && s.ExchangeId == exchangeId, ct);
         if (snapshot is null) return Error.NotFound("SNAPSHOT_NOT_FOUND", "Snapshot not found.");
 
-        var data = JsonSerializer.Deserialize<LearningAgreementSnapshotData>(snapshot.Snapshot, _jsonOptions);
+        var data = JsonSerializer.Deserialize<LearningAgreementSnapshotData>(snapshot.Snapshot, JsonHelper.DefaultOptions);
 
         return new ExchangeSnapshotResponse(
             snapshot.Id,
@@ -555,6 +434,4 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             data
         );
     }
-
-    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 }

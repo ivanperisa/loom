@@ -1,4 +1,3 @@
-using Loom.Application.DTOs.CourseSlot;
 using Loom.Application.DTOs.Exchange;
 using Loom.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -39,10 +38,7 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
     }
 
     [HttpPatch("{exchangeId:guid}/status")]
-    public async Task<IActionResult> UpdateStatus(
-        Guid exchangeId,
-        [FromBody] UpdateExchangeStatusRequest request,
-        CancellationToken ct)
+    public async Task<IActionResult> UpdateStatus(Guid exchangeId, [FromBody] UpdateExchangeStatusRequest request, CancellationToken ct)
     {
         var result = await exchangeService.UpdateExchangeStatusAsync(exchangeId, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
@@ -76,34 +72,6 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, Ok);
     }
 
-    [HttpPost("{exchangeId:guid}/learning-agreement/slot-mode")]
-    public async Task<IActionResult> SetSlotMode(Guid exchangeId, [FromBody] SetSlotModeRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.SetSlotModeAsync(exchangeId, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPost("{exchangeId:guid}/learning-agreement/mappings")]
-    public async Task<IActionResult> AddSlotMapping(Guid exchangeId, [FromBody] AddSlotMappingRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.AddSlotMappingAsync(exchangeId, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpDelete("{exchangeId:guid}/learning-agreement/mappings")]
-    public async Task<IActionResult> RemoveSlotMapping(Guid exchangeId, [FromBody] RemoveSlotMappingRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.RemoveSlotMappingAsync(exchangeId, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpDelete("{exchangeId:guid}/learning-agreement/slot-state")]
-    public async Task<IActionResult> RemoveSlotState(Guid exchangeId, [FromBody] RemoveSlotStateRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.RemoveSlotStateAsync(exchangeId, GetCurrentUserId(), request.CourseSlotId, ct);
-        return Match(result, Ok);
-    }
-
     [HttpPut("{exchangeId:guid}/coordinator-message")]
     public async Task<IActionResult> UpdateCoordinatorMessage(Guid exchangeId, [FromBody] UpdateCoordinatorMessageRequest request, CancellationToken ct)
     {
@@ -117,5 +85,4 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         var result = await exchangeService.GetMyStudentsExchangesAsync(GetCurrentUserId(), ct);
         return Match(result, Ok);
     }
-
 }

@@ -61,7 +61,7 @@ export interface ExchangeSummaryResponse {
 export interface CourseSlotResponse {
   id: string
   semester: number
-  colStart: number
+  slotPosition: number
   ects: number
   categoryCode: string
   categoryName: string
@@ -72,42 +72,22 @@ export interface CourseSlotResponse {
   courseNameEn: string | null
 }
 
-export interface SlotMappingResponse {
-  id: string
-  foreignCourseId: string
-  foreignCourseCode: string
-  foreignCourseNameEn: string
-  foreignCourseNameHr: string | null
-  awardedEcts: number
-}
-
-export interface SlotStateResponse {
+export interface LearningAgreementEntryResponse {
   id: string
   courseSlotId: string
   mode: SlotMode
-  mappings: SlotMappingResponse[]
+  foreignCourseId: string | null
+  foreignCourseCode: string | null
+  foreignCourseNameEn: string | null
+  foreignCourseNameHr: string | null
+  awardedEcts: number | null
 }
 
 export interface LearningAgreementResponse {
   exchangeId: string
   status: ExchangeStatus
   slots: CourseSlotResponse[]
-  slotStates: SlotStateResponse[]
-}
-
-export interface SetSlotModeRequest {
-  courseSlotId: string
-  mode: SlotMode
-}
-
-export interface AddSlotMappingRequest {
-  courseSlotId: string
-  foreignCourseId: string
-  awardedEcts: number
-}
-
-export interface RemoveSlotMappingRequest {
-  slotMappingId: string
+  entries: LearningAgreementEntryResponse[]
 }
 
 export interface UpdateExchangeStatusRequest {
@@ -132,23 +112,18 @@ export interface ExchangeSnapshotResponse {
 }
 
 export interface LearningAgreementSnapshotData {
-  slotStates: SlotStateResponse[]
+  entries: LearningAgreementEntryResponse[]
 }
 
-// Batch save (sent to server — no IDs)
 export interface SaveLearningAgreementRequest {
-  slotStates: SlotStateUpsertDto[]
+  entries: LearningAgreementEntryUpsertDto[]
 }
 
-export interface SlotStateUpsertDto {
+export interface LearningAgreementEntryUpsertDto {
   courseSlotId: string
   mode: SlotMode
-  mappings: SlotMappingUpsertDto[]
-}
-
-export interface SlotMappingUpsertDto {
-  foreignCourseId: string
-  awardedEcts: number
+  foreignCourseId?: string | null
+  awardedEcts?: number | null
 }
 
 // Local working copy (localId used only as :key, never sent to server)

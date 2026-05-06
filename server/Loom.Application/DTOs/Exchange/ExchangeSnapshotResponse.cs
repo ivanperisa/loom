@@ -12,4 +12,4 @@ public record ExchangeSnapshotResponse(
     LearningAgreementSnapshotData? Data
 );
 
-public record LearningAgreementSnapshotData(List<SlotStateResponse> SlotStates);
+public record LearningAgreementSnapshotData(List<LearningAgreementEntryResponse> Entries);

@@ -12,7 +12,7 @@ import type { ForeignCourseResponse } from '@/types/institution.types'
 
 const props = withDefaults(defineProps<{
   slots: CourseSlotResponse[]
-  slotStates: LocalSlotState[]
+  lines: LocalSlotState[]
   exchangeId: string
   readonly?: boolean
 }>(), { readonly: false })
@@ -25,20 +25,20 @@ const SEMESTERS = [1, 2, 3, 4]
 const modes: SlotMode[] = ['AtHome', 'AtExchange', 'AfterExchange']
 
 function mappedEcts(slot: CourseSlotResponse): number {
-  const state = slotState(slot.id)
+  const state = lineFor(slot.id)
   if (!state) return 0
   return state.mappings.reduce((sum, m) => sum + m.awardedEcts, 0)
 }
 
 function ectsLabel(slot: CourseSlotResponse): string {
-  const state = slotState(slot.id)
+  const state = lineFor(slot.id)
   if (!state || state.mode !== 'AtExchange') return ''
   const mapped = mappedEcts(slot)
   return `${mapped}/${slot.ects}`
 }
 
 function ectsColor(slot: CourseSlotResponse): string {
-  const state = slotState(slot.id)
+  const state = lineFor(slot.id)
   if (!state || state.mode !== 'AtExchange') return 'transparent'
   const mapped = mappedEcts(slot)
   if (mapped === 0) return '#94a3b8'
@@ -50,11 +50,11 @@ function ectsColor(slot: CourseSlotResponse): string {
 function slotsForSemester(sem: number): CourseSlotResponse[] {
   return props.slots
     .filter(s => s.semester === sem)
-    .sort((a, b) => a.colStart - b.colStart)
+    .sort((a, b) => a.slotPosition - b.slotPosition)
 }
 
-function slotState(courseSlotId: string): LocalSlotState | undefined {
-  return props.slotStates.find(s => s.courseSlotId === courseSlotId)
+function lineFor(courseSlotId: string): LocalSlotState | undefined {
+  return props.lines.find(s => s.courseSlotId === courseSlotId)
 }
 
 const modeOutlineColor: Record<SlotMode, string> = {
@@ -71,7 +71,7 @@ const pendingEcts = ref<number>(0)
 
 function alreadyMappedEcts(courseId: string): number {
   let sum = 0
-  for (const state of props.slotStates) {
+  for (const state of props.lines) {
     for (const m of state.mappings) {
       if (m.foreignCourseId === courseId) sum += m.awardedEcts
     }
@@ -93,7 +93,7 @@ watch(() => pendingDrop.value, (val) => {
 })
 
 function cellStyle(slot: CourseSlotResponse): Record<string, string> {
-  const state = slotState(slot.id)
+  const state = lineFor(slot.id)
   const bg = slot.color
 
   if (dragOverSlotId.value === slot.id && state?.mode === 'AtExchange') {
@@ -124,12 +124,12 @@ function cellStyle(slot: CourseSlotResponse): Record<string, string> {
 }
 
 function onDragOver(event: DragEvent, slot: CourseSlotResponse) {
-  const state = slotState(slot.id)
+  const state = lineFor(slot.id)
   if (state?.mode === 'AtExchange') event.preventDefault()
 }
 
 function onDragEnter(slot: CourseSlotResponse) {
-  if (slotState(slot.id)?.mode === 'AtExchange') dragOverSlotId.value = slot.id
+  if (lineFor(slot.id)?.mode === 'AtExchange') dragOverSlotId.value = slot.id
 }
 
 function onDragLeave() {
@@ -139,7 +139,7 @@ function onDragLeave() {
 function onDrop(event: DragEvent, slot: CourseSlotResponse) {
   event.preventDefault()
   dragOverSlotId.value = null
-  const state = slotState(slot.id)
+  const state = lineFor(slot.id)
   if (state?.mode !== 'AtExchange') return
   const course = exchangeStore.draggingCourse
   if (!course) return
@@ -168,7 +168,7 @@ function cancelDrop() {
 
 function cycleMode(slot: CourseSlotResponse) {
   if (props.readonly || slot.categoryCode === 'Thesis') return
-  const state = slotState(slot.id)
+  const state = lineFor(slot.id)
   if (!state) {
     exchangeStore.localSetSlotMode(slot.id, 'AtHome')
   } else {
@@ -236,16 +236,16 @@ function removeMapping(courseSlotId: string, localId: string) {
                 : t(`courseSlotCategory.${slot.categoryCode}`) }}
             </div>
 
-            <div v-if="slotState(slot.id)" style="margin-top: 3px;">
+            <div v-if="lineFor(slot.id)" style="margin-top: 3px;">
               <span
                 style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 600;"
                 :style="{
-                  color: modeOutlineColor[slotState(slot.id)!.mode],
-                  border: `1px solid ${modeOutlineColor[slotState(slot.id)!.mode]}`,
+                  color: modeOutlineColor[lineFor(slot.id)!.mode],
+                  border: `1px solid ${modeOutlineColor[lineFor(slot.id)!.mode]}`,
                   background: 'rgba(255,255,255,0.6)',
                 }"
               >
-                {{ t(`slotMode.${slotState(slot.id)!.mode}`) }}
+                {{ t(`slotMode.${lineFor(slot.id)!.mode}`) }}
               </span>
             </div>
 
@@ -259,7 +259,7 @@ function removeMapping(courseSlotId: string, localId: string) {
             </div>
 
             <div
-              v-for="mapping in slotState(slot.id)?.mappings ?? []"
+              v-for="mapping in lineFor(slot.id)?.mappings ?? []"
               :key="mapping.localId"
               style="margin-top: 3px; display: flex; align-items: flex-start; justify-content: space-between; background: rgba(0,0,0,0.08); padding: 2px 4px; font-size: 11px;"
               @click.stop

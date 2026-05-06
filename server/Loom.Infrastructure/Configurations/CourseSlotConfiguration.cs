@@ -13,7 +13,7 @@ public class CourseSlotConfiguration : IEntityTypeConfiguration<CourseSlot>
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.StudyProfileId).HasColumnName("study_profile_id");
         builder.Property(x => x.Semester).HasColumnName("semester");
-        builder.Property(x => x.ColStart).HasColumnName("col_start");
+        builder.Property(x => x.SlotPosition).HasColumnName("slot_position");
         builder.Property(x => x.Ects).HasColumnName("ects");
         builder.Property(x => x.CategoryCode).HasColumnName("category_code").HasMaxLength(20).IsRequired();
         builder.Property(x => x.CourseCode).HasColumnName("course_code");

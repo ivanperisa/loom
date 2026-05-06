@@ -1,4 +1,3 @@
-using Loom.Application.DTOs.Exchange;
 using Loom.Application.DTOs.Recognition;
 using Loom.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -30,7 +29,7 @@ public class RecognitionController(IRecognitionService recognitionService) : Api
     [HttpPatch("status")]
     public async Task<IActionResult> UpdateStatus(
         Guid exchangeId,
-        [FromBody] UpdateExchangeStatusRequest request,
+        [FromBody] UpdateRecognitionStatusRequest request,
         CancellationToken ct)
     {
         var result = await recognitionService.UpdateRecognitionStatusAsync(exchangeId, GetCurrentUserId(), request, ct);

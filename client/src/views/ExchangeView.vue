@@ -6,38 +6,25 @@ import LearningAgreementTable from '@/components/exchange/LearningAgreementTable
 import ForeignCoursePanel from '@/components/exchange/ForeignCoursePanel.vue'
 import RecognitionPanel from '@/components/exchange/RecognitionPanel.vue'
 import SnapshotHistoryPanel from '@/components/exchange/SnapshotHistoryPanel.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
-import { useAuthStore } from '@/stores/auth.store'
+import { useExchangePermissions } from '@/composables/useExchangePermissions'
 
 const route = useRoute()
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
-const authStore = useAuthStore()
+const { isCoordinator, isApproved, isEditable } = useExchangePermissions()
 
 const activeTab = ref<'la' | 'recognition' | 'history'>('la')
 const isSavingLa = ref(false)
 const saveError = ref<string | null>(null)
 const exchangeId = computed(() => route.params.exchangeId as string)
 
-const isCoordinator = computed(
-  () => exchangeStore.exchange?.coordinatorId === authStore.user?.id || authStore.isAdmin
-)
-const isApproved = computed(() => exchangeStore.exchange?.status === 'Approved')
-const isEditable = computed(() => {
-  const status = exchangeStore.exchange?.status
-  return status === 'Draft'
-})
-
 const coordinatorMessage = ref('')
 const isEditingMessage = ref(false)
 const isSavingMessage = ref(false)
 
-const statusColorClass: Record<string, string> = {
-  Draft: 'bg-slate-500/20 text-slate-300 border-slate-400',
-  Submitted: 'bg-primary/20 text-primary-light border-primary',
-  Approved: 'bg-green-500/20 text-green-300 border-green-400',
-  Rejected: 'bg-red-500/20 text-red-300 border-red-400',
-}
 
 onMounted(async () => {
   await Promise.all([
@@ -324,9 +311,7 @@ function switchToRecognition() {
             <!-- LA Status + Actions bar -->
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div class="flex items-center gap-3">
-                <span class="rounded-full border px-3 py-0.5 text-xs font-semibold" :class="statusColorClass[exchangeStore.exchange.status] ?? statusColorClass.Draft">
-                  {{ t(`exchangeStatus.${exchangeStore.exchange.status}`) }}
-                </span>
+                <StatusBadge :status="exchangeStore.exchange.status" />
               </div>
               <div class="flex flex-wrap gap-2">
                 <!-- Student actions -->
@@ -352,43 +337,18 @@ function switchToRecognition() {
             </div>
 
             <!-- Save bar — shown above the table when there are unsaved changes -->
-            <div
+            <UnsavedChangesBar
               v-if="isEditable && exchangeStore.isDirty"
-              class="mb-4 flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-500/15 px-4 py-3"
-            >
-              <div class="flex items-center gap-2">
-                <svg class="shrink-0 text-amber-400" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                  <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                <span class="text-sm font-medium text-amber-300">{{ t('la.unsavedChanges') }}</span>
-                <span v-if="saveError" class="ml-1 text-xs text-red-400">— {{ saveError }}</span>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700/40"
-                  :disabled="isSavingLa"
-                  @click="discardLa"
-                >
-                  {{ t('la.discard') }}
-                </button>
-                <button
-                  type="button"
-                  class="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-semibold text-dark transition hover:bg-amber-400 disabled:opacity-60"
-                  :disabled="isSavingLa"
-                  @click="saveLa"
-                >
-                  {{ isSavingLa ? t('common.loading') : t('la.save') }}
-                </button>
-              </div>
-            </div>
+              :saving="isSavingLa"
+              @save="saveLa"
+              @discard="discardLa"
+            />
 
             <!-- LA table: always full width -->
             <LearningAgreementTable
               v-if="exchangeStore.serverLearningAgreement"
               :slots="exchangeStore.slots"
-              :slot-states="exchangeStore.localSlotStates"
+              :lines="exchangeStore.localSlotStates"
               :exchange-id="exchangeId"
               :readonly="!isEditable"
             />
@@ -432,7 +392,7 @@ function switchToRecognition() {
           <template v-else-if="activeTab === 'history'">
             <SnapshotHistoryPanel
               :exchange-id="exchangeId"
-              :current-slot-states="exchangeStore.serverLearningAgreement?.slotStates ?? []"
+              :current-entries="exchangeStore.serverLearningAgreement?.entries ?? []"
               :slots="exchangeStore.slots"
             />
           </template>

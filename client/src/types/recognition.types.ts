@@ -2,7 +2,7 @@ export type RecognitionStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected'
 
 export interface RecognitionEntryResponse {
   id: string
-  slotMappingId: string
+  learningAgreementEntryId: string
   foreignCourseCode: string
   foreignCourseNameEn: string
   foreignCourseNameHr: string | null
@@ -33,7 +33,7 @@ export interface RecognitionResponse {
 }
 
 export interface UpsertRecognitionEntryRequest {
-  slotMappingId: string
+  learningAgreementEntryId: string
   enrollmentStatus: string | null
   originalGrade: string | null
   ectsGrade: string | null
@@ -43,4 +43,8 @@ export interface UpsertRecognitionEntryRequest {
 
 export interface SaveRecognitionRequest {
   entries: UpsertRecognitionEntryRequest[]
+}
+
+export interface UpdateRecognitionStatusRequest {
+  status: RecognitionStatus
 }

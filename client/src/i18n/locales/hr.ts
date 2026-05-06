@@ -97,7 +97,6 @@ export default {
       institution: 'Matični fakultet',
       mentor: 'Mentor',
       coordinator: 'Koordinator',
-      jmbagSaved: 'JMBAG uspješno spremljen.'
     },
     institutions: {
       title: 'Moje institucije',
@@ -274,7 +273,6 @@ export default {
       ectsGrade: 'Ocjena\nECTS\n(F-A)',
       hrGrade: 'Ocjena\nhrv.\n(1-5)',
       examDate: 'Datum polaganja',
-      recognized: 'Prizn.',
     },
     excel: {
       title: 'ISVU-obrazac za priznavanje predmeta ERASMUS-studentima',
@@ -335,35 +333,6 @@ export default {
   exchangeCourseStatus: {
     OriginallyEnrolled: 'Izvorno upisan',
     Additional: 'Dodatni'
-  },
-  mapping: {
-    title: 'Mapiranje',
-    propose: 'Predloži mapiranje',
-    addMapping: 'Dodaj mapiranje',
-    awardedEcts: 'Priznato ECTS',
-    convertedGrade: 'HR ocjena',
-    coordinatorNote: 'Napomena koordinatora',
-    ectsWarning: 'Suma ECTS-a premašuje ukupni ECTS stranog predmeta',
-    history: 'Povijest',
-    save: 'Spremi mapiranje',
-    noMappings: 'Još nema predloženih mapiranja.',
-    approve: 'Odobri',
-    reject: 'Odbij'
-  },
-  mappingStatus: {
-    Pending: 'Na čekanju',
-    Approved: 'Odobreno',
-    Rejected: 'Odbijeno'
-  },
-  mappingHistory: {
-    title: 'Povijest mapiranja',
-    noHistory: 'Nema zabilježenih promjena',
-    changedBy: 'Promijenio'
-  },
-  historyPage: {
-    title: 'Povijest mapiranja',
-    selectStudent: 'Odaberi studenta',
-    noStudents: 'Nema studenata s aktivnom razmjenom'
   },
   callback: {
     signingIn: 'Prijava u tijeku...',

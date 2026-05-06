@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { exchangeService } from '@/services/exchange.service'
 import type { ExchangeSummaryResponse } from '@/types/exchange.types'
+import { statusColorClass } from '@/utils/statusColors'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -13,12 +14,6 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const expandedStudentId = ref<string | null>(null)
 
-const statusColorClass: Record<string, string> = {
-  Draft: 'bg-slate-500/20 text-slate-300 border-slate-400',
-  Submitted: 'bg-primary/20 text-primary-light border-primary',
-  Approved: 'bg-green-500/20 text-green-300 border-green-400',
-  Rejected: 'bg-red-500/20 text-red-300 border-red-400',
-}
 
 interface StudentGroup {
   studentId: string

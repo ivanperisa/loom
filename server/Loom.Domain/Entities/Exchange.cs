@@ -23,7 +23,7 @@ public class Exchange : AuditableEntity
     public ExchangeStatus Status { get; set; }
     public string? CoordinatorMessage { get; set; }
 
-    public ICollection<SlotState> SlotStates { get; set; } = null!;
+    public LearningAgreement? LearningAgreement { get; set; }
     public Recognition? Recognition { get; set; }
     public ICollection<ExchangeSnapshot> Snapshots { get; set; } = null!;
 }

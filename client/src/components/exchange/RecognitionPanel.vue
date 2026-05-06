@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/auth.store'
 import type { RecognitionResponse, RecognitionEntryResponse } from '@/types/recognition.types'
 import type { LearningAgreementResponse, ExchangeResponse } from '@/types/exchange.types'
 import { exportRecognitionExcel } from '@/utils/exportRecognition'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 
 const props = defineProps<{
   exchangeId: string
@@ -37,12 +39,6 @@ const hasUnsavedChanges = computed(() => {
 
 const isCoordinator = computed(() => authStore.canActAsCoordinator)
 
-const statusColorClass: Record<string, string> = {
-  Draft:     'bg-slate-500/20 text-slate-300 border-slate-400',
-  Submitted: 'bg-primary/20 text-primary-light border-primary',
-  Approved:  'bg-green-500/20 text-green-300 border-green-400',
-  Rejected:  'bg-red-500/20 text-red-300 border-red-400',
-}
 
 interface GradeData {
   enrollmentStatus: string
@@ -125,7 +121,7 @@ async function saveAll() {
       const grades = editableGrades[g.foreignCourseCode]
       if (!grades) return []
       return g.entries.map(e => ({
-        slotMappingId: e.slotMappingId,
+        learningAgreementEntryId: e.learningAgreementEntryId,
         enrollmentStatus: grades.enrollmentStatus || null,
         originalGrade: grades.originalGrade || null,
         ectsGrade: grades.ectsGrade || null,
@@ -158,9 +154,8 @@ async function toggleGroupRecognition(group: CourseGroup) {
     
     const results = await Promise.all(promises)
     
-    if (results.length > 0) {
-      recognition.value = results[results.length - 1].data
-    }
+    const last = results[results.length - 1]
+    if (last !== undefined) recognition.value = last.data
   } catch {
     error.value = t('common.error')
   } finally {
@@ -209,9 +204,7 @@ const rejectedBg = '#FFCCCC'
       <!-- Status + actions bar -->
       <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <span class="rounded-full border px-3 py-0.5 text-xs font-semibold" :class="statusColorClass[recognition.status] ?? statusColorClass.Draft">
-            {{ t(`recognitionStatus.${recognition.status}`) }}
-          </span>
+          <StatusBadge :status="recognition.status" i18n-prefix="recognitionStatus" />
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" class="rounded-lg border border-primary/40 px-4 py-2 text-sm font-medium text-primary-light transition hover:bg-primary/10" @click="doExport">
@@ -248,36 +241,12 @@ const rejectedBg = '#FFCCCC'
       </div>
 
       <!-- Unsaved changes bar -->
-      <div
+      <UnsavedChangesBar
         v-if="hasUnsavedChanges"
-        class="mb-4 flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-500/15 px-4 py-3"
-      >
-        <div class="flex items-center gap-2">
-          <svg class="shrink-0 text-amber-400" width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-            <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <span class="text-sm font-medium text-amber-300">{{ t('la.unsavedChanges') }}</span>
-        </div>
-        <div class="flex gap-2">
-          <button
-            type="button"
-            class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700/40"
-            :disabled="isSaving"
-            @click="discardChanges"
-          >
-            {{ t('la.discard') }}
-          </button>
-          <button
-            type="button"
-            class="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-semibold text-dark transition hover:bg-amber-400 disabled:opacity-60"
-            :disabled="isSaving"
-            @click="saveAll"
-          >
-            {{ isSaving ? t('common.loading') : t('la.save') }}
-          </button>
-        </div>
-      </div>
+        :saving="isSaving"
+        @save="saveAll"
+        @discard="discardChanges"
+      />
 
       <div v-if="courseGroups.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
         <p class="text-light/60">{{ t('recognition.noEntries') }}</p>
@@ -330,7 +299,7 @@ const rejectedBg = '#FFCCCC'
 
           <tbody>
             <template v-for="group in courseGroups" :key="group.foreignCourseCode">
-              <tr v-for="(entry, idx) in group.entries" :key="entry.slotMappingId">
+              <tr v-for="(entry, idx) in group.entries" :key="entry.learningAgreementEntryId">
 
                 <!-- A–F: foreign course data, rowspanned -->
                 <td v-if="idx === 0" :rowspan="group.entries.length"

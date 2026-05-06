@@ -5,14 +5,14 @@ import { useExchangeStore } from '@/stores/exchange.store'
 import LearningAgreementTable from '@/components/exchange/LearningAgreementTable.vue'
 import type {
   CourseSlotResponse,
-  SlotStateResponse,
+  LearningAgreementEntryResponse,
   ExchangeSnapshotResponse,
   LocalSlotState,
 } from '@/types/exchange.types'
 
 const props = defineProps<{
   exchangeId: string
-  currentSlotStates: SlotStateResponse[]
+  currentEntries: LearningAgreementEntryResponse[]
   slots: CourseSlotResponse[]
 }>()
 
@@ -24,30 +24,35 @@ const selectedBId = ref<string | 'current' | null>(null)
 const loadingA = ref(false)
 const loadingB = ref(false)
 
-function toLocalSlotStates(states: SlotStateResponse[]): LocalSlotState[] {
-  return states.map(s => ({
-    courseSlotId: s.courseSlotId,
-    mode: s.mode,
-    mappings: s.mappings.map(m => ({
-      localId: m.id,
-      foreignCourseId: m.foreignCourseId,
-      foreignCourseCode: m.foreignCourseCode,
-      foreignCourseNameEn: m.foreignCourseNameEn,
-      foreignCourseNameHr: m.foreignCourseNameHr,
-      awardedEcts: m.awardedEcts,
-    })),
-  }))
+function toLocalFromEntries(entries: LearningAgreementEntryResponse[]): LocalSlotState[] {
+  const map = new Map<string, LocalSlotState>()
+  for (const e of entries) {
+    if (!map.has(e.courseSlotId)) {
+      map.set(e.courseSlotId, { courseSlotId: e.courseSlotId, mode: e.mode, mappings: [] })
+    }
+    if (e.foreignCourseId !== null) {
+      map.get(e.courseSlotId)!.mappings.push({
+        localId: e.id,
+        foreignCourseId: e.foreignCourseId!,
+        foreignCourseCode: e.foreignCourseCode ?? '',
+        foreignCourseNameEn: e.foreignCourseNameEn ?? '',
+        foreignCourseNameHr: e.foreignCourseNameHr ?? null,
+        awardedEcts: e.awardedEcts ?? 0,
+      })
+    }
+  }
+  return Array.from(map.values())
 }
 
-function getSnapshotStates(id: string | 'current' | null): SlotStateResponse[] {
+function getSnapshotEntries(id: string | 'current' | null): LearningAgreementEntryResponse[] {
   if (!id) return []
-  if (id === 'current') return props.currentSlotStates
+  if (id === 'current') return props.currentEntries
   const snap = exchangeStore.snapshots.find(s => s.id === id)
-  return snap?.data?.slotStates ?? []
+  return snap?.data?.entries ?? []
 }
 
-const statesA = computed(() => getSnapshotStates(selectedAId.value))
-const statesB = computed(() => getSnapshotStates(selectedBId.value))
+const statesA = computed(() => getSnapshotEntries(selectedAId.value))
+const statesB = computed(() => getSnapshotEntries(selectedBId.value))
 
 async function selectSnapshot(id: string, side: 'A' | 'B') {
   if (id === 'current') {
@@ -96,8 +101,8 @@ interface LaDiff {
 }
 
 function computeDiff(
-  statesA: SlotStateResponse[],
-  statesB: SlotStateResponse[],
+  entriesA: LearningAgreementEntryResponse[],
+  entriesB: LearningAgreementEntryResponse[],
   slots: CourseSlotResponse[]
 ): LaDiff {
   const slotName = (id: string) => {
@@ -105,8 +110,26 @@ function computeDiff(
     return s ? (s.courseCode ?? s.courseName) : id
   }
 
-  const mapA = new Map(statesA.map(s => [s.courseSlotId, s]))
-  const mapB = new Map(statesB.map(s => [s.courseSlotId, s]))
+  // Group by courseSlotId: mode + list of foreign course mappings
+  type SlotGroup = { mode: string; mappings: { foreignCourseId: string; code: string; nameEn: string; ects: number }[] }
+  const groupEntries = (entries: LearningAgreementEntryResponse[]): Map<string, SlotGroup> => {
+    const map = new Map<string, SlotGroup>()
+    for (const e of entries) {
+      if (!map.has(e.courseSlotId)) map.set(e.courseSlotId, { mode: e.mode, mappings: [] })
+      if (e.foreignCourseId) {
+        map.get(e.courseSlotId)!.mappings.push({
+          foreignCourseId: e.foreignCourseId,
+          code: e.foreignCourseCode ?? '',
+          nameEn: e.foreignCourseNameEn ?? '',
+          ects: e.awardedEcts ?? 0,
+        })
+      }
+    }
+    return map
+  }
+
+  const mapA = groupEntries(entriesA)
+  const mapB = groupEntries(entriesB)
   const allIds = new Set([...mapA.keys(), ...mapB.keys()])
 
   const changedModes: ChangedMode[] = []
@@ -119,17 +142,16 @@ function computeDiff(
     const modeA = a?.mode ?? null
     const modeB = b?.mode ?? null
 
-    if (modeA !== modeB) {
+    if (modeA !== modeB)
       changedModes.push({ courseSlotId: id, slotName: slotName(id), oldMode: modeA, newMode: modeB })
-    }
 
-    const countMap = (mappings: SlotStateResponse['mappings']) => {
-      const map = new Map<string, number>()
-      for (const m of mappings) {
-        const key = `${m.foreignCourseId}:${m.awardedEcts}`
-        map.set(key, (map.get(key) ?? 0) + 1)
+    const countMap = (mappings: SlotGroup['mappings']) => {
+      const m = new Map<string, number>()
+      for (const x of mappings) {
+        const key = `${x.foreignCourseId}:${x.ects}`
+        m.set(key, (m.get(key) ?? 0) + 1)
       }
-      return map
+      return m
     }
 
     const countsA = countMap(a?.mappings ?? [])
@@ -137,27 +159,17 @@ function computeDiff(
     const allKeys = new Set([...countsA.keys(), ...countsB.keys()])
 
     for (const key of allKeys) {
-      const cntA = countsA.get(key) ?? 0
-      const cntB = countsB.get(key) ?? 0
-      const diff = cntB - cntA
+      const diff = (countsB.get(key) ?? 0) - (countsA.get(key) ?? 0)
+      if (diff === 0) continue
 
-      const allMappings = [...(a?.mappings ?? []), ...(b?.mappings ?? [])]
-      const rep = allMappings.find(m => `${m.foreignCourseId}:${m.awardedEcts}` === key)
+      const rep = [...(a?.mappings ?? []), ...(b?.mappings ?? [])].find(
+        x => `${x.foreignCourseId}:${x.ects}` === key
+      )
       if (!rep) continue
 
-      const entry: DiffMapping = {
-        courseSlotId: id,
-        slotName: slotName(id),
-        foreignCourseCode: rep.foreignCourseCode,
-        foreignCourseNameEn: rep.foreignCourseNameEn,
-        awardedEcts: rep.awardedEcts,
-      }
-
-      if (diff > 0) {
-        for (let i = 0; i < diff; i++) addedMappings.push(entry)
-      } else if (diff < 0) {
-        for (let i = 0; i < -diff; i++) removedMappings.push(entry)
-      }
+      const dm: DiffMapping = { courseSlotId: id, slotName: slotName(id), foreignCourseCode: rep.code, foreignCourseNameEn: rep.nameEn, awardedEcts: rep.ects }
+      if (diff > 0) for (let i = 0; i < diff; i++) addedMappings.push(dm)
+      else for (let i = 0; i < -diff; i++) removedMappings.push(dm)
     }
   }
 
@@ -315,7 +327,7 @@ function optionLabel(id: string | 'current'): string {
             </p>
             <LearningAgreementTable
               :slots="slots"
-              :slot-states="toLocalSlotStates(statesA)"
+              :lines="toLocalFromEntries(statesA)"
               :exchange-id="exchangeId"
               :readonly="true"
             />
@@ -326,7 +338,7 @@ function optionLabel(id: string | 'current'): string {
             </p>
             <LearningAgreementTable
               :slots="slots"
-              :slot-states="toLocalSlotStates(statesB)"
+              :lines="toLocalFromEntries(statesB)"
               :exchange-id="exchangeId"
               :readonly="true"
             />
