@@ -9,15 +9,16 @@ export default {
     language: 'Jezik',
     user: 'Korisnik',
     cancel: 'Odustani',
-    confirm: 'Potvrdi'
+    confirm: 'Potvrdi',
   },
   auth: {
-    signInWithGoogle: 'Prijava putem Googlea'
+    signInWithGoogle: 'Prijava putem Googlea',
   },
   landing: {
     tagline: 'Pojednostavite preslikavanje kolegija za Erasmus',
-    description: 'Preslikajte kolegije s razmjene, pratite ECTS bodove i dobijte odobrenje koordinatora - sve na jednom mjestu.',
-    visualTitle: 'Preslikavanje kolegija jednostavno'
+    description:
+      'Preslikajte kolegije s razmjene, pratite ECTS bodove i dobijte odobrenje koordinatora - sve na jednom mjestu.',
+    visualTitle: 'Preslikavanje kolegija jednostavno',
   },
   home: {
     welcome: 'Dobrodošli, {name}',
@@ -40,14 +41,14 @@ export default {
     status: 'Status',
     coordinatorRequestPending: 'Vaš zahtjev za koordinatorski pristup čeka odobrenje admina.',
     coordinatorRequestRejected: 'Vaš zahtjev za koordinatorski pristup je odbijen.',
-    reRequestCoordinator: 'Pošalji novi zahtjev'
+    reRequestCoordinator: 'Pošalji novi zahtjev',
   },
   onboarding: {
     title: 'Postavljanje računa',
     steps: {
       role: 'Uloga',
       institution: 'Institucija',
-      jmbag: 'JMBAG'
+      jmbag: 'JMBAG',
     },
     roleQuestion: 'Kako planirate koristiti Loom?',
     roleStudent: 'Student',
@@ -66,14 +67,14 @@ export default {
       roleRequired: 'Odaberite ulogu prije nastavka.',
       institutionRequired: 'Odaberite instituciju prije nastavka.',
       jmbagRequired: 'JMBAG je obavezan.',
-      jmbagInvalid: 'JMBAG mora sadržavati točno 10 znamenki.'
-    }
+      jmbagInvalid: 'JMBAG mora sadržavati točno 10 znamenki.',
+    },
   },
   errors: {
     required: 'Ovo polje je obavezno.',
     notFound: 'Nije pronađeno.',
     unexpected: 'Došlo je do neočekivane greške.',
-    unauthorized: 'Nemate pristup ovoj stranici.'
+    unauthorized: 'Nemate pristup ovoj stranici.',
   },
   nav: {
     home: 'Početna',
@@ -81,7 +82,7 @@ export default {
     exchange: 'Razmjena',
     students: 'Studenti',
     history: 'Povijest',
-    admin: 'Korisnici'
+    admin: 'Korisnici',
   },
   settings: {
     title: 'Postavke',
@@ -113,8 +114,8 @@ export default {
       removeConfirm: 'Jeste li sigurni da želite ukloniti ovu instituciju?',
       removeError: 'Nije moguće ukloniti instituciju s aktivnim razmjenama.',
       updateSuccess: 'Institucija uspješno ažurirana.',
-      addSuccess: 'Institucija uspješno dodana.'
-    }
+      addSuccess: 'Institucija uspješno dodana.',
+    },
   },
   la: {
     unsavedChanges: 'Imate nespremljene promjene',
@@ -186,7 +187,7 @@ export default {
       program: 'Program i profil',
       foreign: 'Strani program',
       details: 'Detalji',
-      confirm: 'Potvrda'
+      confirm: 'Potvrda',
     },
     selectProgram: 'Odaberite studijski program',
     selectProgramPlaceholder: '— odaberite program —',
@@ -213,8 +214,8 @@ export default {
       profileRequired: 'Odaberite profil.',
       foreignProgramRequired: 'Odaberite strani program.',
       academicYearRequired: 'Unesite akademsku godinu.',
-      studySemesterRequired: 'Unesite semestar studija.'
-    }
+      studySemesterRequired: 'Unesite semestar studija.',
+    },
   },
   documentStatus: {
     Draft: 'Nacrt',
@@ -227,7 +228,7 @@ export default {
     Summer: 'Ljetni',
   },
   slotMode: {
-    AtHome: 'Na matičnom fakultetu',
+    AtHome: 'Položeno',
     AtExchange: 'Na razmjeni',
     AfterExchange: 'Nakon razmjene',
   },
@@ -293,8 +294,10 @@ export default {
       ukupno: 'UKUPNO',
       profileLabel: 'Profil:',
       napomeneTitle: 'NAPOMENE:',
-      napomene1: 'U Learning Agreement, tablica B stavlja KATEGORIJE PREDMETA, ne pojedine predmete!',
-      napomene2: 'Za jezgrene i obvezne predmete mora biti 1:1 zamjena te se mora u tablici mapiranja navesti ime predmeta za kojeg se priznaje!',
+      napomene1:
+        'U Learning Agreement, tablica B stavlja KATEGORIJE PREDMETA, ne pojedine predmete!',
+      napomene2:
+        'Za jezgrene i obvezne predmete mora biti 1:1 zamjena te se mora u tablici mapiranja navesti ime predmeta za kojeg se priznaje!',
       napomene3: 'Poveznice zamijeniti stvarnim poveznicama na strane/domaće kolegije',
       sheetRecognition: 'Priznavanje',
       sheetLA: 'Ugovor o učenju',
@@ -322,27 +325,27 @@ export default {
     ectsGrade: 'ECTS ocjena',
     examDate: 'Datum ispita',
     addGrades: 'Unesi ocjene',
-    saveGrades: 'Spremi ocjene'
+    saveGrades: 'Spremi ocjene',
   },
   exchangeCourseStatus: {
     OriginallyEnrolled: 'Izvorno upisan',
-    Additional: 'Dodatni'
+    Additional: 'Dodatni',
   },
   callback: {
     signingIn: 'Prijava u tijeku...',
-    failed: 'OAuth povratni poziv nije uspio.'
+    failed: 'OAuth povratni poziv nije uspio.',
   },
   languageSwitcher: {
     dropdownLabel: 'Odaberi jezik',
     locales: {
       hr: 'Hrvatski',
-      en: 'English'
-    }
+      en: 'English',
+    },
   },
   studyProgramLevels: {
     Undergraduate: 'Preddiplomski',
     Graduate: 'Diplomski',
-    Postgraduate: 'Poslijediplomski'
+    Postgraduate: 'Poslijediplomski',
   },
   courseTypes: {
     Mandatory: 'Obvezni predmet',
@@ -353,16 +356,16 @@ export default {
     Seminar: 'Seminar',
     ResearchSeminar: 'Istraživački seminar',
     Project: 'Projekt',
-    Thesis: 'Diplomski rad'
+    Thesis: 'Diplomski rad',
   },
   courseStatuses: {
     Active: 'Aktivan',
     Inactive: 'Neaktivan',
-    Historical: 'Arhiviran'
+    Historical: 'Arhiviran',
   },
   exchangeSemesters: {
     Winter: 'Zimski',
-    Summer: 'Ljetni'
+    Summer: 'Ljetni',
   },
   coordinator: {
     title: 'Moji studenti',
@@ -384,7 +387,7 @@ export default {
     mappingsCount: 'mapiranja',
     approved: 'odobreno',
     pending: 'na čekanju',
-    rejected: 'odbijeno'
+    rejected: 'odbijeno',
   },
   foreignCourses: {
     dragHint: 'Povuci predmet na ćeliju označenu kao Na razmjeni',
@@ -398,6 +401,8 @@ export default {
     searchPlaceholder: 'Pretraži po kodu predmeta...',
     searchHint: 'Upiši kod predmeta za pretragu',
     noResults: 'Nema rezultata',
+    stageAdd: 'Dodaj u popis',
+    stageAdded: 'Dodano',
   },
   table: {
     semester: 'Semestar',
@@ -413,7 +418,7 @@ export default {
     unsavedChanges: 'Promjene nisu spremljene',
     proposeStudent: 'Predloži mapiranje',
     proposeCoordinator: 'Spremi pregled',
-    mapped: '\u25cf mapirano'
+    mapped: '\u25cf mapirano',
   },
   admin: {
     title: 'Admin panel',
@@ -425,24 +430,25 @@ export default {
       role: {
         Student: 'Student',
         Coordinator: 'Koordinator',
-        Admin: 'Admin'
-      }
+        Admin: 'Admin',
+      },
     },
     requests: {
       title: 'Zahtjevi za koordinatorski pristup',
       empty: 'Nema aktivnih zahtjeva.',
       approve: 'Odobri',
-      reject: 'Odbij'
+      reject: 'Odbij',
     },
     whitelist: {
       title: 'Whitelist koordinatora',
-      description: 'Korisnici s whitelistiranom adresom automatski dobivaju koordinatorsku ulogu pri prvom loginu.',
+      description:
+        'Korisnici s whitelistiranom adresom automatski dobivaju koordinatorsku ulogu pri prvom loginu.',
       emailPlaceholder: 'email@fer.hr',
       add: 'Dodaj',
       addError: 'Greška pri dodavanju e-mail adrese.',
       remove: 'Ukloni',
       empty: 'Whitelist je prazan.',
-      addedOn: 'Dodano'
-    }
-  }
+      addedOn: 'Dodano',
+    },
+  },
 }

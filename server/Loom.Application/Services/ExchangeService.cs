@@ -208,12 +208,41 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             .ToListAsync(ct);
 
         var la = await LaWithEntries().AsNoTracking().FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+        var activeEntries = la?.Entries.Select(e => e.ToResponse()).ToList() ?? [];
+
+        var snapshots = await db.ExchangeSnapshots
+            .AsNoTracking()
+            .Where(s => s.ExchangeId == exchangeId && s.Phase == SnapshotPhase.LearningAgreement)
+            .OrderBy(s => s.CreatedAt)
+            .ToListAsync(ct);
+
+        var deletedEntries = new List<LearningAgreementEntryResponse>();
+        if (snapshots.Count > 0)
+        {
+            var activeKeys = activeEntries
+                .Where(e => e.ForeignCourseId.HasValue)
+                .Select(e => (e.CourseSlotId, e.ForeignCourseId!.Value))
+                .ToHashSet();
+
+            var seen = new HashSet<(Guid, Guid)>();
+            foreach (var snapshot in snapshots)
+            {
+                var data = JsonSerializer.Deserialize<LearningAgreementSnapshotData>(snapshot.Snapshot, JsonHelper.DefaultOptions);
+                if (data is null) continue;
+                foreach (var entry in data.Entries.Where(e => e.ForeignCourseId.HasValue))
+                {
+                    var key = (entry.CourseSlotId, entry.ForeignCourseId!.Value);
+                    if (!activeKeys.Contains(key) && seen.Add(key))
+                        deletedEntries.Add(entry with { IsDeleted = true });
+                }
+            }
+        }
 
         return new LearningAgreementResponse(
             exchangeId,
             la?.Status.ToString() ?? DocumentStatus.Draft.ToString(),
             slots.Select(s => s.ToResponse()).ToList(),
-            la?.Entries.Select(e => e.ToResponse()).ToList() ?? []
+            [.. activeEntries, .. deletedEntries]
         );
     }
 
@@ -259,8 +288,6 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         {
             if (!Enum.TryParse<SlotMode>(dto.Mode, out var mode))
                 return Error.Validation("INVALID_MODE", $"Invalid slot mode: {dto.Mode}.");
-            if (mode == SlotMode.AtExchange && dto.ForeignCourseId is not null && dto.AwardedEcts <= 0)
-                return Error.Validation("INVALID_ECTS", "Awarded ECTS must be greater than 0.");
             if (mode != SlotMode.AtExchange && dto.ForeignCourseId is not null)
                 return Error.Validation("INVALID_MAPPING", "Foreign courses are only allowed on slots marked as AtExchange.");
         }

@@ -8,5 +8,6 @@ public record LearningAgreementEntryResponse(
     string? ForeignCourseCode,
     string? ForeignCourseNameEn,
     string? ForeignCourseNameHr,
-    decimal? AwardedEcts
+    decimal? AwardedEcts,
+    bool IsDeleted = false
 );

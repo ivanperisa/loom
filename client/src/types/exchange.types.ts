@@ -80,6 +80,7 @@ export interface LearningAgreementEntryResponse {
   foreignCourseNameEn: string | null
   foreignCourseNameHr: string | null
   awardedEcts: number | null
+  isDeleted: boolean
 }
 
 export interface LearningAgreementResponse {

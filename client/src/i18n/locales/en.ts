@@ -9,15 +9,16 @@ export default {
     language: 'Language',
     user: 'User',
     cancel: 'Cancel',
-    confirm: 'Confirm'
+    confirm: 'Confirm',
   },
   auth: {
-    signInWithGoogle: 'Sign in with Google'
+    signInWithGoogle: 'Sign in with Google',
   },
   landing: {
     tagline: 'Simplify your Erasmus course mapping',
-    description: 'Map your exchange courses, track ECTS credits, and get approval from your coordinator - all in one place.',
-    visualTitle: 'Course Mapping Made Simple'
+    description:
+      'Map your exchange courses, track ECTS credits, and get approval from your coordinator - all in one place.',
+    visualTitle: 'Course Mapping Made Simple',
   },
   home: {
     welcome: 'Welcome back, {name}',
@@ -40,14 +41,14 @@ export default {
     status: 'Status',
     coordinatorRequestPending: 'Your coordinator access request is pending admin approval.',
     coordinatorRequestRejected: 'Your coordinator access request has been rejected.',
-    reRequestCoordinator: 'Submit new request'
+    reRequestCoordinator: 'Submit new request',
   },
   onboarding: {
     title: 'Account Setup',
     steps: {
       role: 'Role',
       institution: 'Institution',
-      jmbag: 'JMBAG'
+      jmbag: 'JMBAG',
     },
     roleQuestion: 'How do you plan to use Loom?',
     roleStudent: 'Student',
@@ -66,14 +67,14 @@ export default {
       roleRequired: 'Please select a role before continuing.',
       institutionRequired: 'Please select an institution before continuing.',
       jmbagRequired: 'JMBAG is required.',
-      jmbagInvalid: 'JMBAG must be exactly 10 digits.'
-    }
+      jmbagInvalid: 'JMBAG must be exactly 10 digits.',
+    },
   },
   errors: {
     required: 'This field is required.',
     notFound: 'Not found.',
     unexpected: 'An unexpected error occurred.',
-    unauthorized: 'You are not authorized to view this page.'
+    unauthorized: 'You are not authorized to view this page.',
   },
   nav: {
     home: 'Home',
@@ -81,7 +82,7 @@ export default {
     exchange: 'Exchange',
     students: 'Students',
     history: 'History',
-    admin: 'Users'
+    admin: 'Users',
   },
   settings: {
     title: 'Settings',
@@ -113,8 +114,8 @@ export default {
       removeConfirm: 'Are you sure you want to remove this institution?',
       removeError: 'Cannot remove institution with active exchanges.',
       updateSuccess: 'Institution updated successfully.',
-      addSuccess: 'Institution added successfully.'
-    }
+      addSuccess: 'Institution added successfully.',
+    },
   },
   la: {
     unsavedChanges: 'You have unsaved changes',
@@ -186,7 +187,7 @@ export default {
       program: 'Program & Profile',
       foreign: 'Foreign Program',
       details: 'Details',
-      confirm: 'Confirm'
+      confirm: 'Confirm',
     },
     selectProgram: 'Select study program',
     selectProgramPlaceholder: '— select program —',
@@ -213,8 +214,8 @@ export default {
       profileRequired: 'Please select a profile.',
       foreignProgramRequired: 'Please select a foreign program.',
       academicYearRequired: 'Please enter an academic year.',
-      studySemesterRequired: 'Please enter a study semester.'
-    }
+      studySemesterRequired: 'Please enter a study semester.',
+    },
   },
   documentStatus: {
     Draft: 'Draft',
@@ -227,7 +228,7 @@ export default {
     Summer: 'Summer',
   },
   slotMode: {
-    AtHome: 'At home institution',
+    AtHome: 'Passed',
     AtExchange: 'At exchange',
     AfterExchange: 'After exchange',
   },
@@ -293,8 +294,10 @@ export default {
       ukupno: 'TOTAL',
       profileLabel: 'Profile:',
       napomeneTitle: 'NOTES:',
-      napomene1: 'In the Learning Agreement, Table B lists COURSE CATEGORIES, not individual courses!',
-      napomene2: 'Core and mandatory courses require a 1:1 substitution — the course being substituted must be listed in the mapping table!',
+      napomene1:
+        'In the Learning Agreement, Table B lists COURSE CATEGORIES, not individual courses!',
+      napomene2:
+        'Core and mandatory courses require a 1:1 substitution — the course being substituted must be listed in the mapping table!',
       napomene3: 'Replace links with actual links to foreign/domestic courses',
       sheetRecognition: 'Recognition',
       sheetLA: 'Learning Agreement',
@@ -322,27 +325,27 @@ export default {
     ectsGrade: 'ECTS Grade',
     examDate: 'Exam Date',
     addGrades: 'Enter Grades',
-    saveGrades: 'Save Grades'
+    saveGrades: 'Save Grades',
   },
   exchangeCourseStatus: {
     OriginallyEnrolled: 'Originally Enrolled',
-    Additional: 'Additional'
+    Additional: 'Additional',
   },
   callback: {
     signingIn: 'Signing in...',
-    failed: 'OAuth callback failed.'
+    failed: 'OAuth callback failed.',
   },
   languageSwitcher: {
     dropdownLabel: 'Select language',
     locales: {
       hr: 'Croatian',
-      en: 'English'
-    }
+      en: 'English',
+    },
   },
   studyProgramLevels: {
     Undergraduate: 'Undergraduate',
     Graduate: 'Graduate',
-    Postgraduate: 'Postgraduate'
+    Postgraduate: 'Postgraduate',
   },
   courseTypes: {
     Mandatory: 'Mandatory',
@@ -353,16 +356,16 @@ export default {
     Seminar: 'Seminar',
     ResearchSeminar: 'Research seminar',
     Project: 'Project',
-    Thesis: 'Thesis'
+    Thesis: 'Thesis',
   },
   courseStatuses: {
     Active: 'Active',
     Inactive: 'Inactive',
-    Historical: 'Historical'
+    Historical: 'Historical',
   },
   exchangeSemesters: {
     Winter: 'Winter',
-    Summer: 'Summer'
+    Summer: 'Summer',
   },
   coordinator: {
     title: 'My Students',
@@ -384,7 +387,7 @@ export default {
     mappingsCount: 'mappings',
     approved: 'approved',
     pending: 'pending',
-    rejected: 'rejected'
+    rejected: 'rejected',
   },
   foreignCourses: {
     dragHint: 'Drag a course onto a cell marked as At exchange',
@@ -398,6 +401,8 @@ export default {
     searchPlaceholder: 'Search by course code...',
     searchHint: 'Enter a course code to search',
     noResults: 'No results',
+    stageAdd: 'Add to list',
+    stageAdded: 'Added',
   },
   table: {
     semester: 'Semester',
@@ -413,7 +418,7 @@ export default {
     unsavedChanges: 'Unsaved changes',
     proposeStudent: 'Propose Mapping',
     proposeCoordinator: 'Save Review',
-    mapped: '\u25cf mapped'
+    mapped: '\u25cf mapped',
   },
   admin: {
     title: 'Admin Panel',
@@ -425,24 +430,25 @@ export default {
       role: {
         Student: 'Student',
         Coordinator: 'Coordinator',
-        Admin: 'Admin'
-      }
+        Admin: 'Admin',
+      },
     },
     requests: {
       title: 'Coordinator Access Requests',
       empty: 'No pending requests.',
       approve: 'Approve',
-      reject: 'Reject'
+      reject: 'Reject',
     },
     whitelist: {
       title: 'Coordinator Whitelist',
-      description: 'Users with a whitelisted email address automatically receive the coordinator role on first login.',
+      description:
+        'Users with a whitelisted email address automatically receive the coordinator role on first login.',
       emailPlaceholder: 'email@fer.hr',
       add: 'Add',
       addError: 'Error adding email address.',
       remove: 'Remove',
       empty: 'The whitelist is empty.',
-      addedOn: 'Added'
-    }
-  }
+      addedOn: 'Added',
+    },
+  },
 }

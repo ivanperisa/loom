@@ -12,16 +12,19 @@ import type {
   LocalSlotState,
   LocalSlotMapping,
   SlotMode,
-  ExchangeSnapshotResponse,
   LearningAgreementEntryUpsertDto,
 } from '@/types/exchange.types'
 import type { ForeignCourseResponse } from '@/types/institution.types'
 
 function buildLocalFromServer(la: LearningAgreementResponse): LocalSlotState[] {
   const map = new Map<string, LocalSlotState>()
-  for (const entry of la.entries) {
+  for (const entry of la.entries.filter((e) => !e.isDeleted)) {
     if (!map.has(entry.courseSlotId)) {
-      map.set(entry.courseSlotId, { courseSlotId: entry.courseSlotId, mode: entry.mode, mappings: [] })
+      map.set(entry.courseSlotId, {
+        courseSlotId: entry.courseSlotId,
+        mode: entry.mode,
+        mappings: [],
+      })
     }
     if (entry.foreignCourseId !== null) {
       map.get(entry.courseSlotId)!.mappings.push({
@@ -48,7 +51,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const draggingCourse = ref<ForeignCourseResponse | null>(null)
-  const snapshots = ref<ExchangeSnapshotResponse[]>([])
+  const stagedForeignCourseIds = ref<Set<string>>(new Set())
 
   const slots = computed(() => serverLearningAgreement.value?.slots ?? [])
 
@@ -60,10 +63,18 @@ export const useExchangeStore = defineStore('exchange', () => {
     draggingCourse.value = null
   }
 
-  // ── Local mutations (sync, no API calls) ──────────────────────────────────
+  function stageForeignCourse(id: string) {
+    stagedForeignCourseIds.value = new Set([...stagedForeignCourseIds.value, id])
+  }
+
+  function unstageForeignCourse(id: string) {
+    const next = new Set(stagedForeignCourseIds.value)
+    next.delete(id)
+    stagedForeignCourseIds.value = next
+  }
 
   function localSetSlotMode(courseSlotId: string, mode: SlotMode) {
-    const existing = localSlotStates.value.find(s => s.courseSlotId === courseSlotId)
+    const existing = localSlotStates.value.find((s) => s.courseSlotId === courseSlotId)
     if (existing) {
       existing.mode = mode
       if (mode !== 'AtExchange') existing.mappings = []
@@ -74,12 +85,12 @@ export const useExchangeStore = defineStore('exchange', () => {
   }
 
   function localRemoveSlotState(courseSlotId: string) {
-    localSlotStates.value = localSlotStates.value.filter(s => s.courseSlotId !== courseSlotId)
+    localSlotStates.value = localSlotStates.value.filter((s) => s.courseSlotId !== courseSlotId)
     isDirty.value = true
   }
 
   function localAddSlotMapping(courseSlotId: string, mapping: LocalSlotMapping) {
-    const state = localSlotStates.value.find(s => s.courseSlotId === courseSlotId)
+    const state = localSlotStates.value.find((s) => s.courseSlotId === courseSlotId)
     if (state) {
       state.mappings.push(mapping)
       isDirty.value = true
@@ -87,10 +98,28 @@ export const useExchangeStore = defineStore('exchange', () => {
   }
 
   function localRemoveSlotMapping(courseSlotId: string, localId: string) {
-    const state = localSlotStates.value.find(s => s.courseSlotId === courseSlotId)
+    const state = localSlotStates.value.find((s) => s.courseSlotId === courseSlotId)
     if (state) {
-      state.mappings = state.mappings.filter(m => m.localId !== localId)
+      state.mappings = state.mappings.filter((m) => m.localId !== localId)
       isDirty.value = true
+    }
+  }
+
+  function localRemoveAllMappingsForCourse(foreignCourseId: string) {
+    for (const state of localSlotStates.value) {
+      state.mappings = state.mappings.filter((m) => m.foreignCourseId !== foreignCourseId)
+    }
+    isDirty.value = true
+  }
+
+  function localUpdateMappingEcts(courseSlotId: string, localId: string, newEcts: number) {
+    const state = localSlotStates.value.find((s) => s.courseSlotId === courseSlotId)
+    if (state) {
+      const idx = state.mappings.findIndex((m) => m.localId === localId)
+      if (idx !== -1) {
+        state.mappings.splice(idx, 1, { ...state.mappings[idx]!, awardedEcts: newEcts })
+        isDirty.value = true
+      }
     }
   }
 
@@ -111,7 +140,7 @@ export const useExchangeStore = defineStore('exchange', () => {
 
   async function deleteExchange(exchangeId: string) {
     await exchangeService.deleteExchange(exchangeId)
-    summaries.value = summaries.value.filter(s => s.id !== exchangeId)
+    summaries.value = summaries.value.filter((s) => s.id !== exchangeId)
   }
 
   async function fetchExchange(exchangeId: string) {
@@ -149,6 +178,7 @@ export const useExchangeStore = defineStore('exchange', () => {
       const res = await exchangeService.getLearningAgreement(exchangeId)
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
+      stagedForeignCourseIds.value = new Set()
       isDirty.value = false
     } catch {
       error.value = t('common.error')
@@ -164,10 +194,20 @@ export const useExchangeStore = defineStore('exchange', () => {
       const entries: LearningAgreementEntryUpsertDto[] = []
       for (const s of localSlotStates.value) {
         if (s.mode !== 'AtExchange' || s.mappings.length === 0) {
-          entries.push({ courseSlotId: s.courseSlotId, mode: s.mode, foreignCourseId: null, awardedEcts: null })
+          entries.push({
+            courseSlotId: s.courseSlotId,
+            mode: s.mode,
+            foreignCourseId: null,
+            awardedEcts: null,
+          })
         } else {
           for (const m of s.mappings) {
-            entries.push({ courseSlotId: s.courseSlotId, mode: s.mode, foreignCourseId: m.foreignCourseId, awardedEcts: m.awardedEcts })
+            entries.push({
+              courseSlotId: s.courseSlotId,
+              mode: s.mode,
+              foreignCourseId: m.foreignCourseId,
+              awardedEcts: m.awardedEcts,
+            })
           }
         }
       }
@@ -183,7 +223,10 @@ export const useExchangeStore = defineStore('exchange', () => {
 
   // ── Status & coordinator ──────────────────────────────────────────────────
 
-  async function updateLearningAgreementStatus(exchangeId: string, request: UpdateLearningAgreementStatusRequest) {
+  async function updateLearningAgreementStatus(
+    exchangeId: string,
+    request: UpdateLearningAgreementStatusRequest,
+  ) {
     try {
       const res = await exchangeService.updateLearningAgreementStatus(exchangeId, request)
       exchange.value = res.data
@@ -195,7 +238,10 @@ export const useExchangeStore = defineStore('exchange', () => {
     }
   }
 
-  async function updateCoordinatorMessage(exchangeId: string, request: UpdateCoordinatorMessageRequest) {
+  async function updateCoordinatorMessage(
+    exchangeId: string,
+    request: UpdateCoordinatorMessageRequest,
+  ) {
     try {
       const res = await exchangeService.updateCoordinatorMessage(exchangeId, request)
       exchange.value = res.data
@@ -204,36 +250,34 @@ export const useExchangeStore = defineStore('exchange', () => {
     }
   }
 
-  // ── Snapshots ─────────────────────────────────────────────────────────────
-
-  async function fetchSnapshots(exchangeId: string) {
-    try {
-      const res = await exchangeService.getSnapshots(exchangeId)
-      snapshots.value = res.data
-    } catch {
-      // Snapshots are non-critical — fail silently
-    }
-  }
-
-  async function fetchSnapshot(exchangeId: string, snapshotId: string): Promise<ExchangeSnapshotResponse | null> {
-    try {
-      const res = await exchangeService.getSnapshot(exchangeId, snapshotId)
-      const idx = snapshots.value.findIndex(s => s.id === snapshotId)
-      if (idx !== -1) snapshots.value[idx] = res.data
-      return res.data
-    } catch {
-      return null
-    }
-  }
-
   return {
-    summaries, exchange, serverLearningAgreement, localSlotStates, isDirty, slots,
-    loading, error, draggingCourse, snapshots,
-    startDrag, endDrag,
-    localSetSlotMode, localRemoveSlotState, localAddSlotMapping, localRemoveSlotMapping,
-    fetchMySummaries, fetchExchange, createExchange, deleteExchange,
-    fetchLearningAgreement, saveLearningAgreement,
-    updateLearningAgreementStatus, updateCoordinatorMessage,
-    fetchSnapshots, fetchSnapshot,
+    summaries,
+    exchange,
+    serverLearningAgreement,
+    localSlotStates,
+    isDirty,
+    slots,
+    loading,
+    error,
+    draggingCourse,
+    stagedForeignCourseIds,
+    startDrag,
+    endDrag,
+    stageForeignCourse,
+    unstageForeignCourse,
+    localSetSlotMode,
+    localRemoveSlotState,
+    localAddSlotMapping,
+    localRemoveSlotMapping,
+    localRemoveAllMappingsForCourse,
+    localUpdateMappingEcts,
+    fetchMySummaries,
+    fetchExchange,
+    createExchange,
+    deleteExchange,
+    fetchLearningAgreement,
+    saveLearningAgreement,
+    updateLearningAgreementStatus,
+    updateCoordinatorMessage,
   }
 })
