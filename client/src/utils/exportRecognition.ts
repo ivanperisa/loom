@@ -2,7 +2,7 @@ import XLSX from 'xlsx-js-style'
 import type { RecognitionResponse } from '@/types/recognition.types'
 import type { ExchangeResponse, LearningAgreementResponse, LearningAgreementEntryResponse } from '@/types/exchange.types'
 
-// ── Style helpers ─────────────────────────────────────────────────────────
+// Style helpers
 
 type XlsxCell = { v?: string | number; t?: string; s?: object; l?: object }
 
@@ -53,7 +53,7 @@ function colLetter(idx: number): string {
   return s
 }
 
-// ── Translation map ───────────────────────────────────────────────────────
+// Translation map
 
 type Lang = 'hr' | 'en' | string
 
@@ -107,7 +107,7 @@ function tr(key: string, lang: Lang): string {
   return T[key]?.[lang] ?? T[key]?.['hr'] ?? key
 }
 
-// ── Sheet 1: Recognition ──────────────────────────────────────────────────
+// Sheet 1: Recognition
 
 function buildRecognitionSheet(
   recognition: RecognitionResponse,
@@ -118,15 +118,15 @@ function buildRecognitionSheet(
   const merges: object[] = []
   const LAST_COL = 16  // Q (0-indexed), cols A–Q = 0–16
 
-  // ── Row 1: title ──────────────────────────────────────────────────────
+  // Row 1: title
   ws['A1'] = c(tr('title', lang), { bold: true, sz: 11, borders: false })
   for (let ci = 1; ci <= LAST_COL; ci++) ws[`${colLetter(ci)}1`] = empty(undefined, false)
   merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: LAST_COL } })
 
-  // ── Row 2: spacer ─────────────────────────────────────────────────────
+  // Row 2: spacer
   for (let ci = 0; ci <= LAST_COL; ci++) ws[`${colLetter(ci)}2`] = empty(undefined, false)
 
-  // Helper: info row — label right-aligned in E–H, value in I–Q, A–D blank
+  // Helper: info row, label right-aligned in E-H, value in I-Q, A-D blank
   function infoRow(row: number, label: string, value: string | null, labelColor?: string) {
     for (let ci = 0; ci <= 3; ci++) ws[`${colLetter(ci)}${row}`] = empty(undefined, false)
     merges.push({ s: { r: row - 1, c: 0 }, e: { r: row - 1, c: 3 } })
@@ -145,7 +145,7 @@ function buildRecognitionSheet(
   infoRow(5, tr('studyType', lang), tr('studyTypeVal', lang))
   infoRow(6, tr('semester', lang), String(exchange.studySemester))
 
-  // ── Rows 7–12: left = big profile block (A7:D12 merged), right = more info ──
+  // Rows 7-12: left = big profile block (A7:D12 merged), right = more info
   ws['A7'] = c(`${tr('profileLabel', lang)}  ${exchange.studyProfile.name}`, {
     bold: true, sz: 16, borders: false, valign: 'middle', wrap: true,
   })
@@ -167,7 +167,7 @@ function buildRecognitionSheet(
   }
 
   infoRowRight(7,  tr('profile', lang),     exchange.studyProfile.name)
-  // University is a hyperlink — use foreignProgram.url if available, else plain text
+  // University is a hyperlink, use foreignProgram.url if available, else plain text
   const uniUrl = (exchange.foreignProgram as any).url ?? ''
   if (uniUrl) {
     ws[`E8`] = c(tr('university', lang), { bold: true, halign: 'right', borders: false, color: 'FF0000' })
@@ -184,16 +184,16 @@ function buildRecognitionSheet(
   infoRowRight(11, tr('exchSemester', lang), exchange.semesterType === 'Winter' ? tr('winter', lang) : tr('summer', lang))
   infoRowRight(12, tr('mentor', lang),      exchange.mentor)
 
-  // ── Row 13: section subtitle (italic red) ─────────────────────────────
+  // Row 13: section subtitle (italic red)
   ws['A13'] = c(tr('sectionTitle', lang), { sz: 9, italic: true, color: 'FF0000', borders: false })
   for (let ci = 1; ci <= LAST_COL; ci++) ws[`${colLetter(ci)}13`] = empty(undefined, false)
   merges.push({ s: { r: 12, c: 0 }, e: { r: 12, c: LAST_COL } })
 
-  // ── Rows 14–15: spacers ───────────────────────────────────────────────
+  // Rows 14-15: spacers
   for (let row = 14; row <= 15; row++)
     for (let ci = 0; ci <= LAST_COL; ci++) ws[`${colLetter(ci)}${row}`] = empty(undefined, false)
 
-  // ── Rows 16–17: column headers ────────────────────────────────────────
+  // Rows 16-17: column headers
   const hdr = (v: string) => c(v, { bold: true, bg: HEADER_BG, wrap: true, halign: 'center', valign: 'middle' })
 
   // Row 16 super-headers
@@ -218,7 +218,7 @@ function buildRecognitionSheet(
     merges.push({ s: { r: 15, c: ci }, e: { r: 16, c: ci } })
   }
 
-  // Row 17 — phantom cells for rowspan cols, sub-headers for H–M
+  // Row 17: phantom cells for rowspan cols, sub-headers for H-M
   ws['A17'] = hdr('')
   ws['B17'] = hdr('')
   ws['C17'] = hdr('')
@@ -238,7 +238,7 @@ function buildRecognitionSheet(
   ws['P17'] = hdr('')
   ws['Q17'] = hdr('')
 
-  // ── Data rows (from row 18) — NO spacer rows between groups ──────────
+  // Data rows (from row 18), no spacer rows between groups
   const groups = new Map<string, typeof recognition.entries>()
   for (const entry of recognition.entries) {
     if (!groups.has(entry.foreignCourseCode)) groups.set(entry.foreignCourseCode, [])
@@ -312,10 +312,10 @@ function buildRecognitionSheet(
         merges.push({ s: { r: groupStart - 1, c: ci }, e: { r: groupEnd - 1, c: ci } })
       }
     }
-    // NO spacer row — groups are contiguous, matching the screenshot
+    // no spacer row, groups are contiguous, matching the screenshot
   }
 
-  // ── UKUPNO row ────────────────────────────────────────────────────────
+  // UKUPNO row
   const totalEcts = Math.round(recognition.entries.reduce((s, e) => s + e.awardedEcts, 0) * 10) / 10
   ws[`A${row}`] = c(tr('ukupno', lang), { bold: true, bg: HEADER_BG, halign: 'right' })
   for (let ci = 1; ci <= 11; ci++) ws[`${colLetter(ci)}${row}`] = empty(HEADER_BG)
@@ -325,7 +325,7 @@ function buildRecognitionSheet(
 
   row += 2  // one blank spacer after UKUPNO
 
-  // ── NAPOMENE section ──────────────────────────────────────────────────
+  // NAPOMENE section
   // Layout from screenshot:
   //   Col D = "NAPOMENE:" label (bold red), col E–M = napomena text (italic red)
   //   Col N–P = summary category rows (right side), col Q = blank no border
@@ -346,7 +346,7 @@ function buildRecognitionSheet(
   napomenaRow(row, '', tr('napomene2', lang)); row++
   napomenaRow(row, '', tr('napomene3', lang))
 
-  // ── Summary table (N–P columns, aligned with napomene rows) ──────────
+  // Summary table (N-P columns, aligned with napomene rows)
   // Screenshot: N–O merged (category name), P (ECTS), Q blank no border
   let sumRow = napRow
   for (const [, cat] of categoryTotals) {
@@ -412,7 +412,7 @@ function buildRecognitionSheet(
   return ws
 }
 
-// ── Sheet 2: Learning Agreement ───────────────────────────────────────────
+// Sheet 2: Learning Agreement
 
 function buildLASheet(
   la: LearningAgreementResponse,
@@ -435,21 +435,21 @@ function buildLASheet(
   // Total columns: col 0 = "Semesta", cols 1–30 = positions
   const TOTAL_COLS = 30
 
-  // ── Row 1: study profile name (plain, bold, large) ────────────────────
+  // Row 1: study profile name (plain, bold, large)
   ws['A1'] = c(exchange.studyProfile.name, { bold: true, sz: 11, borders: false })
   for (let ci = 1; ci <= TOTAL_COLS; ci++) ws[`${colLetter(ci)}1`] = empty(undefined, false)
   merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: TOTAL_COLS } })
 
-  // ── Row 2: blank spacer ───────────────────────────────────────────────
+  // Row 2: blank spacer
   for (let ci = 0; ci <= TOTAL_COLS; ci++) ws[`${colLetter(ci)}2`] = empty(undefined, false)
 
-  // ── Row 3: "Semesta" header + position numbers 1–30 + "Trans." ────────
+  // Row 3: "Semesta" header + position numbers 1-30 + "Trans."
   ws['A3'] = c('Semesta', { bold: true, bg: HEADER_BG, halign: 'center', valign: 'middle' })
   for (let pos = 1; pos <= 30; pos++) {
     ws[`${colLetter(pos)}3`] = c(pos, { bold: true, bg: HEADER_BG, halign: 'center', sz: 8 })
   }
 
-  // ── Rows 4–7: semesters 1–4 ───────────────────────────────────────────
+  // Rows 4-7: semesters 1-4
   for (let sem = 1; sem <= 4; sem++) {
     const rowNum = sem + 3  // sem1→row4, sem2→row5, sem3→row6, sem4→row7
 
@@ -505,7 +505,7 @@ function buildLASheet(
     }
   }
 
-  // ── Legend: rows 9–11, col B (colour swatch) + col C–F (label text) ─────
+  // Legend: rows 9-11, col B (colour swatch) + col C-F (label text)
   // Placed below the 4-semester table, matching the screenshot style.
   // Col B = filled square (space with bg), col C–F merged = label text
   const LEGEND_ENTRIES = [
@@ -554,7 +554,7 @@ function buildLASheet(
   return ws
 }
 
-// ── Main export function ──────────────────────────────────────────────────
+// Main export function
 
 export function exportRecognitionExcel(
   recognition: RecognitionResponse,

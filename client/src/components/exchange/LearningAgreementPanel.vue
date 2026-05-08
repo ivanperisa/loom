@@ -563,6 +563,10 @@ function cancelEditEcts() {
                 :key="`removed-${removed.id}`"
                 class="la-mapping-item la-mapping-removed"
               >
+                <svg class="la-mapping-x" aria-hidden="true" preserveAspectRatio="none">
+                  <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5"/>
+                  <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5"/>
+                </svg>
                 <span class="la-mapping-text">
                   <span style="font-weight: 700">{{ removed.foreignCourseCode }}</span><br />
                   <span style="font-size: 10px; color: var(--color-primary-light)">{{ removed.foreignCourseNameEn }}</span><br />
@@ -781,7 +785,7 @@ function cancelEditEcts() {
 </template>
 
 <style scoped>
-/* ── Shared doc-table styles ─────────────────────────────────────── */
+/* Shared doc-table styles */
 .doc-table-wrap {
   font-family: Calibri, Arial, sans-serif;
 }
@@ -794,7 +798,7 @@ function cancelEditEcts() {
   align-items: center;
 }
 
-/* ── Slot cell ───────────────────────────────────────────────────── */
+/* Slot cell */
 .la-slot-cell {
   border: 1px solid #aaa;
   vertical-align: top;
@@ -831,31 +835,18 @@ function cancelEditEcts() {
   line-height: 1.3;
 }
 
-/* Removed mapping: X cross overlay */
+/* Removed mapping */
 .la-mapping-removed {
   position: relative;
   opacity: 0.65;
   pointer-events: none;
 }
-.la-mapping-removed::before {
-  content: '';
+.la-mapping-x {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      to bottom right,
-      transparent calc(50% - 1px),
-      #cc0000 calc(50% - 1px),
-      #cc0000 calc(50% + 1px),
-      transparent calc(50% + 1px)
-    ),
-    linear-gradient(
-      to bottom left,
-      transparent calc(50% - 1px),
-      #cc0000 calc(50% - 1px),
-      #cc0000 calc(50% + 1px),
-      transparent calc(50% + 1px)
-    );
+  width: 100%;
+  height: 100%;
   pointer-events: none;
+  overflow: visible;
 }
 </style>

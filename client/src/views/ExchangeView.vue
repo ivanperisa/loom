@@ -51,64 +51,25 @@ onMounted(async () => {
 
         <h1 class="text-2xl font-bold text-light">{{ t('exchange.title') }}</h1>
 
-        <!-- Foreign institution -->
-        <div class="mt-4 rounded-xl border border-primary/20 bg-dark-2 p-5">
-          <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-light/60">
-            {{ t('exchange.foreignInstitution') }}
-          </h3>
-          <dl class="space-y-2 text-sm">
-            <div>
-              <dt class="text-light/60">{{ t('exchange.institution') }}</dt>
-              <dd class="font-medium text-light">
-                {{ exchangeStore.exchange.foreignProgram.institutionName }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-light/60">{{ t('exchange.program') }}</dt>
-              <dd class="font-medium text-light">
-                {{ exchangeStore.exchange.foreignProgram.name }}
-              </dd>
-            </div>
-          </dl>
-        </div>
+        <!-- Exchange header -->
+        <div class="mt-4 rounded-xl border border-primary/20 bg-dark-2 px-5 py-4">
+          <p class="text-xs font-semibold uppercase tracking-wide text-light/50">{{ t('exchange.foreignInstitution') }}</p>
+          <p class="mt-1 text-base font-semibold text-light">{{ exchangeStore.exchange.foreignProgram.institutionName }}</p>
+          <p class="text-sm text-light/70">{{ exchangeStore.exchange.foreignProgram.name }}</p>
 
-        <!-- Exchange details -->
-        <div class="mt-4 rounded-xl border border-primary/20 bg-dark-2 p-5">
-          <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
-            <div>
-              <dt class="text-light/60">{{ t('exchange.academicYear') }}</dt>
-              <dd class="font-medium text-light">{{ exchangeStore.exchange.academicYear }}</dd>
-            </div>
-            <div>
-              <dt class="text-light/60">{{ t('exchange.semester') }}</dt>
-              <dd class="font-medium text-light">
-                {{ t(`exchangeSemester.${exchangeStore.exchange.semesterType}`) }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-light/60">{{ t('exchange.studySemester') }}</dt>
-              <dd class="font-medium text-light">{{ exchangeStore.exchange.studySemester }}</dd>
-            </div>
-            <div v-if="isCoordinator && exchangeStore.exchange.studentName">
-              <dt class="text-light/60">{{ t('exchange.student') }}</dt>
-              <dd class="font-medium text-light">{{ exchangeStore.exchange.studentName }}</dd>
-            </div>
-          </dl>
+          <div class="my-3 border-t border-primary/15"></div>
 
-          <dl
-            class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 border-t border-primary/20 pt-4 text-sm sm:grid-cols-4"
-          >
-            <div>
-              <dt class="text-light/60">{{ t('exchange.coordinatorLabel') }}</dt>
-              <dd class="font-medium text-light">
-                {{ exchangeStore.exchange.coordinatorName ?? t('exchange.noCoordinator') }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-light/60">{{ t('exchange.mentor') }}</dt>
-              <dd class="font-medium text-light">{{ exchangeStore.exchange.mentor ?? '-' }}</dd>
-            </div>
-          </dl>
+          <div class="flex flex-wrap gap-x-6 gap-y-1.5 text-sm">
+            <span class="text-light/50">{{ t('exchange.academicYear') }}: <span class="font-medium text-light">{{ exchangeStore.exchange.academicYear }}</span></span>
+            <span class="text-light/50">{{ t('exchange.semester') }}: <span class="font-medium text-light">{{ t(`exchangeSemester.${exchangeStore.exchange.semesterType}`) }}</span></span>
+            <span class="text-light/50">{{ t('exchange.studySemester') }}: <span class="font-medium text-light">{{ exchangeStore.exchange.studySemester }}</span></span>
+            <span v-if="isCoordinator && exchangeStore.exchange.studentName" class="text-light/50">{{ t('exchange.student') }}: <span class="font-medium text-light">{{ exchangeStore.exchange.studentName }}</span></span>
+          </div>
+
+          <div class="mt-1.5 flex flex-wrap gap-x-6 gap-y-1 text-sm text-light/40">
+            <span>{{ t('exchange.coordinatorLabel') }}: <span class="text-light/60">{{ exchangeStore.exchange.coordinatorName ?? t('exchange.noCoordinator') }}</span></span>
+            <span>{{ t('exchange.mentor') }}: <span class="text-light/60">{{ exchangeStore.exchange.mentor ?? '-' }}</span></span>
+          </div>
         </div>
 
         <!-- Tabs -->

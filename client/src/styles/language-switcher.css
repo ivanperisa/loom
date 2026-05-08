@@ -67,7 +67,7 @@
   background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
-/* Dark variant — for use on dark backgrounds (AppHeader, OnboardingView) */
+/* Dark variant, for use on dark backgrounds (AppHeader, OnboardingView) */
 .language-switcher.variant-dark {
   background: transparent;
   border-color: transparent;

@@ -123,7 +123,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     }
   }
 
-  // ── Fetch actions ─────────────────────────────────────────────────────────
+  // Fetch actions
 
   async function fetchMySummaries() {
     loading.value = true
@@ -187,7 +187,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     }
   }
 
-  // ── Batch save ────────────────────────────────────────────────────────────
+  // Batch save
 
   async function saveLearningAgreement(exchangeId: string) {
     try {
@@ -221,7 +221,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     }
   }
 
-  // ── Status & coordinator ──────────────────────────────────────────────────
+  // Status & coordinator
 
   async function updateLearningAgreementStatus(
     exchangeId: string,
