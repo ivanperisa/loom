@@ -395,6 +395,9 @@ export default {
     availableCourses: 'Dostupni predmeti',
     allMapped: 'Svi predmeti su u potpunosti mapirani.',
     noMapped: 'Još nema mapiranih predmeta.',
+    searchPlaceholder: 'Pretraži po kodu predmeta...',
+    searchHint: 'Upiši kod predmeta za pretragu',
+    noResults: 'Nema rezultata',
   },
   table: {
     semester: 'Semestar',

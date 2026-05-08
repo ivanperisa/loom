@@ -16,6 +16,7 @@ const exchangeStore = useExchangeStore()
 
 const courses = ref<ForeignCourseResponse[]>([])
 const loading = ref(true)
+const searchCode = ref('')
 
 onMounted(async () => {
   try {
@@ -51,6 +52,12 @@ const availableCourses = computed(() =>
   courses.value.filter(c => mappedEcts(c.id) < c.ects)
 )
 
+const searchResults = computed(() => {
+  const q = searchCode.value.trim().toLowerCase()
+  if (!q) return []
+  return availableCourses.value.filter(c => c.code.toLowerCase().includes(q))
+})
+
 function onDragStart(course: ForeignCourseResponse) {
   exchangeStore.startDrag(course)
 }
@@ -64,12 +71,23 @@ function onDragStart(course: ForeignCourseResponse) {
     </div>
 
     <template v-else>
-      <!-- Available variant: courses not fully mapped (draggable) -->
+      <!-- Available variant: courses not fully mapped (searchable, draggable) -->
       <template v-if="variant === 'available' || variant === 'all'">
-        <p v-if="variant === 'all'" class="mb-3 text-xs text-light/60">{{ t('foreignCourses.dragHint') }}</p>
+        <input
+          v-model="searchCode"
+          type="text"
+          :placeholder="t('foreignCourses.searchPlaceholder')"
+          class="mb-3 w-full rounded-lg border border-primary/20 bg-dark-2 px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
+        />
         <div class="max-h-[400px] space-y-1.5 overflow-y-auto pr-1">
+          <p v-if="searchCode.trim() === ''" class="py-4 text-center text-xs text-light/60">
+            {{ t('foreignCourses.searchHint') }}
+          </p>
+          <p v-else-if="searchResults.length === 0" class="py-4 text-center text-xs text-light/60">
+            {{ t('foreignCourses.noResults') }}
+          </p>
           <div
-            v-for="course in availableCourses"
+            v-for="course in searchResults"
             :key="course.id"
             draggable="true"
             class="flex items-center gap-3 rounded-lg border border-primary/20 bg-dark-2 px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
@@ -98,9 +116,6 @@ function onDragStart(course: ForeignCourseResponse) {
               </span>
             </div>
           </div>
-          <p v-if="availableCourses.length === 0" class="py-4 text-center text-xs text-light/60">
-            {{ t('foreignCourses.allMapped') }}
-          </p>
         </div>
       </template>
 

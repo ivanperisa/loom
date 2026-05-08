@@ -395,6 +395,9 @@ export default {
     availableCourses: 'Available courses',
     allMapped: 'All courses have been fully mapped.',
     noMapped: 'No courses mapped yet.',
+    searchPlaceholder: 'Search by course code...',
+    searchHint: 'Enter a course code to search',
+    noResults: 'No results',
   },
   table: {
     semester: 'Semester',
