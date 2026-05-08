@@ -14,7 +14,6 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const expandedStudentId = ref<string | null>(null)
 
-
 interface StudentGroup {
   studentId: string
   studentName: string
@@ -67,22 +66,38 @@ function viewExchange(exchangeId: string) {
 
       <!-- Loading skeleton -->
       <div v-if="loading" class="space-y-4">
-        <div v-for="i in 3" :key="i" class="animate-pulse rounded-xl border border-primary/20 bg-dark-2 p-5">
+        <div
+          v-for="i in 3"
+          :key="i"
+          class="animate-pulse rounded-xl border border-primary/20 bg-dark-2 p-5"
+        >
           <div class="h-5 w-48 rounded bg-primary/20"></div>
           <div class="mt-3 h-4 w-72 rounded bg-primary/20"></div>
         </div>
       </div>
 
       <!-- Error -->
-      <div v-else-if="error" class="rounded-xl border border-red-400/30 bg-red-900/20 p-8 text-center">
+      <div
+        v-else-if="error"
+        class="rounded-xl border border-red-400/30 bg-red-900/20 p-8 text-center"
+      >
         <p class="text-red-300">{{ error }}</p>
       </div>
 
       <!-- Empty -->
-      <div v-else-if="students.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
+      <div
+        v-else-if="students.length === 0"
+        class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center"
+      >
         <svg class="mx-auto h-12 w-12 text-light/60" viewBox="0 0 24 24" fill="none">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/>
+          <path
+            d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5" />
         </svg>
         <p class="mt-3 text-light/60">{{ t('coordinator.noStudents') }}</p>
       </div>
@@ -105,22 +120,39 @@ function viewExchange(exchangeId: string) {
               <svg
                 class="h-4 w-4 text-light/60 transition-transform"
                 :class="{ 'rotate-90': expandedStudentId === student.studentId }"
-                viewBox="0 0 20 20" fill="currentColor"
+                viewBox="0 0 20 20"
+                fill="currentColor"
               >
-                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                <path
+                  fill-rule="evenodd"
+                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                  clip-rule="evenodd"
+                />
               </svg>
               <div>
                 <h3 class="text-lg font-semibold text-light">{{ student.studentName }}</h3>
-                <p v-if="student.studentJmbag" class="mt-0.5 font-mono text-sm text-light/60">{{ student.studentJmbag }}</p>
+                <p v-if="student.studentJmbag" class="mt-0.5 font-mono text-sm text-light/60">
+                  {{ student.studentJmbag }}
+                </p>
               </div>
             </div>
-            <span class="rounded-full bg-primary/20 px-3 py-1 text-xs font-medium text-primary-light">
-              {{ student.exchanges.length }} {{ student.exchanges.length === 1 ? t('coordinator.exchangeCount') : t('coordinator.exchangesCount') }}
+            <span
+              class="rounded-full bg-primary/20 px-3 py-1 text-xs font-medium text-primary-light"
+            >
+              {{ student.exchanges.length }}
+              {{
+                student.exchanges.length === 1
+                  ? t('coordinator.exchangeCount')
+                  : t('coordinator.exchangesCount')
+              }}
             </span>
           </button>
 
           <!-- Expanded: exchange list -->
-          <div v-if="expandedStudentId === student.studentId" class="border-t border-primary/20 px-5 pb-4 pt-3">
+          <div
+            v-if="expandedStudentId === student.studentId"
+            class="border-t border-primary/20 px-5 pb-4 pt-3"
+          >
             <div class="space-y-2">
               <div
                 v-for="ex in student.exchanges"
@@ -130,31 +162,43 @@ function viewExchange(exchangeId: string) {
               >
                 <div class="flex-1">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-medium text-light">{{ ex.foreignInstitutionName }}</span>
-                    <span
-                      class="rounded-full border px-2 py-0.5 text-xs font-medium"
-                      :class="statusColorClass[ex.learningAgreementStatus] ?? statusColorClass.Draft"
-                    >
-                      {{ t('exchange.tabs.learningAgreement') }}: {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
+                    <span class="text-xs font-medium text-light/50">
+                      {{ ex.academicYear }} &middot; {{ t(`exchangeSemester.${ex.semesterType}`) }}
                     </span>
                     <span
-                      v-if="ex.learningAgreementStatus === 'Approved' || ex.recognitionStatus"
-                      class="rounded-full border px-2 py-0.5 text-xs font-medium"
-                      :class="statusColorClass[ex.recognitionStatus ?? 'Draft'] ?? statusColorClass.Draft"
+                      class="rounded-full border px-2 py-0.5 text-xs font-semibold"
+                      :class="statusColorClass[ex.learningAgreementStatus]"
                     >
-                      {{ t('exchange.tabs.recognition') }}: {{ t(`documentStatus.${ex.recognitionStatus ?? 'Draft'}`) }}
+                      {{ t('exchange.tabs.learningAgreement') }}:
+                      {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
+                    </span>
+                    <span
+                      class="rounded-full border px-2 py-0.5 text-xs font-semibold"
+                      :class="statusColorClass[ex.recognitionStatus]"
+                    >
+                      {{ t('exchange.tabs.recognition') }}:
+                      {{ t(`documentStatus.${ex.recognitionStatus}`) }}
                     </span>
                   </div>
-                  <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-light/60">
-                    <span>{{ ex.foreignProgramName }}</span>
-                    <span>&middot;</span>
-                    <span>{{ ex.academicYear }}</span>
-                    <span>&middot;</span>
-                    <span>{{ t(`exchangeSemester.${ex.semesterType}`) }}</span>
-                  </div>
+
+                  <!-- Row 2: strani fakultet -->
+                  <p class="mt-2.5 text-sm font-semibold text-light">
+                    {{ ex.foreignInstitutionName }}
+                  </p>
+                  <p class="text-xs text-light/60">{{ ex.foreignProgramName }}</p>
+
+                  <!-- Row 3: studij · profil -->
+                  <p class="mt-1.5 text-xs text-light/40">
+                    {{ ex.studyProgramName
+                    }}<span v-if="ex.studyProfileName"> &middot; {{ ex.studyProfileName }}</span>
+                  </p>
                 </div>
                 <svg class="h-5 w-5 text-light/60" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                  <path
+                    fill-rule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    clip-rule="evenodd"
+                  />
                 </svg>
               </div>
             </div>

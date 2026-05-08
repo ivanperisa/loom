@@ -2,7 +2,6 @@ import { api } from './api'
 import type {
   CreateExchangeRequest,
   ExchangeResponse,
-  ExchangeSnapshotResponse,
   ExchangeSummaryResponse,
   LearningAgreementResponse,
   UpdateLearningAgreementStatusRequest,
@@ -29,8 +28,4 @@ export const exchangeService = {
     api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
   getMyStudents: () =>
     api.get<ExchangeSummaryResponse[]>('/api/exchanges/coordinator/students'),
-  getSnapshots: (exchangeId: string) =>
-    api.get<ExchangeSnapshotResponse[]>(`/api/exchanges/${exchangeId}/snapshots`),
-  getSnapshot: (exchangeId: string, snapshotId: string) =>
-    api.get<ExchangeSnapshotResponse>(`/api/exchanges/${exchangeId}/snapshots/${snapshotId}`),
 }

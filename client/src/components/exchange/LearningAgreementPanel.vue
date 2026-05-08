@@ -8,6 +8,8 @@ import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import type { CourseSlotResponse, LocalSlotMapping, SlotMode } from '@/types/exchange.types'
 import type { ForeignCourseResponse } from '@/types/institution.types'
+import { documentStatus } from '@/utils/documentStatus'
+import { slotMode } from '@/utils/slotMode'
 
 const props = defineProps<{
   exchangeId: string
@@ -44,23 +46,29 @@ async function submitExchange() {
   if (exchangeStore.isDirty) {
     await exchangeStore.saveLearningAgreement(props.exchangeId)
   }
-  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, { status: 'Submitted' })
+  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
+    status: documentStatus.Submitted,
+  })
   await exchangeStore.fetchExchange(props.exchangeId)
 }
 
 async function backToDraft() {
-  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, { status: 'Draft' })
+  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
+    status: documentStatus.Draft,
+  })
   await exchangeStore.fetchExchange(props.exchangeId)
 }
 
 async function approveExchange() {
-  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, { status: 'Approved' })
+  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
+    status: documentStatus.Approved,
+  })
   await exchangeStore.fetchExchange(props.exchangeId)
 }
 
 async function rejectExchange() {
   await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
-    status: 'Rejected',
+    status: documentStatus.Rejected,
     message: coordinatorMessage.value.trim() || null,
   })
   await exchangeStore.fetchExchange(props.exchangeId)
@@ -88,7 +96,7 @@ async function saveMessage() {
 
 const TOTAL_COLS = 30
 const SEMESTERS = [1, 2, 3, 4]
-const modes: SlotMode[] = ['AtHome', 'AtExchange', 'AfterExchange']
+const modes: SlotMode[] = [slotMode.AtHome, slotMode.AtExchange, slotMode.AfterExchange]
 
 const modeOutlineColor: Record<SlotMode, string> = {
   AtHome: '#4472C4',
@@ -109,10 +117,11 @@ function lineFor(courseSlotId: string) {
 }
 
 function deletedEntriesForSlot(slotId: string) {
-  const serverEntries = (exchangeStore.serverLearningAgreement?.entries ?? [])
-    .filter(e => e.courseSlotId === slotId && e.foreignCourseId !== null)
-  const localIds = new Set((lineFor(slotId)?.mappings ?? []).map(m => m.foreignCourseId))
-  return serverEntries.filter(e => e.isDeleted || !localIds.has(e.foreignCourseId!))
+  const serverEntries = (exchangeStore.serverLearningAgreement?.entries ?? []).filter(
+    (e) => e.courseSlotId === slotId && e.foreignCourseId !== null,
+  )
+  const localIds = new Set((lineFor(slotId)?.mappings ?? []).map((m) => m.foreignCourseId))
+  return serverEntries.filter((e) => e.isDeleted || !localIds.has(e.foreignCourseId!))
 }
 
 function slotsForSemester(sem: number): CourseSlotResponse[] {
@@ -127,13 +136,13 @@ function mappedEcts(slot: CourseSlotResponse): number {
 
 function ectsLabel(slot: CourseSlotResponse): string {
   const state = lineFor(slot.id)
-  if (!state || state.mode !== 'AtExchange') return ''
+  if (!state || state.mode !== slotMode.AtExchange) return ''
   return `${mappedEcts(slot)}/${slot.ects}`
 }
 
 function ectsColor(slot: CourseSlotResponse): string {
   const state = lineFor(slot.id)
-  if (!state || state.mode !== 'AtExchange') return 'transparent'
+  if (!state || state.mode !== slotMode.AtExchange) return 'transparent'
   const mapped = mappedEcts(slot)
   if (mapped === 0) return '#94a3b8'
   if (mapped < slot.ects) return '#f59e0b'
@@ -170,7 +179,7 @@ function cellStyle(slot: CourseSlotResponse): Record<string, string> {
   const state = lineFor(slot.id)
   const bg = slot.color
 
-  if (dragOverSlotId.value === slot.id && state?.mode === 'AtExchange') {
+  if (dragOverSlotId.value === slot.id && state?.mode === slotMode.AtExchange) {
     return {
       backgroundColor: 'color-mix(in srgb, var(--color-primary) 20%, transparent)',
       outline: '2px dashed var(--color-primary)',
@@ -179,7 +188,7 @@ function cellStyle(slot: CourseSlotResponse): Record<string, string> {
     }
   }
 
-  if (isDragging.value && state?.mode === 'AtExchange') {
+  if (isDragging.value && state?.mode === slotMode.AtExchange) {
     return {
       backgroundColor: bg,
       outline: '2px dashed var(--color-primary)',
@@ -212,8 +221,8 @@ function onDrop(event: DragEvent, slot: CourseSlotResponse) {
   dragOverSlotId.value = null
   const course = exchangeStore.draggingCourse
   if (!course) return
-  if (lineFor(slot.id)?.mode !== 'AtExchange') {
-    exchangeStore.localSetSlotMode(slot.id, 'AtExchange')
+  if (lineFor(slot.id)?.mode !== slotMode.AtExchange) {
+    exchangeStore.localSetSlotMode(slot.id, slotMode.AtExchange)
   }
   pendingDrop.value = { slot, course }
   exchangeStore.endDrag()
@@ -242,7 +251,7 @@ function cycleMode(slot: CourseSlotResponse) {
   if (!isEditable.value || slot.categoryCode === 'Thesis') return
   const state = lineFor(slot.id)
   if (!state) {
-    exchangeStore.localSetSlotMode(slot.id, 'AtHome')
+    exchangeStore.localSetSlotMode(slot.id, slotMode.AtHome)
   } else {
     const currentIndex = modes.indexOf(state.mode)
     if (currentIndex === modes.length - 1) {
@@ -282,7 +291,10 @@ function cancelEditEcts() {
     <!-- Status + Actions bar -->
     <div class="relative mb-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <StatusBadge :status="exchangeStore.serverLearningAgreement?.status ?? 'Draft'" />
+        <StatusBadge
+          v-if="exchangeStore.serverLearningAgreement"
+          :status="exchangeStore.serverLearningAgreement.status"
+        />
       </div>
       <span
         class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80"
@@ -293,14 +305,16 @@ function cancelEditEcts() {
         <!-- Student actions -->
         <template v-if="!isCoordinator">
           <button
-            v-if="exchangeStore.serverLearningAgreement?.status === 'Draft'"
+            v-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Draft"
             type="button"
             class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
             @click="submitExchange"
           >
             {{ t('exchange.actions.submit') }}
           </button>
-          <template v-else-if="exchangeStore.serverLearningAgreement?.status === 'Submitted'">
+          <template
+            v-else-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Submitted"
+          >
             <span
               class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60"
             >
@@ -315,7 +329,7 @@ function cancelEditEcts() {
             </button>
           </template>
           <button
-            v-else-if="exchangeStore.serverLearningAgreement?.status === 'Rejected'"
+            v-else-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Rejected"
             type="button"
             class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
             @click="backToDraft"
@@ -325,7 +339,9 @@ function cancelEditEcts() {
         </template>
         <!-- Coordinator actions -->
         <template v-if="isCoordinator">
-          <template v-if="exchangeStore.serverLearningAgreement?.status === 'Submitted'">
+          <template
+            v-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Submitted"
+          >
             <button
               type="button"
               class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
@@ -343,8 +359,8 @@ function cancelEditEcts() {
           </template>
           <button
             v-if="
-              exchangeStore.serverLearningAgreement?.status === 'Approved' ||
-              exchangeStore.serverLearningAgreement?.status === 'Rejected'
+              exchangeStore.serverLearningAgreement?.status === documentStatus.Approved ||
+              exchangeStore.serverLearningAgreement?.status === documentStatus.Rejected
             "
             type="button"
             class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
@@ -564,13 +580,34 @@ function cancelEditEcts() {
                 class="la-mapping-item la-mapping-removed"
               >
                 <svg class="la-mapping-x" aria-hidden="true" preserveAspectRatio="none">
-                  <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5"/>
-                  <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5"/>
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2="100%"
+                    y2="100%"
+                    stroke="rgba(204,0,0,0.75)"
+                    stroke-width="1.5"
+                  />
+                  <line
+                    x1="100%"
+                    y1="0"
+                    x2="0"
+                    y2="100%"
+                    stroke="rgba(204,0,0,0.75)"
+                    stroke-width="1.5"
+                  />
                 </svg>
                 <span class="la-mapping-text">
-                  <span style="font-weight: 700">{{ removed.foreignCourseCode }}</span><br />
-                  <span style="font-size: 10px; color: var(--color-primary-light)">{{ removed.foreignCourseNameEn }}</span><br />
-                  <span style="font-size: 10px; color: #777">{{ removed.foreignCourseNameHr ?? '-' }}</span><br />
+                  <span style="font-weight: 700">{{ removed.foreignCourseCode }}</span
+                  ><br />
+                  <span style="font-size: 10px; color: var(--color-primary-light)">{{
+                    removed.foreignCourseNameEn
+                  }}</span
+                  ><br />
+                  <span style="font-size: 10px; color: #777">{{
+                    removed.foreignCourseNameHr ?? '-'
+                  }}</span
+                  ><br />
                   <span style="color: #555; font-size: 10px">{{ removed.awardedEcts }} ECTS</span>
                 </span>
               </div>
@@ -582,9 +619,16 @@ function cancelEditEcts() {
                 @click.stop
               >
                 <span class="la-mapping-text">
-                  <span style="font-weight: 700">{{ mapping.foreignCourseCode }}</span><br />
-                  <span style="font-size: 10px; color: var(--color-primary-light)">{{ mapping.foreignCourseNameEn }}</span><br />
-                  <span style="font-size: 10px; color: #777">{{ mapping.foreignCourseNameHr ?? '-' }}</span><br />
+                  <span style="font-weight: 700">{{ mapping.foreignCourseCode }}</span
+                  ><br />
+                  <span style="font-size: 10px; color: var(--color-primary-light)">{{
+                    mapping.foreignCourseNameEn
+                  }}</span
+                  ><br />
+                  <span style="font-size: 10px; color: #777">{{
+                    mapping.foreignCourseNameHr ?? '-'
+                  }}</span
+                  ><br />
                   <template
                     v-if="editingMapping?.localId === mapping.localId"
                     :key="`edit-${mapping.localId}`"

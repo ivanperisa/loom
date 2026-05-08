@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { i18n } from '@/i18n'
 import { exchangeService } from '@/services/exchange.service'
+import { recognitionService } from '@/services/recognition.service'
+import { slotMode } from '@/utils/slotMode'
 import type {
   ExchangeSummaryResponse,
   ExchangeResponse,
@@ -15,6 +17,11 @@ import type {
   LearningAgreementEntryUpsertDto,
 } from '@/types/exchange.types'
 import type { ForeignCourseResponse } from '@/types/institution.types'
+import type {
+  RecognitionResponse,
+  SaveRecognitionRequest,
+  UpdateRecognitionStatusRequest,
+} from '@/types/recognition.types'
 
 function buildLocalFromServer(la: LearningAgreementResponse): LocalSlotState[] {
   const map = new Map<string, LocalSlotState>()
@@ -46,6 +53,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   const summaries = ref<ExchangeSummaryResponse[]>([])
   const exchange = ref<ExchangeResponse | null>(null)
   const serverLearningAgreement = ref<LearningAgreementResponse | null>(null)
+  const serverRecognition = ref<RecognitionResponse | null>(null)
   const localSlotStates = ref<LocalSlotState[]>([])
   const isDirty = ref(false)
   const loading = ref(false)
@@ -77,7 +85,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     const existing = localSlotStates.value.find((s) => s.courseSlotId === courseSlotId)
     if (existing) {
       existing.mode = mode
-      if (mode !== 'AtExchange') existing.mappings = []
+      if (mode !== slotMode.AtExchange) existing.mappings = []
     } else {
       localSlotStates.value.push({ courseSlotId, mode, mappings: [] })
     }
@@ -164,7 +172,6 @@ export const useExchangeStore = defineStore('exchange', () => {
       exchange.value = res.data
       return res.data
     } catch {
-      error.value = t('common.error')
       return null
     } finally {
       loading.value = false
@@ -193,7 +200,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     try {
       const entries: LearningAgreementEntryUpsertDto[] = []
       for (const s of localSlotStates.value) {
-        if (s.mode !== 'AtExchange' || s.mappings.length === 0) {
+        if (s.mode !== slotMode.AtExchange || s.mappings.length === 0) {
           entries.push({
             courseSlotId: s.courseSlotId,
             mode: s.mode,
@@ -216,7 +223,6 @@ export const useExchangeStore = defineStore('exchange', () => {
       localSlotStates.value = buildLocalFromServer(res.data)
       isDirty.value = false
     } catch (e: unknown) {
-      error.value = t('common.error')
       throw e
     }
   }
@@ -227,14 +233,10 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchangeId: string,
     request: UpdateLearningAgreementStatusRequest,
   ) {
-    try {
-      const res = await exchangeService.updateLearningAgreementStatus(exchangeId, request)
-      exchange.value = res.data
-      if (serverLearningAgreement.value) {
-        serverLearningAgreement.value = { ...serverLearningAgreement.value, status: request.status }
-      }
-    } catch {
-      error.value = t('common.error')
+    const res = await exchangeService.updateLearningAgreementStatus(exchangeId, request)
+    exchange.value = res.data
+    if (serverLearningAgreement.value) {
+      serverLearningAgreement.value = { ...serverLearningAgreement.value, status: request.status }
     }
   }
 
@@ -242,18 +244,40 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchangeId: string,
     request: UpdateCoordinatorMessageRequest,
   ) {
-    try {
-      const res = await exchangeService.updateCoordinatorMessage(exchangeId, request)
-      exchange.value = res.data
-    } catch {
-      error.value = t('common.error')
-    }
+    const res = await exchangeService.updateCoordinatorMessage(exchangeId, request)
+    exchange.value = res.data
+  }
+
+  // Recognition
+
+  async function fetchRecognition(exchangeId: string) {
+    const res = await recognitionService.getOrCreate(exchangeId)
+    serverRecognition.value = res.data
+  }
+
+  async function saveRecognition(exchangeId: string, request: SaveRecognitionRequest) {
+    const res = await recognitionService.saveRecognition(exchangeId, request)
+    serverRecognition.value = res.data
+  }
+
+  async function updateRecognitionStatus(
+    exchangeId: string,
+    request: UpdateRecognitionStatusRequest,
+  ) {
+    const res = await recognitionService.updateRecognitionStatus(exchangeId, request)
+    serverRecognition.value = res.data
+  }
+
+  async function setEntryRecognized(exchangeId: string, entryId: string, isRecognized: boolean | null) {
+    const res = await recognitionService.setEntryRecognized(exchangeId, entryId, isRecognized)
+    serverRecognition.value = res.data
   }
 
   return {
     summaries,
     exchange,
     serverLearningAgreement,
+    serverRecognition,
     localSlotStates,
     isDirty,
     slots,
@@ -279,5 +303,9 @@ export const useExchangeStore = defineStore('exchange', () => {
     saveLearningAgreement,
     updateLearningAgreementStatus,
     updateCoordinatorMessage,
+    fetchRecognition,
+    saveRecognition,
+    updateRecognitionStatus,
+    setEntryRecognized,
   }
 })

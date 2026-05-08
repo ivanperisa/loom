@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import { useExchangeStore } from '@/stores/exchange.store'
+import { exchangeSemester } from '@/utils/exchangeSemester'
 import type { StudyProgramResponse, StudyProfileResponse, ForeignProgramResponse } from '@/types/institution.types'
 import type { ExchangeSemester } from '@/types/exchange.types'
 
@@ -50,7 +51,7 @@ const selectedForeignProgram = computed(() =>
 
 // Step 3: Details
 const academicYear = ref('')
-const semesterType = ref<ExchangeSemester>('Winter')
+const semesterType = ref<ExchangeSemester>(exchangeSemester.Winter)
 const studySemester = ref<number>(1)
 
 // Reset profile when program changes
@@ -149,7 +150,7 @@ const stepKeys = [
 
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" @mousedown.self="emit('close')">
-    <div class="w-full max-w-lg rounded-xl border border-primary/20 bg-dark-2 shadow-xl">
+    <div class="w-full max-w-2xl rounded-xl border border-primary/20 bg-dark-2 shadow-xl">
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
         <h2 class="text-lg font-semibold text-light">{{ t('createExchange.title') }}</h2>
@@ -282,11 +283,11 @@ const stepKeys = [
                 type="button"
                 class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition"
                 :class="
-                  semesterType === 'Winter'
+                  semesterType === exchangeSemester.Winter
                     ? 'border-primary bg-dark-2 text-white'
                     : 'border-primary/20 bg-dark text-light/60 hover:border-light/60'
                 "
-                @click="semesterType = 'Winter'"
+                @click="semesterType = exchangeSemester.Winter"
               >
                 {{ t('exchangeSemester.Winter') }}
               </button>
@@ -294,11 +295,11 @@ const stepKeys = [
                 type="button"
                 class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition"
                 :class="
-                  semesterType === 'Summer'
+                  semesterType === exchangeSemester.Summer
                     ? 'border-primary bg-dark-2 text-white'
                     : 'border-primary/20 bg-dark text-light/60 hover:border-light/60'
                 "
-                @click="semesterType = 'Summer'"
+                @click="semesterType = exchangeSemester.Summer"
               >
                 {{ t('exchangeSemester.Summer') }}
               </button>

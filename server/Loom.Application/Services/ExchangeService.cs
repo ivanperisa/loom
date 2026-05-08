@@ -45,13 +45,18 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
     private async Task<LearningAgreement> GetOrCreateLaAsync(Guid exchangeId, CancellationToken ct)
     {
-        var la = await db.LearningAgreements.FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
-        if (la is not null) return la;
-        la = new LearningAgreement { ExchangeId = exchangeId, Status = DocumentStatus.Draft };
-        db.LearningAgreements.Add(la);
+        var learningAgreement = await db.LearningAgreements.FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+
+        if (learningAgreement is not null)
+            return learningAgreement;
+
+        learningAgreement = new LearningAgreement { ExchangeId = exchangeId, Status = DocumentStatus.Draft };
+
+        db.LearningAgreements.Add(learningAgreement);
         await db.SaveChangesAsync(ct);
-        la.Entries = new List<LearningAgreementEntry>();
-        return la;
+
+        learningAgreement.Entries = [];
+        return learningAgreement;
     }
 
     private IQueryable<LearningAgreement> LaWithEntries() => db.LearningAgreements
@@ -402,29 +407,37 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
     public async Task<ErrorOr<Deleted>> DeleteExchangeAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
     {
-        var exchange = await db.Exchanges.FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-        if (exchange.StudentId != requesterId) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var exchange = await db.Exchanges
+            .Include(e => e.Student)
+            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
 
-        var la = await db.LearningAgreements.FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
-        if (la?.Status != DocumentStatus.Draft)
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        if (exchange.StudentId != requesterId &&
+            exchange.Student.CoordinatorId != requesterId &&
+            exchange.Student.Role != UserRole.Admin)
+            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+
+        var la = await db.LearningAgreements
+            .Include(l => l.Entries)
+            .FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
+
+        var recognition = await db.Recognitions
+            .Include(r => r.Entries)
+            .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
+
+        if (la?.Status != DocumentStatus.Draft || recognition?.Status != DocumentStatus.Draft)
             return Error.Conflict("NOT_DRAFT", "Only draft exchanges can be deleted.");
 
         db.ExchangeSnapshots.RemoveRange(
             await db.ExchangeSnapshots.Where(s => s.ExchangeId == exchangeId).ToListAsync(ct));
 
-        var learningAgreement = await db.LearningAgreements
-            .Include(la => la.Entries)
-            .FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
-        if (learningAgreement is not null)
+        if (la is not null)
         {
-            db.LearningAgreementEntries.RemoveRange(learningAgreement.Entries);
-            db.LearningAgreements.Remove(learningAgreement);
+            db.LearningAgreementEntries.RemoveRange(la.Entries);
+            db.LearningAgreements.Remove(la);
         }
 
-        var recognition = await db.Recognitions.
-            Include(r => r.Entries).
-            FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is not null)
         {
             db.RecognitionEntries.RemoveRange(recognition.Entries);

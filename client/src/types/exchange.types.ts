@@ -1,8 +1,11 @@
+import type { documentStatus } from '@/utils/documentStatus'
+import type { slotMode } from '@/utils/slotMode'
+import type { exchangeSemester } from '@/utils/exchangeSemester'
 import type { StudyProfileResponse, ForeignProgramResponse } from './institution.types'
 
-export type DocumentStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected'
-export type ExchangeSemester = 'Winter' | 'Summer'
-export type SlotMode = 'AtHome' | 'AtExchange' | 'AfterExchange'
+export type DocumentStatus = (typeof documentStatus)[keyof typeof documentStatus]
+export type ExchangeSemester = (typeof exchangeSemester)[keyof typeof exchangeSemester]
+export type SlotMode = (typeof slotMode)[keyof typeof slotMode]
 export type CourseSlotCategory =
   | 'Mandatory'
   | 'CoreElective'
@@ -54,7 +57,7 @@ export interface ExchangeSummaryResponse {
   academicYear: string
   semesterType: ExchangeSemester
   learningAgreementStatus: DocumentStatus
-  recognitionStatus: string | null
+  recognitionStatus: DocumentStatus
 }
 
 export interface CourseSlotResponse {
@@ -99,21 +102,6 @@ export interface UpdateCoordinatorMessageRequest {
   message: string | null
 }
 
-export type SnapshotPhase = 'LearningAgreement' | 'Recognition'
-
-export interface ExchangeSnapshotResponse {
-  id: string
-  exchangeId: string
-  phase: SnapshotPhase
-  changedById: string
-  changedByName: string
-  createdAt: string
-  data: LearningAgreementSnapshotData | null
-}
-
-export interface LearningAgreementSnapshotData {
-  entries: LearningAgreementEntryResponse[]
-}
 
 export interface SaveLearningAgreementRequest {
   entries: LearningAgreementEntryUpsertDto[]

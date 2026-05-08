@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { statusColorClass } from '@/utils/statusColors'
+import type { DocumentStatus } from '@/types/exchange.types'
 
 const { t } = useI18n()
 
 defineProps<{
-  status: string
+  status: DocumentStatus
   i18nPrefix?: string
 }>()
 </script>
@@ -13,7 +14,7 @@ defineProps<{
 <template>
   <span
     class="rounded-full border px-3 py-0.5 text-xs font-semibold"
-    :class="statusColorClass[status] ?? statusColorClass['Draft']"
+    :class="statusColorClass[status]"
   >
     {{ t(`${i18nPrefix ?? 'documentStatus'}.${status}`) }}
   </span>

@@ -3,14 +3,11 @@ import { defineStore } from 'pinia'
 import { authService } from '@/services/auth.service'
 import { userService } from '@/services/user.service'
 import { api } from '@/services/api'
-import { i18n } from '@/i18n'
 import router from '@/router'
 import type { AuthMeResponse, UserRole } from '@/types/auth.types'
 import type { CompleteOnboardingRequest, UpdateProfileRequest } from '@/types/onboarding.types'
 
 export const useAuthStore = defineStore('auth', () => {
-  const t = i18n.global.t
-
   let initPromise: Promise<void> | null = null
   const user = ref<AuthMeResponse | null>(null)
   const loading = ref(false)
@@ -76,7 +73,6 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await userService.completeOnboarding(request)
       user.value = response.data
     } catch (e: unknown) {
-      error.value = t('common.error')
       throw e
     } finally {
       loading.value = false
@@ -90,7 +86,6 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await userService.updateProfile(request)
       user.value = response.data
     } catch (e: unknown) {
-      error.value = t('common.error')
       throw e
     } finally {
       loading.value = false

@@ -1,4 +1,5 @@
 import XLSX from 'xlsx-js-style'
+import { exchangeSemester } from '@/utils/exchangeSemester'
 import type { RecognitionResponse } from '@/types/recognition.types'
 import type { ExchangeResponse, LearningAgreementResponse, LearningAgreementEntryResponse } from '@/types/exchange.types'
 
@@ -114,8 +115,8 @@ function buildRecognitionSheet(
   exchange: ExchangeResponse,
   lang: Lang,
 ): Record<string, XlsxCell> {
-  const ws: Record<string, XlsxCell> = {}
-  const merges: object[] = []
+  const ws: XLSX.WorkSheet = {}
+  const merges: XLSX.Range[] = []
   const LAST_COL = 16  // Q (0-indexed), cols A–Q = 0–16
 
   // Row 1: title
@@ -181,7 +182,7 @@ function buildRecognitionSheet(
   }
   infoRowRight(9,  tr('faculty', lang),     exchange.foreignProgram.name)
   infoRowRight(10, tr('academicYear', lang), exchange.academicYear)
-  infoRowRight(11, tr('exchSemester', lang), exchange.semesterType === 'Winter' ? tr('winter', lang) : tr('summer', lang))
+  infoRowRight(11, tr('exchSemester', lang), exchange.semesterType === exchangeSemester.Winter ? tr('winter', lang) : tr('summer', lang))
   infoRowRight(12, tr('mentor', lang),      exchange.mentor)
 
   // Row 13: section subtitle (italic red)
@@ -419,8 +420,8 @@ function buildLASheet(
   exchange: ExchangeResponse,
   lang: Lang,
 ): Record<string, XlsxCell> {
-  const ws: Record<string, XlsxCell> = {}
-  const merges: object[] = []
+  const ws: XLSX.WorkSheet = {}
+  const merges: XLSX.Range[] = []
 
   // Group flat entries by courseSlotId for quick lookup
   const stateMap = new Map<string, { mode: string; entries: LearningAgreementEntryResponse[] }>()
