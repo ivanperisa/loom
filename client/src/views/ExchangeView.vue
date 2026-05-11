@@ -172,8 +172,6 @@ onMounted(async () => {
           <template v-else-if="activeTab === 'recognition'">
             <RecognitionPanel
               :exchange-id="exchangeId"
-              :exchange="exchangeStore.exchange!"
-              :learning-agreement="exchangeStore.serverLearningAgreement!"
               :study-profile-name="exchangeStore.exchange.studyProfile.name"
             />
           </template>

@@ -7,6 +7,7 @@ import { institutionService } from '@/services/institution.service'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { localizedName } from '@/utils/i18n.utils'
+import { userRole } from '../utils/userRole'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -15,7 +16,7 @@ const { t } = useI18n()
 const isCoordinatorOrAdmin = computed(() => authStore.canActAsCoordinator)
 
 // Step 1 choice: null = not yet chosen, 'Student' | 'Coordinator'
-const roleChoice = ref<'Student' | 'Coordinator' | null>(null)
+const roleChoice = ref<typeof userRole.Student | typeof userRole.Coordinator | null>(null)
 
 const steps = computed(() => {
   if (isCoordinatorOrAdmin.value) {
@@ -25,7 +26,7 @@ const steps = computed(() => {
     { id: 1, key: 'onboarding.steps.role' },
     { id: 2, key: 'onboarding.steps.institution' },
   ]
-  if (roleChoice.value !== 'Coordinator') {
+  if (roleChoice.value !== userRole.Coordinator) {
     base.push({ id: 3, key: 'onboarding.steps.jmbag' })
   }
   return base
@@ -95,7 +96,7 @@ async function finishOnboarding() {
     return
   }
 
-  const isRequestingCoordinator = !isCoordinatorOrAdmin.value && roleChoice.value === 'Coordinator'
+  const isRequestingCoordinator = !isCoordinatorOrAdmin.value && roleChoice.value === userRole.Coordinator
 
   if (!isRequestingCoordinator && !isCoordinatorOrAdmin.value) {
     if (!jmbag.value.trim()) {
@@ -201,10 +202,10 @@ async function logout() {
             <button
               type="button"
               class="w-full rounded-xl border px-4 py-4 text-left transition"
-              :class="roleChoice === 'Student'
+              :class="roleChoice === userRole.Student
                 ? 'border-primary bg-primary/10 text-light'
                 : 'border-primary/20 bg-dark text-light hover:border-primary/50'"
-              @click="roleChoice = 'Student'"
+              @click="roleChoice = userRole.Student"
             >
               <p class="font-semibold">{{ t('onboarding.roleStudent') }}</p>
               <p class="mt-0.5 text-xs text-light/60">{{ t('onboarding.roleStudentDesc') }}</p>
@@ -213,10 +214,10 @@ async function logout() {
             <button
               type="button"
               class="w-full rounded-xl border px-4 py-4 text-left transition"
-              :class="roleChoice === 'Coordinator'
+              :class="roleChoice === userRole.Coordinator
                 ? 'border-primary bg-primary/10 text-light'
                 : 'border-primary/20 bg-dark text-light hover:border-primary/50'"
-              @click="roleChoice = 'Coordinator'"
+              @click="roleChoice = userRole.Coordinator"
             >
               <p class="font-semibold">{{ t('onboarding.roleCoordinator') }}</p>
               <p class="mt-0.5 text-xs text-light/60">{{ t('onboarding.roleCoordinatorDesc') }}</p>

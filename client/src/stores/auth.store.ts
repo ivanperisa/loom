@@ -6,6 +6,7 @@ import { api } from '@/services/api'
 import router from '@/router'
 import type { AuthMeResponse, UserRole } from '@/types/auth.types'
 import type { CompleteOnboardingRequest, UpdateProfileRequest } from '@/types/onboarding.types'
+import { userRole } from '../utils/userRole'
 
 export const useAuthStore = defineStore('auth', () => {
   let initPromise: Promise<void> | null = null
@@ -19,9 +20,9 @@ export const useAuthStore = defineStore('auth', () => {
   const email = computed(() => user.value?.email ?? null)
   const name = computed(() => user.value?.name ?? null)
   const jmbag = computed(() => user.value?.jmbag ?? null)
-  const isAdmin = computed(() => user.value?.role === 'Admin')
-  const isStudent = computed(() => user.value?.role === 'Student')
-  const canActAsCoordinator = computed(() => user.value?.role === 'Coordinator' || user.value?.role === 'Admin')
+  const isAdmin = computed(() => user.value?.role === userRole.Admin)
+  const isStudent = computed(() => user.value?.role === userRole.Student)
+  const canActAsCoordinator = computed(() => user.value?.role === userRole.Coordinator || user.value?.role === userRole.Admin)
 
   async function init(force = false) {
     if (initPromise && !force) return initPromise

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminService, type CoordinatorRequestResponse, type CoordinatorWhitelistEntryResponse, type UserListResponse } from '@/services/admin.service'
+import { userRole } from '../utils/userRole'
 
 const { t } = useI18n()
 
@@ -37,8 +38,8 @@ async function makeCoordinatorFromList(userId: string) {
   userActionId.value = userId
   try {
     await adminService.makeCoordinator(userId)
-    const u = users.value.find(x => x.id === userId)
-    if (u) { u.role = 'Coordinator'; u.coordinatorRequestStatus = null }
+    const u = users.value.find((x: { id: string }) => x.id === userId)
+    if (u) { u.role = userRole.Coordinator; u.coordinatorRequestStatus = null }
   } finally {
     userActionId.value = null
   }
@@ -49,7 +50,7 @@ async function removeCoordinatorFromList(userId: string) {
   try {
     await adminService.removeCoordinator(userId)
     const u = users.value.find(x => x.id === userId)
-    if (u) { u.role = 'Student'; u.coordinatorRequestStatus = null }
+    if (u) { u.role = userRole.Student; u.coordinatorRequestStatus = null }
   } finally {
     userActionId.value = null
   }
@@ -204,10 +205,10 @@ function formatDate(iso: string) {
             </div>
             <div class="flex items-center gap-2">
               <span class="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-                :class="u.role === 'Admin' ? 'border-purple-400/40 bg-purple-500/10 text-purple-300' : u.role === 'Coordinator' ? 'border-primary/40 bg-primary/10 text-primary-light' : 'border-primary/20 text-light/60'"
+                :class="u.role === userRole.Admin ? 'border-purple-400/40 bg-purple-500/10 text-purple-300' : u.role === userRole.Coordinator ? 'border-primary/40 bg-primary/10 text-primary-light' : 'border-primary/20 text-light/60'"
               >{{ t(`admin.users.role.${u.role}`) }}</span>
               <button
-                v-if="u.role === 'Student'"
+                v-if="u.role === userRole.Student"
                 type="button"
                 class="rounded-lg bg-primary/20 px-3 py-1.5 text-xs font-semibold text-primary-light transition hover:bg-primary/40 disabled:opacity-50"
                 :disabled="userActionId === u.id"
@@ -216,7 +217,7 @@ function formatDate(iso: string) {
                 {{ t('admin.users.makeCoordinator') }}
               </button>
               <button
-                v-if="u.role === 'Coordinator'"
+                v-if="u.role === userRole.Coordinator"
                 type="button"
                 class="rounded-lg border border-red-400/40 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
                 :disabled="userActionId === u.id"

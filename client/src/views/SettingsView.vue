@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { institutionService } from '@/services/institution.service'
 import type { InstitutionResponse } from '@/types/institution.types'
 import type { AuthMeResponse } from '@/types/auth.types'
+import { userRole } from '../utils/userRole'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -20,7 +21,7 @@ const saving = ref(false)
 const success = ref(false)
 const errorMsg = ref<string | null>(null)
 
-const isStudent = computed(() => authStore.role === 'Student')
+const isStudent = computed(() => authStore.role === userRole.Student)
 
 onMounted(async () => {
   const [instRes, coordRes] = await Promise.all([

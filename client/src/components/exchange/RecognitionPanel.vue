@@ -4,16 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useAuthStore } from '@/stores/auth.store'
 import type { RecognitionEntryResponse } from '@/types/recognition.types'
-import type { LearningAgreementResponse, ExchangeResponse } from '@/types/exchange.types'
-import { exportRecognitionExcel } from '@/utils/exportRecognition'
+import { exportExchangeExcel } from '@/utils/exportExchange'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import { documentStatus } from '@/utils/documentStatus'
 
 const props = defineProps<{
   exchangeId: string
-  exchange: ExchangeResponse
-  learningAgreement: LearningAgreementResponse
   studyProfileName: string
 }>()
 
@@ -171,17 +168,16 @@ function discardChanges() {
 
 function doExport() {
   if (!exchangeStore.serverRecognition) return
-  exportRecognitionExcel(
+  exportExchangeExcel(
     exchangeStore.serverRecognition,
-    props.learningAgreement,
-    props.exchange,
+    exchangeStore.serverLearningAgreement!,
+    exchangeStore.exchange!,
     locale.value,
   )
 }
 
-const totalCols = computed(() => 16)
-
 const rejectedBg = '#FFCCCC'
+
 </script>
 
 <template>
@@ -304,73 +300,31 @@ const rejectedBg = '#FFCCCC'
           "
         >
           <thead>
-            <!-- Row 1: super-headers + rowspanned headers -->
             <tr>
-              <th rowspan="2" class="rec-th" style="min-width: 70px">
-                {{ t('recognition.col.foreignCode') }}
-              </th>
-              <th rowspan="2" class="rec-th" style="min-width: 160px">
-                {{ t('recognition.col.foreignNameEn') }}
-              </th>
-              <th rowspan="2" class="rec-th" style="min-width: 90px">
-                {{ t('recognition.col.enrollmentStatus') }}
-              </th>
-              <th rowspan="2" class="rec-th" style="min-width: 140px">
-                {{ t('recognition.col.foreignNameHr') }}
-              </th>
-              <th rowspan="2" class="rec-th" style="min-width: 70px">
-                {{ t('recognition.col.hours') }}
-              </th>
-              <th rowspan="2" class="rec-th" style="min-width: 40px">
-                {{ t('recognition.col.ects') }}
-              </th>
-              <th rowspan="2" class="rec-th" style="min-width: 28px">
-                {{ t('recognition.col.rbr') }}
-              </th>
-
-              <!-- Super-header spanning 5 cols (H–L) -->
-              <th colspan="5" class="rec-th" style="font-size: 10px">
-                {{ t('recognition.col.recognizedAs') }}
-              </th>
-
-              <th rowspan="2" class="rec-th" style="min-width: 60px">
-                {{ t('recognition.col.originalGrade') }}
-              </th>
-              <th rowspan="2" class="rec-th" style="min-width: 55px">
-                {{ t('recognition.col.ectsGrade') }}
-              </th>
-              <th rowspan="2" class="rec-th" style="min-width: 55px">
-                {{ t('recognition.col.hrGrade') }}
-              </th>
-              <th rowspan="2" class="rec-th" style="min-width: 80px">
-                {{ t('recognition.col.examDate') }}
-              </th>
-            </tr>
-
-            <!-- Row 2: sub-headers -->
-            <tr>
-              <th class="rec-th" style="min-width: 130px; border-top: none">
-                {{ t('recognition.col.slotName') }}
-              </th>
-              <th class="rec-th" style="min-width: 55px; border-top: none">
-                {{ t('recognition.col.slotCode') }}
-              </th>
-              <th class="rec-th" style="min-width: 110px; border-top: none">
-                {{ t('recognition.col.slotCategory') }}
-              </th>
-              <th class="rec-th" style="min-width: 38px; border-top: none">
-                {{ t('recognition.col.semester') }}
-              </th>
-              <th class="rec-th" style="min-width: 50px; border-top: none">
-                {{ t('recognition.col.awardedEcts') }}
-              </th>
+              <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.foreignCode') }}</th>
+              <th class="rec-th" style="min-width: 160px">{{ t('recognition.col.foreignNameEn') }}</th>
+              <th class="rec-th" style="min-width: 90px">{{ t('recognition.col.enrollmentStatus') }}</th>
+              <th class="rec-th" style="min-width: 140px">{{ t('recognition.col.foreignNameHr') }}</th>
+              <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.hours') }}</th>
+              <th class="rec-th" style="min-width: 40px">{{ t('recognition.col.ects') }}</th>
+              <th class="rec-th" style="min-width: 28px">{{ t('recognition.col.rbr') }}</th>
+              <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.recognizedAs') }}</th>
+              <th class="rec-th" style="min-width: 130px">{{ t('recognition.col.slotName') }}</th>
+              <th class="rec-th" style="min-width: 55px">{{ t('recognition.col.slotCode') }}</th>
+              <th class="rec-th" style="min-width: 110px">{{ t('recognition.col.slotCategory') }}</th>
+              <th class="rec-th" style="min-width: 38px">{{ t('recognition.col.semester') }}</th>
+              <th class="rec-th" style="min-width: 50px">{{ t('recognition.col.awardedEcts') }}</th>
+              <th class="rec-th" style="min-width: 60px">{{ t('recognition.col.originalGrade') }}</th>
+              <th class="rec-th" style="min-width: 55px">{{ t('recognition.col.ectsGrade') }}</th>
+              <th class="rec-th" style="min-width: 55px">{{ t('recognition.col.hrGrade') }}</th>
+              <th class="rec-th" style="min-width: 80px">{{ t('recognition.col.examDate') }}</th>
             </tr>
           </thead>
 
           <tbody>
             <template v-for="group in courseGroups" :key="group.foreignCourseCode">
               <tr v-for="(entry, idx) in group.entries" :key="entry.learningAgreementEntryId">
-                <!-- A–F: foreign course data, rowspanned -->
+                <!-- A: Šifra predmeta -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
@@ -399,6 +353,8 @@ const rejectedBg = '#FFCCCC'
                     </button>
                   </div>
                 </td>
+
+                <!-- B: Naziv engleski -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
@@ -413,6 +369,8 @@ const rejectedBg = '#FFCCCC'
                     {{ group.foreignCourseNameHr }}
                   </div>
                 </td>
+
+                <!-- C: Status predmeta -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
@@ -428,6 +386,8 @@ const rejectedBg = '#FFCCCC'
                     placeholder="—"
                   />
                 </td>
+
+                <!--D: Naziv - hrvatski -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
@@ -436,6 +396,8 @@ const rejectedBg = '#FFCCCC'
                 >
                   {{ group.foreignCourseNameHr ?? '—' }}
                 </td>
+
+                <!-- E: Sati u obliku:... -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
@@ -444,6 +406,8 @@ const rejectedBg = '#FFCCCC'
                 >
                   {{ group.foreignCourseHours ?? '—' }}
                 </td>
+
+                <!-- F: ECTS -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
@@ -453,39 +417,41 @@ const rejectedBg = '#FFCCCC'
                   {{ group.foreignCourseEcts }}
                 </td>
 
-                <!-- G: Rbr. per slot -->
+                <!-- G: Rbr. -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{
-                    background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor,
-                  }"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
                   {{ idx + 1 }}
                 </td>
 
-                <!-- H: slot name -->
-                <td
-                  class="rec-td"
-                  :style="{
-                    background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor,
-                  }"
-                >
-                  {{ entry.courseSlotName }}
-                </td>
-
-                <!-- I: slot code -->
+                <!-- H: Priznaje se za predmet -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{
-                    background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor,
-                  }"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
                   {{ entry.courseSlotCode ?? '—' }}
                 </td>
 
-                <!-- J: category name -->
+                <!-- I: Naziv -->
                 <td
-                  class="rec-td rec-td--small"
+                  class="rec-td"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                >
+                  {{ entry.courseSlotName }}
+                </td>
+
+                <!-- J: Izb. grupa -->
+                <td
+                  class="rec-td rec-td--center"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                >
+                  {{ entry.courseSlotCategoryCode ?? '—' }}
+                </td>
+
+                <!-- K: Naziv izb. grupe -->
+                <td
+                  class="rec-td rec-td--center"
                   :style="{
                     background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor,
                   }"
@@ -493,17 +459,15 @@ const rejectedBg = '#FFCCCC'
                   {{ entry.courseSlotCategoryName }}
                 </td>
 
-                <!-- K: semester -->
+                <!-- L: Semestar -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{
-                    background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor,
-                  }"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
                   {{ entry.courseSlotSemester }}
                 </td>
 
-                <!-- L: awarded ECTS -->
+                <!-- M: Priznato ECTS-a -->
                 <td
                   class="rec-td rec-td--center rec-td--bold"
                   :style="{
@@ -513,12 +477,12 @@ const rejectedBg = '#FFCCCC'
                   {{ entry.awardedEcts }}
                 </td>
 
-                <!-- M–P: grades, rowspanned -->
+                <!-- N: Ocjena originalna -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
                 >
                   <input
                     v-if="editableGrades[group.foreignCourseCode]"
@@ -529,11 +493,12 @@ const rejectedBg = '#FFCCCC'
                     placeholder="—"
                   />
                 </td>
+                <!-- O: Ocjena ECTS (F-A) -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
                 >
                   <input
                     v-if="editableGrades[group.foreignCourseCode]"
@@ -544,11 +509,12 @@ const rejectedBg = '#FFCCCC'
                     placeholder="—"
                   />
                 </td>
+                <!-- P: Ocjena hrv... (1-5) -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
                 >
                   <input
                     v-if="editableGrades[group.foreignCourseCode]"
@@ -559,11 +525,12 @@ const rejectedBg = '#FFCCCC'
                     placeholder="—"
                   />
                 </td>
+                <!-- Q: Datum polaganja -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
                 >
                   <input
                     v-if="editableGrades[group.foreignCourseCode]"
@@ -585,7 +552,7 @@ const rejectedBg = '#FFCCCC'
 <style scoped>
 .rec-th {
   border: 1px solid #aaa;
-  background: #d9d9d9;
+  background: #ffffcc;
   padding: 3px 4px;
   text-align: center;
   font-size: 9px;

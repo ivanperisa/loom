@@ -1,3 +1,5 @@
+import { userRole } from "../utils/userRole"
+
 export interface AuthMeResponse {
   id: string
   email: string
@@ -13,4 +15,4 @@ export interface AuthMeResponse {
   coordinatorRequestStatus: 'Pending' | 'Rejected' | null
 }
 
-export type UserRole = 'Student' | 'Coordinator' | 'Admin'
+export type UserRole = (typeof userRole)[keyof typeof userRole]
