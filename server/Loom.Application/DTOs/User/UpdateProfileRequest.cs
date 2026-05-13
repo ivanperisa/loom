@@ -3,7 +3,7 @@ namespace Loom.Application.DTOs.User;
 public record UpdateProfileRequest(
     string Name,
     string? Jmbag,
-    Guid InstitutionId,
+    int InstitutionId,
     string? Mentor,
-    Guid? CoordinatorId
+    int? CoordinatorId
 );

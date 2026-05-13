@@ -79,10 +79,10 @@ const T: Record<string, Record<Lang, string>> = {
   napomeneTitle:    { hr: 'NAPOMENE:', en: 'NOTES:' },
   napomene1:        { hr: 'U Learning Agreement, tablica B stavlja KATEGORIJE PREDMETA, ne pojedine predmete!', en: 'In the Learning Agreement, Table B lists COURSE CATEGORIES, not individual courses!' },
   napomene2:        { hr: 'Za jezgrene i obvezne predmete mora biti 1:1 zamjena te se mora u tablici mapiranja navesti ime predmeta za kojeg se priznaje!', en: 'Core and mandatory courses require a 1:1 substitution — the course being substituted must be listed!' },
-  napomene3:        { hr: 'Poveznice zamijeniti stvarnim poveznicama na strane/domaće kolegije', en: 'Replace links with actual links to foreign/domestic courses' },
+  napomene3:        { hr: 'Poveznice zamijeniti stvarnim poveznicama na strane/domaće kolegije', en: 'Replace links with actual links to partner/domestic courses' },
   sheetRecognition: { hr: 'Priznavanje', en: 'Recognition' },
   sheetLA:          { hr: 'Ugovor o učenju', en: 'Learning Agreement' },
-  colForeignCode:   { hr: 'Šifra predmeta', en: 'Course Code' },
+  colPartnerCode:   { hr: 'Šifra predmeta', en: 'Course Code' },
   colNameEn:        { hr: 'Naziv engleski', en: 'Name (English)' },
   colStatus:        { hr: 'Status predmeta', en: 'Course Status' },
   colNameHr:        { hr: 'Naziv - hrvatski', en: 'Name (Croatian)' },
@@ -118,43 +118,33 @@ function buildRecognitionSheet(
   const ws: XLSX.WorkSheet = {}
   const merges: XLSX.Range[] = []
 
-  // Helper: label in D (right-aligned), value in E (left-aligned) — no merges
   function infoRow(row: number, label: string, value: string | null, labelColor?: string) {
     ws[`D${row}`] = c(label, { bold: true, halign: 'right', borders: false, color: labelColor })
     ws[`E${row}`] = c(value ?? '', { halign: 'left', borders: false })
   }
 
-  // Row 1: title — single cell, no merge
   ws['A1'] = c(tr('title', lang), { bold: true, sz: 11, borders: false })
 
-  // Row 2: spacer (empty row kept)
-
-  // Rows 3-6: student info
   infoRow(3, tr('student', lang), exchange.studentName)
   infoRow(4, tr('jmbag', lang), exchange.studentJmbag)
   infoRow(5, tr('studyType', lang), tr('studyTypeVal', lang))
   infoRow(6, tr('semester', lang), String(exchange.studySemester))
 
-  // Row 8: profile name prominent, rows 7-12: exchange info
-  ws['A8'] = c(`${tr('profileLabel', lang)} ${exchange.studyProfile.name}`, { bold: true, sz: 18, borders: false })
-  const uniUrl = (exchange.foreignProgram as any).url ?? ''
-  infoRow(7,  tr('university', lang),   uniUrl ? null : exchange.foreignProgram.institutionName, 'FF0000')
-  if (uniUrl) ws[`E7`] = link(exchange.foreignProgram.institutionName, uniUrl)
-  infoRow(9,  tr('faculty', lang),      exchange.foreignProgram.name)
+  ws['A8'] = c(`${tr('profileLabel', lang)} ${exchange.homeProfile.name}`, { bold: true, sz: 18, borders: false })
+  const uniUrl = (exchange.partnerProgram as any).url ?? ''
+  infoRow(7,  tr('university', lang),   uniUrl ? null : exchange.partnerProgram.institutionName, 'FF0000')
+  if (uniUrl) ws[`E7`] = link(exchange.partnerProgram.institutionName, uniUrl)
+  infoRow(9,  tr('faculty', lang),      exchange.partnerProgram.name)
   infoRow(10, tr('academicYear', lang),  exchange.academicYear)
   infoRow(11, tr('exchSemester', lang),  exchange.semesterType === exchangeSemester.Winter ? tr('winter', lang) : tr('summer', lang))
   infoRow(12, tr('mentor', lang),        exchange.mentor)
 
-  // Row 14: section subtitle — single cell, no merge
   ws['A14'] = c(tr('sectionTitle', lang), { sz: 9, italic: true, color: 'FF0000', borders: false })
 
-  // Row 13, 15: spacers (empty rows kept)
-
-  // Row 16: single header row
   const hdr      = (v: string) => c(v, { bold: true, bg: 'FFFFCC', wrap: true, halign: 'center', valign: 'middle' })
   const hdrGrade = (v: string) => c(v, { bold: true, bg: 'DDD9C3', wrap: true, halign: 'center', valign: 'middle' })
 
-  ws['A16'] = hdr(tr('colForeignCode', lang))
+  ws['A16'] = hdr(tr('colPartnerCode', lang))
   ws['B16'] = hdr(tr('colNameEn', lang))
   ws['C16'] = hdr(tr('colStatus', lang))
   ws['D16'] = hdr(tr('colNameHr', lang))
@@ -172,11 +162,10 @@ function buildRecognitionSheet(
   ws['P16'] = hdrGrade(tr('colHrGrade', lang))
   ws['Q16'] = hdrGrade(tr('colDate', lang))
 
-  // Data rows (from row 17), no spacer rows between groups
   const groups = new Map<string, typeof recognition.entries>()
   for (const entry of recognition.entries) {
-    if (!groups.has(entry.foreignCourseCode)) groups.set(entry.foreignCourseCode, [])
-    groups.get(entry.foreignCourseCode)!.push(entry)
+    if (!groups.has(entry.partnerCourseCode)) groups.set(entry.partnerCourseCode, [])
+    groups.get(entry.partnerCourseCode)!.push(entry)
   }
 
   let row = 17
@@ -184,7 +173,7 @@ function buildRecognitionSheet(
 
   for (const [, entries] of groups) {
     const isRejected = entries.some(e => e.isRecognized === false)
-    const foreignBg = isRejected ? RED_ROW_BG : 'FFFFFF'
+    const partnerBg = isRejected ? RED_ROW_BG : 'FFFFFF'
     const gradeBg = isRejected ? RED_ROW_BG : 'DDD9C3'
     const groupStart = row
     const groupEnd = row + entries.length - 1
@@ -192,34 +181,32 @@ function buildRecognitionSheet(
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i]
       if (!entry) continue
-      const slotBg = isRejected ? RED_ROW_BG : entry.courseSlotColor.replace('#', '')
+      const slotBg = isRejected ? RED_ROW_BG : entry.homeSlotColor.replace('#', '')
 
       if (i === 0) {
-        // Foreign course code: hyperlink if url available
-        const codeUrl = (entry as any).foreignCourseUrl ?? ''
+        const codeUrl = (entry as any).partnerCourseUrl ?? ''
         ws[`A${row}`] = codeUrl
-          ? link(entry.foreignCourseCode, codeUrl, foreignBg)
-          : c(entry.foreignCourseCode, { bg: foreignBg, bold: true, halign: 'center' })
+          ? link(entry.partnerCourseCode, codeUrl, partnerBg)
+          : c(entry.partnerCourseCode, { bg: partnerBg, bold: true, halign: 'center' })
 
-        // Foreign name EN: hyperlink if url available
         ws[`B${row}`] = codeUrl
-          ? link(entry.foreignCourseNameEn, codeUrl, foreignBg)
-          : c(entry.foreignCourseNameEn, { bg: foreignBg, wrap: true })
+          ? link(entry.partnerCourseNameEn, codeUrl, partnerBg)
+          : c(entry.partnerCourseNameEn, { bg: partnerBg, wrap: true })
 
-        ws[`C${row}`] = c(entry.enrollmentStatus, { bg: foreignBg })
-        ws[`D${row}`] = c(entry.foreignCourseNameHr, { bg: foreignBg, wrap: true })
-        ws[`E${row}`] = c(entry.foreignCourseHours, { bg: foreignBg, halign: 'center' })
-        ws[`F${row}`] = c(entry.foreignCourseEcts, { bg: foreignBg, halign: 'center', bold: true })
+        ws[`C${row}`] = c(entry.enrollmentStatus, { bg: partnerBg })
+        ws[`D${row}`] = c(entry.partnerCourseNameHr, { bg: partnerBg, wrap: true })
+        ws[`E${row}`] = c(entry.partnerCourseHours, { bg: partnerBg, halign: 'center' })
+        ws[`F${row}`] = c(entry.partnerCourseEcts, { bg: partnerBg, halign: 'center', bold: true })
       } else {
-        for (const col of ['A', 'B', 'C', 'D', 'E', 'F']) ws[`${col}${row}`] = empty(foreignBg)
+        for (const col of ['A', 'B', 'C', 'D', 'E', 'F']) ws[`${col}${row}`] = empty(partnerBg)
       }
 
       ws[`G${row}`] = c(i + 1, { halign: 'center' })
-      ws[`H${row}`] = c(entry.courseSlotCode, { halign: 'center' })
-      ws[`I${row}`] = c(entry.courseSlotName, { wrap: true })
-      ws[`J${row}`] = c(entry.courseSlotCategoryCode, { halign: 'center' })
-      ws[`K${row}`] = c(entry.courseSlotCategoryName, { bg: slotBg, wrap: true })
-      ws[`L${row}`] = c(entry.courseSlotSemester, { halign: 'center' })
+      ws[`H${row}`] = c(entry.homeSlotCourseIsvuCode, { halign: 'center' })
+      ws[`I${row}`] = c(entry.homeSlotCourseName, { wrap: true })
+      ws[`J${row}`] = c(entry.homeSlotCourseGroupIsvuCode, { halign: 'center' })
+      ws[`K${row}`] = c(entry.homeSlotCourseGroupName, { bg: slotBg, wrap: true })
+      ws[`L${row}`] = c(entry.homeSlotSemester, { halign: 'center' })
       ws[`M${row}`] = c(entry.awardedEcts, { bg: slotBg, halign: 'center', bold: true })
 
       if (i === 0) {
@@ -231,26 +218,22 @@ function buildRecognitionSheet(
         for (const col of ['N', 'O', 'P', 'Q']) ws[`${col}${row}`] = empty(gradeBg)
       }
 
-      // Accumulate category totals
-      const catKey = entry.courseSlotCategoryName
+      const catKey = entry.homeSlotCourseGroupName
       if (!categoryTotals.has(catKey)) {
-        categoryTotals.set(catKey, { name: catKey, color: entry.courseSlotColor.replace('#', ''), ects: 0 })
+        categoryTotals.set(catKey, { name: catKey, color: entry.homeSlotColor.replace('#', ''), ects: 0 })
       }
       categoryTotals.get(catKey)!.ects = Math.round((categoryTotals.get(catKey)!.ects + entry.awardedEcts) * 10) / 10
 
       row++
     }
 
-    // Merge foreign course columns (A–F, N–Q) across group rows if multi-slot
     if (entries.length > 1) {
       for (const ci of [0, 1, 2, 3, 4, 5, 13, 14, 15, 16]) {
         merges.push({ s: { r: groupStart - 1, c: ci }, e: { r: groupEnd - 1, c: ci } })
       }
     }
-    // no spacer row, groups are contiguous, matching the screenshot
   }
 
-  // UKUPNO row
   const totalEcts = Math.round(recognition.entries.reduce((s, e) => s + e.awardedEcts, 0) * 10) / 10
   ws[`A${row}`] = c(tr('ukupno', lang), { bold: true, bg: HEADER_BG, halign: 'right' })
   for (let ci = 1; ci <= 11; ci++) ws[`${colLetter(ci)}${row}`] = empty(HEADER_BG)
@@ -258,9 +241,8 @@ function buildRecognitionSheet(
   ws[`M${row}`] = c(totalEcts, { bold: true, bg: HEADER_BG, halign: 'center' })
   for (const col of ['N', 'O', 'P', 'Q']) ws[`${col}${row}`] = empty(HEADER_BG)
 
-  row += 2  // one blank spacer after UKUPNO
+  row += 2
 
-  // NAPOMENE section — B=label (right), C=text (left), no merges
   const napRow = row
   ws[`B${row}`] = c(tr('napomeneTitle', lang), { sz: 8, bold: true, italic: true, color: 'FF0000', halign: 'right', borders: false })
   ws[`C${row}`] = c(tr('napomene1', lang), { sz: 8, italic: true, color: 'FF0000', halign: 'left', borders: false })
@@ -269,14 +251,12 @@ function buildRecognitionSheet(
   row++
   ws[`C${row}`] = c(tr('napomene3', lang), { sz: 8, italic: true, color: 'FF0000', halign: 'left', borders: false })
 
-  // Summary table (N–O columns, aligned with napomene rows) — no merges
   let sumRow = napRow
   for (const [, cat] of categoryTotals) {
     ws[`N${sumRow}`] = c(cat.name, { bg: cat.color, sz: 8, borders: true, wrap: true })
     ws[`O${sumRow}`] = c(cat.ects, { bg: cat.color, halign: 'center', sz: 8, borders: true })
     sumRow++
   }
-  // UKUPNO summary row
   ws[`N${sumRow}`] = c(tr('ukupno', lang), { bg: HEADER_BG, bold: true, sz: 8, borders: true })
   ws[`O${sumRow}`] = c(totalEcts, { bg: HEADER_BG, bold: true, halign: 'center', sz: 8, borders: true })
 
@@ -285,42 +265,42 @@ function buildRecognitionSheet(
   ws['!merges'] = merges
 
   ws['!cols'] = [
-    { wch: 16 },  // A – šifra
-    { wch: 49 },  // B – naziv EN
-    { wch: 16 },  // C – status
-    { wch: 59 },  // D – naziv HR
-    { wch: 25 },  // E – sati
-    { wch: 6 },   // F – ECTS
-    { wch: 5 },   // G – Rbr
-    { wch: 12 },  // H – kod predmeta (courseSlotCode)
-    { wch: 26 },  // I – naziv predmeta (courseSlotName)
-    { wch: 10 },  // J – izb. grupa kod (courseSlotCategoryCode)
-    { wch: 22 },  // K – naziv izb. grupe
-    { wch: 8 },   // L – semestar
-    { wch: 10 },  // M – priznato ECTS
-    { wch: 14 },  // N – ocjena orig / summary name
-    { wch: 8 },   // O – ocjena ECTS / (merged)
-    { wch: 8 },   // P – ocjena hrv / summary ECTS
-    { wch: 14 },  // Q – datum
+    { wch: 16 },
+    { wch: 49 },
+    { wch: 16 },
+    { wch: 59 },
+    { wch: 25 },
+    { wch: 6 },
+    { wch: 5 },
+    { wch: 12 },
+    { wch: 26 },
+    { wch: 10 },
+    { wch: 22 },
+    { wch: 8 },
+    { wch: 10 },
+    { wch: 14 },
+    { wch: 8 },
+    { wch: 8 },
+    { wch: 14 },
   ]
 
   ws['!rows'] = [
-    { hpt: 14 },  // 1 – title
-    { hpt: 15 },  // 2 – spacer
-    { hpt: 13 },  // 3
-    { hpt: 13 },  // 4
-    { hpt: 13 },  // 5
-    { hpt: 13 },  // 6
-    { hpt: 13 },  // 7
-    { hpt: 24 },  // 8 – profile name (font 18)
-    { hpt: 13 },  // 9
-    { hpt: 13 },  // 10
-    { hpt: 13 },  // 11
-    { hpt: 13 },  // 12
-    { hpt: 15 },  // 13 – spacer
-    { hpt: 13 },  // 14 – section title
-    { hpt: 15 },  // 15 – spacer
-    { hpt: 40 },  // 16 – header row
+    { hpt: 14 },
+    { hpt: 15 },
+    { hpt: 13 },
+    { hpt: 13 },
+    { hpt: 13 },
+    { hpt: 13 },
+    { hpt: 13 },
+    { hpt: 24 },
+    { hpt: 13 },
+    { hpt: 13 },
+    { hpt: 13 },
+    { hpt: 13 },
+    { hpt: 15 },
+    { hpt: 13 },
+    { hpt: 15 },
+    { hpt: 40 },
   ]
 
   return ws
@@ -342,61 +322,54 @@ function buildLASheet(
   const ws: XLSX.WorkSheet = {}
   const merges: XLSX.Range[] = []
 
-  // Group flat entries by courseSlotId for quick lookup; skip deleted entries
   const stateMap = new Map<string, { mode: string; entries: LearningAgreementEntryResponse[] }>()
   for (const e of la.entries) {
-    if (!stateMap.has(e.courseSlotId)) stateMap.set(e.courseSlotId, { mode: e.mode, entries: [] })
-    if (e.foreignCourseId && !e.isDeleted) stateMap.get(e.courseSlotId)!.entries.push(e)
+    if (!stateMap.has(e.homeSlotId)) stateMap.set(e.homeSlotId, { mode: e.mode, entries: [] })
+    if (e.partnerCourseId && !e.isDeleted) stateMap.get(e.homeSlotId)!.entries.push(e)
   }
 
-  // Total columns: col 0 = "Semestar", cols 1–30 = positions
   const TOTAL_COLS = 30
 
-  // Row 1: study profile name (plain, bold, large)
-  ws['A1'] = c(exchange.studyProfile.name, { bold: true, sz: 11, borders: false })
+  ws['A1'] = c(exchange.homeProfile.name, { bold: true, sz: 11, borders: false })
   for (let ci = 1; ci <= TOTAL_COLS; ci++) ws[`${colLetter(ci)}1`] = empty(undefined, false)
   merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: TOTAL_COLS } })
 
-  // Row 2: blank spacer
   for (let ci = 0; ci <= TOTAL_COLS; ci++) ws[`${colLetter(ci)}2`] = empty(undefined, false)
 
-  // Row 3: "Semestar" header + position numbers 1-30 + "Trans."
   ws['A3'] = c('Semestar', { bold: true, bg: HEADER_BG, halign: 'center', valign: 'middle' })
   for (let pos = 1; pos <= 30; pos++) {
     ws[`${colLetter(pos)}3`] = c(pos, { bold: true, bg: HEADER_BG, halign: 'center', sz: 8 })
   }
 
-  // Rows 4-7: semesters 1-4
   for (let sem = 1; sem <= 4; sem++) {
-    const rowNum = sem + 3  // sem1→row4, sem2→row5, sem3→row6, sem4→row7
+    const rowNum = sem + 3
 
-    // Col A: semester number label
     ws[`A${rowNum}`] = c(sem, { bold: true, bg: HEADER_BG, halign: 'center', valign: 'middle' })
 
-    // Fill all position cells with empty bordered cells as background
     for (let pos = 1; pos <= TOTAL_COLS; pos++) {
       ws[`${colLetter(pos)}${rowNum}`] = empty(undefined, true)
     }
 
-    // Render each slot in this semester
     const semSlots = la.slots.filter(s => s.semester === sem)
     for (const slot of semSlots) {
       const state = stateMap.get(slot.id)
       const slotBg = slot.color.replace('#', '')
 
-      // Build cell text matching LearningAgreementPanel layout
+      const isvuCode = slot.courseIsvuCode ?? slot.courseGroupIsvuCode
+      const name = slot.courseName ?? slot.courseGroupName ?? ''
+
       const lines: string[] = []
-      if (slot.courseCode) lines.push(slot.courseCode)
-      lines.push(slot.courseName)
+      if (isvuCode) lines.push(String(isvuCode))
+      lines.push(name)
       for (const m of state?.entries ?? []) {
-        lines.push(m.foreignCourseCode ?? '')
-        if (m.foreignCourseNameEn) lines.push(`  ${m.foreignCourseNameEn}`)
-        if (m.foreignCourseNameHr) lines.push(`  ${m.foreignCourseNameHr}`)
+        lines.push(m.partnerCourseCode ?? '')
+        if (m.partnerCourseNameEn) lines.push(`  ${m.partnerCourseNameEn}`)
+        if (m.partnerCourseNameHr) lines.push(`  ${m.partnerCourseNameHr}`)
         lines.push(`  ${m.awardedEcts} ECTS`)
       }
       const text = lines.join('\n')
 
-      const startCol = slot.slotPosition          // 1-indexed position column
+      const startCol = slot.slotPosition
       const endCol = slot.slotPosition + slot.ects - 1
 
       const textColor = state?.mode ? (MODE_TEXT_COLOR[state.mode] ?? '000000') : '000000'
@@ -424,25 +397,18 @@ function buildLASheet(
     }
   }
 
-  // Legend: rows 9-11, col B (colour swatch) + col C-F (label text)
-  // Placed below the 4-semester table, matching the screenshot style.
-  // Col B = filled square (space with bg), col C–F merged = label text
   const LEGEND_ENTRIES = [
     { label: tr('laAtHome', lang),        swatchBg: '4472C4', textColor: '4472C4' },
     { label: tr('laAtExchange', lang),    swatchBg: 'FF0000', textColor: 'FF0000' },
     { label: tr('laAfterExchange', lang), swatchBg: '000000', textColor: '000000' },
   ]
 
-  // Row 8: blank spacer between table and legend
   for (let ci = 0; ci <= TOTAL_COLS; ci++) ws[`${colLetter(ci)}8`] = empty(undefined, false)
 
   LEGEND_ENTRIES.forEach(({ label, swatchBg, textColor }, i) => {
-    const r = 9 + i  // rows 9, 10, 11
-    // Col A: blank
+    const r = 9 + i
     ws[`A${r}`] = empty(undefined, false)
-    // Col B: colour swatch cell
     ws[`B${r}`] = c('  ', { bg: swatchBg, borders: true })
-    // Col C–F: label text, merged
     ws[`C${r}`] = c(label, { borders: false, sz: 9, color: textColor })
     for (let ci = 3; ci <= 6; ci++) ws[`${colLetter(ci)}${r}`] = empty(undefined, false)
     merges.push({ s: { r: r - 1, c: 2 }, e: { r: r - 1, c: 6 } })
@@ -452,22 +418,22 @@ function buildLASheet(
   ws['!merges'] = merges
 
   ws['!cols'] = [
-    { wch: 7 },                       // A – "Semestar"
-    ...Array(30).fill({ wch: 5.5 }), // positions 1–30
+    { wch: 7 },
+    ...Array(30).fill({ wch: 5.5 }),
   ]
 
   ws['!rows'] = [
-    { hpt: 20 },  // 1 – profile name
-    { hpt: 6 },   // 2 – spacer
-    { hpt: 20 },  // 3 – header
-    { hpt: 100 },  // 4 – sem 1
-    { hpt: 100 },  // 5 – sem 2
-    { hpt: 100 },  // 6 – sem 3
-    { hpt: 100 },  // 7 – sem 4
-    { hpt: 6 },   // 8 – spacer
-    { hpt: 14 },  // 9 – legend 1
-    { hpt: 14 },  // 10 – legend 2
-    { hpt: 14 },  // 11 – legend 3
+    { hpt: 20 },
+    { hpt: 6 },
+    { hpt: 20 },
+    { hpt: 100 },
+    { hpt: 100 },
+    { hpt: 100 },
+    { hpt: 100 },
+    { hpt: 6 },
+    { hpt: 14 },
+    { hpt: 14 },
+    { hpt: 14 },
   ]
 
   return ws

@@ -4,10 +4,15 @@ namespace Loom.Domain.Entities;
 
 public class RecognitionEntry : EntityBase
 {
-    public Guid RecognitionId { get; set; }
+    public int RecognitionId { get; set; }
     public Recognition Recognition { get; set; } = null!;
-    public Guid LearningAgreementEntryId { get; set; }
+
+    public int LearningAgreementEntryId { get; set; }
     public LearningAgreementEntry LearningAgreementEntry { get; set; } = null!;
+
+    public int? RecognizedAsCourseId { get; set; }
+    public HomeCourse? RecognizedAsCourse { get; set; }
+
     public string? EnrollmentStatus { get; set; }
     public string? OriginalGrade { get; set; }
     public string? EctsGrade { get; set; }

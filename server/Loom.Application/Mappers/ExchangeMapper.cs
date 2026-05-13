@@ -1,5 +1,5 @@
-using Loom.Application.DTOs.CourseSlot;
 using Loom.Application.DTOs.Exchange;
+using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.DTOs.Recognition;
 using Loom.Domain.Entities;
 
@@ -9,13 +9,14 @@ public static class ExchangeMapper
 {
     public static ExchangeResponse ToResponse(this Exchange exchange) => new(
         exchange.Id,
+        exchange.Guid,
         exchange.StudentId,
         exchange.Student.Name,
         exchange.Student.Jmbag,
-        exchange.StudyProfile.StudyProgram.Institution.Name,
-        exchange.StudyProfile.StudyProgram.Name,
-        exchange.StudyProfile.ToResponse(),
-        exchange.ForeignProgram.ToResponse(),
+        exchange.HomeProfile.Program.Institution.Name,
+        exchange.HomeProfile.Program.Name,
+        exchange.HomeProfile.ToResponse(),
+        exchange.PartnerProgram.ToResponse(),
         exchange.CoordinatorId,
         exchange.Coordinator?.Name,
         exchange.Student.Mentor,
@@ -29,46 +30,51 @@ public static class ExchangeMapper
 
     public static ExchangeSummaryResponse ToSummaryResponse(this Exchange exchange) => new(
         exchange.Id,
+        exchange.Guid,
         exchange.StudentId,
         exchange.Student.Name,
         exchange.Student.Jmbag,
-        exchange.ForeignProgram.Institution.Name,
-        exchange.ForeignProgram.Name,
-        exchange.StudyProfile.StudyProgram.Institution.Name,
-        exchange.StudyProfile.StudyProgram.Name,
-        exchange.StudyProfile.Name,
+        exchange.PartnerProgram.Institution.Name,
+        exchange.PartnerProgram.Name,
+        exchange.HomeProfile.Program.Institution.Name,
+        exchange.HomeProfile.Program.Name,
+        exchange.HomeProfile.Name,
         exchange.AcademicYear,
         exchange.SemesterType.ToString(),
         exchange.LearningAgreement!.Status.ToString(),
         exchange.Recognition?.Status.ToString()
     );
 
-    public static CourseSlotResponse ToResponse(this CourseSlot slot) => new(
+    public static HomeSlotResponse ToResponse(this HomeSlot slot) => new(
         slot.Id,
         slot.Semester,
         slot.SlotPosition,
         slot.Ects,
-        slot.CategoryCode,
-        slot.Category.Name,
-        slot.Category.NameEn,
-        slot.Category.Color,
-        slot.CourseCode,
-        slot.CourseName,
-        slot.CourseNameEn
+        slot.SlotTypeId,
+        slot.SlotType.Name,
+        slot.SlotType.NameEn,
+        slot.SlotType.Color,
+        slot.Course?.IsvuCode,
+        slot.Course?.Name,
+        slot.Course?.NameEn,
+        slot.CourseGroup?.IsvuCode,
+        slot.CourseGroup?.Name,
+        slot.CourseGroup?.NameEn
     );
 
     public static LearningAgreementEntryResponse ToResponse(this LearningAgreementEntry entry) => new(
         entry.Id,
-        entry.CourseSlotId,
+        entry.HomeSlotId,
         entry.Mode.ToString(),
-        entry.ForeignCourseId,
-        entry.ForeignCourse?.Code,
-        entry.ForeignCourse?.NameEn,
-        entry.ForeignCourse?.NameHr,
-        entry.AwardedEcts
+        entry.PartnerCourseId,
+        entry.PartnerCourse?.Code,
+        entry.PartnerCourse?.NameEn,
+        entry.PartnerCourse?.NameHr,
+        entry.AwardedEcts,
+        entry.IsDeleted
     );
 
-    public static ForeignCourseResponse ToResponse(this ForeignCourse course) => new(
+    public static PartnerCourseResponse ToResponse(this PartnerCourse course) => new(
         course.Id,
         course.Code,
         course.NameEn,
@@ -101,26 +107,34 @@ public static class ExchangeMapper
     public static RecognitionEntryResponse ToResponse(this RecognitionEntry entry)
     {
         var laEntry = entry.LearningAgreementEntry;
-        var fc = laEntry.ForeignCourse!;
-        var slot = laEntry.CourseSlot;
-        var hours = (fc.LecturesH.HasValue || fc.AuditoryH.HasValue || fc.LabH.HasValue)
-            ? $"{fc.LecturesH ?? 0}/{fc.AuditoryH ?? 0}/{fc.LabH ?? 0}"
+        var pc = laEntry.PartnerCourse!;
+        var slot = laEntry.HomeSlot;
+        var hours = (pc.LecturesH.HasValue || pc.AuditoryH.HasValue || pc.LabH.HasValue)
+            ? $"{pc.LecturesH ?? 0}/{pc.AuditoryH ?? 0}/{pc.LabH ?? 0}"
             : null;
+
+        var slotCourseName = slot.Course?.Name ?? string.Empty;
+        var slotCourseIsvuCode = slot.Course?.IsvuCode;
+        var slotCourseGroupIsvuCode = slot.CourseGroup?.IsvuCode;
+        var slotCourseGroupName = slot.CourseGroup?.Name ?? string.Empty;
+
         return new(
             entry.Id,
             entry.LearningAgreementEntryId,
-            fc.Code,
-            fc.NameEn,
-            fc.NameHr,
-            fc.Ects,
+            pc.Code,
+            pc.NameEn,
+            pc.NameHr,
             hours,
-            laEntry.AwardedEcts!.Value,
-            slot.CourseName,
-            slot.CourseCode,
-            slot.CategoryCode,
-            slot.Category.Name,
-            slot.Category.Color,
+            pc.Ects,
+            slotCourseIsvuCode,
+            slotCourseName,
+            slotCourseGroupIsvuCode,
+            slotCourseGroupName,
+            slot.SlotType.Color,
             slot.Semester,
+            laEntry.AwardedEcts!.Value,
+            entry.RecognizedAsCourseId,
+            entry.RecognizedAsCourse?.Name,
             entry.EnrollmentStatus,
             entry.OriginalGrade,
             entry.EctsGrade,

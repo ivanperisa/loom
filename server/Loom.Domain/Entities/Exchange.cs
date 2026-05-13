@@ -5,16 +5,18 @@ namespace Loom.Domain.Entities;
 
 public class Exchange : AuditableEntity
 {
-    public Guid StudentId { get; set; }
+    public Guid Guid { get; set; }
+
+    public int StudentId { get; set; }
     public User Student { get; set; } = null!;
 
-    public Guid StudyProfileId { get; set; }
-    public StudyProfile StudyProfile { get; set; } = null!;
+    public int HomeProfileId { get; set; }
+    public HomeProfile HomeProfile { get; set; } = null!;
 
-    public Guid ForeignProgramId { get; set; }
-    public ForeignProgram ForeignProgram { get; set; } = null!;
+    public int PartnerProgramId { get; set; }
+    public PartnerProgram PartnerProgram { get; set; } = null!;
 
-    public Guid? CoordinatorId { get; set; }
+    public int? CoordinatorId { get; set; }
     public User? Coordinator { get; set; }
 
     public string AcademicYear { get; set; } = null!;

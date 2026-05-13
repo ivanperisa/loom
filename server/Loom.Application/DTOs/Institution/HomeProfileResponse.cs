@@ -1,7 +1,7 @@
 namespace Loom.Application.DTOs.Institution;
 
-public record StudyProfileResponse(
-    Guid Id,
+public record HomeProfileResponse(
+    int Id,
     string Name,
     string? NameEn
 );

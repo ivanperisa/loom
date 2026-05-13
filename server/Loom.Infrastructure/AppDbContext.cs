@@ -9,13 +9,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<Institution> Institutions => Set<Institution>();
-    public DbSet<StudyProgram> StudyPrograms => Set<StudyProgram>();
-    public DbSet<StudyProfile> StudyProfiles => Set<StudyProfile>();
+    public DbSet<HomeProgram> HomePrograms => Set<HomeProgram>();
+    public DbSet<HomeProfile> HomeProfiles => Set<HomeProfile>();
+    public DbSet<HomeCourse> HomeCourses => Set<HomeCourse>();
+    public DbSet<HomeCourseGroup> HomeCourseGroups => Set<HomeCourseGroup>();
+    public DbSet<HomeSlot> HomeSlots => Set<HomeSlot>();
+    public DbSet<HomeSlotType> HomeSlotTypes => Set<HomeSlotType>();
+    public DbSet<PartnerProgram> PartnerPrograms => Set<PartnerProgram>();
+    public DbSet<PartnerCourse> PartnerCourses => Set<PartnerCourse>();
     public DbSet<Exchange> Exchanges => Set<Exchange>();
-    public DbSet<ForeignProgram> ForeignPrograms => Set<ForeignProgram>();
-    public DbSet<ForeignCourse> ForeignCourses => Set<ForeignCourse>();
-    public DbSet<CourseCategory> CourseCategories => Set<CourseCategory>();
-    public DbSet<CourseSlot> CourseSlots => Set<CourseSlot>();
     public DbSet<LearningAgreement> LearningAgreements => Set<LearningAgreement>();
     public DbSet<LearningAgreementEntry> LearningAgreementEntries => Set<LearningAgreementEntry>();
     public DbSet<Recognition> Recognitions => Set<Recognition>();

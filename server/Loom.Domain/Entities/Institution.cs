@@ -1,4 +1,5 @@
 using Loom.Domain.Common;
+using Loom.Domain.Enums;
 
 namespace Loom.Domain.Entities;
 
@@ -9,8 +10,8 @@ public class Institution : EntityBase
     public string Country { get; set; } = string.Empty;
     public string? City { get; set; }
     public string? ErasmusCode { get; set; }
-    public bool IsHome { get; set; }
+    public InstitutionType Type { get; set; } = InstitutionType.Partner;
 
-    public ICollection<StudyProgram> StudyPrograms { get; set; } = [];
-    public ICollection<ForeignProgram> ForeignPrograms { get; set; } = null!;
+    public ICollection<HomeProgram> HomePrograms { get; set; } = [];
+    public ICollection<PartnerProgram> PartnerPrograms { get; set; } = null!;
 }

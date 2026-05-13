@@ -128,7 +128,7 @@ async function reRequestCoordinatorRole() {
             v-for="ex in exchangeStore.summaries"
             :key="ex.id"
             class="flex cursor-pointer items-center justify-between rounded-xl border border-primary/20 bg-dark-2 px-5 py-4 transition hover:border-primary/50 hover:bg-dark-2/80"
-            @click="router.push(`/exchange/${ex.id}`)"
+            @click="router.push(`/exchange/${ex.guid}`)"
           >
             <div class="flex-1">
               <!-- Row 1: meta + badges -->
@@ -153,13 +153,13 @@ async function reRequestCoordinatorRole() {
               </div>
 
               <!-- Row 2: strani fakultet -->
-              <p class="mt-2.5 text-sm font-semibold text-light">{{ ex.foreignInstitutionName }}</p>
-              <p class="text-xs text-light/60">{{ ex.foreignProgramName }}</p>
+              <p class="mt-2.5 text-sm font-semibold text-light">{{ ex.partnerInstitutionName }}</p>
+              <p class="text-xs text-light/60">{{ ex.partnerProgramName }}</p>
 
               <!-- Row 3: studij · profil -->
               <p class="mt-1.5 text-xs text-light/40">
-                {{ ex.studyProgramName
-                }}<span v-if="ex.studyProfileName"> &middot; {{ ex.studyProfileName }}</span>
+                {{ ex.homeProgramName
+                }}<span v-if="ex.homeProfileName"> &middot; {{ ex.homeProfileName }}</span>
               </p>
             </div>
 

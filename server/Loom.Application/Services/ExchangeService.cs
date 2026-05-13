@@ -1,69 +1,21 @@
-using System.Text.Json;
 using ErrorOr;
-using Loom.Application.Helpers;
-using Loom.Application.Mappers;
-using Loom.Domain.Entities;
-using Loom.Application.DTOs.CourseSlot;
 using Loom.Application.DTOs.Exchange;
+using Loom.Application.DTOs.LearningAgreement;
+using Loom.Application.Helpers;
 using Loom.Application.Interfaces;
 using Loom.Application.Interfaces.Services;
+using Loom.Application.Mappers;
+using Loom.Domain.Entities;
 using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.Net.NetworkInformation;
+using System.Text.Json;
 
 namespace Loom.Application.Services;
 
 public class ExchangeService(IAppDbContext db) : IExchangeService
 {
-    private IQueryable<Exchange> ExchangeWithIncludes() => db.Exchanges
-        .AsNoTracking()
-        .Include(e => e.Student)
-        .Include(e => e.Coordinator)
-        .Include(e => e.StudyProfile).ThenInclude(sp => sp.StudyProgram).ThenInclude(p => p.Institution)
-        .Include(e => e.ForeignProgram).ThenInclude(p => p.Institution)
-        .Include(e => e.LearningAgreement);
-
-    private async Task<ErrorOr<(Exchange exchange, User requester)>> CheckExchangeAccessAsync(
-        Guid exchangeId, Guid requesterId, bool requireStudentInclude = false, CancellationToken ct = default)
-    {
-        var query = db.Exchanges.AsQueryable();
-        if (requireStudentInclude) query = query.Include(e => e.Student);
-
-        var exchange = await query.FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
-
-        return (exchange, requester);
-    }
-
-    private static bool IsLaLocked(DocumentStatus laStatus) =>
-        laStatus is DocumentStatus.Approved or DocumentStatus.Submitted;
-
-    private async Task<LearningAgreement> GetOrCreateLaAsync(Guid exchangeId, CancellationToken ct)
-    {
-        var learningAgreement = await db.LearningAgreements.FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
-
-        if (learningAgreement is not null)
-            return learningAgreement;
-
-        learningAgreement = new LearningAgreement { ExchangeId = exchangeId, Status = DocumentStatus.Draft };
-
-        db.LearningAgreements.Add(learningAgreement);
-        await db.SaveChangesAsync(ct);
-
-        learningAgreement.Entries = [];
-        return learningAgreement;
-    }
-
-    private IQueryable<LearningAgreement> LaWithEntries() => db.LearningAgreements
-        .Include(la => la.Entries)
-            .ThenInclude(e => e.ForeignCourse);
-
-    public async Task<ErrorOr<ExchangeResponse>> CreateExchangeAsync(Guid studentId, CreateExchangeRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<ExchangeResponse>> CreateExchangeAsync(int studentId, CreateExchangeRequest request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(request.AcademicYear))
             return Error.Validation("INVALID_ACADEMIC_YEAR", "Academic year is required.");
@@ -75,21 +27,21 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var student = await db.Users.FindAsync([studentId], ct);
         if (student is null) return Error.NotFound("USER_NOT_FOUND", "Student not found.");
 
-        var studyProfile = await db.StudyProfiles.FindAsync([request.StudyProfileId], ct);
-        if (studyProfile is null) return Error.NotFound("STUDY_PROFILE_NOT_FOUND", "Study profile not found.");
+        var homeProfile = await db.HomeProfiles.FindAsync([request.HomeProfileId], ct);
+        if (homeProfile is null) return Error.NotFound("HOME_PROFILE_NOT_FOUND", "Home profile not found.");
 
-        var foreignProgram = await db.ForeignPrograms
+        var partnerProgram = await db.PartnerPrograms
             .AsNoTracking()
             .Include(p => p.Institution)
-            .FirstOrDefaultAsync(p => p.Id == request.ForeignProgramId, ct);
-        if (foreignProgram is null) return Error.NotFound("FOREIGN_PROGRAM_NOT_FOUND", "Foreign program not found.");
+            .FirstOrDefaultAsync(p => p.Id == request.PartnerProgramId, ct);
+        if (partnerProgram is null) return Error.NotFound("PARTNER_PROGRAM_NOT_FOUND", "Partner profile not found.");
 
         var exchange = new Exchange
         {
             StudentId = studentId,
             CoordinatorId = student.CoordinatorId,
-            StudyProfileId = request.StudyProfileId,
-            ForeignProgramId = request.ForeignProgramId,
+            HomeProfileId = request.HomeProfileId,
+            PartnerProgramId = request.PartnerProgramId,
             AcademicYear = request.AcademicYear,
             SemesterType = semesterType,
             StudySemester = request.StudySemester,
@@ -106,8 +58,12 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return saved.ToResponse();
     }
 
-    public async Task<ErrorOr<ExchangeResponse>> GetExchangeAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
+    public async Task<ErrorOr<ExchangeResponse>> GetExchangeAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeGuidAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var exchange = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
@@ -120,13 +76,13 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return exchange.ToResponse();
     }
 
-    public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyExchangesAsync(Guid studentId, CancellationToken ct = default)
+    public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyExchangesAsync(int studentId, CancellationToken ct = default)
     {
         var exchanges = await db.Exchanges
             .AsNoTracking()
             .Include(e => e.Student)
-            .Include(e => e.ForeignProgram).ThenInclude(p => p.Institution)
-            .Include(e => e.StudyProfile).ThenInclude(sp => sp.StudyProgram).ThenInclude(p => p.Institution)
+            .Include(e => e.PartnerProgram).ThenInclude(p => p.Institution)
+            .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
             .Include(e => e.LearningAgreement)
             .Include(e => e.Recognition)
             .Where(e => e.StudentId == studentId)
@@ -135,8 +91,12 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return exchanges.Select(e => e.ToSummaryResponse()).ToList();
     }
 
-    public async Task<ErrorOr<ExchangeResponse>> UpdateLearningAgreementStatusAsync(Guid exchangeId, Guid requesterId, UpdateLearningAgreementStatusRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<ExchangeResponse>> UpdateLearningAgreementStatusAsync(Guid exchangeGuid, int requesterId, UpdateLearningAgreementStatusRequest request, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeGuidAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         if (!Enum.TryParse<DocumentStatus>(request.Status, out var newStatus))
             return Error.Validation("INVALID_STATUS", "Invalid status.");
 
@@ -160,14 +120,6 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (isStudent && newStatus == DocumentStatus.Draft && la.Status == DocumentStatus.Approved)
             return Error.Forbidden("FORBIDDEN", "Cannot revert an approved learning agreement to draft.");
 
-        if (newStatus == DocumentStatus.Approved)
-        {
-            var hasApproved = await db.LearningAgreements
-                .AnyAsync(l => l.Exchange.StudentId == exchange.StudentId && l.ExchangeId != exchangeId && l.Status == DocumentStatus.Approved, ct);
-            if (hasApproved)
-                return Error.Conflict("ALREADY_HAS_APPROVED", "Student already has an approved learning agreement.");
-        }
-
         la.Status = newStatus;
         la.UpdatedAt = DateTime.UtcNow;
 
@@ -180,9 +132,15 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         if (newStatus == DocumentStatus.Approved)
         {
-            var laWithEntries = await LaWithEntries().AsNoTracking().FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
+            var laWithEntries = await db.LearningAgreements
+                .AsNoTracking()
+                .Include(la => la.Entries)
+                    .ThenInclude(e => e.PartnerCourse)
+                .FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
+
             var snapshotData = new LearningAgreementSnapshotData(
                 laWithEntries?.Entries.Select(e => e.ToResponse()).ToList() ?? []);
+
             db.ExchangeSnapshots.Add(new ExchangeSnapshot
             {
                 ExchangeId = exchangeId,
@@ -199,20 +157,31 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return saved.ToResponse();
     }
 
-    public async Task<ErrorOr<LearningAgreementResponse>> GetLearningAgreementAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
+    public async Task<ErrorOr<LearningAgreementResponse>> GetLearningAgreementAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeGuidAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
         var (exchange, _) = accessCheck.Value;
 
-        var slots = await db.CourseSlots
+        var slots = await db.HomeSlots
             .AsNoTracking()
-            .Include(s => s.Category)
-            .Where(s => s.StudyProfileId == exchange.StudyProfileId)
+            .Include(s => s.SlotType)
+            .Include(s => s.Course)
+            .Include(s => s.CourseGroup)
+            .Where(s => s.ProfileId == exchange.HomeProfileId)
             .OrderBy(s => s.Semester).ThenBy(s => s.SlotPosition)
             .ToListAsync(ct);
 
-        var la = await LaWithEntries().AsNoTracking().FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+        var la = await db.LearningAgreements
+            .AsNoTracking()
+            .Include(la => la.Entries)
+                .ThenInclude(e => e.PartnerCourse)
+            .FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+
         var activeEntries = la?.Entries.Select(e => e.ToResponse()).ToList() ?? [];
 
         var snapshots = await db.ExchangeSnapshots
@@ -225,18 +194,18 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (snapshots.Count > 0)
         {
             var activeKeys = activeEntries
-                .Where(e => e.ForeignCourseId.HasValue)
-                .Select(e => (e.CourseSlotId, e.ForeignCourseId!.Value))
+                .Where(e => e.PartnerCourseId.HasValue)
+                .Select(e => (e.HomeSlotId, e.PartnerCourseId!.Value))
                 .ToHashSet();
 
-            var seen = new HashSet<(Guid, Guid)>();
+            var seen = new HashSet<(int, int)>();
             foreach (var snapshot in snapshots)
             {
                 var data = JsonSerializer.Deserialize<LearningAgreementSnapshotData>(snapshot.Snapshot, JsonHelper.DefaultOptions);
                 if (data is null) continue;
-                foreach (var entry in data.Entries.Where(e => e.ForeignCourseId.HasValue))
+                foreach (var entry in data.Entries.Where(e => e.PartnerCourseId.HasValue))
                 {
-                    var key = (entry.CourseSlotId, entry.ForeignCourseId!.Value);
+                    var key = (entry.HomeSlotId, entry.PartnerCourseId!.Value);
                     if (!activeKeys.Contains(key) && seen.Add(key))
                         deletedEntries.Add(entry with { IsDeleted = true });
                 }
@@ -251,40 +220,44 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         );
     }
 
-    public async Task<ErrorOr<LearningAgreementResponse>> SaveLearningAgreementAsync(Guid exchangeId, Guid requesterId, SaveLearningAgreementRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<LearningAgreementResponse>> SaveLearningAgreementAsync(Guid exchangeGuid, int requesterId, SaveLearningAgreementRequest request, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeGuidAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
         var (exchange, _) = accessCheck.Value;
 
         var la = await db.LearningAgreements.FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
-        if (la is not null && IsLaLocked(la.Status))
+        if (la is not null && (la.Status is DocumentStatus.Approved or DocumentStatus.Submitted))
             return Error.Conflict("LA_LOCKED", "Learning agreement cannot be modified in current status.");
 
         var validationError = ValidateEntryRequest(request);
         if (validationError is not null) return validationError.Value;
 
-        var profileSlotIds = await db.CourseSlots
+        var profileSlotIds = await db.HomeSlots
             .AsNoTracking()
-            .Where(s => s.StudyProfileId == exchange.StudyProfileId)
+            .Where(s => s.ProfileId == exchange.HomeProfileId)
             .Select(s => s.Id)
             .ToHashSetAsync(ct);
 
         foreach (var dto in request.Entries)
         {
-            if (!profileSlotIds.Contains(dto.CourseSlotId))
-                return Error.Validation("SLOT_NOT_IN_PROFILE", $"Course slot {dto.CourseSlotId} does not belong to this study profile.");
+            if (!profileSlotIds.Contains(dto.HomeSlotId))
+                return Error.Validation("SLOT_NOT_IN_PROFILE", $"Home slot {dto.HomeSlotId} does not belong to this profile.");
         }
 
-        var ectsError = await ValidateForeignCourseEctsAsync(request, ct);
+        var ectsError = await ValidatePartnerCourseEctsAsync(request, ct);
         if (ectsError is not null) return ectsError.Value;
 
-        var laEntity = await GetOrCreateLaAsync(exchangeId, ct);
+        var laEntity = await GetOrCreateLearningAgreementAsync(exchangeId, ct);
         await DeleteExistingEntriesAsync(laEntity.Id, ct);
         await CreateNewEntriesAsync(laEntity.Id, request, ct);
 
         await db.SaveChangesAsync(ct);
-        return await GetLearningAgreementAsync(exchangeId, requesterId, ct);
+        return await GetLearningAgreementAsync(exchangeGuid, requesterId, ct);
     }
 
     private static ErrorOr<LearningAgreementResponse>? ValidateEntryRequest(SaveLearningAgreementRequest request)
@@ -293,78 +266,43 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         {
             if (!Enum.TryParse<SlotMode>(dto.Mode, out var mode))
                 return Error.Validation("INVALID_MODE", $"Invalid slot mode: {dto.Mode}.");
-            if (mode != SlotMode.AtExchange && dto.ForeignCourseId is not null)
-                return Error.Validation("INVALID_MAPPING", "Foreign courses are only allowed on slots marked as AtExchange.");
+            if (mode != SlotMode.AtExchange && dto.PartnerCourseId is not null)
+                return Error.Validation("INVALID_MAPPING", "Partner courses are only allowed on slots marked as AtExchange.");
         }
         return null;
     }
 
-    private async Task<ErrorOr<LearningAgreementResponse>?> ValidateForeignCourseEctsAsync(
+    private async Task<ErrorOr<LearningAgreementResponse>?> ValidatePartnerCourseEctsAsync(
         SaveLearningAgreementRequest request, CancellationToken ct)
     {
-        var allForeignCourseIds = request.Entries
-            .Where(e => e.ForeignCourseId.HasValue)
-            .Select(e => e.ForeignCourseId!.Value)
+        var allPartnerCourseIds = request.Entries
+            .Where(e => e.PartnerCourseId.HasValue)
+            .Select(e => e.PartnerCourseId!.Value)
             .Distinct().ToList();
 
-        if (allForeignCourseIds.Count == 0) return null;
+        if (allPartnerCourseIds.Count == 0) return null;
 
-        var foreignCourses = await db.ForeignCourses
+        var partnerCourses = await db.PartnerCourses
             .AsNoTracking()
-            .Where(fc => allForeignCourseIds.Contains(fc.Id))
-            .ToDictionaryAsync(fc => fc.Id, fc => fc.Ects, ct);
+            .Where(c => allPartnerCourseIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.Ects, ct);
 
         var ectsUsage = request.Entries
-            .Where(e => e.ForeignCourseId.HasValue && e.AwardedEcts.HasValue)
-            .GroupBy(e => e.ForeignCourseId!.Value)
+            .Where(e => e.PartnerCourseId.HasValue && e.AwardedEcts.HasValue)
+            .GroupBy(e => e.PartnerCourseId!.Value)
             .ToDictionary(g => g.Key, g => g.Sum(e => e.AwardedEcts!.Value));
 
         foreach (var (courseId, totalUsed) in ectsUsage)
         {
-            if (!foreignCourses.TryGetValue(courseId, out var maxEcts))
-                return Error.NotFound("FOREIGN_COURSE_NOT_FOUND", $"Foreign course {courseId} not found.");
+            if (!partnerCourses.TryGetValue(courseId, out var maxEcts))
+                return Error.NotFound("PARTNER_COURSE_NOT_FOUND", $"Partner course {courseId} not found.");
             if (totalUsed > maxEcts)
                 return Error.Validation("ECTS_EXCEEDED", $"Awarded ECTS for course {courseId} exceeds available {maxEcts}.");
         }
         return null;
     }
 
-    private async Task DeleteExistingEntriesAsync(Guid laId, CancellationToken ct)
-    {
-        var existingEntries = await db.LearningAgreementEntries
-            .Where(e => e.LearningAgreementId == laId)
-            .ToListAsync(ct);
-
-        var entryIds = existingEntries.Select(e => e.Id).ToList();
-        if (entryIds.Count > 0)
-        {
-            var recognitionEntries = await db.RecognitionEntries
-                .Where(re => entryIds.Contains(re.LearningAgreementEntryId))
-                .ToListAsync(ct);
-            db.RecognitionEntries.RemoveRange(recognitionEntries);
-        }
-
-        db.LearningAgreementEntries.RemoveRange(existingEntries);
-    }
-
-    private async Task CreateNewEntriesAsync(Guid laId, SaveLearningAgreementRequest request, CancellationToken ct)
-    {
-        foreach (var dto in request.Entries)
-        {
-            Enum.TryParse<SlotMode>(dto.Mode, out var mode);
-            db.LearningAgreementEntries.Add(new LearningAgreementEntry
-            {
-                LearningAgreementId = laId,
-                CourseSlotId = dto.CourseSlotId,
-                Mode = mode,
-                ForeignCourseId = dto.ForeignCourseId,
-                AwardedEcts = dto.AwardedEcts
-            });
-        }
-        await Task.CompletedTask;
-    }
-
-    public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyStudentsExchangesAsync(Guid requesterId, CancellationToken ct = default)
+    public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyStudentsExchangesAsync(int requesterId, CancellationToken ct = default)
     {
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -372,8 +310,8 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var query = db.Exchanges
             .AsNoTracking()
             .Include(e => e.Student)
-            .Include(e => e.ForeignProgram).ThenInclude(p => p.Institution)
-            .Include(e => e.StudyProfile).ThenInclude(sp => sp.StudyProgram).ThenInclude(p => p.Institution)
+            .Include(e => e.PartnerProgram).ThenInclude(p => p.Institution)
+            .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
             .Include(e => e.LearningAgreement)
             .Include(e => e.Recognition);
 
@@ -385,8 +323,12 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return exchanges.Select(e => e.ToSummaryResponse()).ToList();
     }
 
-    public async Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeId, Guid requesterId, string? message, CancellationToken ct = default)
+    public async Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeGuid, int requesterId, string? message, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeGuidAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
@@ -405,8 +347,12 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return saved.ToResponse();
     }
 
-    public async Task<ErrorOr<Deleted>> DeleteExchangeAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
+    public async Task<ErrorOr<Deleted>> DeleteExchangeAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeGuidAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var exchange = await db.Exchanges
             .Include(e => e.Student)
             .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
@@ -449,8 +395,12 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return Result.Deleted;
     }
 
-    public async Task<ErrorOr<List<ExchangeSnapshotResponse>>> GetSnapshotsAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
+    public async Task<ErrorOr<List<ExchangeSnapshotResponse>>> GetSnapshotsAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeGuidAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
 
@@ -464,8 +414,12 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return snapshots.Select(s => s.ToResponse()).ToList();
     }
 
-    public async Task<ErrorOr<ExchangeSnapshotResponse>> GetSnapshotAsync(Guid exchangeId, Guid snapshotId, Guid requesterId, CancellationToken ct = default)
+    public async Task<ErrorOr<ExchangeSnapshotResponse>> GetSnapshotAsync(Guid exchangeGuid, int snapshotId, int requesterId, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeGuidAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
 
@@ -487,4 +441,91 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             data
         );
     }
+
+    #region Private Methods
+
+    private IQueryable<Exchange> ExchangeWithIncludes() => db.Exchanges
+        .AsNoTracking()
+        .Include(e => e.Student)
+        .Include(e => e.Coordinator)
+        .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
+        .Include(e => e.PartnerProgram).ThenInclude(p => p.Institution)
+        .Include(e => e.LearningAgreement);
+
+    private async Task<ErrorOr<int>> ResolveExchangeGuidAsync(Guid guid, CancellationToken ct)
+    {
+        var id = await db.Exchanges.Where(e => e.Guid == guid).Select(e => e.Id).FirstOrDefaultAsync(ct);
+        return id == 0 ? Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.") : id;
+    }
+
+    private async Task<ErrorOr<(Exchange exchange, User requester)>> CheckExchangeAccessAsync(
+        int exchangeId, int requesterId, bool requireStudentInclude = false, CancellationToken ct = default)
+    {
+        var query = db.Exchanges.AsQueryable();
+        if (requireStudentInclude) query = query.Include(e => e.Student);
+
+        var exchange = await query.FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
+            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+
+        return (exchange, requester);
+    }
+
+    private async Task<LearningAgreement> GetOrCreateLearningAgreementAsync(int exchangeId, CancellationToken ct)
+    {
+        var learningAgreement = await db.LearningAgreements.FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+
+        if (learningAgreement is not null)
+            return learningAgreement;
+
+        learningAgreement = new LearningAgreement { ExchangeId = exchangeId, Status = DocumentStatus.Draft };
+
+        db.LearningAgreements.Add(learningAgreement);
+        await db.SaveChangesAsync(ct);
+
+        learningAgreement.Entries = [];
+        return learningAgreement;
+    }
+
+    private async Task DeleteExistingEntriesAsync(int laId, CancellationToken ct)
+    {
+        var existingEntries = await db.LearningAgreementEntries
+            .Where(e => e.LearningAgreementId == laId)
+            .ToListAsync(ct);
+
+        var entryIds = existingEntries.Select(e => e.Id).ToList();
+        if (entryIds.Count > 0)
+        {
+            var recognitionEntries = await db.RecognitionEntries
+                .Where(re => entryIds.Contains(re.LearningAgreementEntryId))
+                .ToListAsync(ct);
+            db.RecognitionEntries.RemoveRange(recognitionEntries);
+        }
+
+        db.LearningAgreementEntries.RemoveRange(existingEntries);
+    }
+
+    private async Task CreateNewEntriesAsync(int laId, SaveLearningAgreementRequest request, CancellationToken ct)
+    {
+        foreach (var dto in request.Entries)
+        {
+            Enum.TryParse<SlotMode>(dto.Mode, out var mode);
+            db.LearningAgreementEntries.Add(new LearningAgreementEntry
+            {
+                LearningAgreementId = laId,
+                HomeSlotId = dto.HomeSlotId,
+                Mode = mode,
+                PartnerCourseId = dto.PartnerCourseId,
+                AwardedEcts = dto.AwardedEcts
+            });
+        }
+        await Task.CompletedTask;
+    }
+
+    #endregion
 }

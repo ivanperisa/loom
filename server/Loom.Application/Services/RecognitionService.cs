@@ -16,14 +16,34 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
     private IQueryable<Recognition> RecognitionsWithIncludes() => db.Recognitions
         .Include(r => r.Entries)
             .ThenInclude(e => e.LearningAgreementEntry)
-                .ThenInclude(e => e.ForeignCourse)
+                .ThenInclude(e => e.PartnerCourse)
         .Include(r => r.Entries)
             .ThenInclude(e => e.LearningAgreementEntry)
-                .ThenInclude(e => e.CourseSlot)
-                    .ThenInclude(s => s.Category);
+                .ThenInclude(e => e.HomeSlot)
+                    .ThenInclude(s => s.SlotType)
+        .Include(r => r.Entries)
+            .ThenInclude(e => e.LearningAgreementEntry)
+                .ThenInclude(e => e.HomeSlot)
+                    .ThenInclude(s => s.Course)
+        .Include(r => r.Entries)
+            .ThenInclude(e => e.LearningAgreementEntry)
+                .ThenInclude(e => e.HomeSlot)
+                    .ThenInclude(s => s.CourseGroup)
+        .Include(r => r.Entries)
+            .ThenInclude(e => e.RecognizedAsCourse);
 
-    public async Task<ErrorOr<RecognitionResponse>> GetOrCreateRecognitionAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default)
+    private async Task<ErrorOr<int>> ResolveExchangeIdAsync(Guid guid, CancellationToken ct)
     {
+        var id = await db.Exchanges.Where(e => e.Guid == guid).Select(e => e.Id).FirstOrDefaultAsync(ct);
+        return id == 0 ? Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.") : id;
+    }
+
+    public async Task<ErrorOr<RecognitionResponse>> GetOrCreateRecognitionAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default)
+    {
+        var idResult = await ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
@@ -51,7 +71,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         var existingEntryIds = recognition.Entries.Select(e => e.LearningAgreementEntryId).ToHashSet();
         var allEntryIds = await db.LearningAgreementEntries
             .AsNoTracking()
-            .Where(e => e.LearningAgreement.ExchangeId == exchangeId && e.ForeignCourseId != null)
+            .Where(e => e.LearningAgreement.ExchangeId == exchangeId && e.PartnerCourseId != null)
             .Select(e => e.Id)
             .ToListAsync(ct);
 
@@ -73,8 +93,12 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         return recognition.ToResponse();
     }
 
-    public async Task<ErrorOr<RecognitionResponse>> SaveRecognitionAsync(Guid exchangeId, Guid studentId, SaveRecognitionRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<RecognitionResponse>> SaveRecognitionAsync(Guid exchangeGuid, int studentId, SaveRecognitionRequest request, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var exchange = await db.Exchanges.FindAsync([exchangeId], ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
         if (exchange.StudentId != studentId) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
@@ -117,11 +141,15 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         recognition.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        return await GetOrCreateRecognitionAsync(exchangeId, studentId, ct);
+        return await GetOrCreateRecognitionAsync(exchangeGuid, studentId, ct);
     }
 
-    public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionStatusAsync(Guid exchangeId, Guid requesterId, UpdateRecognitionStatusRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionStatusAsync(Guid exchangeGuid, int requesterId, UpdateRecognitionStatusRequest request, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         if (!Enum.TryParse<DocumentStatus>(request.Status, out var newStatus))
             return Error.Validation("INVALID_STATUS", "Invalid recognition status.");
 
@@ -157,8 +185,12 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         return statusResponse;
     }
 
-    public async Task<ErrorOr<RecognitionResponse>> SetEntryRecognizedAsync(Guid exchangeId, Guid entryId, Guid coordinatorId, SetEntryRecognizedRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<RecognitionResponse>> SetEntryRecognizedAsync(Guid exchangeGuid, int entryId, int coordinatorId, SetEntryRecognizedRequest request, CancellationToken ct = default)
     {
+        var idResult = await ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
         var exchange = await db.Exchanges.FindAsync([exchangeId], ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
@@ -179,10 +211,10 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         entry.IsRecognized = request.IsRecognized;
         await db.SaveChangesAsync(ct);
 
-        return await GetOrCreateRecognitionAsync(exchangeId, coordinatorId, ct);
+        return await GetOrCreateRecognitionAsync(exchangeGuid, coordinatorId, ct);
     }
 
-    private async Task SaveSnapshotAsync(Guid exchangeId, Guid changedById, SnapshotPhase phase, object payload, CancellationToken ct)
+    private async Task SaveSnapshotAsync(int exchangeId, int changedById, SnapshotPhase phase, object payload, CancellationToken ct)
     {
         db.ExchangeSnapshots.Add(new ExchangeSnapshot
         {

@@ -1,7 +1,7 @@
-namespace Loom.Application.DTOs.CourseSlot;
+namespace Loom.Application.DTOs.LearningAgreement;
 
-public record ForeignCourseResponse(
-    Guid Id,
+public record PartnerCourseResponse(
+    int Id,
     string Code,
     string NameEn,
     string? NameHr,

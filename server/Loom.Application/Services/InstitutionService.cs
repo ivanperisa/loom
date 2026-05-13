@@ -1,7 +1,7 @@
 using ErrorOr;
 using Loom.Application.DTOs.Auth;
-using Loom.Application.DTOs.CourseSlot;
 using Loom.Application.DTOs.Institution;
+using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.Interfaces;
 using Loom.Application.Interfaces.Services;
 using Loom.Application.Mappers;
@@ -16,37 +16,37 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
     {
         var institutions = await db.Institutions
             .AsNoTracking()
-            .Where(x => x.IsHome)
+            .Where(x => x.Type == InstitutionType.Home)
             .OrderBy(x => x.Name)
             .ToListAsync(ct);
         return institutions.Select(i => i.ToResponse()).ToList();
     }
 
-    public async Task<ErrorOr<List<ForeignProgramResponse>>> GetForeignProgramsAsync(CancellationToken ct = default)
+    public async Task<ErrorOr<List<HomeProgramResponse>>> GetHomeProgramsAsync(CancellationToken ct = default)
     {
-        var programs = await db.ForeignPrograms
+        var programs = await db.HomePrograms
+            .AsNoTracking()
+            .Include(p => p.Profiles)
+            .OrderBy(p => p.Name)
+            .ToListAsync(ct);
+        return programs.Select(p => p.ToResponse()).ToList();
+    }
+
+    public async Task<ErrorOr<List<PartnerProgramResponse>>> GetPartnerProgramsAsync(CancellationToken ct = default)
+    {
+        var profiles = await db.PartnerPrograms
             .AsNoTracking()
             .Include(p => p.Institution)
             .OrderBy(p => p.Name)
             .ToListAsync(ct);
-        return programs.Select(p => p.ToResponse()).ToList();
+        return profiles.Select(p => p.ToResponse()).ToList();
     }
 
-    public async Task<ErrorOr<List<StudyProgramResponse>>> GetStudyProgramsAsync(CancellationToken ct = default)
+    public async Task<ErrorOr<List<PartnerCourseResponse>>> GetPartnerCoursesAsync(int partnerProgramId, CancellationToken ct = default)
     {
-        var programs = await db.StudyPrograms
+        var courses = await db.PartnerCourses
             .AsNoTracking()
-            .Include(p => p.StudyProfiles)
-            .OrderBy(p => p.Name)
-            .ToListAsync(ct);
-        return programs.Select(p => p.ToResponse()).ToList();
-    }
-
-    public async Task<ErrorOr<List<ForeignCourseResponse>>> GetForeignCoursesAsync(Guid foreignProgramId, CancellationToken ct = default)
-    {
-        var courses = await db.ForeignCourses
-            .AsNoTracking()
-            .Where(c => c.ForeignProgramId == foreignProgramId)
+            .Where(c => c.Program.Id == partnerProgramId)
             .OrderBy(c => c.Code)
             .ToListAsync(ct);
         return courses.Select(c => c.ToResponse()).ToList();

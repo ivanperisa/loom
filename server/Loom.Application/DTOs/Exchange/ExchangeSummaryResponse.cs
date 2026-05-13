@@ -1,15 +1,16 @@
 namespace Loom.Application.DTOs.Exchange;
 
 public record ExchangeSummaryResponse(
-    Guid Id,
-    Guid StudentId,
+    int Id,
+    Guid Guid,
+    int StudentId,
     string StudentName,
     string? StudentJmbag,
-    string ForeignInstitutionName,
-    string ForeignProgramName,
+    string PartnerInstitutionName,
+    string PartnerProgramName,
     string HomeInstitutionName,
-    string StudyProgramName,
-    string StudyProfileName,
+    string HomeProgramName,
+    string HomeProfileName,
     string AcademicYear,
     string SemesterType,
     string LearningAgreementStatus,

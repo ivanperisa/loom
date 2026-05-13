@@ -1,10 +1,10 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { exchangeSemester } from '@/utils/exchangeSemester'
-import type { StudyProgramResponse, StudyProfileResponse, ForeignProgramResponse } from '@/types/institution.types'
+import type { HomeProgramResponse, HomeProfileResponse, PartnerProgramResponse } from '@/types/institution.types'
 import type { ExchangeSemester } from '@/types/exchange.types'
 
 const emit = defineEmits<{
@@ -24,29 +24,29 @@ const currentStep = ref(1)
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
-// Step 1: Study program & profile
-const studyPrograms = ref<StudyProgramResponse[]>([])
+// Step 1: Home program & profile
+const homePrograms = ref<HomeProgramResponse[]>([])
 const loadingPrograms = ref(true)
 const selectedProgramId = ref<string | null>(null)
 const selectedProfileId = ref<string | null>(null)
 
 const selectedProgram = computed(() =>
-  studyPrograms.value.find(p => p.id === selectedProgramId.value) ?? null
+  homePrograms.value.find(p => p.id === selectedProgramId.value) ?? null
 )
-const availableProfiles = computed<StudyProfileResponse[]>(() =>
+const availableProfiles = computed<HomeProfileResponse[]>(() =>
   selectedProgram.value?.profiles ?? []
 )
 const selectedProfile = computed(() =>
   availableProfiles.value.find(p => p.id === selectedProfileId.value) ?? null
 )
 
-// Step 2: Foreign program
-const foreignPrograms = ref<ForeignProgramResponse[]>([])
-const loadingForeignPrograms = ref(true)
-const selectedForeignProgramId = ref<string | null>(null)
+// Step 2: Partner program
+const partnerPrograms = ref<PartnerProgramResponse[]>([])
+const loadingPartnerPrograms = ref(true)
+const selectedPartnerProgramId = ref<string | null>(null)
 
-const selectedForeignProgram = computed(() =>
-  foreignPrograms.value.find(p => p.id === selectedForeignProgramId.value) ?? null
+const selectedPartnerProgram = computed(() =>
+  partnerPrograms.value.find(p => p.id === selectedPartnerProgramId.value) ?? null
 )
 
 // Step 3: Details
@@ -54,22 +54,21 @@ const academicYear = ref('')
 const semesterType = ref<ExchangeSemester>(exchangeSemester.Winter)
 const studySemester = ref<number>(1)
 
-// Reset profile when program changes
 watch(selectedProgramId, () => {
   selectedProfileId.value = null
 })
 
 onMounted(async () => {
-  const [programsRes, foreignRes] = await Promise.allSettled([
-    institutionService.getStudyPrograms(),
-    institutionService.getForeignPrograms(),
+  const [programsRes, partnerRes] = await Promise.allSettled([
+    institutionService.getHomePrograms(),
+    institutionService.getPartnerPrograms(),
   ])
 
-  if (programsRes.status === 'fulfilled') studyPrograms.value = programsRes.value.data
+  if (programsRes.status === 'fulfilled') homePrograms.value = programsRes.value.data
   loadingPrograms.value = false
 
-  if (foreignRes.status === 'fulfilled') foreignPrograms.value = foreignRes.value.data
-  loadingForeignPrograms.value = false
+  if (partnerRes.status === 'fulfilled') partnerPrograms.value = partnerRes.value.data
+  loadingPartnerPrograms.value = false
 })
 
 function validateStep(): boolean {
@@ -87,8 +86,8 @@ function validateStep(): boolean {
   }
 
   if (currentStep.value === 2) {
-    if (!selectedForeignProgramId.value) {
-      errorMessage.value = t('createExchange.errors.foreignProgramRequired')
+    if (!selectedPartnerProgramId.value) {
+      errorMessage.value = t('createExchange.errors.partnerProgramRequired')
       return false
     }
   }
@@ -122,14 +121,14 @@ async function submitExchange() {
   isSubmitting.value = true
   try {
     const result = await exchangeStore.createExchange({
-      studyProfileId: selectedProfileId.value!,
-      foreignProgramId: selectedForeignProgramId.value!,
+      homeProfileId: selectedProfileId.value!,
+      partnerProgramId: selectedPartnerProgramId.value!,
       academicYear: academicYear.value.trim(),
       semesterType: semesterType.value,
       studySemester: studySemester.value!
     })
     if (result) {
-      emit('created', result.id)
+      emit('created', result.guid)
     } else {
       errorMessage.value = exchangeStore.error ?? t('errors.unexpected')
     }
@@ -142,7 +141,7 @@ async function submitExchange() {
 
 const stepKeys = [
   'createExchange.steps.program',
-  'createExchange.steps.foreign',
+  'createExchange.steps.partner',
   'createExchange.steps.details',
   'createExchange.steps.confirm'
 ]
@@ -210,7 +209,7 @@ const stepKeys = [
                 class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-light focus:border-primary focus:outline-none"
               >
                 <option :value="null" disabled>{{ t('createExchange.selectProgramPlaceholder') }}</option>
-                <option v-for="prog in studyPrograms" :key="prog.id" :value="prog.id">
+                <option v-for="prog in homePrograms" :key="prog.id" :value="prog.id">
                   {{ localizedName(prog) }}
                 </option>
               </select>
@@ -232,10 +231,10 @@ const stepKeys = [
           </div>
         </div>
 
-        <!-- Step 2: Foreign Program -->
+        <!-- Step 2: Partner Profile -->
         <div v-if="currentStep === 2" class="space-y-4">
-          <label class="block text-sm font-medium text-primary-light">{{ t('createExchange.selectForeignProgram') }}</label>
-          <template v-if="loadingForeignPrograms">
+          <label class="block text-sm font-medium text-primary-light">{{ t('createExchange.selectPartnerProgram') }}</label>
+          <template v-if="loadingPartnerPrograms">
             <div class="space-y-2">
               <div class="h-10 animate-pulse rounded-lg bg-primary/20"></div>
               <div class="h-10 animate-pulse rounded-lg bg-primary/20"></div>
@@ -244,19 +243,19 @@ const stepKeys = [
           <template v-else>
             <div class="max-h-64 space-y-1.5 overflow-y-auto pr-1">
               <button
-                v-for="fp in foreignPrograms"
-                :key="fp.id"
+                v-for="pp in partnerPrograms"
+                :key="pp.id"
                 type="button"
                 class="w-full rounded-lg border px-3 py-2.5 text-left text-sm transition"
                 :class="
-                  selectedForeignProgramId === fp.id
+                  selectedPartnerProgramId === pp.id
                     ? 'border-primary bg-dark-2'
                     : 'border-primary/20 bg-dark hover:border-light/60'
                 "
-                @click="selectedForeignProgramId = fp.id"
+                @click="selectedPartnerProgramId = pp.id"
               >
-                <span class="font-medium text-light">{{ localizedName(fp) }}</span>
-                <span class="block text-xs text-light/60">{{ fp.institutionName }}</span>
+                <span class="font-medium text-light">{{ localizedName(pp) }}</span>
+                <span class="block text-xs text-light/60">{{ pp.institutionName }}</span>
               </button>
             </div>
           </template>
@@ -264,7 +263,6 @@ const stepKeys = [
 
         <!-- Step 3: Details -->
         <div v-if="currentStep === 3" class="space-y-4">
-          <!-- Academic Year -->
           <div>
             <label class="mb-1 block text-sm font-medium text-primary-light">{{ t('exchange.academicYear') }}</label>
             <input
@@ -275,7 +273,6 @@ const stepKeys = [
             />
           </div>
 
-          <!-- Semester Type -->
           <div>
             <label class="mb-1 block text-sm font-medium text-primary-light">{{ t('exchange.semester') }}</label>
             <div class="flex gap-3">
@@ -306,7 +303,6 @@ const stepKeys = [
             </div>
           </div>
 
-          <!-- Study Semester -->
           <div>
             <label class="mb-1 block text-sm font-medium text-primary-light">{{ t('exchange.studySemester') }}</label>
             <select
@@ -319,7 +315,6 @@ const stepKeys = [
               <option :value="4">4</option>
             </select>
           </div>
-
         </div>
 
         <!-- Step 4: Confirm -->
@@ -335,10 +330,10 @@ const stepKeys = [
               <dd class="text-right font-medium text-light">{{ selectedProfile ? localizedName(selectedProfile) : '' }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-light/60">{{ t('createExchange.summaryForeignProgram') }}</dt>
+              <dt class="text-light/60">{{ t('createExchange.summaryPartnerProgram') }}</dt>
               <dd class="text-right font-medium text-light">
-                {{ selectedForeignProgram ? localizedName(selectedForeignProgram) : '' }}
-                <span v-if="selectedForeignProgram" class="block text-xs text-light/60">{{ selectedForeignProgram.institutionName }}</span>
+                {{ selectedPartnerProgram ? localizedName(selectedPartnerProgram) : '' }}
+                <span v-if="selectedPartnerProgram" class="block text-xs text-light/60">{{ selectedPartnerProgram.institutionName }}</span>
               </dd>
             </div>
             <div class="flex justify-between">

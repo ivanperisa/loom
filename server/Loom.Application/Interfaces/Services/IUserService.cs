@@ -7,22 +7,22 @@ namespace Loom.Application.Interfaces.Services;
 
 public interface IUserService
 {
-    Task<ErrorOr<AuthMeResponse>> GetCurrentUserAsync(Guid userId, CancellationToken ct = default);
-    Task<ErrorOr<AuthMeResponse>> CompleteOnboardingAsync(Guid userId, CompleteOnboardingRequest request, CancellationToken ct = default);
-    Task<ErrorOr<AuthMeResponse>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default);
-    Task<ErrorOr<AuthMeResponse>> RequestCoordinatorRoleAsync(Guid userId, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> GetCurrentUserAsync(int userId, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> CompleteOnboardingAsync(int userId, CompleteOnboardingRequest request, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> UpdateProfileAsync(int userId, UpdateProfileRequest request, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> RequestCoordinatorRoleAsync(int userId, CancellationToken ct = default);
 
     // Admin — user management
-    Task<ErrorOr<List<UserListResponse>>> GetAllUsersAsync(Guid adminId, CancellationToken ct = default);
+    Task<ErrorOr<List<UserListResponse>>> GetAllUsersAsync(int adminId, CancellationToken ct = default);
 
     // Admin — coordinator role management
-    Task<ErrorOr<List<CoordinatorRequestResponse>>> GetCoordinatorRequestsAsync(Guid adminId, CancellationToken ct = default);
-    Task<ErrorOr<AuthMeResponse>> MakeCoordinatorAsync(Guid adminId, Guid targetUserId, CancellationToken ct = default);
-    Task<ErrorOr<AuthMeResponse>> RejectCoordinatorRequestAsync(Guid adminId, Guid targetUserId, CancellationToken ct = default);
-    Task<ErrorOr<AuthMeResponse>> RemoveCoordinatorAsync(Guid adminId, Guid targetUserId, CancellationToken ct = default);
+    Task<ErrorOr<List<CoordinatorRequestResponse>>> GetCoordinatorRequestsAsync(int adminId, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> MakeCoordinatorAsync(int adminId, int targetUserId, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> RejectCoordinatorRequestAsync(int adminId, int targetUserId, CancellationToken ct = default);
+    Task<ErrorOr<AuthMeResponse>> RemoveCoordinatorAsync(int adminId, int targetUserId, CancellationToken ct = default);
 
     // Admin — coordinator whitelist
-    Task<ErrorOr<List<CoordinatorWhitelistEntryResponse>>> GetCoordinatorWhitelistAsync(Guid adminId, CancellationToken ct = default);
-    Task<ErrorOr<CoordinatorWhitelistEntryResponse>> AddToCoordinatorWhitelistAsync(Guid adminId, string email, CancellationToken ct = default);
-    Task<ErrorOr<Deleted>> RemoveFromCoordinatorWhitelistAsync(Guid adminId, string email, CancellationToken ct = default);
+    Task<ErrorOr<List<CoordinatorWhitelistEntryResponse>>> GetCoordinatorWhitelistAsync(int adminId, CancellationToken ct = default);
+    Task<ErrorOr<CoordinatorWhitelistEntryResponse>> AddToCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default);
+    Task<ErrorOr<Deleted>> RemoveFromCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default);
 }

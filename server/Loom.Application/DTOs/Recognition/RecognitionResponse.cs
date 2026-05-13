@@ -1,8 +1,8 @@
 namespace Loom.Application.DTOs.Recognition;
 
 public record RecognitionResponse(
-    Guid Id,
-    Guid ExchangeId,
+    int Id,
+    int ExchangeId,
     string Status,
     List<RecognitionEntryResponse> Entries,
     DateTime CreatedAt,

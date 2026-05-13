@@ -3,18 +3,20 @@ import type { DocumentStatus } from './exchange.types'
 export interface RecognitionEntryResponse {
   id: string
   learningAgreementEntryId: string
-  foreignCourseCode: string
-  foreignCourseNameEn: string
-  foreignCourseNameHr: string | null
-  foreignCourseEcts: number
-  foreignCourseHours: string | null
+  partnerCourseCode: string
+  partnerCourseNameEn: string
+  partnerCourseNameHr: string | null
+  partnerCourseHours: string | null
+  partnerCourseEcts: number
+  homeSlotCourseIsvuCode: number | null
+  homeSlotCourseName: string
+  homeSlotCourseGroupIsvuCode: number | null
+  homeSlotCourseGroupName: string
+  homeSlotColor: string
+  homeSlotSemester: number
   awardedEcts: number
-  courseSlotName: string
-  courseSlotCode: string | null
-  courseSlotCategoryCode: string
-  courseSlotCategoryName: string
-  courseSlotColor: string
-  courseSlotSemester: number
+  recognizedAsCourseId: string | null
+  recognizedAsCourseName: string | null
   enrollmentStatus: string | null
   originalGrade: string | null
   ectsGrade: string | null

@@ -11,28 +11,27 @@ public static class InstitutionMapper
         institution.NameEn,
         institution.Country,
         institution.City,
-        institution.ErasmusCode,
-        institution.IsHome
+        institution.ErasmusCode
     );
 
-    public static ForeignProgramResponse ToResponse(this ForeignProgram program) => new(
+    public static PartnerProgramResponse ToResponse(this PartnerProgram program) => new(
         program.Id,
         program.Name,
         program.NameEn,
-        program.InstitutionId,
+        program.Level.ToString(),
         program.Institution.Name
     );
 
-    public static StudyProgramResponse ToResponse(this StudyProgram program) => new(
+    public static HomeProgramResponse ToResponse(this HomeProgram program) => new(
         program.Id,
         program.Name,
         program.NameEn,
         program.Level.ToString(),
         program.DurationSemesters,
-        program.StudyProfiles.Select(p => p.ToResponse()).ToList()
+        program.Profiles.Select(p => p.ToResponse()).ToList()
     );
 
-    public static StudyProfileResponse ToResponse(this StudyProfile profile) => new(
+    public static HomeProfileResponse ToResponse(this HomeProfile profile) => new(
         profile.Id,
         profile.Name,
         profile.NameEn

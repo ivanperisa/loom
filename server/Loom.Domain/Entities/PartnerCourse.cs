@@ -2,10 +2,10 @@ using Loom.Domain.Common;
 
 namespace Loom.Domain.Entities;
 
-public class ForeignCourse : EntityBase
+public class PartnerCourse : EntityBase
 {
-    public Guid ForeignProgramId { get; set; }
-    public ForeignProgram ForeignProgram { get; set; } = null!;
+    public int ProgramId { get; set; }
+    public PartnerProgram Program { get; set; } = null!;
     public string Code { get; set; } = null!;
     public string NameEn { get; set; } = null!;
     public string? NameHr { get; set; }

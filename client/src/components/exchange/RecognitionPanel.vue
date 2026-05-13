@@ -11,7 +11,7 @@ import { documentStatus } from '@/utils/documentStatus'
 
 const props = defineProps<{
   exchangeId: string
-  studyProfileName: string
+  homeProfileName: string
 }>()
 
 const { t, locale } = useI18n()
@@ -23,7 +23,7 @@ const isSaving = ref(false)
 const hasUnsavedChanges = computed(() => {
   if (!exchangeStore.serverRecognition) return false
   return courseGroups.value.some((g) => {
-    const e = editableGrades[g.foreignCourseCode]
+    const e = editableGrades[g.partnerCourseCode]
     if (!e) return false
     return g.entries.some(
       (x) =>
@@ -47,11 +47,11 @@ interface GradeData {
 }
 
 interface CourseGroup {
-  foreignCourseCode: string
-  foreignCourseNameEn: string
-  foreignCourseNameHr: string | null
-  foreignCourseEcts: number
-  foreignCourseHours: string | null
+  partnerCourseCode: string
+  partnerCourseNameEn: string
+  partnerCourseNameHr: string | null
+  partnerCourseEcts: number
+  partnerCourseHours: string | null
   totalAwardedEcts: number
   entries: RecognitionEntryResponse[]
 }
@@ -62,14 +62,14 @@ const courseGroups = computed<CourseGroup[]>(() => {
   if (!exchangeStore.serverRecognition) return []
   const map = new Map<string, CourseGroup>()
   for (const entry of exchangeStore.serverRecognition.entries) {
-    const code = entry.foreignCourseCode
+    const code = entry.partnerCourseCode
     if (!map.has(code)) {
       map.set(code, {
-        foreignCourseCode: code,
-        foreignCourseNameEn: entry.foreignCourseNameEn,
-        foreignCourseNameHr: entry.foreignCourseNameHr,
-        foreignCourseEcts: entry.foreignCourseEcts,
-        foreignCourseHours: entry.foreignCourseHours,
+        partnerCourseCode: code,
+        partnerCourseNameEn: entry.partnerCourseNameEn,
+        partnerCourseNameHr: entry.partnerCourseNameHr,
+        partnerCourseEcts: entry.partnerCourseEcts,
+        partnerCourseHours: entry.partnerCourseHours,
         totalAwardedEcts: 0,
         entries: [],
       })
@@ -90,9 +90,9 @@ function initGrades() {
   if (!rec) return
   const seen = new Set<string>()
   for (const entry of rec.entries) {
-    if (seen.has(entry.foreignCourseCode)) continue
-    seen.add(entry.foreignCourseCode)
-    editableGrades[entry.foreignCourseCode] = {
+    if (seen.has(entry.partnerCourseCode)) continue
+    seen.add(entry.partnerCourseCode)
+    editableGrades[entry.partnerCourseCode] = {
       enrollmentStatus: entry.enrollmentStatus ?? '',
       originalGrade: entry.originalGrade ?? '',
       ectsGrade: entry.ectsGrade ?? '',
@@ -117,7 +117,7 @@ async function saveAll() {
   isSaving.value = true
   try {
     const entriesToSave = courseGroups.value.flatMap((g) => {
-      const grades = editableGrades[g.foreignCourseCode]
+      const grades = editableGrades[g.partnerCourseCode]
       if (!grades) return []
       return g.entries.map((e) => ({
         learningAgreementEntryId: e.learningAgreementEntryId,
@@ -149,9 +149,7 @@ async function toggleGroupRecognition(group: CourseGroup) {
 }
 
 async function submitRecognition() {
-  await exchangeStore.updateRecognitionStatus(props.exchangeId, {
-    status: documentStatus.Submitted,
-  })
+  await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Submitted })
 }
 async function approveRecognition() {
   await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Approved })
@@ -177,7 +175,6 @@ function doExport() {
 }
 
 const rejectedBg = '#FFCCCC'
-
 </script>
 
 <template>
@@ -192,10 +189,8 @@ const rejectedBg = '#FFCCCC'
         <div class="flex items-center gap-3">
           <StatusBadge :status="exchangeStore.serverRecognition!.status" />
         </div>
-        <span
-          class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80"
-        >
-          {{ studyProfileName }}
+        <span class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80">
+          {{ homeProfileName }}
         </span>
         <div class="flex flex-wrap gap-2">
           <button
@@ -215,12 +210,8 @@ const rejectedBg = '#FFCCCC'
             >
               {{ t('recognition.actions.submit') }}
             </button>
-            <template
-              v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Submitted"
-            >
-              <span
-                class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60"
-              >
+            <template v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Submitted">
+              <span class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60">
                 {{ t('exchange.status.waitingApproval') }}
               </span>
               <button
@@ -290,29 +281,21 @@ const rejectedBg = '#FFCCCC'
 
       <!-- Recognition table -->
       <div v-else class="overflow-x-auto doc-table-wrap">
-        <table
-          style="
-            border-collapse: collapse;
-            width: 100%;
-            min-width: 1200px;
-            font-size: 11px;
-            color: #000;
-          "
-        >
+        <table style="border-collapse: collapse; width: 100%; min-width: 1200px; font-size: 11px; color: #000;">
           <thead>
             <tr>
-              <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.foreignCode') }}</th>
-              <th class="rec-th" style="min-width: 160px">{{ t('recognition.col.foreignNameEn') }}</th>
+              <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.partnerCode') }}</th>
+              <th class="rec-th" style="min-width: 160px">{{ t('recognition.col.partnerNameEn') }}</th>
               <th class="rec-th" style="min-width: 90px">{{ t('recognition.col.enrollmentStatus') }}</th>
-              <th class="rec-th" style="min-width: 140px">{{ t('recognition.col.foreignNameHr') }}</th>
-              <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.hours') }}</th>
-              <th class="rec-th" style="min-width: 40px">{{ t('recognition.col.ects') }}</th>
+              <th class="rec-th" style="min-width: 140px">{{ t('recognition.col.partnerNameHr') }}</th>
+              <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.partnerHours') }}</th>
+              <th class="rec-th" style="min-width: 40px">{{ t('recognition.col.partnerEcts') }}</th>
               <th class="rec-th" style="min-width: 28px">{{ t('recognition.col.rbr') }}</th>
               <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.recognizedAs') }}</th>
-              <th class="rec-th" style="min-width: 130px">{{ t('recognition.col.slotName') }}</th>
-              <th class="rec-th" style="min-width: 55px">{{ t('recognition.col.slotCode') }}</th>
-              <th class="rec-th" style="min-width: 110px">{{ t('recognition.col.slotCategory') }}</th>
-              <th class="rec-th" style="min-width: 38px">{{ t('recognition.col.semester') }}</th>
+              <th class="rec-th" style="min-width: 130px">{{ t('recognition.col.homeSlotCourseName') }}</th>
+              <th class="rec-th" style="min-width: 55px">{{ t('recognition.col.homeSlotCourseGroupIsvuCode') }}</th>
+              <th class="rec-th" style="min-width: 110px">{{ t('recognition.col.homeSlotCourseGroupName') }}</th>
+              <th class="rec-th" style="min-width: 38px">{{ t('recognition.col.homeSlotSemester') }}</th>
               <th class="rec-th" style="min-width: 50px">{{ t('recognition.col.awardedEcts') }}</th>
               <th class="rec-th" style="min-width: 60px">{{ t('recognition.col.originalGrade') }}</th>
               <th class="rec-th" style="min-width: 55px">{{ t('recognition.col.ectsGrade') }}</th>
@@ -322,7 +305,7 @@ const rejectedBg = '#FFCCCC'
           </thead>
 
           <tbody>
-            <template v-for="group in courseGroups" :key="group.foreignCourseCode">
+            <template v-for="group in courseGroups" :key="group.partnerCourseCode">
               <tr v-for="(entry, idx) in group.entries" :key="entry.learningAgreementEntryId">
                 <!-- A: Šifra predmeta -->
                 <td
@@ -331,9 +314,7 @@ const rejectedBg = '#FFCCCC'
                   class="rec-td rec-td--center rec-td--bold"
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
-                  <div class="mb-1">{{ group.foreignCourseCode }}</div>
-
-                  <!-- Gumb vidljiv samo koordinatoru -->
+                  <div class="mb-1">{{ group.partnerCourseCode }}</div>
                   <div v-if="isCoordinator">
                     <button
                       type="button"
@@ -345,11 +326,7 @@ const rejectedBg = '#FFCCCC'
                           : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white'
                       "
                     >
-                      {{
-                        groupIsRejected(group)
-                          ? t('recognition.actions.approve')
-                          : t('recognition.actions.reject')
-                      }}
+                      {{ groupIsRejected(group) ? t('recognition.actions.approve') : t('recognition.actions.reject') }}
                     </button>
                   </div>
                 </td>
@@ -361,12 +338,9 @@ const rejectedBg = '#FFCCCC'
                   class="rec-td"
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
-                  {{ group.foreignCourseNameEn }}
-                  <div
-                    v-if="group.foreignCourseNameHr"
-                    style="font-size: 9px; color: #555; font-style: italic"
-                  >
-                    {{ group.foreignCourseNameHr }}
+                  {{ group.partnerCourseNameEn }}
+                  <div v-if="group.partnerCourseNameHr" style="font-size: 9px; color: #555; font-style: italic">
+                    {{ group.partnerCourseNameHr }}
                   </div>
                 </td>
 
@@ -378,8 +352,8 @@ const rejectedBg = '#FFCCCC'
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
                   <input
-                    v-if="editableGrades[group.foreignCourseCode]"
-                    v-model="editableGrades[group.foreignCourseCode]!.enrollmentStatus"
+                    v-if="editableGrades[group.partnerCourseCode]"
+                    v-model="editableGrades[group.partnerCourseCode]!.enrollmentStatus"
                     type="text"
                     :disabled="isCoordinator"
                     class="rec-input"
@@ -387,24 +361,24 @@ const rejectedBg = '#FFCCCC'
                   />
                 </td>
 
-                <!--D: Naziv - hrvatski -->
+                <!-- D: Naziv - hrvatski -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td rec-td--center rec-td--small"
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
-                  {{ group.foreignCourseNameHr ?? '—' }}
+                  {{ group.partnerCourseNameHr ?? '—' }}
                 </td>
 
-                <!-- E: Sati u obliku:... -->
+                <!-- E: Sati -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td rec-td--center"
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
-                  {{ group.foreignCourseHours ?? '—' }}
+                  {{ group.partnerCourseHours ?? '—' }}
                 </td>
 
                 <!-- F: ECTS -->
@@ -414,65 +388,46 @@ const rejectedBg = '#FFCCCC'
                   class="rec-td rec-td--center rec-td--bold"
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
-                  {{ group.foreignCourseEcts }}
+                  {{ group.partnerCourseEcts }}
                 </td>
 
                 <!-- G: Rbr. -->
-                <td
-                  class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
-                >
+                <td class="rec-td rec-td--center" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
                   {{ idx + 1 }}
                 </td>
 
                 <!-- H: Priznaje se za predmet -->
-                <td
-                  class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
-                >
-                  {{ entry.courseSlotCode ?? '—' }}
+                <td class="rec-td rec-td--center" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                  {{ entry.homeSlotCourseIsvuCode}}
                 </td>
 
                 <!-- I: Naziv -->
-                <td
-                  class="rec-td"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
-                >
-                  {{ entry.courseSlotName }}
+                <td class="rec-td" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                  {{ entry.homeSlotCourseName }}
                 </td>
 
                 <!-- J: Izb. grupa -->
-                <td
-                  class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
-                >
-                  {{ entry.courseSlotCategoryCode ?? '—' }}
+                <td class="rec-td rec-td--center" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                  {{ entry.homeSlotCourseGroupIsvuCode ?? '—' }}
                 </td>
 
                 <!-- K: Naziv izb. grupe -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{
-                    background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor,
-                  }"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.homeSlotColor }"
                 >
-                  {{ entry.courseSlotCategoryName }}
+                  {{ entry.homeSlotCourseGroupName }}
                 </td>
 
                 <!-- L: Semestar -->
-                <td
-                  class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
-                >
-                  {{ entry.courseSlotSemester }}
+                <td class="rec-td rec-td--center" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                  {{ entry.homeSlotSemester }}
                 </td>
 
                 <!-- M: Priznato ECTS-a -->
                 <td
                   class="rec-td rec-td--center rec-td--bold"
-                  :style="{
-                    background: groupIsRejected(group) ? rejectedBg : entry.courseSlotColor,
-                  }"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.homeSlotColor }"
                 >
                   {{ entry.awardedEcts }}
                 </td>
@@ -485,15 +440,15 @@ const rejectedBg = '#FFCCCC'
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
                 >
                   <input
-                    v-if="editableGrades[group.foreignCourseCode]"
-                    v-model="editableGrades[group.foreignCourseCode]!.originalGrade"
+                    v-if="editableGrades[group.partnerCourseCode]"
+                    v-model="editableGrades[group.partnerCourseCode]!.originalGrade"
                     type="text"
                     :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
                 </td>
-                <!-- O: Ocjena ECTS (F-A) -->
+                <!-- O: Ocjena ECTS -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
@@ -501,15 +456,15 @@ const rejectedBg = '#FFCCCC'
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
                 >
                   <input
-                    v-if="editableGrades[group.foreignCourseCode]"
-                    v-model="editableGrades[group.foreignCourseCode]!.ectsGrade"
+                    v-if="editableGrades[group.partnerCourseCode]"
+                    v-model="editableGrades[group.partnerCourseCode]!.ectsGrade"
                     type="text"
                     :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
                 </td>
-                <!-- P: Ocjena hrv... (1-5) -->
+                <!-- P: Ocjena hrv. -->
                 <td
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
@@ -517,8 +472,8 @@ const rejectedBg = '#FFCCCC'
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
                 >
                   <input
-                    v-if="editableGrades[group.foreignCourseCode]"
-                    v-model="editableGrades[group.foreignCourseCode]!.hrGrade"
+                    v-if="editableGrades[group.partnerCourseCode]"
+                    v-model="editableGrades[group.partnerCourseCode]!.hrGrade"
                     type="text"
                     :disabled="isCoordinator"
                     class="rec-input"
@@ -533,8 +488,8 @@ const rejectedBg = '#FFCCCC'
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
                 >
                   <input
-                    v-if="editableGrades[group.foreignCourseCode]"
-                    v-model="editableGrades[group.foreignCourseCode]!.examDate"
+                    v-if="editableGrades[group.partnerCourseCode]"
+                    v-model="editableGrades[group.partnerCourseCode]!.examDate"
                     type="date"
                     :disabled="isCoordinator"
                     class="rec-input rec-input--date"
@@ -565,16 +520,9 @@ const rejectedBg = '#FFCCCC'
   padding: 3px 4px;
   vertical-align: middle;
 }
-.rec-td--center {
-  text-align: center;
-}
-.rec-td--bold {
-  font-weight: bold;
-}
-.rec-td--small {
-  font-size: 10px;
-  color: #555;
-}
+.rec-td--center { text-align: center; }
+.rec-td--bold { font-weight: bold; }
+.rec-td--small { font-size: 10px; color: #555; }
 
 .rec-td-grade {
   border: 1px solid #aaa;
@@ -591,7 +539,5 @@ const rejectedBg = '#FFCCCC'
   background: transparent;
   text-align: center;
 }
-.rec-input--date {
-  text-align: left;
-}
+.rec-input--date { text-align: left; }
 </style>

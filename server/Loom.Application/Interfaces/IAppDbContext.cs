@@ -7,13 +7,15 @@ public interface IAppDbContext
 {
     DbSet<User> Users { get; }
     DbSet<Institution> Institutions { get; }
-    DbSet<StudyProgram> StudyPrograms { get; }
-    DbSet<StudyProfile> StudyProfiles { get; }
+    DbSet<HomeProgram> HomePrograms { get; }
+    DbSet<HomeProfile> HomeProfiles { get; }
+    DbSet<HomeCourse> HomeCourses { get; }
+    DbSet<HomeCourseGroup> HomeCourseGroups { get; }
+    DbSet<HomeSlot> HomeSlots { get; }
+    DbSet<HomeSlotType> HomeSlotTypes { get; }
+    DbSet<PartnerProgram> PartnerPrograms { get; }
+    DbSet<PartnerCourse> PartnerCourses { get; }
     DbSet<Exchange> Exchanges { get; }
-    DbSet<ForeignProgram> ForeignPrograms { get; }
-    DbSet<ForeignCourse> ForeignCourses { get; }
-    DbSet<CourseCategory> CourseCategories { get; }
-    DbSet<CourseSlot> CourseSlots { get; }
     DbSet<LearningAgreement> LearningAgreements { get; }
     DbSet<LearningAgreementEntry> LearningAgreementEntries { get; }
     DbSet<Recognition> Recognitions { get; }

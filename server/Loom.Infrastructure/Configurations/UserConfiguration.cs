@@ -9,11 +9,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        builder.ToTable("users");
-
+        builder.ToTable("user");
         builder.HasKey(x => x.Id);
-
-        builder.Property(x => x.Id).HasColumnName("id").HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(x => x.ExternalId).HasColumnName("external_id").IsRequired();
         builder.Property(x => x.Email).HasColumnName("email").IsRequired();
         builder.Property(x => x.Name).HasColumnName("name").IsRequired();

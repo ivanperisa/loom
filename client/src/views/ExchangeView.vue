@@ -82,12 +82,12 @@ onMounted(async () => {
         <!-- Exchange header -->
         <div class="mt-4 rounded-xl border border-primary/20 bg-dark-2 px-5 py-4">
           <p class="text-xs font-semibold uppercase tracking-wide text-light/50">
-            {{ t('exchange.foreignInstitution') }}
+            {{ t('exchange.partnerInstitution') }}
           </p>
           <p class="mt-1 text-base font-semibold text-light">
-            {{ exchangeStore.exchange.foreignProgram.institutionName }}
+            {{ exchangeStore.exchange.partnerProgram.institutionName }}
           </p>
-          <p class="text-sm text-light/70">{{ exchangeStore.exchange.foreignProgram.name }}</p>
+          <p class="text-sm text-light/70">{{ exchangeStore.exchange.partnerProgram.name }}</p>
 
           <div class="my-3 border-t border-primary/15"></div>
 
@@ -165,14 +165,14 @@ onMounted(async () => {
           <template v-if="activeTab === 'la'">
             <LearningAgreementPanel
               :exchange-id="exchangeId"
-              :study-profile-name="exchangeStore.exchange.studyProfile.name"
+              :home-profile-name="exchangeStore.exchange.homeProfile.name"
             />
           </template>
 
           <template v-else-if="activeTab === 'recognition'">
             <RecognitionPanel
               :exchange-id="exchangeId"
-              :study-profile-name="exchangeStore.exchange.studyProfile.name"
+              :home-profile-name="exchangeStore.exchange.homeProfile.name"
             />
           </template>
         </div>

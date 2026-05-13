@@ -5,45 +5,45 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("api/exchanges/{exchangeId:guid}/recognition")]
+[Route("api/exchanges/{exchangeGuid:guid}/recognition")]
 [Authorize]
 public class RecognitionController(IRecognitionService recognitionService) : ApiController
 {
     [HttpGet]
-    public async Task<IActionResult> GetOrCreate(Guid exchangeId, CancellationToken ct)
+    public async Task<IActionResult> GetOrCreate(Guid exchangeGuid, CancellationToken ct)
     {
-        var result = await recognitionService.GetOrCreateRecognitionAsync(exchangeId, GetCurrentUserId(), ct);
+        var result = await recognitionService.GetOrCreateRecognitionAsync(exchangeGuid, GetCurrentUserId(), ct);
         return Match(result, Ok);
     }
 
     [HttpPut("entries")]
     public async Task<IActionResult> SaveRecognition(
-        Guid exchangeId,
+        Guid exchangeGuid,
         [FromBody] SaveRecognitionRequest request,
         CancellationToken ct)
     {
-        var result = await recognitionService.SaveRecognitionAsync(exchangeId, GetCurrentUserId(), request, ct);
+        var result = await recognitionService.SaveRecognitionAsync(exchangeGuid, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
 
     [HttpPatch("status")]
     public async Task<IActionResult> UpdateStatus(
-        Guid exchangeId,
+        Guid exchangeGuid,
         [FromBody] UpdateRecognitionStatusRequest request,
         CancellationToken ct)
     {
-        var result = await recognitionService.UpdateRecognitionStatusAsync(exchangeId, GetCurrentUserId(), request, ct);
+        var result = await recognitionService.UpdateRecognitionStatusAsync(exchangeGuid, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
 
-    [HttpPatch("entries/{entryId:guid}/recognized")]
+    [HttpPatch("entries/{entryId:int}/recognized")]
     public async Task<IActionResult> SetEntryRecognized(
-        Guid exchangeId,
-        Guid entryId,
+        Guid exchangeGuid,
+        int entryId,
         [FromBody] SetEntryRecognizedRequest request,
         CancellationToken ct)
     {
-        var result = await recognitionService.SetEntryRecognizedAsync(exchangeId, entryId, GetCurrentUserId(), request, ct);
+        var result = await recognitionService.SetEntryRecognizedAsync(exchangeGuid, entryId, GetCurrentUserId(), request, ct);
         return Match(result, Ok);
     }
 }

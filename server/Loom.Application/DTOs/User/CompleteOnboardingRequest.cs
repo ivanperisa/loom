@@ -1,7 +1,7 @@
 namespace Loom.Application.DTOs.User;
 
 public record CompleteOnboardingRequest(
-    Guid InstitutionId,
+    int InstitutionId,
     string? Jmbag = null,
     bool RequestCoordinatorRole = false
 );

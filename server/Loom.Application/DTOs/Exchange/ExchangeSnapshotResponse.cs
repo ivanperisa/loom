@@ -1,12 +1,12 @@
-using Loom.Application.DTOs.CourseSlot;
+using Loom.Application.DTOs.LearningAgreement;
 
 namespace Loom.Application.DTOs.Exchange;
 
 public record ExchangeSnapshotResponse(
-    Guid Id,
-    Guid ExchangeId,
+    int Id,
+    int ExchangeId,
     string Phase,
-    Guid ChangedById,
+    int ChangedById,
     string ChangedByName,
     DateTime CreatedAt,
     LearningAgreementSnapshotData? Data

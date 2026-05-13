@@ -8,7 +8,7 @@ namespace Loom.Api.Middleware;
 public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
 {
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
-    private record CachedUser(Guid Id, UserRole Role);
+    private record CachedUser(int Id, UserRole Role);
 
     public async Task InvokeAsync(HttpContext context, IUserSyncService userSyncService)
     {

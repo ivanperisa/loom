@@ -1,7 +1,7 @@
 namespace Loom.Application.DTOs.Recognition;
 
 public record UpsertRecognitionEntryRequest(
-    Guid LearningAgreementEntryId,
+    int LearningAgreementEntryId,
     string? EnrollmentStatus,
     string? OriginalGrade,
     string? EctsGrade,

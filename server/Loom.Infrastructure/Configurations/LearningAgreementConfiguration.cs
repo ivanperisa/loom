@@ -8,16 +8,19 @@ public class LearningAgreementConfiguration : IEntityTypeConfiguration<LearningA
 {
     public void Configure(EntityTypeBuilder<LearningAgreement> builder)
     {
-        builder.ToTable("learning_agreement");
+        builder.ToTable("learning_agreement", "exchange");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
+        builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(x => x.ExchangeId).HasColumnName("exchange_id");
         builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at");
-        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
+
         builder.HasOne(x => x.Exchange)
             .WithOne(x => x.LearningAgreement)
             .HasForeignKey<LearningAgreement>(x => x.ExchangeId);
+
         builder.HasIndex(x => x.ExchangeId).IsUnique();
+        builder.HasIndex(x => x.Status);
     }
 }

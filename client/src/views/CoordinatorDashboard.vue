@@ -158,7 +158,7 @@ function viewExchange(exchangeId: string) {
                 v-for="ex in student.exchanges"
                 :key="ex.id"
                 class="flex cursor-pointer items-center justify-between rounded-lg border border-primary/20 bg-dark px-4 py-3 transition hover:border-light/60"
-                @click="viewExchange(ex.id)"
+                @click="viewExchange(ex.guid)"
               >
                 <div class="flex-1">
                   <div class="flex flex-wrap items-center gap-2">
@@ -183,14 +183,14 @@ function viewExchange(exchangeId: string) {
 
                   <!-- Row 2: strani fakultet -->
                   <p class="mt-2.5 text-sm font-semibold text-light">
-                    {{ ex.foreignInstitutionName }}
+                    {{ ex.partnerInstitutionName }}
                   </p>
-                  <p class="text-xs text-light/60">{{ ex.foreignProgramName }}</p>
+                  <p class="text-xs text-light/60">{{ ex.partnerProgramName }}</p>
 
                   <!-- Row 3: studij · profil -->
                   <p class="mt-1.5 text-xs text-light/40">
-                    {{ ex.studyProgramName
-                    }}<span v-if="ex.studyProfileName"> &middot; {{ ex.studyProfileName }}</span>
+                    {{ ex.homeProgramName
+                    }}<span v-if="ex.homeProfileName"> &middot; {{ ex.homeProfileName }}</span>
                   </p>
                 </div>
                 <svg class="h-5 w-5 text-light/60" viewBox="0 0 20 20" fill="currentColor">

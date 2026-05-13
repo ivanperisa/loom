@@ -17,7 +17,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         .Include(u => u.Institution)
         .Include(u => u.Coordinator);
 
-    public async Task<ErrorOr<AuthMeResponse>> GetCurrentUserAsync(Guid userId, CancellationToken ct = default)
+    public async Task<ErrorOr<AuthMeResponse>> GetCurrentUserAsync(int userId, CancellationToken ct = default)
     {
         var user = await UsersWithIncludes()
             .AsNoTracking()
@@ -26,7 +26,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return user.ToAuthMeResponse();
     }
 
-    public async Task<ErrorOr<AuthMeResponse>> CompleteOnboardingAsync(Guid userId, CompleteOnboardingRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<AuthMeResponse>> CompleteOnboardingAsync(int userId, CompleteOnboardingRequest request, CancellationToken ct = default)
     {
         var user = await db.Users.FindAsync([userId], ct);
         if (user is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -34,7 +34,8 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
 
         var institution = await db.Institutions.FindAsync([request.InstitutionId], ct);
         if (institution is null) return Error.NotFound("INSTITUTION_NOT_FOUND", "Institution not found.");
-        if (!institution.IsHome) return Error.Validation("INVALID_INSTITUTION", "Must select a home institution.");
+        if (institution.Type != InstitutionType.Home)
+            return Error.Validation("INVALID_INSTITUTION", "Must select a home institution.");
 
         if (request.RequestCoordinatorRole)
         {
@@ -59,7 +60,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return saved.ToAuthMeResponse();
     }
 
-    public async Task<ErrorOr<AuthMeResponse>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<AuthMeResponse>> UpdateProfileAsync(int userId, UpdateProfileRequest request, CancellationToken ct = default)
     {
         var user = await db.Users.FindAsync([userId], ct);
         if (user is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -69,7 +70,8 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
 
         var institution = await db.Institutions.FindAsync([request.InstitutionId], ct);
         if (institution is null) return Error.NotFound("INSTITUTION_NOT_FOUND", "Institution not found.");
-        if (!institution.IsHome) return Error.Validation("INVALID_INSTITUTION", "Must select a home institution.");
+        if (institution.Type != InstitutionType.Home)
+            return Error.Validation("INVALID_INSTITUTION", "Must select a home institution.");
 
         if (!string.IsNullOrWhiteSpace(request.Jmbag))
         {
@@ -112,7 +114,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return saved.ToAuthMeResponse();
     }
 
-    public async Task<ErrorOr<AuthMeResponse>> RequestCoordinatorRoleAsync(Guid userId, CancellationToken ct = default)
+    public async Task<ErrorOr<AuthMeResponse>> RequestCoordinatorRoleAsync(int userId, CancellationToken ct = default)
     {
         var user = await db.Users.FindAsync([userId], ct);
         if (user is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -131,7 +133,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return saved.ToAuthMeResponse();
     }
 
-    public async Task<ErrorOr<List<UserListResponse>>> GetAllUsersAsync(Guid adminId, CancellationToken ct = default)
+    public async Task<ErrorOr<List<UserListResponse>>> GetAllUsersAsync(int adminId, CancellationToken ct = default)
     {
         var admin = await db.Users.FindAsync([adminId], ct);
         if (admin is null || admin.Role != UserRole.Admin)
@@ -153,7 +155,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return users;
     }
 
-    public async Task<ErrorOr<List<CoordinatorRequestResponse>>> GetCoordinatorRequestsAsync(Guid adminId, CancellationToken ct = default)
+    public async Task<ErrorOr<List<CoordinatorRequestResponse>>> GetCoordinatorRequestsAsync(int adminId, CancellationToken ct = default)
     {
         var admin = await db.Users.FindAsync([adminId], ct);
         if (admin is null || admin.Role != UserRole.Admin)
@@ -169,7 +171,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return requests;
     }
 
-    public async Task<ErrorOr<AuthMeResponse>> MakeCoordinatorAsync(Guid adminId, Guid targetUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<AuthMeResponse>> MakeCoordinatorAsync(int adminId, int targetUserId, CancellationToken ct = default)
     {
         var admin = await db.Users.FindAsync([adminId], ct);
         if (admin is null || admin.Role != UserRole.Admin)
@@ -189,7 +191,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return saved.ToAuthMeResponse();
     }
 
-    public async Task<ErrorOr<AuthMeResponse>> RejectCoordinatorRequestAsync(Guid adminId, Guid targetUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<AuthMeResponse>> RejectCoordinatorRequestAsync(int adminId, int targetUserId, CancellationToken ct = default)
     {
         var admin = await db.Users.FindAsync([adminId], ct);
         if (admin is null || admin.Role != UserRole.Admin)
@@ -210,7 +212,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return saved.ToAuthMeResponse();
     }
 
-    public async Task<ErrorOr<AuthMeResponse>> RemoveCoordinatorAsync(Guid adminId, Guid targetUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<AuthMeResponse>> RemoveCoordinatorAsync(int adminId, int targetUserId, CancellationToken ct = default)
     {
         var admin = await db.Users.FindAsync([adminId], ct);
         if (admin is null || admin.Role != UserRole.Admin)
@@ -232,7 +234,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return saved.ToAuthMeResponse();
     }
 
-    public async Task<ErrorOr<List<CoordinatorWhitelistEntryResponse>>> GetCoordinatorWhitelistAsync(Guid adminId, CancellationToken ct = default)
+    public async Task<ErrorOr<List<CoordinatorWhitelistEntryResponse>>> GetCoordinatorWhitelistAsync(int adminId, CancellationToken ct = default)
     {
         var admin = await db.Users.FindAsync([adminId], ct);
         if (admin is null || admin.Role != UserRole.Admin)
@@ -247,7 +249,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return entries;
     }
 
-    public async Task<ErrorOr<CoordinatorWhitelistEntryResponse>> AddToCoordinatorWhitelistAsync(Guid adminId, string email, CancellationToken ct = default)
+    public async Task<ErrorOr<CoordinatorWhitelistEntryResponse>> AddToCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default)
     {
         var admin = await db.Users.FindAsync([adminId], ct);
         if (admin is null || admin.Role != UserRole.Admin)
@@ -266,7 +268,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         return new CoordinatorWhitelistEntryResponse(entry.Id, entry.Email, entry.CreatedAt);
     }
 
-    public async Task<ErrorOr<Deleted>> RemoveFromCoordinatorWhitelistAsync(Guid adminId, string email, CancellationToken ct = default)
+    public async Task<ErrorOr<Deleted>> RemoveFromCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default)
     {
         var admin = await db.Users.FindAsync([adminId], ct);
         if (admin is null || admin.Role != UserRole.Admin)

@@ -1,7 +1,7 @@
 namespace Loom.Application.DTOs.Admin;
 
 public record CoordinatorRequestResponse(
-    Guid Id,
+    int Id,
     string Name,
     string Email,
     string? InstitutionName

@@ -13,10 +13,10 @@ public class User : EntityBase
     public string? Jmbag { get; set; }
     public string? Mentor { get; set; }
 
-    public Guid? InstitutionId { get; set; }
+    public int? InstitutionId { get; set; }
     public Institution? Institution { get; set; }
 
-    public Guid? CoordinatorId { get; set; }
+    public int? CoordinatorId { get; set; }
     public User? Coordinator { get; set; }
 
     public string? CoordinatorRequestStatus { get; set; }
@@ -27,6 +27,6 @@ public class User : EntityBase
 
     public bool CanActAsCoordinator() => Role == UserRole.Coordinator || Role == UserRole.Admin;
 
-    public bool IsCoordinatorFor(Guid? studentCoordinatorId) =>
+    public bool IsCoordinatorFor(int? studentCoordinatorId) =>
         studentCoordinatorId == Id || Role == UserRole.Admin;
 }

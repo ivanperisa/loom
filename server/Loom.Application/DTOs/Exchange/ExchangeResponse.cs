@@ -3,15 +3,16 @@ using Loom.Application.DTOs.Institution;
 namespace Loom.Application.DTOs.Exchange;
 
 public record ExchangeResponse(
-    Guid Id,
-    Guid StudentId,
+    int Id,
+    Guid Guid,
+    int StudentId,
     string StudentName,
     string? StudentJmbag,
     string HomeInstitutionName,
-    string StudyProgramName,
-    StudyProfileResponse StudyProfile,
-    ForeignProgramResponse ForeignProgram,
-    Guid? CoordinatorId,
+    string HomeProgramName,
+    HomeProfileResponse HomeProfile,
+    PartnerProgramResponse PartnerProgram,
+    int? CoordinatorId,
     string? CoordinatorName,
     string? Mentor,
     string AcademicYear,

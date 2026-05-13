@@ -1,8 +1,8 @@
-namespace Loom.Application.DTOs.CourseSlot;
+namespace Loom.Application.DTOs.LearningAgreement;
 
 public record LearningAgreementResponse(
-    Guid ExchangeId,
+    int ExchangeId,
     string Status,
-    List<CourseSlotResponse> Slots,
+    List<HomeSlotResponse> Slots,
     List<LearningAgreementEntryResponse> Entries
 );

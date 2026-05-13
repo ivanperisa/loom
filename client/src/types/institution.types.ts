@@ -5,33 +5,31 @@ export interface InstitutionResponse {
   country: string | null
   city: string | null
   erasmusCode: string | null
-  isHome: boolean
 }
 
-export interface StudyProfileResponse {
+export interface HomeProfileResponse {
   id: string
   name: string
   nameEn: string | null
 }
 
-export interface StudyProgramResponse {
+export interface HomeProgramResponse {
   id: string
   name: string
   nameEn: string | null
   level: string
   durationSemesters: number
-  profiles: StudyProfileResponse[]
+  profiles: HomeProfileResponse[]
 }
 
-export interface ForeignProgramResponse {
+export interface PartnerProgramResponse {
   id: string
   name: string
   nameEn: string | null
-  institutionId: string
   institutionName: string
 }
 
-export interface ForeignCourseResponse {
+export interface PartnerCourseResponse {
   id: string
   code: string
   nameEn: string

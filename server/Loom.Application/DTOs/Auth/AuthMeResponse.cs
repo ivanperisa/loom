@@ -1,16 +1,16 @@
 namespace Loom.Application.DTOs.Auth;
 
 public record AuthMeResponse(
-    Guid Id,
+    int Id,
     string Email,
     string Name,
     string? Jmbag,
     string? Mentor,
     string Role,
     bool IsOnboarded,
-    Guid? InstitutionId,
+    int? InstitutionId,
     string? InstitutionName,
-    Guid? CoordinatorId,
+    int? CoordinatorId,
     string? CoordinatorName,
     string? CoordinatorRequestStatus
 );

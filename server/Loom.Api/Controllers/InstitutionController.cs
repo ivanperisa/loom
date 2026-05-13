@@ -15,24 +15,25 @@ public class InstitutionController(IInstitutionService institutionService) : Api
         return Match(result, Ok);
     }
 
-    [HttpGet("foreign-programs")]
-    public async Task<IActionResult> GetForeignPrograms(CancellationToken ct)
+    [HttpGet("home-programs")]
+    public async Task<IActionResult> GetHomePrograms(CancellationToken ct)
     {
-        var result = await institutionService.GetForeignProgramsAsync(ct);
+        var result = await institutionService.GetHomeProgramsAsync(ct);
         return Match(result, Ok);
     }
 
-    [HttpGet("study-programs")]
-    public async Task<IActionResult> GetStudyPrograms(CancellationToken ct)
+    [HttpGet("partner-programs")]
+    public async Task<IActionResult> GetPartnerPrograms(CancellationToken ct)
     {
-        var result = await institutionService.GetStudyProgramsAsync(ct);
+        var result = await institutionService.GetPartnerProgramsAsync(ct);
         return Match(result, Ok);
     }
 
-    [HttpGet("foreign-programs/{foreignProgramId:guid}/courses")]
-    public async Task<IActionResult> GetForeignCourses(Guid foreignProgramId, CancellationToken ct)
+    
+    [HttpGet("partner-programs/{partnerProgramId:int}/courses")]
+    public async Task<IActionResult> GetPartnerCourses(int partnerProgramId, CancellationToken ct)
     {
-        var result = await institutionService.GetForeignCoursesAsync(foreignProgramId, ct);
+        var result = await institutionService.GetPartnerCoursesAsync(partnerProgramId, ct);
         return Match(result, Ok);
     }
 

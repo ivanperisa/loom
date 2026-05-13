@@ -39,7 +39,7 @@ var allowedOrigins = builder.Configuration
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("App", policy =>
+    options.AddPolicy("CorsPolicy", policy =>
     {
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
@@ -130,7 +130,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseCors("App");
+app.UseCors("CorsPolicy");
 app.UseAuthentication();
 app.UseMiddleware<UserSyncMiddleware>();
 app.UseAuthorization();

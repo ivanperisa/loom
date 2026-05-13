@@ -24,22 +24,22 @@ public class AdminController(IUserService userService) : ApiController
         return Match(result, Ok);
     }
 
-    [HttpPatch("users/{userId:guid}/make-coordinator")]
-    public async Task<IActionResult> MakeCoordinator(Guid userId, CancellationToken ct)
+    [HttpPatch("users/{userId:int}/make-coordinator")]
+    public async Task<IActionResult> MakeCoordinator(int userId, CancellationToken ct)
     {
         var result = await userService.MakeCoordinatorAsync(GetCurrentUserId(), userId, ct);
         return Match(result, Ok);
     }
 
-    [HttpPatch("users/{userId:guid}/reject-coordinator-request")]
-    public async Task<IActionResult> RejectCoordinatorRequest(Guid userId, CancellationToken ct)
+    [HttpPatch("users/{userId:int}/reject-coordinator-request")]
+    public async Task<IActionResult> RejectCoordinatorRequest(int userId, CancellationToken ct)
     {
         var result = await userService.RejectCoordinatorRequestAsync(GetCurrentUserId(), userId, ct);
         return Match(result, Ok);
     }
 
-    [HttpPatch("users/{userId:guid}/remove-coordinator")]
-    public async Task<IActionResult> RemoveCoordinator(Guid userId, CancellationToken ct)
+    [HttpPatch("users/{userId:int}/remove-coordinator")]
+    public async Task<IActionResult> RemoveCoordinator(int userId, CancellationToken ct)
     {
         var result = await userService.RemoveCoordinatorAsync(GetCurrentUserId(), userId, ct);
         return Match(result, Ok);

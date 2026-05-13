@@ -1,10 +1,10 @@
-namespace Loom.Application.DTOs.Exchange;
+namespace Loom.Application.DTOs.LearningAgreement;
 
 public record SaveLearningAgreementRequest(List<LearningAgreementEntryUpsertDto> Entries);
 
 public record LearningAgreementEntryUpsertDto(
-    Guid CourseSlotId,
+    int HomeSlotId,
     string Mode,
-    Guid? ForeignCourseId,
+    int? PartnerCourseId,
     decimal? AwardedEcts
 );

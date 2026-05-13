@@ -1,9 +1,9 @@
 namespace Loom.Application.DTOs.Institution;
 
-public record ForeignProgramResponse(
-    Guid Id,
+public record PartnerProgramResponse(
+    int Id,
     string Name,
     string? NameEn,
-    Guid InstitutionId,
+    string Level,
     string InstitutionName
 );

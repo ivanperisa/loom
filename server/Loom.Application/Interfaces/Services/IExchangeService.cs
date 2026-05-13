@@ -1,20 +1,20 @@
 using ErrorOr;
-using Loom.Application.DTOs.CourseSlot;
 using Loom.Application.DTOs.Exchange;
+using Loom.Application.DTOs.LearningAgreement;
 
 namespace Loom.Application.Interfaces.Services;
 
 public interface IExchangeService
 {
-    Task<ErrorOr<ExchangeResponse>> CreateExchangeAsync(Guid studentId, CreateExchangeRequest request, CancellationToken ct = default);
-    Task<ErrorOr<ExchangeResponse>> GetExchangeAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default);
-    Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyExchangesAsync(Guid studentId, CancellationToken ct = default);
-    Task<ErrorOr<Deleted>> DeleteExchangeAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default);
-    Task<ErrorOr<ExchangeResponse>> UpdateLearningAgreementStatusAsync(Guid exchangeId, Guid requesterId, UpdateLearningAgreementStatusRequest request, CancellationToken ct = default);
-    Task<ErrorOr<LearningAgreementResponse>> GetLearningAgreementAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default);
-    Task<ErrorOr<LearningAgreementResponse>> SaveLearningAgreementAsync(Guid exchangeId, Guid requesterId, SaveLearningAgreementRequest request, CancellationToken ct = default);
-    Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyStudentsExchangesAsync(Guid coordinatorId, CancellationToken ct = default);
-    Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeId, Guid requesterId, string? message, CancellationToken ct = default);
-    Task<ErrorOr<List<ExchangeSnapshotResponse>>> GetSnapshotsAsync(Guid exchangeId, Guid requesterId, CancellationToken ct = default);
-    Task<ErrorOr<ExchangeSnapshotResponse>> GetSnapshotAsync(Guid exchangeId, Guid snapshotId, Guid requesterId, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeResponse>> CreateExchangeAsync(int studentId, CreateExchangeRequest request, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeResponse>> GetExchangeAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default);
+    Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyExchangesAsync(int studentId, CancellationToken ct = default);
+    Task<ErrorOr<Deleted>> DeleteExchangeAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeResponse>> UpdateLearningAgreementStatusAsync(Guid exchangeGuid, int requesterId, UpdateLearningAgreementStatusRequest request, CancellationToken ct = default);
+    Task<ErrorOr<LearningAgreementResponse>> GetLearningAgreementAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default);
+    Task<ErrorOr<LearningAgreementResponse>> SaveLearningAgreementAsync(Guid exchangeGuid, int requesterId, SaveLearningAgreementRequest request, CancellationToken ct = default);
+    Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyStudentsExchangesAsync(int coordinatorId, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeGuid, int requesterId, string? message, CancellationToken ct = default);
+    Task<ErrorOr<List<ExchangeSnapshotResponse>>> GetSnapshotsAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeSnapshotResponse>> GetSnapshotAsync(Guid exchangeGuid, int snapshotId, int requesterId, CancellationToken ct = default);
 }

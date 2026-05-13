@@ -8,13 +8,13 @@ namespace Loom.Api.Controllers;
 [ApiController]
 public abstract class ApiController : ControllerBase
 {
-    protected Guid GetCurrentUserId() =>
-        Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    protected int GetCurrentUserId() =>
+        int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    protected Guid? TryGetCurrentUserId()
+    protected int? TryGetCurrentUserId()
     {
         var rawUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return Guid.TryParse(rawUserId, out var parsedUserId) ? parsedUserId : null;
+        return int.TryParse(rawUserId, out var parsedUserId) ? parsedUserId : null;
     }
 
     protected string? GetCurrentRole()

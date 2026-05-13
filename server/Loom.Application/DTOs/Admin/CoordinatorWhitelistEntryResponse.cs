@@ -1,7 +1,7 @@
 namespace Loom.Application.DTOs.Admin;
 
 public record CoordinatorWhitelistEntryResponse(
-    Guid Id,
+    int Id,
     string Email,
     DateTime CreatedAt
 );

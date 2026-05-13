@@ -1,13 +1,13 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import { useExchangeStore } from '@/stores/exchange.store'
-import type { ForeignCourseResponse } from '@/types/institution.types'
+import type { PartnerCourseResponse } from '@/types/institution.types'
 
 const props = withDefaults(
   defineProps<{
-    foreignProgramId: string
+    partnerProgramId: string
     exchangeId: string
     variant?: 'available' | 'mapped' | 'all'
   }>(),
@@ -17,13 +17,13 @@ const props = withDefaults(
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
 
-const courses = ref<ForeignCourseResponse[]>([])
+const courses = ref<PartnerCourseResponse[]>([])
 const loading = ref(true)
 const searchCode = ref('')
 
 onMounted(async () => {
   try {
-    const res = await institutionService.getForeignCourses(props.foreignProgramId)
+    const res = await institutionService.getPartnerCourses(props.partnerProgramId)
     courses.value = res.data
   } catch {
     // keep empty
@@ -36,7 +36,7 @@ const mappedEctsMap = computed(() => {
   const map = new Map<string, number>()
   for (const state of exchangeStore.localSlotStates) {
     for (const m of state.mappings) {
-      map.set(m.foreignCourseId, (map.get(m.foreignCourseId) ?? 0) + m.awardedEcts)
+      map.set(m.partnerCourseId, (map.get(m.partnerCourseId) ?? 0) + m.awardedEcts)
     }
   }
   return map
@@ -49,12 +49,14 @@ function mappedEcts(courseId: string): number {
 const mappedCourses = computed(() => {
   const withEcts = courses.value.filter((c) => mappedEcts(c.id) > 0)
   const stagedOnly = courses.value.filter(
-    (c) => exchangeStore.stagedForeignCourseIds.has(c.id) && mappedEcts(c.id) === 0,
+    (c) => exchangeStore.stagedPartnerCourseIds.has(c.id) && mappedEcts(c.id) === 0,
   )
   return [...withEcts, ...stagedOnly]
 })
 
-const availableCourses = computed(() => courses.value.filter((c) => mappedEcts(c.id) === 0 && !exchangeStore.stagedForeignCourseIds.has(c.id)))
+const availableCourses = computed(() =>
+  courses.value.filter((c) => mappedEcts(c.id) === 0 && !exchangeStore.stagedPartnerCourseIds.has(c.id))
+)
 
 const searchResults = computed(() => {
   const q = searchCode.value.trim().toLowerCase()
@@ -62,7 +64,7 @@ const searchResults = computed(() => {
   return availableCourses.value.filter((c) => c.code.toLowerCase().includes(q))
 })
 
-function onDragStart(course: ForeignCourseResponse) {
+function onDragStart(course: PartnerCourseResponse) {
   exchangeStore.startDrag(course)
 }
 </script>
@@ -78,15 +80,15 @@ function onDragStart(course: ForeignCourseResponse) {
         <input
           v-model="searchCode"
           type="text"
-          :placeholder="t('foreignCourses.searchPlaceholder')"
+          :placeholder="t('partnerCourses.searchPlaceholder')"
           class="mb-3 w-full rounded-lg border border-primary/20 bg-dark-2 px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
         />
         <div class="max-h-[400px] space-y-1.5 overflow-y-auto pr-1">
           <p v-if="searchCode.trim() === ''" class="py-4 text-center text-xs text-light/60">
-            {{ t('foreignCourses.searchHint') }}
+            {{ t('partnerCourses.searchHint') }}
           </p>
           <p v-else-if="searchResults.length === 0" class="py-4 text-center text-xs text-light/60">
-            {{ t('foreignCourses.noResults') }}
+            {{ t('partnerCourses.noResults') }}
           </p>
           <div
             v-for="course in searchResults"
@@ -96,19 +98,10 @@ function onDragStart(course: ForeignCourseResponse) {
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
           >
-            <svg
-              class="shrink-0 text-light/60"
-              width="12"
-              height="18"
-              viewBox="0 0 12 18"
-              fill="currentColor"
-            >
-              <circle cx="3" cy="3" r="1.5" />
-              <circle cx="9" cy="3" r="1.5" />
-              <circle cx="3" cy="9" r="1.5" />
-              <circle cx="9" cy="9" r="1.5" />
-              <circle cx="3" cy="15" r="1.5" />
-              <circle cx="9" cy="15" r="1.5" />
+            <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
+              <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
+              <circle cx="3" cy="9" r="1.5" /><circle cx="9" cy="9" r="1.5" />
+              <circle cx="3" cy="15" r="1.5" /><circle cx="9" cy="15" r="1.5" />
             </svg>
             <div class="min-w-0 flex-1">
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
@@ -119,49 +112,22 @@ function onDragStart(course: ForeignCourseResponse) {
               <span
                 v-if="mappedEcts(course.id) > 0"
                 class="rounded px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300"
-              >
-                {{ mappedEcts(course.id) }}/{{ course.ects }} ECTS
-              </span>
-              <span
-                v-else
-                class="rounded bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary-light"
-              >
+              >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
+              <span v-else class="rounded bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary-light">
                 {{ course.ects }} ECTS
               </span>
               <button
-                v-if="!exchangeStore.stagedForeignCourseIds.has(course.id)"
-                :title="t('foreignCourses.stageAdd')"
+                v-if="!exchangeStore.stagedPartnerCourseIds.has(course.id)"
+                :title="t('partnerCourses.stageAdd')"
                 class="flex items-center justify-center w-6 h-6 rounded text-light/40 hover:text-primary hover:bg-primary/10 transition"
-                @click.stop="exchangeStore.stageForeignCourse(course.id)"
+                @click.stop="exchangeStore.stagePartnerCourse(course.id)"
               >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                >
-                  <line x1="6" y1="1" x2="6" y2="11" />
-                  <line x1="1" y1="6" x2="11" y2="6" />
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <line x1="6" y1="1" x2="6" y2="11" /><line x1="1" y1="6" x2="11" y2="6" />
                 </svg>
               </button>
-              <span
-                v-else
-                :title="t('foreignCourses.stageAdded')"
-                class="flex items-center justify-center w-6 h-6 rounded text-green-400"
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
+              <span v-else :title="t('partnerCourses.stageAdded')" class="flex items-center justify-center w-6 h-6 rounded text-green-400">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="2,6 5,9 10,3" />
                 </svg>
               </span>
@@ -171,10 +137,7 @@ function onDragStart(course: ForeignCourseResponse) {
       </template>
 
       <template v-if="variant === 'mapped' || variant === 'all'">
-        <div
-          class="max-h-[400px] space-y-1.5 overflow-y-auto pr-1"
-          :class="variant === 'all' ? 'mt-4' : ''"
-        >
+        <div class="max-h-[400px] space-y-1.5 overflow-y-auto pr-1" :class="variant === 'all' ? 'mt-4' : ''">
           <div
             v-for="course in mappedCourses"
             :key="course.id"
@@ -188,19 +151,10 @@ function onDragStart(course: ForeignCourseResponse) {
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
           >
-            <svg
-              class="shrink-0 text-light/60"
-              width="12"
-              height="18"
-              viewBox="0 0 12 18"
-              fill="currentColor"
-            >
-              <circle cx="3" cy="3" r="1.5" />
-              <circle cx="9" cy="3" r="1.5" />
-              <circle cx="3" cy="9" r="1.5" />
-              <circle cx="9" cy="9" r="1.5" />
-              <circle cx="3" cy="15" r="1.5" />
-              <circle cx="9" cy="15" r="1.5" />
+            <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
+              <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
+              <circle cx="3" cy="9" r="1.5" /><circle cx="9" cy="9" r="1.5" />
+              <circle cx="3" cy="15" r="1.5" /><circle cx="9" cy="15" r="1.5" />
             </svg>
             <div class="min-w-0 flex-1">
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
@@ -217,30 +171,19 @@ function onDragStart(course: ForeignCourseResponse) {
                       ? 'bg-green-500/20 text-green-300'
                       : 'bg-amber-500/20 text-amber-300'
                 "
-              >
-                {{ mappedEcts(course.id) }}/{{ course.ects }} ECTS
-              </span>
+              >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
               <button
                 class="flex items-center justify-center w-5 h-5 rounded text-light/40 hover:text-red-400 hover:bg-red-400/10 transition"
-                @click.stop="exchangeStore.localRemoveAllMappingsForCourse(course.id); exchangeStore.unstageForeignCourse(course.id)"
+                @click.stop="exchangeStore.localRemoveAllMappingsForCourse(course.id); exchangeStore.unstagePartnerCourse(course.id)"
               >
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 10 10"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                >
-                  <line x1="1" y1="1" x2="9" y2="9" />
-                  <line x1="9" y1="1" x2="1" y2="9" />
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
                 </svg>
               </button>
             </div>
           </div>
           <p v-if="mappedCourses.length === 0" class="py-4 text-center text-xs text-light/60">
-            {{ t('foreignCourses.noMapped') }}
+            {{ t('partnerCourses.noMapped') }}
           </p>
         </div>
       </template>

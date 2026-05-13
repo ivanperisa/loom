@@ -8,18 +8,18 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
 {
     public void Configure(EntityTypeBuilder<Exchange> builder)
     {
-        builder.ToTable("exchange");
-
+        builder.ToTable("exchange", "exchange");
         builder.HasKey(x => x.Id);
-
-        builder.Property(x => x.Id).HasColumnName("id").HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
+        builder.Property(x => x.Guid).HasColumnName("guid").HasDefaultValueSql("gen_random_uuid()").IsRequired();
+        builder.HasIndex(x => x.Guid).IsUnique();
         builder.Property(x => x.StudentId).HasColumnName("student_id").IsRequired();
-        builder.Property(x => x.StudyProfileId).HasColumnName("study_profile_id").IsRequired();
-        builder.Property(x => x.ForeignProgramId).HasColumnName("foreign_program_id").IsRequired();
+        builder.Property(x => x.HomeProfileId).HasColumnName("home_profile_id").IsRequired();
+        builder.Property(x => x.PartnerProgramId).HasColumnName("partner_program_id").IsRequired();
+        builder.Property(x => x.CoordinatorId).HasColumnName("coordinator_id");
         builder.Property(x => x.AcademicYear).HasColumnName("academic_year").IsRequired();
         builder.Property(x => x.SemesterType).HasColumnName("semester_type").HasConversion<string>().HasMaxLength(10);
         builder.Property(x => x.StudySemester).HasColumnName("study_semester").IsRequired();
-        builder.Property(x => x.CoordinatorId).HasColumnName("coordinator_id");
         builder.Property(x => x.CoordinatorMessage).HasColumnName("coordinator_message");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()").IsRequired();
@@ -29,9 +29,14 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
             .HasForeignKey(x => x.StudentId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(x => x.StudyProfile)
+        builder.HasOne(x => x.HomeProfile)
             .WithMany()
-            .HasForeignKey(x => x.StudyProfileId)
+            .HasForeignKey(x => x.HomeProfileId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.PartnerProgram)
+            .WithMany()
+            .HasForeignKey(x => x.PartnerProgramId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Coordinator)
@@ -41,6 +46,7 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
 
         builder.HasIndex(x => x.StudentId);
         builder.HasIndex(x => x.CoordinatorId);
-        builder.HasIndex(x => x.ForeignProgramId);
+        builder.HasIndex(x => x.HomeProfileId);
+        builder.HasIndex(x => x.PartnerProgramId);
     }
 }

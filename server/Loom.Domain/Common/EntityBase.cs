@@ -2,6 +2,6 @@
 
 public abstract class EntityBase
 {
-    public Guid Id { get; set; } = Guid.CreateVersion7();
+    public int Id { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

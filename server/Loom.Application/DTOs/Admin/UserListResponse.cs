@@ -1,7 +1,7 @@
 namespace Loom.Application.DTOs.Admin;
 
 public record UserListResponse(
-    Guid Id,
+    int Id,
     string Name,
     string Email,
     string Role,
