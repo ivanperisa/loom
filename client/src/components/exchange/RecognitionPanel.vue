@@ -149,7 +149,9 @@ async function toggleGroupRecognition(group: CourseGroup) {
 }
 
 async function submitRecognition() {
-  await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Submitted })
+  await exchangeStore.updateRecognitionStatus(props.exchangeId, {
+    status: documentStatus.Submitted,
+  })
 }
 async function approveRecognition() {
   await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Approved })
@@ -189,7 +191,9 @@ const rejectedBg = '#FFCCCC'
         <div class="flex items-center gap-3">
           <StatusBadge :status="exchangeStore.serverRecognition!.status" />
         </div>
-        <span class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80">
+        <span
+          class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80"
+        >
           {{ homeProfileName }}
         </span>
         <div class="flex flex-wrap gap-2">
@@ -210,8 +214,12 @@ const rejectedBg = '#FFCCCC'
             >
               {{ t('recognition.actions.submit') }}
             </button>
-            <template v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Submitted">
-              <span class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60">
+            <template
+              v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Submitted"
+            >
+              <span
+                class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60"
+              >
                 {{ t('exchange.status.waitingApproval') }}
               </span>
               <button
@@ -281,23 +289,51 @@ const rejectedBg = '#FFCCCC'
 
       <!-- Recognition table -->
       <div v-else class="overflow-x-auto doc-table-wrap">
-        <table style="border-collapse: collapse; width: 100%; min-width: 1200px; font-size: 11px; color: #000;">
+        <table
+          style="
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 1200px;
+            font-size: 11px;
+            color: #000;
+          "
+        >
           <thead>
             <tr>
               <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.partnerCode') }}</th>
-              <th class="rec-th" style="min-width: 160px">{{ t('recognition.col.partnerNameEn') }}</th>
-              <th class="rec-th" style="min-width: 90px">{{ t('recognition.col.enrollmentStatus') }}</th>
-              <th class="rec-th" style="min-width: 140px">{{ t('recognition.col.partnerNameHr') }}</th>
-              <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.partnerHours') }}</th>
+              <th class="rec-th" style="min-width: 160px">
+                {{ t('recognition.col.partnerNameEn') }}
+              </th>
+              <th class="rec-th" style="min-width: 90px">
+                {{ t('recognition.col.enrollmentStatus') }}
+              </th>
+              <th class="rec-th" style="min-width: 140px">
+                {{ t('recognition.col.partnerNameHr') }}
+              </th>
+              <th class="rec-th" style="min-width: 70px">
+                {{ t('recognition.col.partnerHours') }}
+              </th>
               <th class="rec-th" style="min-width: 40px">{{ t('recognition.col.partnerEcts') }}</th>
               <th class="rec-th" style="min-width: 28px">{{ t('recognition.col.rbr') }}</th>
-              <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.recognizedAs') }}</th>
-              <th class="rec-th" style="min-width: 130px">{{ t('recognition.col.homeSlotCourseName') }}</th>
-              <th class="rec-th" style="min-width: 55px">{{ t('recognition.col.homeSlotCourseGroupIsvuCode') }}</th>
-              <th class="rec-th" style="min-width: 110px">{{ t('recognition.col.homeSlotCourseGroupName') }}</th>
-              <th class="rec-th" style="min-width: 38px">{{ t('recognition.col.homeSlotSemester') }}</th>
+              <th class="rec-th" style="min-width: 70px">
+                {{ t('recognition.col.recognizedAs') }}
+              </th>
+              <th class="rec-th" style="min-width: 130px">
+                {{ t('recognition.col.homeSlotCourseName') }}
+              </th>
+              <th class="rec-th" style="min-width: 55px">
+                {{ t('recognition.col.homeSlotCourseGroupIsvuCode') }}
+              </th>
+              <th class="rec-th" style="min-width: 110px">
+                {{ t('recognition.col.homeSlotCourseGroupName') }}
+              </th>
+              <th class="rec-th" style="min-width: 38px">
+                {{ t('recognition.col.homeSlotSemester') }}
+              </th>
               <th class="rec-th" style="min-width: 50px">{{ t('recognition.col.awardedEcts') }}</th>
-              <th class="rec-th" style="min-width: 60px">{{ t('recognition.col.originalGrade') }}</th>
+              <th class="rec-th" style="min-width: 60px">
+                {{ t('recognition.col.originalGrade') }}
+              </th>
               <th class="rec-th" style="min-width: 55px">{{ t('recognition.col.ectsGrade') }}</th>
               <th class="rec-th" style="min-width: 55px">{{ t('recognition.col.hrGrade') }}</th>
               <th class="rec-th" style="min-width: 80px">{{ t('recognition.col.examDate') }}</th>
@@ -326,7 +362,11 @@ const rejectedBg = '#FFCCCC'
                           : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white'
                       "
                     >
-                      {{ groupIsRejected(group) ? t('recognition.actions.approve') : t('recognition.actions.reject') }}
+                      {{
+                        groupIsRejected(group)
+                          ? t('recognition.actions.approve')
+                          : t('recognition.actions.reject')
+                      }}
                     </button>
                   </div>
                 </td>
@@ -339,7 +379,10 @@ const rejectedBg = '#FFCCCC'
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
                   {{ group.partnerCourseNameEn }}
-                  <div v-if="group.partnerCourseNameHr" style="font-size: 9px; color: #555; font-style: italic">
+                  <div
+                    v-if="group.partnerCourseNameHr"
+                    style="font-size: 9px; color: #555; font-style: italic"
+                  >
                     {{ group.partnerCourseNameHr }}
                   </div>
                 </td>
@@ -392,22 +435,34 @@ const rejectedBg = '#FFCCCC'
                 </td>
 
                 <!-- G: Rbr. -->
-                <td class="rec-td rec-td--center" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                <td
+                  class="rec-td rec-td--center"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                >
                   {{ idx + 1 }}
                 </td>
 
                 <!-- H: Priznaje se za predmet -->
-                <td class="rec-td rec-td--center" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
-                  {{ entry.homeSlotCourseIsvuCode}}
+                <td
+                  class="rec-td rec-td--center"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                >
+                  {{ entry.homeSlotCourseIsvuCode }}
                 </td>
 
                 <!-- I: Naziv -->
-                <td class="rec-td" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                <td
+                  class="rec-td"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                >
                   {{ entry.homeSlotCourseName }}
                 </td>
 
                 <!-- J: Izb. grupa -->
-                <td class="rec-td rec-td--center" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                <td
+                  class="rec-td rec-td--center"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                >
                   {{ entry.homeSlotCourseGroupIsvuCode ?? '—' }}
                 </td>
 
@@ -416,11 +471,14 @@ const rejectedBg = '#FFCCCC'
                   class="rec-td rec-td--center"
                   :style="{ background: groupIsRejected(group) ? rejectedBg : entry.homeSlotColor }"
                 >
-                  {{ entry.homeSlotCourseGroupName }}
+                  {{ entry.homeSlotCourseGroupName || t('recognition.col.mandatoryCourse') }}
                 </td>
 
                 <!-- L: Semestar -->
-                <td class="rec-td rec-td--center" :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }">
+                <td
+                  class="rec-td rec-td--center"
+                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                >
                   {{ entry.homeSlotSemester }}
                 </td>
 
@@ -520,9 +578,16 @@ const rejectedBg = '#FFCCCC'
   padding: 3px 4px;
   vertical-align: middle;
 }
-.rec-td--center { text-align: center; }
-.rec-td--bold { font-weight: bold; }
-.rec-td--small { font-size: 10px; color: #555; }
+.rec-td--center {
+  text-align: center;
+}
+.rec-td--bold {
+  font-weight: bold;
+}
+.rec-td--small {
+  font-size: 10px;
+  color: #555;
+}
 
 .rec-td-grade {
   border: 1px solid #aaa;
@@ -539,5 +604,7 @@ const rejectedBg = '#FFCCCC'
   background: transparent;
   text-align: center;
 }
-.rec-input--date { text-align: left; }
+.rec-input--date {
+  text-align: left;
+}
 </style>

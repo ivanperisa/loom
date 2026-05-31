@@ -57,6 +57,8 @@ export default {
     roleCoordinatorDesc: 'Pregledavam i odobravam razmjene studenata.',
     selectInstitution: 'Odaberite matični fakultet',
     selectInstitutionPlaceholder: '— odaberite instituciju —',
+    searchInstitution: 'Pretraži po nazivu, gradu ili Erasmus kodu...',
+    noInstitutions: 'Nema institucija koje odgovaraju pretrazi.',
     jmbagLabel: 'Unesite JMBAG',
     jmbagPlaceholder: '0036XXXXXX',
     jmbagHint: 'JMBAG mora imati točno 10 znamenki.',
@@ -98,6 +100,10 @@ export default {
       institution: 'Matični fakultet',
       mentor: 'Mentor',
       coordinator: 'Koordinator',
+      searchCoordinator: 'Pretraži koordinatore...',
+      noCoordinatorResults: 'Nema koordinatora koji odgovaraju pretrazi.',
+      searchInstitution: 'Pretraži po nazivu, gradu ili Erasmus kodu...',
+      noInstitutionResults: 'Nema institucija koje odgovaraju pretrazi.',
     },
     institutions: {
       title: 'Moje institucije',
@@ -194,6 +200,11 @@ export default {
     selectProfile: 'Odaberite profil',
     selectProfilePlaceholder: '— odaberite profil —',
     selectPartnerProgram: 'Odaberite strani program',
+    selectProgramFirst: 'Najprije odaberite program kako biste vidjeli dostupne profile.',
+    allCountries: 'Sve države',
+    searchPartner: 'Pretraži po programu ili instituciji...',
+    results: 'rezultata',
+    noResults: 'Nema programa koji odgovaraju filteru.',
     selectCoordinator: 'Odaberite koordinatora',
     selectCoordinatorPlaceholder: '— opcija —',
     academicYearPlaceholder: '2025/2026',
@@ -226,6 +237,7 @@ export default {
   exchangeSemester: {
     Winter: 'Zimski',
     Summer: 'Ljetni',
+    Both: 'Zimski i ljetni',
   },
   slotMode: {
     AtHome: 'Položeno',
@@ -268,6 +280,7 @@ export default {
       homeSlotCourseIsvuCode: 'ISVU šifra',
       homeSlotCourseGroupIsvuCode: 'Šifra izb. grupe',
       homeSlotCourseGroupName: 'Naziv izb. grupe',
+      mandatoryCourse: 'Obavezan predmet',
       homeSlotColor: 'Boja',
       homeSlotSemester: 'Semestar',
       awardedEcts: 'Priznato ECTS-a',
@@ -369,6 +382,7 @@ export default {
   exchangeSemesters: {
     Winter: 'Zimski',
     Summer: 'Ljetni',
+    Both: 'Zimski i ljetni',
   },
   coordinator: {
     title: 'Moji studenti',

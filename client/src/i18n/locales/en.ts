@@ -57,6 +57,8 @@ export default {
     roleCoordinatorDesc: 'I review and approve student exchanges.',
     selectInstitution: 'Select your home institution',
     selectInstitutionPlaceholder: '— select institution —',
+    searchInstitution: 'Search by name, city or Erasmus code...',
+    noInstitutions: 'No institutions match the search.',
     jmbagLabel: 'Enter your JMBAG',
     jmbagPlaceholder: '0036XXXXXX',
     jmbagHint: 'JMBAG must be exactly 10 digits.',
@@ -98,6 +100,10 @@ export default {
       institution: 'Home Institution',
       mentor: 'Mentor',
       coordinator: 'Coordinator',
+      searchCoordinator: 'Search coordinators...',
+      noCoordinatorResults: 'No coordinators match the search.',
+      searchInstitution: 'Search by name, city or Erasmus code...',
+      noInstitutionResults: 'No institutions match the search.',
     },
     institutions: {
       title: 'My institutions',
@@ -194,6 +200,11 @@ export default {
     selectProfile: 'Select profile',
     selectProfilePlaceholder: '— select profile —',
     selectPartnerProgram: 'Select partner program',
+    selectProgramFirst: 'Select a program first to see available profiles.',
+    allCountries: 'All countries',
+    searchPartner: 'Search by program or institution...',
+    results: 'results',
+    noResults: 'No programs match the current filters.',
     selectCoordinator: 'Select coordinator',
     selectCoordinatorPlaceholder: '— optional —',
     academicYearPlaceholder: '2025/2026',
@@ -226,6 +237,7 @@ export default {
   exchangeSemester: {
     Winter: 'Winter',
     Summer: 'Summer',
+    Both: 'Winter & Summer',
   },
   slotMode: {
     AtHome: 'Passed',
@@ -268,6 +280,7 @@ export default {
       homeSlotCourseIsvuCode: 'ISVU Code',
       homeSlotCourseGroupIsvuCode: 'Elective group code',
       homeSlotCourseGroupName: 'Elective group name',
+      mandatoryCourse: 'Mandatory course',
       homeSlotColor: 'Color',
       homeSlotSemester: 'Semester',
       awardedEcts: 'Awarded ECTS',
@@ -369,6 +382,7 @@ export default {
   exchangeSemesters: {
     Winter: 'Winter',
     Summer: 'Summer',
+    Both: 'Winter & Summer',
   },
   coordinator: {
     title: 'My Students',

@@ -22,7 +22,7 @@ public static class ExchangeMapper
         exchange.Student.Mentor,
         exchange.AcademicYear,
         exchange.SemesterType.ToString(),
-        exchange.StudySemester,
+        exchange.StudySemesters,
         exchange.CoordinatorMessage,
         exchange.CreatedAt,
         exchange.UpdatedAt

@@ -12,7 +12,7 @@ export interface CreateExchangeRequest {
   partnerProgramId: string
   academicYear: string
   semesterType: ExchangeSemester
-  studySemester: number
+  studySemesters: number[]
 }
 
 export interface ExchangeResponse {
@@ -30,7 +30,7 @@ export interface ExchangeResponse {
   mentor: string | null
   academicYear: string
   semesterType: ExchangeSemester
-  studySemester: number
+  studySemesters: number[]
   coordinatorMessage: string | null
   createdAt: string
   updatedAt: string

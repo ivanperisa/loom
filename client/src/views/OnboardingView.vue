@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
@@ -42,6 +42,19 @@ const isSubmitting = ref(false)
 
 const institutions = ref<InstitutionResponse[]>([])
 const loadingInstitutions = ref(true)
+const institutionSearch = ref('')
+
+const filteredInstitutions = computed(() => {
+  const q = institutionSearch.value.trim().toLowerCase()
+  if (!q) return institutions.value
+  return institutions.value.filter(
+    (i) =>
+      i.name.toLowerCase().includes(q) ||
+      (i.nameEn?.toLowerCase().includes(q) ?? false) ||
+      (i.city?.toLowerCase().includes(q) ?? false) ||
+      (i.country?.toLowerCase().includes(q) ?? false),
+  )
+})
 
 const isJmbagValid = computed(() => /^\d{10}$/.test(jmbag.value))
 
@@ -87,6 +100,10 @@ function goBack() {
     currentStep.value -= 1
   }
 }
+
+watch(currentStep, () => {
+  institutionSearch.value = ''
+})
 
 async function finishOnboarding() {
   errorMessage.value = null
@@ -147,7 +164,7 @@ async function logout() {
       </div>
     </header>
 
-    <section class="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center justify-center px-4 py-10">
+    <section class="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-2xl items-center justify-center px-4 py-10">
       <div class="w-full">
         <!-- Step indicator -->
         <div class="mb-8 flex items-center justify-center gap-3">
@@ -225,29 +242,60 @@ async function logout() {
           </div>
 
           <!-- Institution step -->
-          <div v-if="currentStep === institutionStep" class="mt-6 space-y-4">
+          <div v-if="currentStep === institutionStep" class="mt-6 space-y-3">
             <label class="block text-sm font-medium text-primary-light">
               {{ t('onboarding.selectInstitution') }}
             </label>
 
+            <!-- Search -->
+            <div class="relative">
+              <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                v-model="institutionSearch"
+                type="text"
+                :placeholder="t('onboarding.searchInstitution')"
+                class="w-full rounded-xl border border-primary/20 bg-dark py-2.5 pl-9 pr-4 text-sm text-light placeholder-slate-500 focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <!-- List -->
             <template v-if="loadingInstitutions">
-              <div class="h-11 animate-pulse rounded-xl bg-primary/20"></div>
+              <div class="space-y-2">
+                <div v-for="i in 4" :key="i" class="h-14 animate-pulse rounded-xl bg-primary/10"></div>
+              </div>
             </template>
             <template v-else>
-              <select
-                v-model="selectedInstitutionId"
-                class="w-full rounded-xl border border-primary/20 bg-dark px-4 py-2.5 text-light focus:border-primary focus:outline-none"
-              >
-                <option :value="null" disabled>{{ t('onboarding.selectInstitutionPlaceholder') }}</option>
-                <option
-                  v-for="inst in institutions"
+              <div class="space-y-2 overflow-y-auto" style="max-height: 280px">
+                <p v-if="filteredInstitutions.length === 0" class="py-6 text-center text-sm text-slate-500">
+                  {{ t('onboarding.noInstitutions') }}
+                </p>
+                <button
+                  v-for="inst in filteredInstitutions"
                   :key="inst.id"
-                  :value="inst.id"
+                  type="button"
+                  class="w-full rounded-xl border px-4 py-3 text-left transition"
+                  :class="
+                    selectedInstitutionId === inst.id
+                      ? 'border-primary bg-primary/10 text-light'
+                      : 'border-primary/20 bg-dark text-light hover:border-primary/50'
+                  "
+                  @click="selectedInstitutionId = inst.id"
                 >
-                  {{ localizedName(inst) }}
-                  <template v-if="inst.city"> — {{ inst.city }}</template>
-                </option>
-              </select>
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-medium">{{ localizedName(inst) }}</p>
+                      <p v-if="inst.city || inst.erasmusCode" class="mt-0.5 truncate text-xs text-slate-400">
+                        <template v-if="inst.city">{{ inst.city }}</template>
+                        <template v-if="inst.city && inst.erasmusCode"> · </template>
+                        <template v-if="inst.erasmusCode">{{ inst.erasmusCode }}</template>
+                      </p>
+                    </div>
+                    <span v-if="inst.country" class="flex-shrink-0 text-xs text-slate-500">{{ inst.country }}</span>
+                  </div>
+                </button>
+              </div>
             </template>
           </div>
 

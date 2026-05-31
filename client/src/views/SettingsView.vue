@@ -6,12 +6,27 @@ import { institutionService } from '@/services/institution.service'
 import type { InstitutionResponse } from '@/types/institution.types'
 import type { AuthMeResponse } from '@/types/auth.types'
 import { userRole } from '../utils/userRole'
+import SearchableSelect from '@/components/common/SearchableSelect.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
 
 const institutions = ref<InstitutionResponse[]>([])
 const coordinators = ref<AuthMeResponse[]>([])
+
+const institutionOptions = computed(() =>
+  institutions.value.map((i) => ({
+    value: i.id,
+    label: i.name,
+    sublabel: i.city ?? undefined,
+  })),
+)
+
+const coordinatorOptions = computed(() => [
+  { value: null, label: t('exchange.noCoordinator') },
+  ...coordinators.value.map((c) => ({ value: c.id, label: c.name })),
+])
+
 const name = ref('')
 const jmbag = ref('')
 const institutionId = ref('')
@@ -111,16 +126,14 @@ async function save() {
 
           <!-- Institution -->
           <div>
-            <label for="institution" class="block text-sm text-light/60">{{ t('settings.profile.institution') }}</label>
-            <select
-              id="institution"
+            <label class="block text-sm text-light/60">{{ t('settings.profile.institution') }}</label>
+            <SearchableSelect
               v-model="institutionId"
-              class="mt-1 w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light focus:border-primary focus:outline-none"
-            >
-              <option v-for="inst in institutions" :key="inst.id" :value="inst.id">
-                {{ inst.name }}
-              </option>
-            </select>
+              :options="institutionOptions"
+              :search-placeholder="t('settings.profile.searchInstitution')"
+              :no-results-label="t('settings.profile.noInstitutionResults')"
+              class="mt-1"
+            />
           </div>
 
           <!-- Mentor (student only) -->
@@ -137,15 +150,14 @@ async function save() {
 
           <!-- Coordinator (student only) -->
           <div v-if="isStudent">
-            <label for="coordinator" class="block text-sm text-light/60">{{ t('settings.profile.coordinator') }}</label>
-            <select
-              id="coordinator"
+            <label class="block text-sm text-light/60">{{ t('settings.profile.coordinator') }}</label>
+            <SearchableSelect
               v-model="coordinatorId"
-              class="mt-1 w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light focus:border-primary focus:outline-none"
-            >
-              <option :value="null">{{ t('exchange.noCoordinator') }}</option>
-              <option v-for="c in coordinators" :key="c.id" :value="c.id">{{ c.name }}</option>
-            </select>
+              :options="coordinatorOptions"
+              :search-placeholder="t('settings.profile.searchCoordinator')"
+              :no-results-label="t('settings.profile.noCoordinatorResults')"
+              class="mt-1"
+            />
           </div>
         </div>
 

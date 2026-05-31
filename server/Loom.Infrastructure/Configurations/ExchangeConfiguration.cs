@@ -19,7 +19,7 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
         builder.Property(x => x.CoordinatorId).HasColumnName("coordinator_id");
         builder.Property(x => x.AcademicYear).HasColumnName("academic_year").IsRequired();
         builder.Property(x => x.SemesterType).HasColumnName("semester_type").HasConversion<string>().HasMaxLength(10);
-        builder.Property(x => x.StudySemester).HasColumnName("study_semester").IsRequired();
+        builder.Property(x => x.StudySemesters).HasColumnName("study_semesters").IsRequired();
         builder.Property(x => x.CoordinatorMessage).HasColumnName("coordinator_message");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()").IsRequired();

@@ -26,7 +26,10 @@ export interface PartnerProgramResponse {
   id: string
   name: string
   nameEn: string | null
+  level: string
   institutionName: string
+  institutionCountry: string | null
+  institutionCity: string | null
 }
 
 export interface PartnerCourseResponse {

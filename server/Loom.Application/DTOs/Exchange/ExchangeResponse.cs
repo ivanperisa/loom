@@ -17,7 +17,7 @@ public record ExchangeResponse(
     string? Mentor,
     string AcademicYear,
     string SemesterType,
-    int StudySemester,
+    List<int> StudySemesters,
     string? CoordinatorMessage,
     DateTime CreatedAt,
     DateTime UpdatedAt

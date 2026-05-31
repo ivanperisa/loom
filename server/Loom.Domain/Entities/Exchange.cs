@@ -21,7 +21,7 @@ public class Exchange : AuditableEntity
 
     public string AcademicYear { get; set; } = null!;
     public ExchangeSemester SemesterType { get; set; }
-    public int StudySemester { get; set; }
+    public List<int> StudySemesters { get; set; } = [];
     public string? CoordinatorMessage { get; set; }
 
     public LearningAgreement? LearningAgreement { get; set; }

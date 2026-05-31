@@ -20,6 +20,29 @@ const activeTab = ref<'la' | 'recognition'>('la')
 const exchangeId = computed(() => route.params.exchangeId as string)
 const deleting = ref(false)
 
+const coordinatorMessage = ref('')
+const isEditingMessage = ref(false)
+const isSavingMessage = ref(false)
+
+function startEditingMessage() {
+  coordinatorMessage.value = exchangeStore.exchange?.coordinatorMessage ?? ''
+  isEditingMessage.value = true
+}
+
+function cancelEditingMessage() {
+  coordinatorMessage.value = exchangeStore.exchange?.coordinatorMessage ?? ''
+  isEditingMessage.value = false
+}
+
+async function saveMessage() {
+  isSavingMessage.value = true
+  await exchangeStore.updateCoordinatorMessage(exchangeId.value, {
+    message: coordinatorMessage.value.trim() || null,
+  })
+  isEditingMessage.value = false
+  isSavingMessage.value = false
+}
+
 const canDelete = computed(
   () =>
     exchangeStore.exchange &&
@@ -107,7 +130,7 @@ onMounted(async () => {
             <span class="text-light/50"
               >{{ t('exchange.studySemester') }}:
               <span class="font-medium text-light">{{
-                exchangeStore.exchange.studySemester
+                exchangeStore.exchange.studySemesters.slice().sort((a: number, b: number) => a - b).join(', ')
               }}</span></span
             >
             <span v-if="isCoordinator && exchangeStore.exchange.studentName" class="text-light/50"
@@ -130,6 +153,86 @@ onMounted(async () => {
               <span class="text-light/60">{{ exchangeStore.exchange.mentor ?? '-' }}</span></span
             >
           </div>
+        </div>
+
+        <!-- Coordinator message -->
+        <div class="mt-4">
+          <!-- Student: read-only -->
+          <div
+            v-if="!isCoordinator && exchangeStore.exchange?.coordinatorMessage"
+            class="rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3"
+          >
+            <p class="text-xs font-semibold uppercase tracking-wide text-amber-400">
+              {{ t('exchange.coordinatorMessage') }}
+            </p>
+            <p class="mt-1 whitespace-pre-wrap text-sm text-amber-200">
+              {{ exchangeStore.exchange.coordinatorMessage }}
+            </p>
+          </div>
+
+          <!-- Coordinator: editable -->
+          <template v-if="isCoordinator">
+            <template v-if="isEditingMessage">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-primary-light">
+                {{ t('exchange.coordinatorMessage') }}
+              </label>
+              <textarea
+                v-model="coordinatorMessage"
+                rows="3"
+                class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder-light/60 focus:border-primary focus:outline-none"
+                :placeholder="t('exchange.coordinatorMessagePlaceholder')"
+              ></textarea>
+              <div class="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
+                  :disabled="isSavingMessage"
+                  @click="saveMessage"
+                >
+                  {{ isSavingMessage ? t('common.loading') : t('exchange.saveMessage') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700/40"
+                  @click="cancelEditingMessage"
+                >
+                  {{ t('common.cancel') }}
+                </button>
+              </div>
+            </template>
+            <template v-else>
+              <div
+                v-if="exchangeStore.exchange?.coordinatorMessage"
+                class="rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-amber-400">
+                      {{ t('exchange.coordinatorMessage') }}
+                    </p>
+                    <p class="mt-1 whitespace-pre-wrap text-sm text-amber-200">
+                      {{ exchangeStore.exchange.coordinatorMessage }}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="shrink-0 text-xs text-primary-light transition hover:text-white"
+                    @click="startEditingMessage"
+                  >
+                    {{ t('exchange.editMessage') }}
+                  </button>
+                </div>
+              </div>
+              <button
+                v-else
+                type="button"
+                class="text-xs text-light/60 transition hover:text-primary-light"
+                @click="startEditingMessage"
+              >
+                + {{ t('exchange.addMessage') }}
+              </button>
+            </template>
+          </template>
         </div>
 
         <!-- Tabs -->

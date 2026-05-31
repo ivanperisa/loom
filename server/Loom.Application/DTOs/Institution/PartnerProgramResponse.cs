@@ -5,5 +5,7 @@ public record PartnerProgramResponse(
     string Name,
     string? NameEn,
     string Level,
-    string InstitutionName
+    string InstitutionName,
+    string? InstitutionCountry,
+    string? InstitutionCity
 );

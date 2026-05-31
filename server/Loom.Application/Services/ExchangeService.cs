@@ -21,8 +21,8 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             return Error.Validation("INVALID_ACADEMIC_YEAR", "Academic year is required.");
         if (!Enum.TryParse<ExchangeSemester>(request.SemesterType, out var semesterType))
             return Error.Validation("INVALID_SEMESTER_TYPE", "Invalid semester type.");
-        if (request.StudySemester < 1 || request.StudySemester > 4)
-            return Error.Validation("INVALID_STUDY_SEMESTER", "Study semester must be between 1 and 4.");
+        if (request.StudySemesters is not { Count: > 0 } || request.StudySemesters.Any(s => s < 1 || s > 10))
+            return Error.Validation("INVALID_STUDY_SEMESTER", "Study semesters must be between 1 and 10.");
 
         var student = await db.Users.FindAsync([studentId], ct);
         if (student is null) return Error.NotFound("USER_NOT_FOUND", "Student not found.");
@@ -44,7 +44,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             PartnerProgramId = request.PartnerProgramId,
             AcademicYear = request.AcademicYear,
             SemesterType = semesterType,
-            StudySemester = request.StudySemester,
+            StudySemesters = request.StudySemesters,
         };
         db.Exchanges.Add(exchange);
         await db.SaveChangesAsync(ct);

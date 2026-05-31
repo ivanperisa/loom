@@ -19,7 +19,9 @@ public static class InstitutionMapper
         program.Name,
         program.NameEn,
         program.Level.ToString(),
-        program.Institution.Name
+        program.Institution.Name,
+        program.Institution.Country,
+        program.Institution.City
     );
 
     public static HomeProgramResponse ToResponse(this HomeProgram program) => new(

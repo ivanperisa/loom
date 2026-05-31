@@ -22,9 +22,6 @@ const { isCoordinator, isEditable } = useExchangePermissions()
 
 const isSavingLa = ref(false)
 const saveError = ref<string | null>(null)
-const coordinatorMessage = ref('')
-const isEditingMessage = ref(false)
-const isSavingMessage = ref(false)
 
 async function saveLa() {
   isSavingLa.value = true
@@ -69,29 +66,8 @@ async function approveExchange() {
 async function rejectExchange() {
   await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
     status: documentStatus.Rejected,
-    message: coordinatorMessage.value.trim() || null,
   })
   await exchangeStore.fetchExchange(props.exchangeId)
-  isEditingMessage.value = false
-}
-
-function startEditingMessage() {
-  coordinatorMessage.value = exchangeStore.exchange?.coordinatorMessage ?? ''
-  isEditingMessage.value = true
-}
-
-function cancelEditingMessage() {
-  coordinatorMessage.value = exchangeStore.exchange?.coordinatorMessage ?? ''
-  isEditingMessage.value = false
-}
-
-async function saveMessage() {
-  isSavingMessage.value = true
-  await exchangeStore.updateCoordinatorMessage(props.exchangeId, {
-    message: coordinatorMessage.value.trim() || null,
-  })
-  isEditingMessage.value = false
-  isSavingMessage.value = false
 }
 
 const TOTAL_COLS = 30
@@ -392,83 +368,6 @@ function slotSubLabel(slot: HomeSlotResponse): string {
           </button>
         </template>
       </div>
-    </div>
-
-    <!-- Coordinator message (visible to student) -->
-    <div
-      v-if="!isCoordinator && exchangeStore.exchange?.coordinatorMessage"
-      class="mb-4 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3"
-    >
-      <p class="text-xs font-semibold uppercase tracking-wide text-amber-400">
-        {{ t('exchange.coordinatorMessage') }}
-      </p>
-      <p class="mt-1 text-sm text-amber-200 whitespace-pre-wrap">
-        {{ exchangeStore.exchange.coordinatorMessage }}
-      </p>
-    </div>
-
-    <!-- Coordinator message (editable by coordinator) -->
-    <div v-if="isCoordinator" class="mb-4">
-      <template v-if="isEditingMessage">
-        <label class="block text-xs font-semibold uppercase tracking-wide text-primary-light mb-1">
-          {{ t('exchange.coordinatorMessage') }}
-        </label>
-        <textarea
-          v-model="coordinatorMessage"
-          rows="3"
-          class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder-light/60 focus:border-primary focus:outline-none"
-          :placeholder="t('exchange.coordinatorMessagePlaceholder')"
-        ></textarea>
-        <div class="mt-2 flex gap-2">
-          <button
-            type="button"
-            class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
-            :disabled="isSavingMessage"
-            @click="saveMessage"
-          >
-            {{ isSavingMessage ? t('common.loading') : t('exchange.saveMessage') }}
-          </button>
-          <button
-            type="button"
-            class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700/40"
-            @click="cancelEditingMessage"
-          >
-            {{ t('common.cancel') }}
-          </button>
-        </div>
-      </template>
-      <template v-else>
-        <div
-          v-if="exchangeStore.exchange?.coordinatorMessage"
-          class="rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3"
-        >
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-amber-400">
-                {{ t('exchange.coordinatorMessage') }}
-              </p>
-              <p class="mt-1 text-sm text-amber-200 whitespace-pre-wrap">
-                {{ exchangeStore.exchange.coordinatorMessage }}
-              </p>
-            </div>
-            <button
-              type="button"
-              class="shrink-0 text-xs text-primary-light hover:text-white transition"
-              @click="startEditingMessage"
-            >
-              {{ t('exchange.editMessage') }}
-            </button>
-          </div>
-        </div>
-        <button
-          v-else
-          type="button"
-          class="text-xs text-light/60 hover:text-primary-light transition"
-          @click="startEditingMessage"
-        >
-          + {{ t('exchange.addMessage') }}
-        </button>
-      </template>
     </div>
 
     <!-- Save bar -->

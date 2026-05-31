@@ -128,7 +128,7 @@ function buildRecognitionSheet(
   infoRow(3, tr('student', lang), exchange.studentName)
   infoRow(4, tr('jmbag', lang), exchange.studentJmbag)
   infoRow(5, tr('studyType', lang), tr('studyTypeVal', lang))
-  infoRow(6, tr('semester', lang), String(exchange.studySemester))
+  infoRow(6, tr('semester', lang), exchange.studySemesters.slice().sort((a, b) => a - b).join(', '))
 
   ws['A8'] = c(`${tr('profileLabel', lang)} ${exchange.homeProfile.name}`, { bold: true, sz: 18, borders: false })
   const uniUrl = (exchange.partnerProgram as any).url ?? ''
