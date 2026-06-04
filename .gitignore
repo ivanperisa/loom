@@ -45,15 +45,17 @@ obj/
 *.user
 .vs/
 .dotnet
-appsettings.Development.json
+# appsettings.Development.json
 
 # NuGet
 *.nupkg
 project.lock.json
 project.assets.json
 
-.github
 .claude
 .dual-graph
 
 db/
+
+/server/publish
+/client/.env.production
