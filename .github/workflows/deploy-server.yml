@@ -83,7 +83,7 @@ jobs:
         run: dotnet publish -c Release --property:PublishDir='${{ needs.setup-variables.outputs.publish-folder }}'
 
       - name: Change connection string in appsettings.json
-        uses: benday-inc/edit-dbconnstr-in-appsettings@v1.4
+        uses: benday-inc/edit-dbconnstr-in-appsettings@v2
         with:
           pathtosettingsfile: "${{ needs.setup-variables.outputs.publish-folder }}/appsettings.json"
           name: "DefaultConnection"
@@ -155,6 +155,6 @@ jobs:
           port: ${{ env.SSH_PORT }}
           script: |
             cd '/var/www/apps/${{ env.APPS_PATH }}'
-            tar -xvzf ${{ needs.setup-variables.outputs.zip-filename }} --no-overwrite-dir
+            tar -xvzf ${{ needs.setup-variables.outputs.zip-filename }} --no-overwrite-dir --no-same-owner --no-same-permissions
             rm ${{ needs.setup-variables.outputs.zip-filename }}
             date >> restart_required.txt

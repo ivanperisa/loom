@@ -54,7 +54,7 @@ jobs:
           echo "PROJECT_FOLDER: ${{ env.PROJECT_FOLDER }}"
           echo "WWW_PATH: ${{ env.WWW_PATH }}"
 
-      - name: Setup Node.js 22.x
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
@@ -64,10 +64,7 @@ jobs:
         with:
           node-version: "22.x"
           cache: pnpm
-          cache-dependency-path: ${{ env.PROJECT_FOLDER }}/pnpm-lock.yaml
-
-      - name: Enable pnpm
-        run: corepack enable
+          cache-dependency-path: ${{ github.workspace }}/${{ env.PROJECT_FOLDER }}/pnpm-lock.yaml
 
       - name: Install dependencies
         working-directory: ${{ env.PROJECT_FOLDER }}
@@ -100,7 +97,7 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           port: ${{ env.SSH_PORT }}
           script: |
-            rm -r /var/www/html/${{env.WWW_PATH}}/*
+            rm -rf /var/www/html/${{env.WWW_PATH}}/*
             cd /var/www/html/${{env.WWW_PATH}}
-            tar -xvzf /tmp/${{ needs.setup-variables.outputs.zip-filename }} --no-overwrite-dir
+            tar -xzf /tmp/${{ needs.setup-variables.outputs.zip-filename }} --no-overwrite-dir --no-same-owner --no-same-permissions
             rm /tmp/${{ needs.setup-variables.outputs.zip-filename }}
