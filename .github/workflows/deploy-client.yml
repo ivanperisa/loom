@@ -55,7 +55,12 @@ jobs:
           echo "WWW_PATH: ${{ env.WWW_PATH }}"
 
       - name: Setup Node.js 22.x
-        uses: actions/setup-node@v4
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v6
         with:
           node-version: "22.x"
           cache: pnpm
