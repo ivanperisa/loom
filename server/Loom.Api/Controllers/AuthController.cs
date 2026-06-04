@@ -22,13 +22,13 @@ public class AuthController(
         var frontendTarget = configuration.BuildFrontendUrl(returnUrl);
         if (User.Identity?.IsAuthenticated == true)
         {
-            return Redirect(frontendTarget);
+            return SignOut(
+            new AuthenticationProperties { RedirectUri = $"/auth/login?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}"},
+            CookieAuthenticationDefaults.AuthenticationScheme);
         }
 
-        var authProperties = new AuthenticationProperties
-        {
-            RedirectUri = frontendTarget
-        };
+        var authProperties = new AuthenticationProperties { RedirectUri = frontendTarget };
+        authProperties.Parameters["prompt"] = "select_account";
 
         return Challenge(authProperties, "GoogleOidc");
     }

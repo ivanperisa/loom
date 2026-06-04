@@ -4,9 +4,9 @@ public static class FrontendUrlExtensions
 {
     public static string BuildFrontendUrl(this IConfiguration configuration, string? returnPath)
     {
-        var frontendBaseUrl = configuration["Frontend:BaseUrl"] ?? "http://localhost:5173";
+        var frontendBaseUrl = configuration["Frontend:BaseUrl"];
         var normalizedPath = NormalizeRelativePath(returnPath);
-        return $"{frontendBaseUrl.TrimEnd('/')}{normalizedPath}";
+        return $"{frontendBaseUrl!.TrimEnd('/')}{normalizedPath}";
     }
 
     public static string NormalizeRelativePath(string? path)

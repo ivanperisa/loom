@@ -92,13 +92,14 @@ try
         options.Scope.Add("profile");
         options.Scope.Add("email");
 
-        options.Events = new OpenIdConnectEvents
+        options.Events.OnRedirectToIdentityProvider = context =>
         {
-            OnRedirectToIdentityProvider = context =>
-            {
-                context.ProtocolMessage.Prompt = "select_account";
-                return Task.CompletedTask;
-            }
+          if (context.Properties.Parameters.TryGetValue("prompt", out var prompt))
+            context.ProtocolMessage.Prompt = prompt!.ToString();
+          else
+            context.ProtocolMessage.Prompt = "select_account";
+
+          return Task.CompletedTask;
         };
       });
 
