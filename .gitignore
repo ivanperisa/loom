@@ -45,7 +45,7 @@ obj/
 *.user
 .vs/
 .dotnet
-appsettings.Development.json
+# appsettings.Development.json
 
 # NuGet
 *.nupkg
@@ -57,3 +57,6 @@ project.assets.json
 .dual-graph
 
 db/
+
+/server/publish
+/client/.env.production
