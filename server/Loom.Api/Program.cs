@@ -1,16 +1,17 @@
-using System.Text.Json.Serialization;
-using System.Threading.RateLimiting;
 using Loom.Api.Middleware;
 using Loom.Application.Interfaces;
 using Loom.Application.Interfaces.Services;
 using Loom.Application.Services;
 using Loom.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using NLog;
 using NLog.Web;
+using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseNLog(new NLogAspNetCoreOptions() { RemoveLoggerFactoryFilter = false });
@@ -65,10 +66,8 @@ try
       .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
       {
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-          ? CookieSecurePolicy.SameAsRequest
-          : CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         options.Events.OnRedirectToLogin = ctx =>
       {
             ctx.Response.StatusCode = 401;
@@ -91,7 +90,16 @@ try
         options.Scope.Clear();
         options.Scope.Add("openid");
         options.Scope.Add("profile");
-        options.Scope.Add("email");              
+        options.Scope.Add("email");
+
+        options.Events = new OpenIdConnectEvents
+        {
+            OnRedirectToIdentityProvider = context =>
+            {
+                context.ProtocolMessage.Prompt = "select_account";
+                return Task.CompletedTask;
+            }
+        };
       });
 
   builder.Services.AddAuthorization();

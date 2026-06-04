@@ -6,7 +6,7 @@ import { extractApiError } from '@/utils/apiError'
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true
+  withCredentials: true,
 })
 
 api.interceptors.response.use(
@@ -25,5 +25,5 @@ api.interceptors.response.use(
     notifyError(title, message)
 
     return Promise.reject(error)
-  }
+  },
 )

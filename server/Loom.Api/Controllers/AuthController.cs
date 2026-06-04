@@ -54,13 +54,9 @@ public class AuthController(
 
     [Authorize]
     [HttpPost("logout")]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout()
     {
-        var authProperties = new AuthenticationProperties
-        {
-            RedirectUri = configuration.BuildFrontendUrl("/")
-        };
-
-        return SignOut(authProperties, CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return NoContent();
     }
 }
