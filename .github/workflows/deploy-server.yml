@@ -1,0 +1,160 @@
+# TO DO: Define
+#   repository secrets: USERNAME, PASSWORD, DB_USERNAME, DB_PASSWORD, CLIENT_ID, CLIENT_SECRET
+#   optionally repository variables: APPS_PATH, API_PROJECT_FOLDER, SERVER, SSH_PORT
+
+name: Loom WebApi
+
+env:
+  PROJECT_FOLDER: ${{ vars.API_PROJECT_FOLDER || 'server/Loom.Api' }}
+  APPS_PATH: ${{ vars.APPS_PATH || 'loom-api' }}
+  SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+  DEPLOY_SERVER: ${{ vars.SERVER || 'zpr-120.fer.hr' }}
+  API_PORT: ${{ vars.API_PORT || '6010' }}
+  DB_HOST: ${{ vars.DB_HOST || 'localhost' }}
+  DB_PORT: ${{ vars.DB_PORT || '5432' }}
+  DB_NAME: ${{ vars.DB_NAME || 'ects' }}
+  FRONTEND_BASE_URL: ${{ vars.FRONTEND_BASE_URL || 'https://zpr-120.fer.hr/loom' }}
+  CLIENT_ID: ${{ secrets.CLIENT_ID }}
+  CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - ".github/workflows/deploy-server.yml"
+
+jobs:
+  setup-variables:
+    runs-on: ubuntu-latest
+    outputs:
+      data-available: ${{ steps.check-secrets.outputs.data-available }}
+      port: ${{ steps.variables.outputs.port }}
+      publish-folder: ${{ steps.variables.outputs.publish-folder }}
+      zip-filename: ${{ steps.variables.outputs.zip-filename }}
+    steps:
+      - name: Calculate variables
+        id: variables
+        run: |
+          echo "port=${{ env.API_PORT }}" >> $GITHUB_OUTPUT
+          echo "zip-filename=V$GITHUB_RUN_NUMBER-$(date +'%Y-%m-%d').tar.gz" >> $GITHUB_OUTPUT
+          echo "publish-folder=${{ github.workspace }}/published" >> $GITHUB_OUTPUT
+
+      - name: Check secrets
+        id: check-secrets
+        run: |
+          echo "data-available=${{ secrets.USERNAME != '' && secrets.PASSWORD != '' && secrets.DB_USERNAME != '' && secrets.DB_PASSWORD != '' && secrets.CLIENT_ID != '' && secrets.CLIENT_SECRET != '' }}" >> $GITHUB_OUTPUT
+
+  build-and-deploy:
+    needs: setup-variables
+    if: needs.setup-variables.outputs.data-available == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Print variables
+        run: |
+          echo "Data available: ${{ needs.setup-variables.outputs.data-available }}"
+          echo "Zip filename: ${{ needs.setup-variables.outputs.zip-filename }}"
+          echo "Publish folder: ${{ needs.setup-variables.outputs.publish-folder }}"
+          echo "Deploy server: ${{ env.DEPLOY_SERVER }}"
+          echo "SSH port: ${{ env.SSH_PORT }}"
+          echo "PROJECT_FOLDER: ${{ env.PROJECT_FOLDER }}"
+          echo "APPS_PATH: ${{ env.APPS_PATH }}"
+          echo "API_PORT: ${{ needs.setup-variables.outputs.port }}"
+          echo "FRONTEND_BASE_URL: ${{ env.FRONTEND_BASE_URL }}"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        working-directory: ${{ env.PROJECT_FOLDER }}
+        run: dotnet restore
+
+      - name: Build
+        working-directory: ${{ env.PROJECT_FOLDER }}
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        working-directory: ${{ env.PROJECT_FOLDER }}
+        run: dotnet publish -c Release --property:PublishDir='${{ needs.setup-variables.outputs.publish-folder }}'
+
+      - name: Change connection string in appsettings.json
+        uses: benday-inc/edit-dbconnstr-in-appsettings@v1.4
+        with:
+          pathtosettingsfile: "${{ needs.setup-variables.outputs.publish-folder }}/appsettings.json"
+          name: "DefaultConnection"
+          connectionstring: "Host=${{ env.DB_HOST }};Port=${{ env.DB_PORT }};Database=${{ env.DB_NAME }};Username=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }}"
+
+      - name: Set Google client id
+        uses: jossef/action-set-json-field@v2.2
+        with:
+          file: ${{ needs.setup-variables.outputs.publish-folder }}/appsettings.json
+          field: Google.ClientId
+          value: ${{ env.CLIENT_ID }}
+
+      - name: Set Google client secret
+        uses: jossef/action-set-json-field@v2.2
+        with:
+          file: ${{ needs.setup-variables.outputs.publish-folder }}/appsettings.json
+          field: Google.ClientSecret
+          value: ${{ env.CLIENT_SECRET }}
+
+      - name: Set frontend base url
+        uses: jossef/action-set-json-field@v2.2
+        with:
+          file: ${{ needs.setup-variables.outputs.publish-folder }}/appsettings.json
+          field: Frontend.BaseUrl
+          value: ${{ env.FRONTEND_BASE_URL }}
+
+      - name: Set allowed CORS origin
+        uses: jossef/action-set-json-field@v2.2
+        with:
+          file: ${{ needs.setup-variables.outputs.publish-folder }}/appsettings.json
+          field: Cors.AllowedOrigins.0
+          value: ${{ env.FRONTEND_BASE_URL }}
+
+      - name: Set Kestrel info
+        uses: jossef/action-set-json-field@v2.2
+        with:
+          file: ${{ needs.setup-variables.outputs.publish-folder }}/appsettings.json
+          field: Kestrel.EndPoints.Http.Url
+          value: http://0.0.0.0:${{ needs.setup-variables.outputs.port }}
+
+      - name: Set PathBase
+        uses: jossef/action-set-json-field@v2.2
+        with:
+          file: ${{ needs.setup-variables.outputs.publish-folder }}/appsettings.json
+          field: PathBase
+          value: /${{ env.APPS_PATH }}
+
+      - name: Compress
+        run: |
+          cd '${{ needs.setup-variables.outputs.publish-folder }}'
+          tar -czf '${{ github.workspace }}/${{ needs.setup-variables.outputs.zip-filename }}' .
+
+      - name: Copy to destination server
+        uses: kostya-ten/ssh-server-deploy@v4
+        with:
+          host: ${{ env.DEPLOY_SERVER }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ env.SSH_PORT }}
+          scp_source: ${{ needs.setup-variables.outputs.zip-filename }}
+          scp_target: /var/www/apps/${{ env.APPS_PATH }}
+
+      - name: Unpack
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.DEPLOY_SERVER }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ env.SSH_PORT }}
+          script: |
+            cd '/var/www/apps/${{ env.APPS_PATH }}'
+            tar -xvzf ${{ needs.setup-variables.outputs.zip-filename }} --no-overwrite-dir
+            rm ${{ needs.setup-variables.outputs.zip-filename }}
+            date >> restart_required.txt

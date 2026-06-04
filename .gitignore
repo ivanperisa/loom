@@ -52,7 +52,6 @@ obj/
 project.lock.json
 project.assets.json
 
-.github
 .claude
 .dual-graph
 

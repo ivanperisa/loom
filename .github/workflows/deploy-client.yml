@@ -1,0 +1,101 @@
+name: Loom Client
+
+env:
+  VITE_API_URL: ${{ vars.VITE_API_URL || 'https://zpr-120.fer.hr/loom-api' }}
+  VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH || '/loom/' }}
+  VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+  PROJECT_FOLDER: client
+  SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+  WWW_PATH: ${{ vars.WWW_PATH || 'loom' }}
+  DEPLOY_SERVER: ${{ vars.SERVER || 'zpr-120.fer.hr' }}
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "client/**"
+      - ".github/workflows/deploy-client.yml"
+
+jobs:
+  setup-variables:
+    runs-on: ubuntu-latest
+    outputs:
+      data-available: ${{ steps.check-secrets.outputs.data-available }}
+      zip-filename: ${{ steps.variables.outputs.zip-filename }}
+      publish-folder: ${{ steps.variables.outputs.publish-folder }}
+    steps:
+      - name: Calculate variables
+        id: variables
+        run: |
+          echo "zip-filename=V$GITHUB_RUN_NUMBER-$(date +'%Y-%m-%d').tar.gz" >> $GITHUB_OUTPUT
+          echo "publish-folder=${{ github.workspace }}/${{ env.PROJECT_FOLDER }}/dist" >> $GITHUB_OUTPUT
+
+      - name: Check secrets
+        id: check-secrets
+        run: |
+          echo "data-available=${{ secrets.USERNAME != '' && secrets.PASSWORD != '' && secrets.VITE_GOOGLE_CLIENT_ID != '' }}" >> $GITHUB_OUTPUT
+
+  build-and-deploy:
+    needs: setup-variables
+    if: needs.setup-variables.outputs.data-available == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Print variables
+        run: |
+          echo "Data available: ${{ needs.setup-variables.outputs.data-available }}"
+          echo "Zip filename: ${{ needs.setup-variables.outputs.zip-filename }}"
+          echo "Publish folder: ${{ needs.setup-variables.outputs.publish-folder }}"
+          echo "Deploy server: ${{ env.DEPLOY_SERVER }}"
+          echo "SSH port: ${{ env.SSH_PORT }}"
+          echo "PROJECT_FOLDER: ${{ env.PROJECT_FOLDER }}"
+          echo "WWW_PATH: ${{ env.WWW_PATH }}"
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: pnpm
+          cache-dependency-path: ${{ env.PROJECT_FOLDER }}/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        working-directory: ${{ env.PROJECT_FOLDER }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Build client
+        working-directory: ${{ env.PROJECT_FOLDER }}
+        run: pnpm build
+
+      - name: Compress build output
+        run: |
+          cd '${{ needs.setup-variables.outputs.publish-folder }}'
+          tar -czf '${{ github.workspace }}/${{ needs.setup-variables.outputs.zip-filename }}' .
+
+      - name: Copy to destination server
+        uses: kostya-ten/ssh-server-deploy@v4
+        with:
+          host: ${{ env.DEPLOY_SERVER }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ env.SSH_PORT }}
+          scp_source: ${{ needs.setup-variables.outputs.zip-filename }}
+          scp_target: /tmp/
+
+      - name: Unpack on destination server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.DEPLOY_SERVER }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ env.SSH_PORT }}
+          script: |
+            rm -r /var/www/html/${{env.WWW_PATH}}/*
+            cd /var/www/html/${{env.WWW_PATH}}
+            tar -xvzf /tmp/${{ needs.setup-variables.outputs.zip-filename }} --no-overwrite-dir
+            rm /tmp/${{ needs.setup-variables.outputs.zip-filename }}
