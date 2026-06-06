@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("api/exchanges")]
+[Route("exchanges")]
 [Authorize]
 public class ExchangeController(IExchangeService exchangeService) : ApiController
 {
@@ -58,10 +58,4 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, Ok);
     }
 
-    [HttpGet("coordinator/students")]
-    public async Task<IActionResult> GetMyStudents(CancellationToken ct)
-    {
-        var result = await exchangeService.GetMyStudentsExchangesAsync(GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
 }

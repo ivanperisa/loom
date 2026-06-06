@@ -6,6 +6,7 @@ import LearningAgreementPanel from '@/components/exchange/LearningAgreementPanel
 import RecognitionPanel from '@/components/exchange/RecognitionPanel.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
+import { useAuthStore } from '@/stores/auth.store'
 import { useConfirm } from '@/composables/useConfirm'
 import { documentStatus } from '@/utils/documentStatus'
 
@@ -14,6 +15,7 @@ const router = useRouter()
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
 const { isCoordinator } = useExchangePermissions()
+const authStore = useAuthStore()
 const { confirm } = useConfirm()
 
 const activeTab = ref<'la' | 'recognition'>('la')
@@ -56,7 +58,7 @@ async function confirmDelete() {
   deleting.value = true
   try {
     await exchangeStore.deleteExchange(exchangeId.value)
-    router.push('/home')
+    router.push(authStore.canActAsCoordinator ? '/coordinator' : '/home')
   } finally {
     deleting.value = false
   }

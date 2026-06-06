@@ -1,6 +1,7 @@
 using ErrorOr;
 using Loom.Application.DTOs.Admin;
 using Loom.Application.DTOs.Auth;
+using Loom.Application.DTOs.Coordinator;
 using Loom.Application.DTOs.User;
 using Loom.Application.Interfaces;
 using Loom.Application.Interfaces.Services;
@@ -43,6 +44,34 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         }
         else if (!string.IsNullOrWhiteSpace(request.Jmbag))
         {
+            var placeholder = await db.Users
+                .FirstOrDefaultAsync(u => u.ExternalId == request.Jmbag && u.Jmbag == request.Jmbag, ct);
+
+            if (placeholder is not null)
+            {
+                user.CoordinatorId ??= placeholder.CoordinatorId;
+
+                var exchangesToTransfer = await db.Exchanges
+                    .Where(e => e.StudentId == placeholder.Id)
+                    .ToListAsync(ct);
+                foreach (var ex in exchangesToTransfer)
+                    ex.StudentId = user.Id;
+
+                db.Users.Remove(placeholder);
+                user.InstitutionId = request.InstitutionId;
+                user.IsOnboarded = true;
+                await db.SaveChangesAsync(ct);
+
+                user.Jmbag = request.Jmbag;
+                await db.SaveChangesAsync(ct);
+
+                var merged = await UsersWithIncludes()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == userId, ct)
+                    ?? throw new InvalidOperationException("User not found after merge.");
+                return merged.ToAuthMeResponse();
+            }
+
             var jmbagTaken = await db.Users.AnyAsync(u => u.Jmbag == request.Jmbag, ct);
             if (jmbagTaken) return Error.Conflict("JMBAG_TAKEN", "This JMBAG is already in use.");
             user.Jmbag = request.Jmbag;
@@ -281,6 +310,63 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         await db.SaveChangesAsync(ct);
 
         return Result.Deleted;
+    }
+
+    public async Task<ErrorOr<List<CoordinatorStudentResponse>>> GetMyStudentsAsync(int coordinatorId, CancellationToken ct = default)
+    {
+        var coordinator = await db.Users.FindAsync([coordinatorId], ct);
+        if (coordinator is null || !coordinator.CanActAsCoordinator())
+            return Error.Forbidden("FORBIDDEN", "Only coordinators can view students.");
+
+        var students = await db.Users
+            .AsNoTracking()
+            .Include(u => u.Institution)
+            .Where(u => (coordinator.IsAdmin() || u.CoordinatorId == coordinatorId) && u.Role == UserRole.Student)
+            .OrderBy(u => u.Name)
+            .ToListAsync(ct);
+
+        return students
+            .Select(u => new CoordinatorStudentResponse(
+                u.Id, u.Name, u.Jmbag, u.Institution?.Name,
+                u.ExternalId == u.Jmbag))
+            .ToList();
+    }
+
+    public async Task<ErrorOr<CoordinatorStudentResponse>> CreatePlaceholderStudentAsync(int coordinatorId, CreatePlaceholderStudentRequest request, CancellationToken ct = default)
+    {
+        var coordinator = await db.Users.FindAsync([coordinatorId], ct);
+        if (coordinator is null || !coordinator.CanActAsCoordinator())
+            return Error.Forbidden("FORBIDDEN", "Only coordinators can create placeholder students.");
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return Error.Validation("INVALID_NAME", "Name is required.");
+
+        if (string.IsNullOrWhiteSpace(request.Jmbag) || !System.Text.RegularExpressions.Regex.IsMatch(request.Jmbag, @"^\d{10}$"))
+            return Error.Validation("INVALID_JMBAG", "JMBAG must be exactly 10 digits.");
+
+        var jmbagTaken = await db.Users.AnyAsync(u => u.Jmbag == request.Jmbag, ct);
+        if (jmbagTaken) return Error.Conflict("JMBAG_TAKEN", "A student with this JMBAG already exists.");
+
+        var institution = await db.Institutions.FindAsync([request.InstitutionId], ct);
+        if (institution is null) return Error.NotFound("INSTITUTION_NOT_FOUND", "Institution not found.");
+        if (institution.Type != InstitutionType.Home)
+            return Error.Validation("INVALID_INSTITUTION", "Must select a home institution.");
+
+        var placeholder = new User
+        {
+            ExternalId = request.Jmbag, // sentinel: ExternalId == Jmbag identifies a placeholder
+            Email = string.Empty,
+            Name = request.Name.Trim(),
+            Role = UserRole.Student,
+            IsOnboarded = true,
+            Jmbag = request.Jmbag,
+            InstitutionId = request.InstitutionId,
+            CoordinatorId = coordinatorId,
+        };
+        db.Users.Add(placeholder);
+        await db.SaveChangesAsync(ct);
+
+        return new CoordinatorStudentResponse(placeholder.Id, placeholder.Name, placeholder.Jmbag, institution.Name, true);
     }
 
     public async Task<ErrorOr<User>> SyncUserAsync(string externalId, string email, string name, CancellationToken ct = default)

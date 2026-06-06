@@ -6,5 +6,6 @@ public record CreateExchangeRequest(
     string AcademicYear,
     string SemesterType,
     List<int> StudySemesters,
-    int? CoordinatorId = null
+    int? CoordinatorId = null,
+    int? TargetStudentId = null
 );

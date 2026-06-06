@@ -14,6 +14,12 @@ import type { ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import { nWord } from '@/utils/plural'
 
+const props = withDefaults(defineProps<{
+  targetStudentId?: string | null
+}>(), {
+  targetStudentId: null,
+})
+
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'created', exchangeId: string): void
@@ -142,9 +148,14 @@ function isPairSelected(pair: number[]): boolean {
 }
 
 function toggleStudySemester(s: number) {
-  const idx = studySemesters.value.indexOf(s)
-  if (idx === -1) studySemesters.value.push(s)
-  else studySemesters.value.splice(idx, 1)
+  const isBoth = semesterType.value === exchangeSemester.Both
+  if (isBoth) {
+    const idx = studySemesters.value.indexOf(s)
+    if (idx === -1) studySemesters.value.push(s)
+    else studySemesters.value.splice(idx, 1)
+  } else {
+    studySemesters.value = studySemesters.value[0] === s ? [] : [s]
+  }
 }
 
 watch(semesterType, () => {
@@ -227,6 +238,7 @@ async function submitExchange() {
       semesterType: semesterType.value,
       studySemesters: studySemesters.value,
       coordinatorId: selectedCoordinatorId.value,
+      targetStudentId: props.targetStudentId,
     })
     if (result) {
       emit('created', result.guid)

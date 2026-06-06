@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("api/exchanges/{exchangeGuid:guid}/learning-agreement")]
+[Route("exchanges/{exchangeGuid:guid}/learning-agreement")]
 [Authorize]
 public class LearningAgreementController(IExchangeService exchangeService) : ApiController
 {

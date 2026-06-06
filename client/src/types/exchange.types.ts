@@ -14,6 +14,7 @@ export interface CreateExchangeRequest {
   semesterType: ExchangeSemester
   studySemesters: number[]
   coordinatorId?: string | null
+  targetStudentId?: string | null
 }
 
 export interface ExchangeResponse {

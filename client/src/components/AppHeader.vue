@@ -72,6 +72,17 @@ function logout() {
           <RouterLink v-if="authStore.isStudent" to="/home" class="nav-link">{{ t('nav.home') }}</RouterLink>
           <RouterLink v-if="authStore.canActAsCoordinator" to="/coordinator" class="nav-link">{{ t('nav.students') }}</RouterLink>
           <RouterLink to="/settings" class="nav-link">{{ t('nav.settings') }}</RouterLink>
+          <a
+            href="https://ewp-dashboard.eu/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="nav-link flex items-center gap-1"
+          >
+            {{ t('nav.erasmusDashboard') }}
+            <svg class="h-3 w-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
         </nav>
       </div>
 

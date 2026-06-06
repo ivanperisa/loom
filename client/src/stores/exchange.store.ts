@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { i18n } from '@/i18n'
 import { exchangeService } from '@/services/exchange.service'
+import { learningAgreementService } from '@/services/learningAgreement.service'
 import { recognitionService } from '@/services/recognition.service'
 import { slotMode } from '@/utils/slotMode'
 import type {
@@ -182,7 +183,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await exchangeService.getLearningAgreement(exchangeId)
+      const res = await learningAgreementService.get(exchangeId)
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
       stagedPartnerCourseIds.value = new Set()
@@ -218,7 +219,7 @@ export const useExchangeStore = defineStore('exchange', () => {
           }
         }
       }
-      const res = await exchangeService.saveLearningAgreement(exchangeId, { entries })
+      const res = await learningAgreementService.save(exchangeId, { entries })
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
       isDirty.value = false
@@ -233,7 +234,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchangeId: string,
     request: UpdateLearningAgreementStatusRequest,
   ) {
-    const res = await exchangeService.updateLearningAgreementStatus(exchangeId, request)
+    const res = await learningAgreementService.updateStatus(exchangeId, request)
     exchange.value = res.data
     if (serverLearningAgreement.value) {
       serverLearningAgreement.value = { ...serverLearningAgreement.value, status: request.status }

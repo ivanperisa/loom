@@ -15,7 +15,7 @@ namespace Loom.Application.Services;
 
 public class ExchangeService(IAppDbContext db) : IExchangeService
 {
-    public async Task<ErrorOr<ExchangeResponse>> CreateExchangeAsync(int studentId, CreateExchangeRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<ExchangeResponse>> CreateExchangeAsync(int requesterId, CreateExchangeRequest request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(request.AcademicYear))
             return Error.Validation("INVALID_ACADEMIC_YEAR", "Academic year is required.");
@@ -24,6 +24,22 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (request.StudySemesters is not { Count: > 0 } || request.StudySemesters.Any(s => s < 1 || s > 10))
             return Error.Validation("INVALID_STUDY_SEMESTER", "Study semesters must be between 1 and 10.");
 
+        var actualStudentId = request.TargetStudentId ?? requesterId;
+
+        if (actualStudentId != requesterId)
+        {
+            var requester = await db.Users.FindAsync([requesterId], ct);
+            if (requester is null || !requester.CanActAsCoordinator())
+                return Error.Forbidden("FORBIDDEN", "Only coordinators can create exchanges for other students.");
+
+            var targetStudent = await db.Users.FindAsync([actualStudentId], ct);
+            if (targetStudent is null) return Error.NotFound("USER_NOT_FOUND", "Target student not found.");
+
+            if (!requester.IsAdmin() && targetStudent.CoordinatorId != requesterId)
+                return Error.Forbidden("FORBIDDEN", "You are not the coordinator for this student.");
+        }
+
+        var studentId = actualStudentId;
         var student = await db.Users.FindAsync([studentId], ct);
         if (student is null) return Error.NotFound("USER_NOT_FOUND", "Student not found.");
 

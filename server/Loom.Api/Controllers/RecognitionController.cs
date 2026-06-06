@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("api/exchanges/{exchangeGuid:guid}/recognition")]
+[Route("exchanges/{exchangeGuid:guid}/recognition")]
 [Authorize]
 public class RecognitionController(IRecognitionService recognitionService) : ApiController
 {
