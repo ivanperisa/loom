@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { coordinatorService } from '@/services/coordinator.service'
-import { exchangeService } from '@/services/exchange.service'
 import { institutionService } from '@/services/institution.service'
 import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
 import type { ExchangeSummaryResponse } from '@/types/exchange.types'
@@ -64,7 +63,7 @@ onMounted(async () => {
   try {
     const [studentsRes, exchangesRes, institutionsRes] = await Promise.allSettled([
       coordinatorService.getStudents(),
-      exchangeService.getMyStudents(),
+      coordinatorService.getStudentsExchanges(),
       institutionService.getHomeInstitutions(),
     ])
     if (studentsRes.status === 'fulfilled') students.value = studentsRes.value.data

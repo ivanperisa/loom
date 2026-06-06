@@ -17,6 +17,4 @@ export const exchangeService = {
     api.delete(`/api/exchanges/${exchangeId}`),
   updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
     api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
-  getMyStudents: () =>
-    api.get<ExchangeSummaryResponse[]>('/api/coordinator/students/exchanges'),
 }
