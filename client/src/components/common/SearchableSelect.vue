@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends string | null">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 
 export interface SelectOption {
   value: string | null
@@ -31,6 +31,8 @@ const emit = defineEmits<{ 'update:modelValue': [value: T] }>()
 const open = ref(false)
 const search = ref('')
 const root = ref<HTMLElement | null>(null)
+const dropdownRef = ref<HTMLElement | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
 
 const selectedLabel = computed(
   () => props.options.find((o) => o.value === props.modelValue)?.label ?? null,
@@ -46,21 +48,53 @@ const filtered = computed(() => {
   )
 })
 
+function updateDropdownPosition() {
+  if (!root.value) return
+  const rect = root.value.getBoundingClientRect()
+  dropdownStyle.value = {
+    position: 'fixed',
+    top: `${rect.bottom + 4}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+    zIndex: '9999',
+  }
+}
+
+function onClickOutside(e: MouseEvent) {
+  if (
+    !root.value?.contains(e.target as Node) &&
+    !dropdownRef.value?.contains(e.target as Node)
+  ) {
+    closeDropdown()
+  }
+}
+
+function openDropdown() {
+  updateDropdownPosition()
+  open.value = true
+  search.value = ''
+  document.addEventListener('mousedown', onClickOutside)
+}
+
+function closeDropdown() {
+  open.value = false
+  document.removeEventListener('mousedown', onClickOutside)
+}
+
 function toggle() {
-  open.value = !open.value
+  if (open.value) closeDropdown()
+  else openDropdown()
 }
 
 function select(value: string | null) {
   emit('update:modelValue', value as T)
-  open.value = false
+  closeDropdown()
   search.value = ''
 }
 
-function onFocusOut(e: FocusEvent) {
-  if (!root.value?.contains(e.relatedTarget as Node)) {
-    open.value = false
-  }
-}
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', onClickOutside)
+})
 
 watch(open, (val) => {
   if (val) search.value = ''
@@ -68,8 +102,7 @@ watch(open, (val) => {
 </script>
 
 <template>
-  <div ref="root" class="relative" @focusout.capture="onFocusOut">
-    <!-- Trigger -->
+  <div ref="root" class="relative">
     <button
       type="button"
       class="flex w-full items-center justify-between rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light transition focus:border-primary focus:outline-none"
@@ -90,49 +123,52 @@ watch(open, (val) => {
       </svg>
     </button>
 
-    <!-- Dropdown -->
-    <div
-      v-if="open"
-      class="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-primary/20 bg-dark-2 shadow-xl"
-    >
-      <!-- Search -->
-      <div v-if="searchable" class="p-2">
-        <div class="relative">
-          <svg
-            class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+    <Teleport to="body">
+      <div
+        v-if="open"
+        ref="dropdownRef"
+        :style="dropdownStyle"
+        class="rounded-lg border border-primary/20 bg-dark-2 shadow-xl"
+      >
+        <!-- Search -->
+        <div v-if="searchable" class="p-2">
+          <div class="relative">
+            <svg
+              class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              v-model="search"
+              type="text"
+              :placeholder="searchPlaceholder"
+              class="w-full rounded-md border border-primary/10 bg-dark py-1.5 pl-7 pr-3 text-xs text-light placeholder-slate-500 focus:border-primary focus:outline-none"
+              @click.stop
+            />
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="max-h-52 overflow-y-auto pb-1">
+          <p v-if="filtered.length === 0" class="px-3 py-2 text-xs text-slate-500">
+            {{ noResultsLabel }}
+          </p>
+          <button
+            v-for="opt in filtered"
+            :key="String(opt.value)"
+            type="button"
+            class="w-full px-3 py-2 text-left text-sm transition hover:bg-primary/10"
+            :class="modelValue === opt.value ? 'font-medium text-primary-light' : 'text-light'"
+            @click="select(opt.value)"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            v-model="search"
-            type="text"
-            :placeholder="searchPlaceholder"
-            class="w-full rounded-md border border-primary/10 bg-dark py-1.5 pl-7 pr-3 text-xs text-light placeholder-slate-500 focus:border-primary focus:outline-none"
-            @click.stop
-          />
+            <span>{{ opt.label }}</span>
+            <span v-if="opt.sublabel" class="ml-1 text-xs text-slate-500">{{ opt.sublabel }}</span>
+          </button>
         </div>
       </div>
-
-      <!-- Options -->
-      <div class="max-h-52 overflow-y-auto pb-1">
-        <p v-if="filtered.length === 0" class="px-3 py-2 text-xs text-slate-500">
-          {{ noResultsLabel }}
-        </p>
-        <button
-          v-for="opt in filtered"
-          :key="String(opt.value)"
-          type="button"
-          class="w-full px-3 py-2 text-left text-sm transition hover:bg-primary/10"
-          :class="modelValue === opt.value ? 'font-medium text-primary-light' : 'text-light'"
-          @click="select(opt.value)"
-        >
-          <span>{{ opt.label }}</span>
-          <span v-if="opt.sublabel" class="ml-1 text-xs text-slate-500">{{ opt.sublabel }}</span>
-        </button>
-      </div>
-    </div>
+    </Teleport>
   </div>
 </template>

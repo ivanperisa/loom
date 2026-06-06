@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import { useExchangeStore } from '@/stores/exchange.store'
 import type { PartnerCourseResponse } from '@/types/institution.types'
+import SearchInput from '@/components/common/SearchInput.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -77,11 +78,10 @@ function onDragStart(course: PartnerCourseResponse) {
 
     <template v-else>
       <template v-if="variant === 'available' || variant === 'all'">
-        <input
+        <SearchInput
           v-model="searchCode"
-          type="text"
           :placeholder="t('partnerCourses.searchPlaceholder')"
-          class="mb-3 w-full rounded-lg border border-primary/20 bg-dark-2 px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
+          class="mb-3"
         />
         <div class="max-h-[400px] space-y-1.5 overflow-y-auto pr-1">
           <p v-if="searchCode.trim() === ''" class="py-4 text-center text-xs text-light/60">

@@ -5,5 +5,6 @@ public record CreateExchangeRequest(
     int PartnerProgramId,
     string AcademicYear,
     string SemesterType,
-    List<int> StudySemesters
+    List<int> StudySemesters,
+    int? CoordinatorId = null
 );

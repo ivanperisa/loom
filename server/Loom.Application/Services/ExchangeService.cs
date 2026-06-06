@@ -39,7 +39,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var exchange = new Exchange
         {
             StudentId = studentId,
-            CoordinatorId = student.CoordinatorId,
+            CoordinatorId = request.CoordinatorId ?? student.CoordinatorId,
             HomeProfileId = request.HomeProfileId,
             PartnerProgramId = request.PartnerProgramId,
             AcademicYear = request.AcademicYear,

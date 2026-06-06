@@ -24,6 +24,10 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       https: {},
+      hmr: {
+        protocol: 'wss',
+        host: 'localhost',
+      },
     },
   }
 })

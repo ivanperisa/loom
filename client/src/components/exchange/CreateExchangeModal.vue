@@ -9,8 +9,10 @@ import type {
   HomeProfileResponse,
   PartnerProgramResponse,
 } from '@/types/institution.types'
+import type { AuthMeResponse } from '@/types/auth.types'
 import type { ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
+import { nWord } from '@/utils/plural'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -89,6 +91,19 @@ const selectedPartnerProgram = computed(
   () => partnerPrograms.value.find((p) => p.id === selectedPartnerProgramId.value) ?? null,
 )
 
+// Step 3: Coordinator
+const coordinators = ref<AuthMeResponse[]>([])
+const selectedCoordinatorId = ref<string | null>(null)
+
+const coordinatorOptions = computed(() => [
+  { value: null, label: t('exchange.noCoordinator') },
+  ...coordinators.value.map((c) => ({ value: c.id, label: c.name })),
+])
+
+const selectedCoordinator = computed(
+  () => coordinators.value.find((c) => c.id === selectedCoordinatorId.value) ?? null,
+)
+
 // Step 3: Details
 function defaultAcademicYear(): string {
   const now = new Date()
@@ -102,11 +117,10 @@ const academicYear = ref(defaultAcademicYear())
 const semesterType = ref<ExchangeSemester>(exchangeSemester.Winter)
 const studySemesters = ref<number[]>([])
 
-// Allowed individual semesters per type; for Both we show pairs instead
 const allowedSemesters = computed<number[]>(() => {
   if (semesterType.value === exchangeSemester.Winter) return [1, 3]
   if (semesterType.value === exchangeSemester.Summer) return [2, 4]
-  return [] // Both uses pair buttons
+  return []
 })
 
 const bothPairs = [[1, 2], [3, 4]]
@@ -142,9 +156,10 @@ watch(selectedProgramId, () => {
 })
 
 onMounted(async () => {
-  const [programsRes, partnerRes] = await Promise.allSettled([
+  const [programsRes, partnerRes, coordRes] = await Promise.allSettled([
     institutionService.getHomePrograms(),
     institutionService.getPartnerPrograms(),
+    institutionService.getCoordinators(),
   ])
 
   if (programsRes.status === 'fulfilled') homePrograms.value = programsRes.value.data
@@ -152,6 +167,8 @@ onMounted(async () => {
 
   if (partnerRes.status === 'fulfilled') partnerPrograms.value = partnerRes.value.data
   loadingPartnerPrograms.value = false
+
+  if (coordRes.status === 'fulfilled') coordinators.value = coordRes.value.data
 })
 
 function validateStep(): boolean {
@@ -209,6 +226,7 @@ async function submitExchange() {
       academicYear: academicYear.value.trim(),
       semesterType: semesterType.value,
       studySemesters: studySemesters.value,
+      coordinatorId: selectedCoordinatorId.value,
     })
     if (result) {
       emit('created', result.guid)
@@ -291,9 +309,7 @@ const stepKeys = [
         </template>
       </div>
 
-      <!-- Body -->
       <div class="min-h-0 flex-1 overflow-y-auto px-8 py-6">
-        <!-- Error -->
         <p
           v-if="errorMessage"
           class="mb-5 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"
@@ -301,7 +317,7 @@ const stepKeys = [
           {{ errorMessage }}
         </p>
 
-        <!-- ── Step 1: Home program & profile ── -->
+        <!-- Step 1: Home program & profile -->
         <div v-if="currentStep === 1" class="space-y-5">
           <div>
             <label class="mb-2 block text-sm font-semibold text-primary-light">{{
@@ -346,7 +362,7 @@ const stepKeys = [
           </div>
         </div>
 
-        <!-- ── Step 2: Partner program ── -->
+        <!-- Step 2: Partner program -->
         <div v-if="currentStep === 2" class="flex flex-col gap-4">
           <label class="text-sm font-semibold text-primary-light">{{
             t('createExchange.selectPartnerProgram')
@@ -385,7 +401,7 @@ const stepKeys = [
 
           <!-- Results count -->
           <p class="text-xs text-slate-500">
-            {{ filteredPartnerPrograms.length }} {{ t('createExchange.results') }}
+            {{ nWord(filteredPartnerPrograms.length, locale, { en: ['result', 'results'], hr: ['rezultat', 'rezultata', 'rezultata'] }) }}
           </p>
 
           <!-- List -->
@@ -433,7 +449,7 @@ const stepKeys = [
           </template>
         </div>
 
-        <!-- ── Step 3: Details ── -->
+        <!-- Step 3: Details -->
         <div v-if="currentStep === 3" class="grid grid-cols-2 gap-6">
           <!-- Academic year -->
           <div class="col-span-2 sm:col-span-1">
@@ -517,9 +533,23 @@ const stepKeys = [
               </button>
             </div>
           </div>
+
+          <!-- Coordinator -->
+          <div class="col-span-2">
+            <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+              t('createExchange.selectCoordinator')
+            }}</label>
+            <SearchableSelect
+              v-model="selectedCoordinatorId"
+              :options="coordinatorOptions"
+              :placeholder="t('createExchange.selectCoordinatorPlaceholder')"
+              :search-placeholder="t('settings.profile.searchCoordinator')"
+              :no-results-label="t('settings.profile.noCoordinatorResults')"
+            />
+          </div>
         </div>
 
-        <!-- ── Step 4: Confirm ── -->
+        <!-- Step 4: Confirm -->
         <div v-if="currentStep === 4">
           <h3 class="mb-4 text-sm font-semibold text-primary-light">
             {{ t('createExchange.summary') }}
@@ -575,6 +605,12 @@ const stepKeys = [
                     .sort((a, b) => a - b)
                     .join(', ')
                 }}
+              </p>
+            </div>
+            <div class="col-span-2 rounded-xl border border-white/10 bg-dark px-4 py-3">
+              <p class="text-xs text-slate-500">{{ t('createExchange.summaryCoordinator') }}</p>
+              <p class="mt-0.5 text-sm font-medium text-light">
+                {{ selectedCoordinator?.name ?? t('exchange.noCoordinator') }}
               </p>
             </div>
           </div>

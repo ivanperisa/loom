@@ -23,7 +23,7 @@ public class AuthController(
         if (User.Identity?.IsAuthenticated == true)
         {
             return SignOut(
-            new AuthenticationProperties { RedirectUri = $"/auth/login?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}"},
+            new AuthenticationProperties { RedirectUri = $"{Request.PathBase}/auth/login?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}"},
             CookieAuthenticationDefaults.AuthenticationScheme);
         }
 

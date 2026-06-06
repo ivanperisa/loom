@@ -13,6 +13,7 @@ export interface CreateExchangeRequest {
   academicYear: string
   semesterType: ExchangeSemester
   studySemesters: number[]
+  coordinatorId?: string | null
 }
 
 export interface ExchangeResponse {
@@ -62,11 +63,9 @@ export interface HomeSlotResponse {
   courseTypeName: string
   courseTypeNameEn: string
   color: string
-  // course-based (null when courseGroupId is set)
   courseIsvuCode: number | null
   courseName: string | null
   courseNameEn: string | null
-  // course-group-based (null when courseId is set)
   courseGroupIsvuCode: number | null
   courseGroupName: string | null
   courseGroupNameEn: string | null
@@ -111,7 +110,6 @@ export interface LearningAgreementEntryUpsertDto {
   awardedEcts?: number | null
 }
 
-// Local working copy (localId used only as :key, never sent to server)
 export interface LocalSlotState {
   homeSlotId: string
   mode: SlotMode

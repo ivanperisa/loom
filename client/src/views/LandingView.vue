@@ -1,9 +1,21 @@
 ﻿<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { authService } from '@/services/auth.service'
-import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import { useTheme } from '@/composables/useTheme'
+import type { AppLocale } from '@/i18n/index'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const { theme, toggleTheme } = useTheme()
+
+const locales: Array<{ code: AppLocale; flag: string; label: string }> = [
+  { code: 'hr', flag: 'fi fi-hr', label: 'HR' },
+  { code: 'en', flag: 'fi fi-gb', label: 'EN' },
+]
+
+function setLocale(code: AppLocale) {
+  locale.value = code
+  localStorage.setItem('locale', code)
+}
 
 function login() {
   authService.login()
@@ -11,22 +23,43 @@ function login() {
 </script>
 
 <template>
-  <main class="relative min-h-screen overflow-hidden text-light">
-    <div class="absolute right-4 top-4 z-20">
-      <LanguageSwitcher />
+  <main class="landing-root relative min-h-screen overflow-hidden text-light">
+    <div class="absolute right-4 top-4 z-20 flex items-center gap-2">
+      <button
+        type="button"
+        class="flex h-9 w-9 items-center justify-center rounded-lg text-light/60 transition hover:bg-white/10 hover:text-light"
+        :title="theme === 'dark' ? t('common.lightTheme') : t('common.darkTheme')"
+        @click="toggleTheme"
+      >
+        <svg v-if="theme === 'dark'" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+        </svg>
+        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+      </button>
+      <button
+        v-for="loc in locales.filter(l => l.code !== locale)"
+        :key="loc.code"
+        type="button"
+        class="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-light/60 transition hover:bg-white/10 hover:text-light"
+        @click="setLocale(loc.code)"
+      >
+        <span :class="loc.flag" aria-hidden="true"></span>
+        {{ loc.label }}
+      </button>
     </div>
 
-    <div class="absolute inset-0 flex">
-      <div class="w-full bg-dark lg:w-1/3"></div>
-      <div class="hidden w-2/3 bg-gradient-to-br from-dark via-dark to-dark lg:block"></div>
-    </div>
+    <div class="absolute inset-0 bg-dark"></div>
 
     <div class="relative z-10 flex min-h-screen flex-col lg:flex-row">
       <section class="relative flex w-full items-center px-6 py-12 lg:w-1/3 lg:px-12">
         <article
-          class="landing-card w-full max-w-xl bg-dark p-8 shadow-[24px_0_45px_rgba(7,28,44,0.65)] lg:translate-x-[80px] lg:rounded-[0_30px_30px_0]"
+          class="landing-card w-full max-w-xl bg-dark p-8 lg:translate-x-[80px] lg:rounded-[0_30px_30px_0]"
         >
-          <h1 class="text-4xl font-black tracking-tight text-white sm:text-5xl">{{ t('common.appName') }}</h1>
+          <h1 class="text-4xl font-black tracking-tight text-light sm:text-5xl">{{ t('common.appName') }}</h1>
           <p class="mt-4 text-lg font-semibold text-primary-light">{{ t('landing.tagline') }}</p>
           <p class="mt-5 max-w-md text-sm leading-7 text-light sm:text-base">
             {{ t('landing.description') }}
@@ -57,7 +90,7 @@ function login() {
             <path d="M520 120 L520 420 L540 560" />
             <path d="M760 220 L730 340 L760 500" />
           </g>
-          <g fill="#FFF7ED">
+          <g fill="var(--color-light)">
             <circle cx="110" cy="140" r="6" />
             <circle cx="320" cy="200" r="6" />
             <circle cx="520" cy="120" r="6" />
@@ -89,18 +122,31 @@ function login() {
   </main>
 </template>
 
+
 <style scoped>
 .landing-card {
   border-radius: 1.5rem;
-  border: 1px solid rgba(138, 196, 237, 0.15);
+  border: 1px solid rgba(234, 88, 12, 0.2);
+  box-shadow: 24px 0 45px rgba(0, 0, 0, 0.5);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+[data-theme="light"] .landing-card {
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 6px 6px 36px rgba(0, 0, 0, 0.18);
 }
 
 .landing-card:hover {
+  transform: translateY(-2px);
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.7),
-    0 0 80px rgba(33, 140, 217, 0.2);
-  transform: translateY(-2px);
-  transition: all 0.25s ease;
+    0 0 60px rgba(234, 88, 12, 0.15);
+}
+
+[data-theme="light"] .landing-card:hover {
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 0 40px rgba(234, 88, 12, 0.08);
 }
 
 .floating {
@@ -115,7 +161,7 @@ function login() {
   height: 180px;
   top: 10%;
   left: 12%;
-  background: rgba(33, 140, 217, 0.32);
+  background: rgba(234, 88, 12, 0.15);
 }
 
 .floating-b {
@@ -123,7 +169,7 @@ function login() {
   height: 110px;
   top: 60%;
   left: 25%;
-  background: rgba(138, 196, 237, 0.45);
+  background: rgba(251, 146, 60, 0.12);
   animation-delay: 1.3s;
 }
 
@@ -132,7 +178,7 @@ function login() {
   height: 150px;
   top: 18%;
   right: 16%;
-  background: rgba(202, 228, 247, 0.2);
+  background: rgba(234, 88, 12, 0.08);
   animation-delay: 2.1s;
 }
 
@@ -141,7 +187,7 @@ function login() {
   height: 220px;
   top: 62%;
   right: 8%;
-  background: rgba(33, 140, 217, 0.22);
+  background: rgba(251, 146, 60, 0.1);
   animation-delay: 0.8s;
 }
 

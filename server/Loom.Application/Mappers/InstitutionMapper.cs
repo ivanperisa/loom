@@ -24,6 +24,24 @@ public static class InstitutionMapper
         program.Institution.City
     );
 
+    public static PartnerInstitutionAdminResponse ToAdminResponse(this Institution institution) => new(
+        institution.Id,
+        institution.Name,
+        institution.NameEn,
+        institution.Country,
+        institution.City,
+        institution.ErasmusCode,
+        institution.PartnerPrograms.Select(p => p.ToAdminResponse()).ToList()
+    );
+
+    public static PartnerProgramAdminResponse ToAdminResponse(this PartnerProgram program) => new(
+        program.Id,
+        program.Name,
+        program.NameEn,
+        program.Level.ToString(),
+        program.Courses.Count
+    );
+
     public static HomeProgramResponse ToResponse(this HomeProgram program) => new(
         program.Id,
         program.Name,

@@ -38,6 +38,14 @@ const errorMsg = ref<string | null>(null)
 
 const isStudent = computed(() => authStore.role === userRole.Student)
 
+const isDirty = computed(() =>
+  name.value !== (authStore.user?.name ?? '') ||
+  jmbag.value !== (authStore.user?.jmbag ?? '') ||
+  institutionId.value !== (authStore.user?.institutionId ?? '') ||
+  mentor.value !== (authStore.user?.mentor ?? '') ||
+  coordinatorId.value !== (authStore.user?.coordinatorId ?? null),
+)
+
 onMounted(async () => {
   const [instRes, coordRes] = await Promise.all([
     institutionService.getHomeInstitutions(),
@@ -162,7 +170,7 @@ async function save() {
         </div>
 
         <!-- Actions -->
-        <div class="mt-6 flex items-center gap-3">
+        <div v-if="isDirty" class="mt-6 flex items-center gap-3">
           <button
             type="button"
             class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"

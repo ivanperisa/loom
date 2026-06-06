@@ -5,9 +5,10 @@ import { useI18n } from 'vue-i18n'
 import { exchangeService } from '@/services/exchange.service'
 import type { ExchangeSummaryResponse } from '@/types/exchange.types'
 import { statusColorClass } from '@/utils/statusColors'
+import { nWord } from '@/utils/plural'
 
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const exchanges = ref<ExchangeSummaryResponse[]>([])
 const loading = ref(true)
@@ -64,7 +65,6 @@ function viewExchange(exchangeId: string) {
     <section class="page-container">
       <h1 class="mb-6 text-2xl font-bold text-light">{{ t('coordinator.title') }}</h1>
 
-      <!-- Loading skeleton -->
       <div v-if="loading" class="space-y-4">
         <div
           v-for="i in 3"
@@ -76,7 +76,6 @@ function viewExchange(exchangeId: string) {
         </div>
       </div>
 
-      <!-- Error -->
       <div
         v-else-if="error"
         class="rounded-xl border border-red-400/30 bg-red-900/20 p-8 text-center"
@@ -84,7 +83,6 @@ function viewExchange(exchangeId: string) {
         <p class="text-red-300">{{ error }}</p>
       </div>
 
-      <!-- Empty -->
       <div
         v-else-if="students.length === 0"
         class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center"
@@ -139,12 +137,7 @@ function viewExchange(exchangeId: string) {
             <span
               class="rounded-full bg-primary/20 px-3 py-1 text-xs font-medium text-primary-light"
             >
-              {{ student.exchanges.length }}
-              {{
-                student.exchanges.length === 1
-                  ? t('coordinator.exchangeCount')
-                  : t('coordinator.exchangesCount')
-              }}
+              {{ nWord(student.exchanges.length, locale, { en: ['exchange', 'exchanges'], hr: ['razmjena', 'razmjene', 'razmjena'] }) }}
             </span>
           </button>
 
@@ -181,13 +174,11 @@ function viewExchange(exchangeId: string) {
                     </span>
                   </div>
 
-                  <!-- Row 2: strani fakultet -->
                   <p class="mt-2.5 text-sm font-semibold text-light">
                     {{ ex.partnerInstitutionName }}
                   </p>
                   <p class="text-xs text-light/60">{{ ex.partnerProgramName }}</p>
 
-                  <!-- Row 3: studij · profil -->
                   <p class="mt-1.5 text-xs text-light/40">
                     {{ ex.homeProgramName
                     }}<span v-if="ex.homeProfileName"> &middot; {{ ex.homeProfileName }}</span>

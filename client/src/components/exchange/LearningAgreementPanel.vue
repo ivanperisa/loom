@@ -10,6 +10,7 @@ import type { HomeSlotResponse, LocalSlotMapping, SlotMode } from '@/types/excha
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import { documentStatus } from '@/utils/documentStatus'
 import { slotMode } from '@/utils/slotMode'
+import { useTheme } from '@/composables/useTheme'
 
 const props = defineProps<{
   exchangeId: string
@@ -19,6 +20,7 @@ const props = defineProps<{
 const { t, locale } = useI18n()
 const exchangeStore = useExchangeStore()
 const { isCoordinator, isEditable } = useExchangePermissions()
+const { theme } = useTheme()
 
 const isSavingLa = ref(false)
 const saveError = ref<string | null>(null)
@@ -120,9 +122,10 @@ function ectsColor(slot: HomeSlotResponse): string {
   const state = lineFor(slot.id)
   if (!state || state.mode !== slotMode.AtExchange) return 'transparent'
   const mapped = mappedEcts(slot)
-  if (mapped === 0) return '#94a3b8'
-  if (mapped < slot.ects) return '#f59e0b'
-  if (mapped === slot.ects) return '#22c55e'
+  const light = theme.value === 'light'
+  if (mapped === 0) return light ? '#78716c' : '#94a3b8'
+  if (mapped < slot.ects) return light ? '#b45309' : '#f59e0b'
+  if (mapped === slot.ects) return light ? '#16a34a' : '#22c55e'
   return '#ef4444'
 }
 
@@ -370,7 +373,6 @@ function slotSubLabel(slot: HomeSlotResponse): string {
       </div>
     </div>
 
-    <!-- Save bar -->
     <UnsavedChangesBar
       v-if="isEditable && exchangeStore.isDirty"
       :saving="isSavingLa"
@@ -442,7 +444,7 @@ function slotSubLabel(slot: HomeSlotResponse): string {
                   :style="{
                     color: ectsColor(slot),
                     border: `1px solid ${ectsColor(slot)}`,
-                    background: 'rgba(255,255,255,0.6)',
+                    background: theme === 'light' ? `${ectsColor(slot)}18` : 'rgba(255,255,255,0.08)',
                   }"
                 >
                   {{ ectsLabel(slot) }} ECTS
