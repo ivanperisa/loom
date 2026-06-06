@@ -8,15 +8,15 @@ import type {
 
 export const exchangeService = {
   create: (request: CreateExchangeRequest) =>
-    api.post<ExchangeResponse>('/exchanges', request),
+    api.post<ExchangeResponse>('/api/exchanges', request),
   getById: (exchangeId: string) =>
-    api.get<ExchangeResponse>(`/exchanges/${exchangeId}`),
+    api.get<ExchangeResponse>(`/api/exchanges/${exchangeId}`),
   getMine: () =>
-    api.get<ExchangeSummaryResponse[]>('/exchanges/mine'),
+    api.get<ExchangeSummaryResponse[]>('/api/exchanges/mine'),
   deleteExchange: (exchangeId: string) =>
-    api.delete(`/exchanges/${exchangeId}`),
+    api.delete(`/api/exchanges/${exchangeId}`),
   updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
-    api.put<ExchangeResponse>(`/exchanges/${exchangeId}/coordinator-message`, request),
+    api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
   getMyStudents: () =>
-    api.get<ExchangeSummaryResponse[]>('/coordinator/students/exchanges'),
+    api.get<ExchangeSummaryResponse[]>('/api/coordinator/students/exchanges'),
 }

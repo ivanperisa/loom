@@ -43,45 +43,45 @@ export interface PartnerInstitutionAdminResponse {
 
 export const adminService = {
   getAllUsers: () =>
-    api.get<UserListResponse[]>('/admin/users'),
+    api.get<UserListResponse[]>('/api/admin/users'),
 
   getCoordinatorRequests: () =>
-    api.get<CoordinatorRequestResponse[]>('/admin/coordinator-requests'),
+    api.get<CoordinatorRequestResponse[]>('/api/admin/coordinator-requests'),
 
-  makeCoordinator: (userId: string) => api.patch(`/admin/users/${userId}/make-coordinator`),
+  makeCoordinator: (userId: string) => api.patch(`/api/admin/users/${userId}/make-coordinator`),
 
   rejectCoordinatorRequest: (userId: string) =>
-    api.patch(`/admin/users/${userId}/reject-coordinator-request`),
+    api.patch(`/api/admin/users/${userId}/reject-coordinator-request`),
 
-  removeCoordinator: (userId: string) => api.patch(`/admin/users/${userId}/remove-coordinator`),
+  removeCoordinator: (userId: string) => api.patch(`/api/admin/users/${userId}/remove-coordinator`),
 
   getCoordinatorWhitelist: () =>
-    api.get<CoordinatorWhitelistEntryResponse[]>('/admin/coordinator-whitelist'),
+    api.get<CoordinatorWhitelistEntryResponse[]>('/api/admin/coordinator-whitelist'),
 
   addToWhitelist: (email: string) =>
-    api.post<CoordinatorWhitelistEntryResponse>('/admin/coordinator-whitelist', { email }),
+    api.post<CoordinatorWhitelistEntryResponse>('/api/admin/coordinator-whitelist', { email }),
 
   removeFromWhitelist: (email: string) =>
-    api.delete(`/admin/coordinator-whitelist/${encodeURIComponent(email)}`),
+    api.delete(`/api/admin/coordinator-whitelist/${encodeURIComponent(email)}`),
 
   getPartnerInstitutions: () =>
-    api.get<PartnerInstitutionAdminResponse[]>('/admin/institutions'),
+    api.get<PartnerInstitutionAdminResponse[]>('/api/admin/institutions'),
 
   createPartnerInstitution: (data: { name: string; nameEn: string; country: string; city?: string; erasmusCode?: string }) =>
-    api.post<PartnerInstitutionAdminResponse>('/admin/institutions', data),
+    api.post<PartnerInstitutionAdminResponse>('/api/admin/institutions', data),
 
   deletePartnerInstitution: (id: string) =>
-    api.delete(`/admin/institutions/${id}`),
+    api.delete(`/api/admin/institutions/${id}`),
 
   createPartnerProgram: (institutionId: string, data: { name: string; nameEn?: string; level: string }) =>
-    api.post<PartnerProgramAdminResponse>(`/admin/institutions/${institutionId}/programs`, data),
+    api.post<PartnerProgramAdminResponse>(`/api/admin/institutions/${institutionId}/programs`, data),
 
   deletePartnerProgram: (programId: string) =>
-    api.delete(`/admin/institutions/programs/${programId}`),
+    api.delete(`/api/admin/institutions/programs/${programId}`),
 
-  createPartnerCourse: (programId: string, data: { code: string; nameEn: string; nameHr?: string; ects: number; lecturesH?: number; auditoryH?: number; labH?: number }) =>
-    api.post<PartnerCourseResponse>(`/admin/institutions/programs/${programId}/courses`, data),
+  createPartnerCourse: (programId: string, data: { code: string; nameHr?: string; nameEn: string; ects: number; lecturesH?: number; auditoryH?: number; labH?: number }) =>
+    api.post<PartnerCourseResponse>(`/api/admin/institutions/programs/${programId}/courses`, data),
 
   deletePartnerCourse: (courseId: string) =>
-    api.delete(`/admin/institutions/programs/courses/${courseId}`),
+    api.delete(`/api/admin/institutions/programs/courses/${courseId}`),
 }

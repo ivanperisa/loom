@@ -8,9 +8,9 @@ import type {
 
 export const learningAgreementService = {
   get: (exchangeId: string) =>
-    api.get<LearningAgreementResponse>(`/exchanges/${exchangeId}/learning-agreement`),
+    api.get<LearningAgreementResponse>(`/api/exchanges/${exchangeId}/learning-agreement`),
   save: (exchangeId: string, request: SaveLearningAgreementRequest) =>
-    api.put<LearningAgreementResponse>(`/exchanges/${exchangeId}/learning-agreement`, request),
+    api.put<LearningAgreementResponse>(`/api/exchanges/${exchangeId}/learning-agreement`, request),
   updateStatus: (exchangeId: string, request: UpdateLearningAgreementStatusRequest) =>
-    api.patch<ExchangeResponse>(`/exchanges/${exchangeId}/learning-agreement/status`, request),
+    api.patch<ExchangeResponse>(`/api/exchanges/${exchangeId}/learning-agreement/status`, request),
 }

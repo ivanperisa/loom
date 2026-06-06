@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("[controller]")]
+[Route("api/[controller]")]
 [Authorize]
 public class CoordinatorController(IUserService userService, IExchangeService exchangeService) : ApiController
 {

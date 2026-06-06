@@ -9,13 +9,13 @@ import type { AuthMeResponse } from '@/types/auth.types'
 
 export const institutionService = {
   getHomeInstitutions: () =>
-    api.get<InstitutionResponse[]>('/institutions/home'),
+    api.get<InstitutionResponse[]>('/api/institutions/home'),
   getHomePrograms: () =>
-    api.get<HomeProgramResponse[]>('/institutions/home-programs'),
+    api.get<HomeProgramResponse[]>('/api/institutions/home-programs'),
   getPartnerPrograms: () =>
-    api.get<PartnerProgramResponse[]>('/institutions/partner-programs'),
+    api.get<PartnerProgramResponse[]>('/api/institutions/partner-programs'),
   getPartnerCourses: (partnerProgramId: string) =>
-    api.get<PartnerCourseResponse[]>(`/institutions/partner-programs/${partnerProgramId}/courses`),
+    api.get<PartnerCourseResponse[]>(`/api/institutions/partner-programs/${partnerProgramId}/courses`),
   getCoordinators: () =>
-    api.get<AuthMeResponse[]>('/institutions/coordinators'),
+    api.get<AuthMeResponse[]>('/api/institutions/coordinators'),
 }

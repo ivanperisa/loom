@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("exchanges")]
+[Route("api/exchanges")]
 [Authorize]
 public class ExchangeController(IExchangeService exchangeService) : ApiController
 {

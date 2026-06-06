@@ -7,11 +7,11 @@ import type {
 
 export const recognitionService = {
   getOrCreate: (exchangeId: string) =>
-    api.get<RecognitionResponse>(`/exchanges/${exchangeId}/recognition`),
+    api.get<RecognitionResponse>(`/api/exchanges/${exchangeId}/recognition`),
   saveRecognition: (exchangeId: string, request: SaveRecognitionRequest) =>
-    api.put<RecognitionResponse>(`/exchanges/${exchangeId}/recognition/entries`, request),
+    api.put<RecognitionResponse>(`/api/exchanges/${exchangeId}/recognition/entries`, request),
   updateRecognitionStatus: (exchangeId: string, request: UpdateRecognitionStatusRequest) =>
-    api.patch<RecognitionResponse>(`/exchanges/${exchangeId}/recognition/status`, request),
+    api.patch<RecognitionResponse>(`/api/exchanges/${exchangeId}/recognition/status`, request),
   setEntryRecognized: (exchangeId: string, entryId: string, isRecognized: boolean | null) =>
-    api.patch<RecognitionResponse>(`/exchanges/${exchangeId}/recognition/entries/${entryId}/recognized`, { isRecognized }),
+    api.patch<RecognitionResponse>(`/api/exchanges/${exchangeId}/recognition/entries/${entryId}/recognized`, { isRecognized }),
 }

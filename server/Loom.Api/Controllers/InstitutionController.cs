@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("institutions")]
+[Route("api/institutions")]
 [Authorize]
 public class InstitutionController(IInstitutionService institutionService) : ApiController
 {

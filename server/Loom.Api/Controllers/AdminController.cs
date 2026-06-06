@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("[controller]")]
+[Route("api/[controller]")]
 [Authorize(Roles = Roles.Admin)]
 public class AdminController(IUserService userService) : ApiController
 {
