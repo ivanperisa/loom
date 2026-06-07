@@ -9,13 +9,6 @@ namespace Loom.Api.Controllers;
 [Authorize]
 public class ExchangeController(IExchangeService exchangeService) : ApiController
 {
-    [HttpPost]
-    public async Task<IActionResult> CreateExchange([FromBody] CreateExchangeRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.CreateExchangeAsync(GetCurrentUserId(), request, ct);
-        return Match(result, value => CreatedAtAction(nameof(GetExchange), new { exchangeGuid = value.Guid }, value));
-    }
-
     [HttpGet("{exchangeGuid:guid}")]
     public async Task<IActionResult> GetExchange(Guid exchangeGuid, CancellationToken ct)
     {
@@ -30,25 +23,18 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, Ok);
     }
 
+    [HttpPost]
+    public async Task<IActionResult> CreateExchange([FromBody] CreateExchangeRequest request, CancellationToken ct)
+    {
+        var result = await exchangeService.CreateExchangeAsync(GetCurrentUserId(), request, ct);
+        return Match(result, value => CreatedAtAction(nameof(GetExchange), new { exchangeGuid = value.Guid }, value));
+    }
+
     [HttpDelete("{exchangeGuid:guid}")]
     public async Task<IActionResult> DeleteExchange(Guid exchangeGuid, CancellationToken ct)
     {
         var result = await exchangeService.DeleteExchangeAsync(exchangeGuid, GetCurrentUserId(), ct);
         return Match(result, _ => NoContent());
-    }
-
-    [HttpGet("{exchangeGuid:guid}/snapshots")]
-    public async Task<IActionResult> GetSnapshots(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await exchangeService.GetSnapshotsAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
-
-    [HttpGet("{exchangeGuid:guid}/snapshots/{snapshotId:int}")]
-    public async Task<IActionResult> GetSnapshot(Guid exchangeGuid, int snapshotId, CancellationToken ct)
-    {
-        var result = await exchangeService.GetSnapshotAsync(exchangeGuid, snapshotId, GetCurrentUserId(), ct);
-        return Match(result, Ok);
     }
 
     [HttpPut("{exchangeGuid:guid}/coordinator-message")]
@@ -57,5 +43,4 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         var result = await exchangeService.UpdateCoordinatorMessageAsync(exchangeGuid, GetCurrentUserId(), request.Message, ct);
         return Match(result, Ok);
     }
-
 }

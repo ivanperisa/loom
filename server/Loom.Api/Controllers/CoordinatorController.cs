@@ -7,26 +7,33 @@ namespace Loom.Api.Controllers;
 
 [Route("api/[controller]")]
 [Authorize]
-public class CoordinatorController(IUserService userService, IExchangeService exchangeService) : ApiController
+public class CoordinatorController(ICoordinatorService coordinatorService) : ApiController
 {
+    [HttpGet("/api/coordinators")]
+    public async Task<IActionResult> GetCoordinators(CancellationToken ct)
+    {
+        var result = await coordinatorService.GetCoordinatorsAsync(ct);
+        return Match(result, Ok);
+    }
+
     [HttpGet("students")]
     public async Task<IActionResult> GetMyStudents(CancellationToken ct)
     {
-        var result = await userService.GetMyStudentsAsync(GetCurrentUserId(), ct);
+        var result = await coordinatorService.GetMyStudentsAsync(GetCurrentUserId(), ct);
         return Match(result, Ok);
     }
 
     [HttpPost("students")]
     public async Task<IActionResult> CreatePlaceholderStudent([FromBody] CreatePlaceholderStudentRequest request, CancellationToken ct)
     {
-        var result = await userService.CreatePlaceholderStudentAsync(GetCurrentUserId(), request, ct);
+        var result = await coordinatorService.CreatePlaceholderStudentAsync(GetCurrentUserId(), request, ct);
         return Match(result, value => CreatedAtAction(nameof(GetMyStudents), value));
     }
 
     [HttpGet("students/exchanges")]
     public async Task<IActionResult> GetMyStudentsExchanges(CancellationToken ct)
     {
-        var result = await exchangeService.GetMyStudentsExchangesAsync(GetCurrentUserId(), ct);
+        var result = await coordinatorService.GetMyStudentsExchangesAsync(GetCurrentUserId(), ct);
         return Match(result, Ok);
     }
 }

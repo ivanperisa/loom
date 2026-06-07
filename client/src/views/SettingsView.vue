@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
 import { institutionService } from '@/services/institution.service'
+import { coordinatorService } from '@/services/coordinator.service'
 import type { InstitutionResponse } from '@/types/institution.types'
 import type { AuthMeResponse } from '@/types/auth.types'
 import { userRole } from '../utils/userRole'
@@ -49,7 +50,7 @@ const isDirty = computed(() =>
 onMounted(async () => {
   const [instRes, coordRes] = await Promise.all([
     institutionService.getHomeInstitutions(),
-    institutionService.getCoordinators(),
+    coordinatorService.getCoordinators(),
   ])
   institutions.value = instRes.data
   coordinators.value = coordRes.data

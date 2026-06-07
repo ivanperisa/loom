@@ -40,7 +40,10 @@ try
   builder.Services.AddScoped<IUserSyncService>(sp => sp.GetRequiredService<UserService>());
   builder.Services.AddScoped<IInstitutionService, InstitutionService>();
   builder.Services.AddScoped<IExchangeService, ExchangeService>();
+  builder.Services.AddScoped<ILearningAgreementService, LearningAgreementService>();
   builder.Services.AddScoped<IRecognitionService, RecognitionService>();
+  builder.Services.AddScoped<ICoordinatorService, CoordinatorService>();
+  builder.Services.AddScoped<IAdminService, AdminService>();
 
   var allowedOrigins = builder.Configuration
       .GetSection("Cors:AllowedOrigins")

@@ -112,7 +112,7 @@ async function loadInstitutions() {
   loading.value = true
   error.value = null
   try {
-    const res = await adminService.getPartnerInstitutions()
+    const res = await institutionService.getPartnerInstitutions()
     institutions.value = res.data
   } catch {
     error.value = t('admin.institutions.saveError')

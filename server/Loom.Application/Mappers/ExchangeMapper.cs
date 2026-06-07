@@ -85,16 +85,6 @@ public static class ExchangeMapper
         course.LabH
     );
 
-    public static ExchangeSnapshotResponse ToResponse(this ExchangeSnapshot snapshot) => new(
-        snapshot.Id,
-        snapshot.ExchangeId,
-        snapshot.Phase.ToString(),
-        snapshot.ChangedById,
-        snapshot.ChangedBy.Name,
-        snapshot.CreatedAt,
-        null
-    );
-
     public static RecognitionResponse ToResponse(this Recognition recognition) => new(
         recognition.Id,
         recognition.ExchangeId,

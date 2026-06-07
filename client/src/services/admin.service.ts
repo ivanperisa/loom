@@ -64,9 +64,6 @@ export const adminService = {
   removeFromWhitelist: (email: string) =>
     api.delete(`/api/admin/coordinator-whitelist/${encodeURIComponent(email)}`),
 
-  getPartnerInstitutions: () =>
-    api.get<PartnerInstitutionAdminResponse[]>('/api/admin/institutions'),
-
   createPartnerInstitution: (data: { name: string; nameEn: string; country: string; city?: string; erasmusCode?: string }) =>
     api.post<PartnerInstitutionAdminResponse>('/api/admin/institutions', data),
 

@@ -8,15 +8,17 @@ import { slotMode } from '@/utils/slotMode'
 import type {
   ExchangeSummaryResponse,
   ExchangeResponse,
-  LearningAgreementResponse,
   CreateExchangeRequest,
-  UpdateLearningAgreementStatusRequest,
   UpdateCoordinatorMessageRequest,
+} from '@/types/exchange.types'
+import type {
+  LearningAgreementResponse,
+  UpdateLearningAgreementStatusRequest,
   LocalSlotState,
   LocalSlotMapping,
   SlotMode,
   LearningAgreementEntryUpsertDto,
-} from '@/types/exchange.types'
+} from '@/types/learningAgreement.types'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import type {
   RecognitionResponse,

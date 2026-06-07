@@ -1,7 +1,8 @@
 import XLSX from 'xlsx-js-style'
 import { exchangeSemester } from '@/utils/exchangeSemester'
 import type { RecognitionResponse } from '@/types/recognition.types'
-import type { ExchangeResponse, LearningAgreementResponse, LearningAgreementEntryResponse } from '@/types/exchange.types'
+import type { ExchangeResponse } from '@/types/exchange.types'
+import type { LearningAgreementResponse, LearningAgreementEntryResponse } from '@/types/learningAgreement.types'
 
 // Style helpers
 

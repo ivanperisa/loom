@@ -1,10 +1,10 @@
 import { api } from './api'
+import type { ExchangeResponse } from '@/types/exchange.types'
 import type {
-  ExchangeResponse,
   LearningAgreementResponse,
   UpdateLearningAgreementStatusRequest,
   SaveLearningAgreementRequest,
-} from '@/types/exchange.types'
+} from '@/types/learningAgreement.types'
 
 export const learningAgreementService = {
   get: (exchangeId: string) =>

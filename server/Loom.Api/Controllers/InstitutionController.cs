@@ -22,6 +22,13 @@ public class InstitutionController(IInstitutionService institutionService) : Api
         return Match(result, Ok);
     }
 
+    [HttpGet("partner")]
+    public async Task<IActionResult> GetPartnerInstitutionsAdmin(CancellationToken ct)
+    {
+        var result = await institutionService.GetPartnerInstitutionsAdminAsync(ct);
+        return Match(result, Ok);
+    }
+
     [HttpGet("partner-programs")]
     public async Task<IActionResult> GetPartnerPrograms(CancellationToken ct)
     {
@@ -34,13 +41,6 @@ public class InstitutionController(IInstitutionService institutionService) : Api
     public async Task<IActionResult> GetPartnerCourses(int partnerProgramId, CancellationToken ct)
     {
         var result = await institutionService.GetPartnerCoursesAsync(partnerProgramId, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpGet("coordinators")]
-    public async Task<IActionResult> GetCoordinators(CancellationToken ct)
-    {
-        var result = await institutionService.GetCoordinatorsAsync(ct);
         return Match(result, Ok);
     }
 }

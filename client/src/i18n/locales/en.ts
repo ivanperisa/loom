@@ -134,21 +134,6 @@ export default {
     discard: 'Discard changes',
     saveError: 'Error saving. Please try again.',
   },
-  snapshot: {
-    title: 'Version History',
-    approvedBy: 'Approved by',
-    noSnapshots: 'No recorded versions.',
-    selectA: 'Version A',
-    selectB: 'Version B',
-    current: 'Current version',
-    noDiff: 'No differences between the selected versions.',
-    changedModes: 'Changed slot modes',
-    addedMappings: 'Added mappings',
-    removedMappings: 'Removed mappings',
-    was: 'Was',
-    became: 'Became',
-    subject: 'Course',
-  },
   exchange: {
     title: 'My Exchange',
     noExchange: 'No active exchange',
@@ -323,10 +308,6 @@ export default {
       sheetRecognition: 'Recognition',
       sheetLA: 'Learning Agreement',
     },
-  },
-  snapshotPhase: {
-    LearningAgreement: 'Learning Agreement',
-    Recognition: 'Recognition',
   },
   exchangeCourse: {
     add: 'Add Course',

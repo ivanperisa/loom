@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
+import { coordinatorService } from '@/services/coordinator.service'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { exchangeSemester } from '@/utils/exchangeSemester'
 import type {
@@ -170,7 +171,7 @@ onMounted(async () => {
   const [programsRes, partnerRes, coordRes] = await Promise.allSettled([
     institutionService.getHomePrograms(),
     institutionService.getPartnerPrograms(),
-    institutionService.getCoordinators(),
+    coordinatorService.getCoordinators(),
   ])
 
   if (programsRes.status === 'fulfilled') homePrograms.value = programsRes.value.data
