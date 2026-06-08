@@ -1,6 +1,6 @@
 namespace Loom.Application.DTOs.Institution;
 
-public record CreatePartnerCourseRequest(
+public record UpdatePartnerCourseRequest(
     string Code,
     string Name,
     string? NameHr,

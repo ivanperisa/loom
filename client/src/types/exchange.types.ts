@@ -1,13 +1,13 @@
 import type { documentStatus } from '@/utils/documentStatus'
 import type { exchangeSemester } from '@/utils/exchangeSemester'
-import type { HomeProfileResponse, PartnerProgramResponse } from './institution.types'
+import type { HomeProfileResponse } from './institution.types'
 
 export type DocumentStatus = (typeof documentStatus)[keyof typeof documentStatus]
 export type ExchangeSemester = (typeof exchangeSemester)[keyof typeof exchangeSemester]
 
 export interface CreateExchangeRequest {
   homeProfileId: string
-  partnerProgramId: string
+  partnerInstitutionId: string
   academicYear: string
   semesterType: ExchangeSemester
   studySemesters: number[]
@@ -24,7 +24,8 @@ export interface ExchangeResponse {
   homeInstitutionName: string
   homeProgramName: string
   homeProfile: HomeProfileResponse
-  partnerProgram: PartnerProgramResponse
+  partnerInstitutionId: string
+  partnerInstitutionName: string
   coordinatorId: string | null
   coordinatorName: string | null
   mentor: string | null
@@ -43,7 +44,6 @@ export interface ExchangeSummaryResponse {
   studentName: string
   studentJmbag: string | null
   partnerInstitutionName: string
-  partnerProgramName: string
   homeInstitutionName: string
   homeProgramName: string
   homeProfileName: string

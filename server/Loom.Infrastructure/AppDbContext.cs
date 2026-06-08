@@ -15,7 +15,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<HomeCourseGroup> HomeCourseGroups => Set<HomeCourseGroup>();
     public DbSet<HomeSlot> HomeSlots => Set<HomeSlot>();
     public DbSet<HomeSlotType> HomeSlotTypes => Set<HomeSlotType>();
-    public DbSet<PartnerProgram> PartnerPrograms => Set<PartnerProgram>();
     public DbSet<PartnerCourse> PartnerCourses => Set<PartnerCourse>();
     public DbSet<Exchange> Exchanges => Set<Exchange>();
     public DbSet<LearningAgreement> LearningAgreements => Set<LearningAgreement>();

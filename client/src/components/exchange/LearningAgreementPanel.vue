@@ -218,7 +218,7 @@ function confirmDrop() {
     localId: crypto.randomUUID(),
     partnerCourseId: course.id,
     partnerCourseCode: course.code,
-    partnerCourseNameEn: course.nameEn,
+    partnerCourseName: course.name,
     partnerCourseNameHr: course.nameHr ?? null,
     awardedEcts: pendingEcts.value,
   }
@@ -462,7 +462,7 @@ function slotSubLabel(slot: HomeSlotResponse): string {
                 </svg>
                 <span class="la-mapping-text">
                   <span style="font-weight: 700">{{ removed.partnerCourseCode }}</span><br />
-                  <span style="font-size: 10px; color: var(--color-primary-light)">{{ removed.partnerCourseNameEn }}</span><br />
+                  <span style="font-size: 10px; color: var(--color-primary-light)">{{ removed.partnerCourseName }}</span><br />
                   <span style="font-size: 10px; color: #777">{{ removed.partnerCourseNameHr ?? '-' }}</span><br />
                   <span style="color: #555; font-size: 10px">{{ removed.awardedEcts }} ECTS</span>
                 </span>
@@ -476,7 +476,7 @@ function slotSubLabel(slot: HomeSlotResponse): string {
               >
                 <span class="la-mapping-text">
                   <span style="font-weight: 700">{{ mapping.partnerCourseCode }}</span><br />
-                  <span style="font-size: 10px; color: var(--color-primary-light)">{{ mapping.partnerCourseNameEn }}</span><br />
+                  <span style="font-size: 10px; color: var(--color-primary-light)">{{ mapping.partnerCourseName }}</span><br />
                   <span style="font-size: 10px; color: #777">{{ mapping.partnerCourseNameHr ?? '-' }}</span><br />
                   <template v-if="editingMapping?.localId === mapping.localId" :key="`edit-${mapping.localId}`">
                     <input
@@ -543,7 +543,7 @@ function slotSubLabel(slot: HomeSlotResponse): string {
           {{ t('partnerCourses.addMapping') }}
         </h3>
         <div style="color: var(--color-primary-light); font-size: 12px; margin-bottom: 4px">
-          {{ pendingDrop.course.code }} — {{ pendingDrop.course.nameEn }}
+          {{ pendingDrop.course.code }} — {{ pendingDrop.course.name }}
         </div>
         <div style="color: var(--color-light); opacity: 0.6; font-size: 11px; margin-bottom: 16px">
           {{ t('partnerCourses.availableEcts') }}: {{ remainingEcts }} / {{ pendingDrop.course.ects }} ECTS
@@ -586,7 +586,7 @@ function slotSubLabel(slot: HomeSlotResponse): string {
         </h3>
         <p class="mb-3 text-xs text-light/60">{{ t('partnerCourses.dragHint') }}</p>
         <PartnerCoursePanel
-          :partner-program-id="exchangeStore.exchange.partnerProgram.id"
+          :partner-institution-id="exchangeStore.exchange.partnerInstitutionId"
           :exchange-id="exchangeId"
           variant="available"
         />
@@ -596,7 +596,7 @@ function slotSubLabel(slot: HomeSlotResponse): string {
           {{ t('partnerCourses.mappedCourses') }}
         </h3>
         <PartnerCoursePanel
-          :partner-program-id="exchangeStore.exchange.partnerProgram.id"
+          :partner-institution-id="exchangeStore.exchange.partnerInstitutionId"
           :exchange-id="exchangeId"
           variant="mapped"
         />

@@ -7,7 +7,6 @@ using Loom.Application.Mappers;
 using Loom.Domain.Entities;
 using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace Loom.Application.Services;
 
@@ -31,12 +30,42 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return exchange.ToResponse();
     }
 
+    public async Task<ErrorOr<ExchangeResponse>> GetPublicExchangeAsync(Guid exchangeGuid, CancellationToken ct = default)
+    {
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
+        var exchange = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        if (!string.IsNullOrEmpty(exchange.Student.Email))
+            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+
+        return exchange.ToResponse();
+    }
+
+    public async Task<ErrorOr<int>> ResolveGuestStudentIdAsync(Guid exchangeGuid, CancellationToken ct = default)
+    {
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
+        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        if (!string.IsNullOrEmpty(exchange.Student.Email))
+            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+
+        return exchange.StudentId;
+    }
+
     public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyExchangesAsync(int studentId, CancellationToken ct = default)
     {
         var exchanges = await db.Exchanges
             .AsNoTracking()
             .Include(e => e.Student)
-            .Include(e => e.PartnerProgram).ThenInclude(p => p.Institution)
+            .Include(e => e.PartnerInstitution)
             .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
             .Include(e => e.LearningAgreement)
             .Include(e => e.Recognition)
@@ -66,7 +95,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             var targetStudent = await db.Users.FindAsync([actualStudentId], ct);
             if (targetStudent is null) return Error.NotFound("USER_NOT_FOUND", "Target student not found.");
 
-            if (!requester.IsAdmin() && targetStudent.CoordinatorId != requesterId)
+            if (targetStudent.CoordinatorId != requesterId)
                 return Error.Forbidden("FORBIDDEN", "You are not the coordinator for this student.");
         }
 
@@ -77,18 +106,20 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var homeProfile = await db.HomeProfiles.FindAsync([request.HomeProfileId], ct);
         if (homeProfile is null) return Error.NotFound("HOME_PROFILE_NOT_FOUND", "Home profile not found.");
 
-        var partnerProgram = await db.PartnerPrograms
+        var partnerInstitution = await db.Institutions
             .AsNoTracking()
-            .Include(p => p.Institution)
-            .FirstOrDefaultAsync(p => p.Id == request.PartnerProgramId, ct);
-        if (partnerProgram is null) return Error.NotFound("PARTNER_PROGRAM_NOT_FOUND", "Partner profile not found.");
+            .FirstOrDefaultAsync(i => i.Id == request.PartnerInstitutionId && i.Type == InstitutionType.Partner, ct);
+        if (partnerInstitution is null) return Error.NotFound("PARTNER_INSTITUTION_NOT_FOUND", "Partner institution not found.");
+
+        if (request.CoordinatorId.HasValue && student.CoordinatorId != request.CoordinatorId)
+            student.CoordinatorId = request.CoordinatorId.Value;
 
         var exchange = new Exchange
         {
             StudentId = studentId,
             CoordinatorId = request.CoordinatorId ?? student.CoordinatorId,
             HomeProfileId = request.HomeProfileId,
-            PartnerProgramId = request.PartnerProgramId,
+            PartnerInstitutionId = partnerInstitution.Id,
             AcademicYear = request.AcademicYear,
             SemesterType = semesterType,
             StudySemesters = request.StudySemesters,
@@ -118,8 +149,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
         if (exchange.StudentId != requesterId &&
-            exchange.Student.CoordinatorId != requesterId &&
-            exchange.Student.Role != UserRole.Admin)
+            exchange.Student.CoordinatorId != requesterId)
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
         var la = await db.LearningAgreements
@@ -184,7 +214,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         .Include(e => e.Student)
         .Include(e => e.Coordinator)
         .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
-        .Include(e => e.PartnerProgram).ThenInclude(p => p.Institution)
+        .Include(e => e.PartnerInstitution)
         .Include(e => e.LearningAgreement);
 
     #endregion

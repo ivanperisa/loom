@@ -11,9 +11,11 @@ import { statusColorClass } from '@/utils/statusColors'
 import { nWord } from '@/utils/plural'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import { localizedName } from '@/utils/i18n.utils'
+import { useNotification } from '@/composables/useNotification'
 
 const router = useRouter()
 const { t, locale } = useI18n()
+const { notifySuccess } = useNotification()
 
 const students = ref<CoordinatorStudentResponse[]>([])
 const exchanges = ref<ExchangeSummaryResponse[]>([])
@@ -37,7 +39,7 @@ const filteredInstitutions = computed(() => {
   return institutions.value.filter(
     (i) =>
       i.name.toLowerCase().includes(q) ||
-      (i.nameEn?.toLowerCase().includes(q) ?? false) ||
+      (i.nameHr?.toLowerCase().includes(q) ?? false) ||
       (i.city?.toLowerCase().includes(q) ?? false) ||
       (i.country?.toLowerCase().includes(q) ?? false),
   )
@@ -49,14 +51,31 @@ const isJmbagValid = computed(() => /^\d{10}$/.test(addJmbag.value))
 const showCreateExchangeModal = ref(false)
 const createExchangeTargetStudentId = ref<string | null>(null)
 
+const selectedAcademicYear = ref<string | null>(null)
+
+const academicYears = computed(() => {
+  const years = new Set(exchanges.value.map((ex) => ex.academicYear))
+  return Array.from(years).sort().reverse()
+})
+
+const filteredExchanges = computed(() => {
+  if (!selectedAcademicYear.value) return exchanges.value
+  return exchanges.value.filter((ex) => ex.academicYear === selectedAcademicYear.value)
+})
+
 const exchangesByStudent = computed(() => {
   const map = new Map<string, ExchangeSummaryResponse[]>()
-  for (const ex of exchanges.value) {
+  for (const ex of filteredExchanges.value) {
     const list = map.get(ex.studentId) ?? []
     list.push(ex)
     map.set(ex.studentId, list)
   }
   return map
+})
+
+const filteredStudents = computed(() => {
+  if (!selectedAcademicYear.value) return students.value
+  return students.value.filter((s) => exchangesByStudent.value.has(s.id))
 })
 
 onMounted(async () => {
@@ -82,6 +101,12 @@ function toggleStudent(studentId: string) {
 
 function viewExchange(exchangeId: string) {
   router.push(`/exchange/${exchangeId}`)
+}
+
+async function copyAccessLink(exchangeGuid: string) {
+  const link = `${window.location.origin}/access/${exchangeGuid}`
+  await navigator.clipboard.writeText(link)
+  notifySuccess(t('exchangeAccess.linkCopied'))
 }
 
 function openAddModal() {
@@ -139,18 +164,28 @@ function onExchangeCreated(exchangeGuid: string) {
 <template>
   <main class="min-h-screen bg-dark">
     <section class="page-container">
-      <div class="mb-6 flex items-center justify-between">
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-2xl font-bold text-light">{{ t('coordinator.title') }}</h1>
-        <button
-          type="button"
-          class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
-          @click="openAddModal"
-        >
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-          </svg>
-          {{ t('coordinator.addStudent') }}
-        </button>
+        <div class="flex items-center gap-3">
+          <select
+            v-if="academicYears.length >= 1"
+            v-model="selectedAcademicYear"
+            class="rounded-lg border border-primary/30 bg-dark-2 px-3 py-2 text-sm text-light focus:border-primary focus:outline-none"
+          >
+            <option :value="null">{{ t('home.allYears') }}</option>
+            <option v-for="year in academicYears" :key="year" :value="year">{{ year }}</option>
+          </select>
+          <button
+            type="button"
+            class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+            @click="openAddModal"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+            </svg>
+            {{ t('coordinator.addStudent') }}
+          </button>
+        </div>
       </div>
 
       <div v-if="loading" class="space-y-4">
@@ -164,7 +199,7 @@ function onExchangeCreated(exchangeGuid: string) {
         <p class="text-red-300">{{ error }}</p>
       </div>
 
-      <div v-else-if="students.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
+      <div v-else-if="filteredStudents.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
         <svg class="mx-auto h-12 w-12 text-light/60" viewBox="0 0 24 24" fill="none">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
           <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5" />
@@ -175,7 +210,7 @@ function onExchangeCreated(exchangeGuid: string) {
       <!-- Student list -->
       <div v-else class="space-y-3">
         <div
-          v-for="student in students"
+          v-for="student in filteredStudents"
           :key="student.id"
           class="rounded-xl border border-primary/20 bg-dark-2 transition"
           :class="{ 'border-primary': expandedStudentId === student.id }"
@@ -249,10 +284,21 @@ function onExchangeCreated(exchangeGuid: string) {
                     </span>
                   </div>
                   <p class="mt-2.5 text-sm font-semibold text-light">{{ ex.partnerInstitutionName }}</p>
-                  <p class="text-xs text-light/60">{{ ex.partnerProgramName }}</p>
                   <p class="mt-1.5 text-xs text-light/40">
                     {{ ex.homeProgramName }}<span v-if="ex.homeProfileName"> &middot; {{ ex.homeProfileName }}</span>
                   </p>
+                  <button
+                    v-if="student.isPlaceholder"
+                    type="button"
+                    class="mt-2 flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-semibold text-primary-light transition hover:bg-primary/10"
+                    @click.stop="copyAccessLink(ex.guid)"
+                  >
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
+                      <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
+                    </svg>
+                    {{ t('exchangeAccess.copyLink') }}
+                  </button>
                 </div>
                 <svg class="h-5 w-5 text-light/60" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />

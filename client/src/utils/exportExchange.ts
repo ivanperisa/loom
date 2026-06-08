@@ -84,9 +84,9 @@ const T: Record<string, Record<Lang, string>> = {
   sheetRecognition: { hr: 'Priznavanje', en: 'Recognition' },
   sheetLA:          { hr: 'Ugovor o učenju', en: 'Learning Agreement' },
   colPartnerCode:   { hr: 'Šifra predmeta', en: 'Course Code' },
-  colNameEn:        { hr: 'Naziv engleski', en: 'Name (English)' },
+  colName:          { hr: 'Naziv (engleski)', en: 'Name (English)' },
   colStatus:        { hr: 'Status predmeta', en: 'Course Status' },
-  colNameHr:        { hr: 'Naziv - hrvatski', en: 'Name (Croatian)' },
+  colNameHr:        { hr: 'Naziv (hrvatski)', en: 'Name (Croatian)' },
   colHours:         { hr: 'Sati u obliku:\nPredavanja/Auditorne/\nlaboratorijske vježbe (P/A/L)', en: 'Hours:\nLectures/Auditory/\nLaboratory (P/A/L)' },
   colEcts:          { hr: 'ECTS', en: 'ECTS' },
   colRbr:           { hr: 'Rbr.', en: 'No.' },
@@ -132,10 +132,8 @@ function buildRecognitionSheet(
   infoRow(6, tr('semester', lang), exchange.studySemesters.slice().sort((a, b) => a - b).join(', '))
 
   ws['A8'] = c(`${tr('profileLabel', lang)} ${exchange.homeProfile.name}`, { bold: true, sz: 18, borders: false })
-  const uniUrl = (exchange.partnerProgram as any).url ?? ''
-  infoRow(7,  tr('university', lang),   uniUrl ? null : exchange.partnerProgram.institutionName, 'FF0000')
-  if (uniUrl) ws[`E7`] = link(exchange.partnerProgram.institutionName, uniUrl)
-  infoRow(9,  tr('faculty', lang),      exchange.partnerProgram.name)
+  infoRow(7,  tr('university', lang),   exchange.partnerInstitutionName, 'FF0000')
+  infoRow(9,  tr('faculty', lang),      '')
   infoRow(10, tr('academicYear', lang),  exchange.academicYear)
   infoRow(11, tr('exchSemester', lang),  exchange.semesterType === exchangeSemester.Winter ? tr('winter', lang) : tr('summer', lang))
   infoRow(12, tr('mentor', lang),        exchange.mentor)
@@ -146,7 +144,7 @@ function buildRecognitionSheet(
   const hdrGrade = (v: string) => c(v, { bold: true, bg: 'DDD9C3', wrap: true, halign: 'center', valign: 'middle' })
 
   ws['A16'] = hdr(tr('colPartnerCode', lang))
-  ws['B16'] = hdr(tr('colNameEn', lang))
+  ws['B16'] = hdr(tr('colName', lang))
   ws['C16'] = hdr(tr('colStatus', lang))
   ws['D16'] = hdr(tr('colNameHr', lang))
   ws['E16'] = hdr(tr('colHours', lang))
@@ -191,8 +189,8 @@ function buildRecognitionSheet(
           : c(entry.partnerCourseCode, { bg: partnerBg, bold: true, halign: 'center' })
 
         ws[`B${row}`] = codeUrl
-          ? link(entry.partnerCourseNameEn, codeUrl, partnerBg)
-          : c(entry.partnerCourseNameEn, { bg: partnerBg, wrap: true })
+          ? link(entry.partnerCourseName, codeUrl, partnerBg)
+          : c(entry.partnerCourseName, { bg: partnerBg, wrap: true })
 
         ws[`C${row}`] = c(entry.enrollmentStatus, { bg: partnerBg })
         ws[`D${row}`] = c(entry.partnerCourseNameHr, { bg: partnerBg, wrap: true })
@@ -364,7 +362,7 @@ function buildLASheet(
       lines.push(name)
       for (const m of state?.entries ?? []) {
         lines.push(m.partnerCourseCode ?? '')
-        if (m.partnerCourseNameEn) lines.push(`  ${m.partnerCourseNameEn}`)
+        if (m.partnerCourseName) lines.push(`  ${m.partnerCourseName}`)
         if (m.partnerCourseNameHr) lines.push(`  ${m.partnerCourseNameHr}`)
         lines.push(`  ${m.awardedEcts} ECTS`)
       }

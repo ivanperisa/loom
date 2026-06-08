@@ -32,7 +32,7 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
         var students = await db.Users
             .AsNoTracking()
             .Include(u => u.Institution)
-            .Where(u => (coordinator.IsAdmin() || u.CoordinatorId == coordinatorId) && u.Role == UserRole.Student)
+            .Where(u => u.CoordinatorId == coordinatorId && u.Role == UserRole.Student)
             .OrderBy(u => u.Name)
             .ToListAsync(ct);
 
@@ -88,16 +88,15 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
         var query = db.Exchanges
             .AsNoTracking()
             .Include(e => e.Student)
-            .Include(e => e.PartnerProgram).ThenInclude(p => p.Institution)
+            .Include(e => e.PartnerInstitution)
             .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
             .Include(e => e.LearningAgreement)
             .Include(e => e.Recognition);
 
-        var filtered = requester.IsAdmin()
-            ? query
-            : query.Where(e => e.Student.CoordinatorId == requesterId);
-
-        var exchanges = await filtered.OrderByDescending(e => e.CreatedAt).ToListAsync(ct);
+        var exchanges = await query
+            .Where(e => e.Student.CoordinatorId == requesterId)
+            .OrderByDescending(e => e.CreatedAt)
+            .ToListAsync(ct);
         return exchanges.Select(e => e.ToSummaryResponse()).ToList();
     }
 }

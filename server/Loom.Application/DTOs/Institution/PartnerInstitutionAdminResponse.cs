@@ -3,17 +3,9 @@ namespace Loom.Application.DTOs.Institution;
 public record PartnerInstitutionAdminResponse(
     int Id,
     string Name,
-    string NameEn,
+    string? NameHr,
     string Country,
     string? City,
     string? ErasmusCode,
-    List<PartnerProgramAdminResponse> Programs
-);
-
-public record PartnerProgramAdminResponse(
-    int Id,
-    string Name,
-    string? NameEn,
-    string Level,
     int CourseCount
 );

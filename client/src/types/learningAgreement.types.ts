@@ -10,7 +10,7 @@ export interface HomeSlotResponse {
   ects: number
   courseTypeId: string
   courseTypeName: string
-  courseTypeNameEn: string
+  courseTypeNameEn: string | null
   color: string
   courseIsvuCode: number | null
   courseName: string | null
@@ -26,7 +26,7 @@ export interface LearningAgreementEntryResponse {
   mode: SlotMode
   partnerCourseId: string | null
   partnerCourseCode: string | null
-  partnerCourseNameEn: string | null
+  partnerCourseName: string | null
   partnerCourseNameHr: string | null
   awardedEcts: number | null
   isDeleted: boolean
@@ -65,7 +65,7 @@ export interface LocalSlotMapping {
   localId: string
   partnerCourseId: string
   partnerCourseCode: string
-  partnerCourseNameEn: string
+  partnerCourseName: string
   partnerCourseNameHr: string | null
   awardedEcts: number
 }

@@ -3,10 +3,12 @@ namespace Loom.Application.DTOs.LearningAgreement;
 public record PartnerCourseResponse(
     int Id,
     string Code,
-    string NameEn,
+    string Name,
     string? NameHr,
     decimal Ects,
     int? LecturesH,
     int? AuditoryH,
-    int? LabH
+    int? LabH,
+    string Semester,
+    string Level
 );

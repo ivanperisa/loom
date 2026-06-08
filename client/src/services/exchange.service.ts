@@ -11,6 +11,8 @@ export const exchangeService = {
     api.post<ExchangeResponse>('/api/exchanges', request),
   getById: (exchangeId: string) =>
     api.get<ExchangeResponse>(`/api/exchanges/${exchangeId}`),
+  getPublic: (exchangeGuid: string) =>
+    api.get<ExchangeResponse>(`/api/exchanges/access/${exchangeGuid}`),
   getMine: () =>
     api.get<ExchangeSummaryResponse[]>('/api/exchanges/mine'),
   deleteExchange: (exchangeId: string) =>

@@ -41,7 +41,7 @@ function buildLocalFromServer(la: LearningAgreementResponse): LocalSlotState[] {
         localId: entry.id,
         partnerCourseId: entry.partnerCourseId!,
         partnerCourseCode: entry.partnerCourseCode ?? '',
-        partnerCourseNameEn: entry.partnerCourseNameEn ?? '',
+        partnerCourseName: entry.partnerCourseName ?? '',
         partnerCourseNameHr: entry.partnerCourseNameHr ?? null,
         awardedEcts: entry.awardedEcts ?? 0,
       })
@@ -63,6 +63,11 @@ export const useExchangeStore = defineStore('exchange', () => {
   const error = ref<string | null>(null)
   const draggingCourse = ref<PartnerCourseResponse | null>(null)
   const stagedPartnerCourseIds = ref<Set<string>>(new Set())
+  const guestMode = ref(false)
+
+  function setGuestMode(value: boolean) {
+    guestMode.value = value
+  }
 
   const slots = computed(() => serverLearningAgreement.value?.slots ?? [])
 
@@ -158,7 +163,9 @@ export const useExchangeStore = defineStore('exchange', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await exchangeService.getById(exchangeId)
+      const res = guestMode.value
+        ? await exchangeService.getPublic(exchangeId)
+        : await exchangeService.getById(exchangeId)
       exchange.value = res.data
     } catch {
       error.value = t('common.error')
@@ -185,7 +192,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await learningAgreementService.get(exchangeId)
+      const res = await learningAgreementService.get(exchangeId, guestMode.value)
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
       stagedPartnerCourseIds.value = new Set()
@@ -221,7 +228,7 @@ export const useExchangeStore = defineStore('exchange', () => {
           }
         }
       }
-      const res = await learningAgreementService.save(exchangeId, { entries })
+      const res = await learningAgreementService.save(exchangeId, { entries }, guestMode.value)
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
       isDirty.value = false
@@ -236,7 +243,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchangeId: string,
     request: UpdateLearningAgreementStatusRequest,
   ) {
-    const res = await learningAgreementService.updateStatus(exchangeId, request)
+    const res = await learningAgreementService.updateStatus(exchangeId, request, guestMode.value)
     exchange.value = res.data
     if (serverLearningAgreement.value) {
       serverLearningAgreement.value = { ...serverLearningAgreement.value, status: request.status }
@@ -254,12 +261,12 @@ export const useExchangeStore = defineStore('exchange', () => {
   // Recognition
 
   async function fetchRecognition(exchangeId: string) {
-    const res = await recognitionService.getOrCreate(exchangeId)
+    const res = await recognitionService.getOrCreate(exchangeId, guestMode.value)
     serverRecognition.value = res.data
   }
 
   async function saveRecognition(exchangeId: string, request: SaveRecognitionRequest) {
-    const res = await recognitionService.saveRecognition(exchangeId, request)
+    const res = await recognitionService.saveRecognition(exchangeId, request, guestMode.value)
     serverRecognition.value = res.data
   }
 
@@ -267,12 +274,12 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchangeId: string,
     request: UpdateRecognitionStatusRequest,
   ) {
-    const res = await recognitionService.updateRecognitionStatus(exchangeId, request)
+    const res = await recognitionService.updateRecognitionStatus(exchangeId, request, guestMode.value)
     serverRecognition.value = res.data
   }
 
   async function setEntryRecognized(exchangeId: string, entryId: string, isRecognized: boolean | null) {
-    const res = await recognitionService.setEntryRecognized(exchangeId, entryId, isRecognized)
+    const res = await recognitionService.setEntryRecognized(exchangeId, entryId, isRecognized, guestMode.value)
     serverRecognition.value = res.data
   }
 
@@ -288,6 +295,8 @@ export const useExchangeStore = defineStore('exchange', () => {
     error,
     draggingCourse,
     stagedPartnerCourseIds,
+    guestMode,
+    setGuestMode,
     startDrag,
     endDrag,
     stagePartnerCourse,

@@ -15,7 +15,7 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
         builder.HasIndex(x => x.Guid).IsUnique();
         builder.Property(x => x.StudentId).HasColumnName("student_id").IsRequired();
         builder.Property(x => x.HomeProfileId).HasColumnName("home_profile_id").IsRequired();
-        builder.Property(x => x.PartnerProgramId).HasColumnName("partner_program_id").IsRequired();
+        builder.Property(x => x.PartnerInstitutionId).HasColumnName("partner_institution_id").IsRequired();
         builder.Property(x => x.CoordinatorId).HasColumnName("coordinator_id");
         builder.Property(x => x.AcademicYear).HasColumnName("academic_year").IsRequired();
         builder.Property(x => x.SemesterType).HasColumnName("semester_type").HasConversion<string>().HasMaxLength(10);
@@ -34,9 +34,9 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
             .HasForeignKey(x => x.HomeProfileId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(x => x.PartnerProgram)
+        builder.HasOne(x => x.PartnerInstitution)
             .WithMany()
-            .HasForeignKey(x => x.PartnerProgramId)
+            .HasForeignKey(x => x.PartnerInstitutionId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Coordinator)
@@ -47,6 +47,6 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
         builder.HasIndex(x => x.StudentId);
         builder.HasIndex(x => x.CoordinatorId);
         builder.HasIndex(x => x.HomeProfileId);
-        builder.HasIndex(x => x.PartnerProgramId);
+        builder.HasIndex(x => x.PartnerInstitutionId);
     }
 }

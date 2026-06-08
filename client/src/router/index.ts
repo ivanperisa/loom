@@ -10,6 +10,11 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/access/:guid',
+      component: () => import('@/views/ExchangeAccessView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/callback',
       component: () => import('@/views/CallbackView.vue'),
       meta: { requiresAuth: false }

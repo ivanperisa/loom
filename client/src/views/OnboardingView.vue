@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
 import { institutionService } from '@/services/institution.service'
-import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { localizedName } from '@/utils/i18n.utils'
 import { userRole } from '../utils/userRole'
@@ -50,7 +50,7 @@ const filteredInstitutions = computed(() => {
   return institutions.value.filter(
     (i) =>
       i.name.toLowerCase().includes(q) ||
-      (i.nameEn?.toLowerCase().includes(q) ?? false) ||
+      (i.nameHr?.toLowerCase().includes(q) ?? false) ||
       (i.city?.toLowerCase().includes(q) ?? false) ||
       (i.country?.toLowerCase().includes(q) ?? false),
   )

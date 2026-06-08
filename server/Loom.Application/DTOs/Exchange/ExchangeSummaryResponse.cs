@@ -7,7 +7,6 @@ public record ExchangeSummaryResponse(
     string StudentName,
     string? StudentJmbag,
     string PartnerInstitutionName,
-    string PartnerProgramName,
     string HomeInstitutionName,
     string HomeProgramName,
     string HomeProfileName,

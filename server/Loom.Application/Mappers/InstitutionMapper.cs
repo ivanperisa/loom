@@ -8,38 +8,20 @@ public static class InstitutionMapper
     public static InstitutionResponse ToResponse(this Institution institution) => new(
         institution.Id,
         institution.Name,
-        institution.NameEn,
+        institution.NameHr,
         institution.Country,
         institution.City,
         institution.ErasmusCode
     );
 
-    public static PartnerProgramResponse ToResponse(this PartnerProgram program) => new(
-        program.Id,
-        program.Name,
-        program.NameEn,
-        program.Level.ToString(),
-        program.Institution.Name,
-        program.Institution.Country,
-        program.Institution.City
-    );
-
     public static PartnerInstitutionAdminResponse ToAdminResponse(this Institution institution) => new(
         institution.Id,
         institution.Name,
-        institution.NameEn,
+        institution.NameHr,
         institution.Country,
         institution.City,
         institution.ErasmusCode,
-        institution.PartnerPrograms.Select(p => p.ToAdminResponse()).ToList()
-    );
-
-    public static PartnerProgramAdminResponse ToAdminResponse(this PartnerProgram program) => new(
-        program.Id,
-        program.Name,
-        program.NameEn,
-        program.Level.ToString(),
-        program.Courses.Count
+        institution.PartnerCourses.Count
     );
 
     public static HomeProgramResponse ToResponse(this HomeProgram program) => new(

@@ -8,7 +8,7 @@ public class HomeProgram : EntityBase
     public int InstitutionId { get; set; }
     public Institution Institution { get; set; } = null!;
     public string Name { get; set; } = string.Empty;
-    public string NameEn { get; set; } = string.Empty;
+    public string? NameEn { get; set; }
     public StudyProgramLevel Level { get; set; }
     public int DurationSemesters { get; set; }
 

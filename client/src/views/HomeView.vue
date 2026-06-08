@@ -20,6 +20,18 @@ const requestingCoordinator = ref(false)
 const displayName = computed(() => authStore.name?.trim() || t('common.user'))
 const coordinatorRequestStatus = computed(() => authStore.user?.coordinatorRequestStatus ?? null)
 
+const selectedAcademicYear = ref<string | null>(null)
+
+const academicYears = computed(() => {
+  const years = new Set(exchangeStore.summaries.map((ex) => ex.academicYear))
+  return Array.from(years).sort().reverse()
+})
+
+const filteredSummaries = computed(() => {
+  if (!selectedAcademicYear.value) return exchangeStore.summaries
+  return exchangeStore.summaries.filter((ex) => ex.academicYear === selectedAcademicYear.value)
+})
+
 onMounted(async () => {
   await exchangeStore.fetchMySummaries()
 })
@@ -90,20 +102,30 @@ async function reRequestCoordinatorRole() {
 
       <template v-else>
         <!-- Header with title + create button -->
-        <div class="mt-8 flex items-center justify-between">
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-xl font-semibold text-light">{{ t('home.myExchanges') }}</h2>
-          <button
-            type="button"
-            class="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
-            @click="openCreateModal"
-          >
-            + {{ t('home.createNew') }}
-          </button>
+          <div class="flex items-center gap-3">
+            <select
+              v-if="academicYears.length >= 1"
+              v-model="selectedAcademicYear"
+              class="rounded-lg border border-primary/30 bg-dark-2 px-3 py-2 text-sm text-light focus:border-primary focus:outline-none"
+            >
+              <option :value="null">{{ t('home.allYears') }}</option>
+              <option v-for="year in academicYears" :key="year" :value="year">{{ year }}</option>
+            </select>
+            <button
+              type="button"
+              class="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+              @click="openCreateModal"
+            >
+              + {{ t('home.createNew') }}
+            </button>
+          </div>
         </div>
 
         <!-- No exchanges -->
         <div
-          v-if="exchangeStore.summaries.length === 0"
+          v-if="filteredSummaries.length === 0"
           class="mt-4 rounded-xl border border-primary/20 bg-dark-2 p-6 text-center"
         >
           <svg class="mx-auto h-12 w-12 text-light/60" viewBox="0 0 24 24" fill="none">
@@ -125,7 +147,7 @@ async function reRequestCoordinatorRole() {
         <!-- Exchange cards -->
         <div v-else class="mt-4 space-y-3">
           <div
-            v-for="ex in exchangeStore.summaries"
+            v-for="ex in filteredSummaries"
             :key="ex.id"
             class="flex cursor-pointer items-center justify-between rounded-xl border border-primary/20 bg-dark-2 px-5 py-4 transition hover:border-primary/50 hover:bg-dark-2/80"
             @click="router.push(`/exchange/${ex.guid}`)"
@@ -154,7 +176,6 @@ async function reRequestCoordinatorRole() {
 
               <!-- Row 2: strani fakultet -->
               <p class="mt-2.5 text-sm font-semibold text-light">{{ ex.partnerInstitutionName }}</p>
-              <p class="text-xs text-light/60">{{ ex.partnerProgramName }}</p>
 
               <!-- Row 3: studij · profil -->
               <p class="mt-1.5 text-xs text-light/40">

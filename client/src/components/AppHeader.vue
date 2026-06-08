@@ -4,22 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTheme } from '@/composables/useTheme'
-import type { AppLocale } from '@/i18n/index'
+import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 
 const authStore = useAuthStore()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const router = useRouter()
 const { theme, toggleTheme } = useTheme()
-
-const locales: Array<{ code: AppLocale; flag: string; label: string }> = [
-  { code: 'hr', flag: 'fi fi-hr', label: 'Hrvatski' },
-  { code: 'en', flag: 'fi fi-gb', label: 'English' },
-]
-
-function setLocale(code: AppLocale) {
-  locale.value = code
-  localStorage.setItem('locale', code)
-}
 
 const dropdownOpen = ref(false)
 const avatarRef = ref<HTMLElement | null>(null)
@@ -108,16 +98,7 @@ function logout() {
             <div class="my-2 border-t border-white/10"></div>
 
             <!-- Language -->
-            <button
-              v-for="loc in locales.filter(l => l.code !== locale)"
-              :key="loc.code"
-              type="button"
-              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-white/5 hover:text-white"
-              @click="setLocale(loc.code)"
-            >
-              <span :class="[loc.flag, 'text-base']" aria-hidden="true"></span>
-              {{ loc.label }}
-            </button>
+            <LocaleSwitcher variant="list" />
 
             <!-- Theme toggle -->
             <button

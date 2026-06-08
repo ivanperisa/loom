@@ -1,55 +1,39 @@
 ﻿<script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { authService } from '@/services/auth.service'
-import { useTheme } from '@/composables/useTheme'
-import type { AppLocale } from '@/i18n/index'
+import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
+import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 
-const { t, locale } = useI18n()
-const { theme, toggleTheme } = useTheme()
+const router = useRouter()
+const { t } = useI18n()
 
-const locales: Array<{ code: AppLocale; flag: string; label: string }> = [
-  { code: 'hr', flag: 'fi fi-hr', label: 'HR' },
-  { code: 'en', flag: 'fi fi-gb', label: 'EN' },
-]
-
-function setLocale(code: AppLocale) {
-  locale.value = code
-  localStorage.setItem('locale', code)
-}
+const showAccessForm = ref(false)
+const accessCode = ref('')
+const accessError = ref(false)
 
 function login() {
   authService.login()
+}
+
+function openAccess() {
+  const value = accessCode.value.trim()
+  const guidMatch = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
+  if (!guidMatch) {
+    accessError.value = true
+    return
+  }
+  accessError.value = false
+  router.push(`/access/${guidMatch[0]}`)
 }
 </script>
 
 <template>
   <main class="landing-root relative min-h-screen overflow-hidden text-light">
     <div class="absolute right-4 top-4 z-20 flex items-center gap-2">
-      <button
-        type="button"
-        class="flex h-9 w-9 items-center justify-center rounded-lg text-light/60 transition hover:bg-white/10 hover:text-light"
-        :title="theme === 'dark' ? t('common.lightTheme') : t('common.darkTheme')"
-        @click="toggleTheme"
-      >
-        <svg v-if="theme === 'dark'" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-        </svg>
-        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-        </svg>
-      </button>
-      <button
-        v-for="loc in locales.filter(l => l.code !== locale)"
-        :key="loc.code"
-        type="button"
-        class="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-light/60 transition hover:bg-white/10 hover:text-light"
-        @click="setLocale(loc.code)"
-      >
-        <span :class="loc.flag" aria-hidden="true"></span>
-        {{ loc.label }}
-      </button>
+      <ThemeToggleButton />
+      <LocaleSwitcher />
     </div>
 
     <div class="absolute inset-0 bg-dark"></div>
@@ -57,8 +41,17 @@ function login() {
     <div class="relative z-10 flex min-h-screen flex-col lg:flex-row">
       <section class="relative flex w-full items-center px-6 py-12 lg:w-1/3 lg:px-12">
         <article
-          class="landing-card w-full max-w-xl bg-dark p-8 lg:translate-x-[80px] lg:rounded-[0_30px_30px_0]"
+          class="landing-card relative w-full max-w-xl bg-dark p-8 pb-12 lg:translate-x-[80px] lg:rounded-[0_30px_30px_0]"
         >
+          <button
+            v-if="!showAccessForm"
+            type="button"
+            class="absolute bottom-4 right-6 text-xs font-medium text-light/40 underline-offset-2 transition hover:text-light/70 hover:underline"
+            @click="showAccessForm = true"
+          >
+            {{ t('landing.accessTab') }}
+          </button>
+
           <h1 class="text-4xl font-black tracking-tight text-light sm:text-5xl">{{ t('common.appName') }}</h1>
           <p class="mt-4 text-lg font-semibold text-primary-light">{{ t('landing.tagline') }}</p>
           <p class="mt-5 max-w-md text-sm leading-7 text-light sm:text-base">
@@ -77,6 +70,35 @@ function login() {
             </svg>
             {{ t('auth.signInWithGoogle') }}
           </button>
+
+          <form v-if="showAccessForm" class="mt-6 border-t border-white/10 pt-5" @submit.prevent="openAccess">
+            <div class="mb-1.5 flex items-center justify-between">
+              <label class="text-xs font-medium text-light/60">{{ t('landing.accessUidLabel') }}</label>
+              <button
+                type="button"
+                class="text-xs font-medium text-light/40 transition hover:text-light/70"
+                @click="showAccessForm = false"
+              >
+                {{ t('common.cancel') }}
+              </button>
+            </div>
+            <div class="flex gap-2">
+              <input
+                v-model="accessCode"
+                type="text"
+                :placeholder="t('landing.accessUidPlaceholder')"
+                class="min-w-0 flex-1 rounded-lg border border-primary/30 bg-dark px-4 py-2.5 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
+                @input="accessError = false"
+              />
+              <button
+                type="submit"
+                class="shrink-0 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+              >
+                {{ t('landing.accessUidButton') }}
+              </button>
+            </div>
+            <p v-if="accessError" class="mt-2 text-xs text-red-400">{{ t('landing.accessUidError') }}</p>
+          </form>
         </article>
       </section>
 

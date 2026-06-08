@@ -13,7 +13,7 @@ public class InstitutionConfiguration : IEntityTypeConfiguration<Institution>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(x => x.Name).HasColumnName("name").IsRequired();
-        builder.Property(x => x.NameEn).HasColumnName("name_en");
+        builder.Property(x => x.NameHr).HasColumnName("name_hr");
         builder.Property(x => x.Country).HasColumnName("country");
         builder.Property(x => x.City).HasColumnName("city");
         builder.Property(x => x.ErasmusCode).HasColumnName("erasmus_code");

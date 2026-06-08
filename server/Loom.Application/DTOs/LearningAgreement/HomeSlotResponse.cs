@@ -7,7 +7,7 @@ public record HomeSlotResponse(
     int Ects,
     int CourseTypeId,
     string CourseTypeName,
-    string CourseTypeNameEn,
+    string? CourseTypeNameEn,
     string Color,
 
     int? CourseIsvuCode,

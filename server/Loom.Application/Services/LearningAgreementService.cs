@@ -190,7 +190,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         .Include(e => e.Student)
         .Include(e => e.Coordinator)
         .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
-        .Include(e => e.PartnerProgram).ThenInclude(p => p.Institution)
+        .Include(e => e.PartnerInstitution)
         .Include(e => e.LearningAgreement);
 
     private async Task<ErrorOr<(Exchange exchange, User requester)>> CheckExchangeAccessAsync(

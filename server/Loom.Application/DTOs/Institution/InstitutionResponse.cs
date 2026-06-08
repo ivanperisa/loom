@@ -3,7 +3,7 @@ namespace Loom.Application.DTOs.Institution;
 public record InstitutionResponse(
     int Id,
     string Name,
-    string? NameEn,
+    string? NameHr,
     string? Country,
     string? City,
     string? ErasmusCode

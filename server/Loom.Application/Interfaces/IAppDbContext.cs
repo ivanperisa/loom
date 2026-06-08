@@ -13,7 +13,6 @@ public interface IAppDbContext
     DbSet<HomeCourseGroup> HomeCourseGroups { get; }
     DbSet<HomeSlot> HomeSlots { get; }
     DbSet<HomeSlotType> HomeSlotTypes { get; }
-    DbSet<PartnerProgram> PartnerPrograms { get; }
     DbSet<PartnerCourse> PartnerCourses { get; }
     DbSet<Exchange> Exchanges { get; }
     DbSet<LearningAgreement> LearningAgreements { get; }

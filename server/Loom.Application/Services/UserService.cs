@@ -53,7 +53,10 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
                     .Where(e => e.StudentId == placeholder.Id)
                     .ToListAsync(ct);
                 foreach (var ex in exchangesToTransfer)
+                {
                     ex.StudentId = user.Id;
+                    ex.Guid = Guid.NewGuid();
+                }
 
                 db.Users.Remove(placeholder);
                 user.InstitutionId = request.InstitutionId;

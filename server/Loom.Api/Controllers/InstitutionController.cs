@@ -1,4 +1,6 @@
+using Loom.Application.DTOs.Institution;
 using Loom.Application.Interfaces.Services;
+using Loom.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,6 +10,8 @@ namespace Loom.Api.Controllers;
 [Authorize]
 public class InstitutionController(IInstitutionService institutionService) : ApiController
 {
+    #region Lookups
+
     [HttpGet("home")]
     public async Task<IActionResult> GetHomeInstitutions(CancellationToken ct)
     {
@@ -23,24 +27,75 @@ public class InstitutionController(IInstitutionService institutionService) : Api
     }
 
     [HttpGet("partner")]
-    public async Task<IActionResult> GetPartnerInstitutionsAdmin(CancellationToken ct)
+    public async Task<IActionResult> GetPartnerInstitutions(CancellationToken ct)
     {
-        var result = await institutionService.GetPartnerInstitutionsAdminAsync(ct);
+        var result = await institutionService.GetPartnerInstitutionsAsync(ct);
         return Match(result, Ok);
     }
 
-    [HttpGet("partner-programs")]
-    public async Task<IActionResult> GetPartnerPrograms(CancellationToken ct)
+    [AllowAnonymous]
+    [HttpGet("partner/{institutionId:int}/courses")]
+    public async Task<IActionResult> GetPartnerCoursesByInstitution(int institutionId, CancellationToken ct)
     {
-        var result = await institutionService.GetPartnerProgramsAsync(ct);
+        var result = await institutionService.GetPartnerCoursesByInstitutionAsync(institutionId, ct);
         return Match(result, Ok);
     }
 
-    
-    [HttpGet("partner-programs/{partnerProgramId:int}/courses")]
-    public async Task<IActionResult> GetPartnerCourses(int partnerProgramId, CancellationToken ct)
+    #endregion
+
+    #region Partner institutions management
+
+    [HttpPost("partner")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> CreatePartnerInstitution([FromBody] CreatePartnerInstitutionRequest request, CancellationToken ct)
     {
-        var result = await institutionService.GetPartnerCoursesAsync(partnerProgramId, ct);
+        var result = await institutionService.CreatePartnerInstitutionAsync(request, ct);
+        return Match(result, value => Created($"/api/institutions/partner", value));
+    }
+
+    [HttpDelete("partner/{institutionId:int}")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> DeletePartnerInstitution(int institutionId, CancellationToken ct)
+    {
+        var result = await institutionService.DeletePartnerInstitutionAsync(institutionId, ct);
+        return Match(result, _ => NoContent());
+    }
+
+    #endregion
+
+    #region Partner courses management
+
+    [AllowAnonymous]
+    [HttpPost("partner/{institutionId:int}/courses")]
+    public async Task<IActionResult> CreatePartnerCourseByInstitution(int institutionId, [FromBody] CreatePartnerCourseRequest request, CancellationToken ct)
+    {
+        var result = await institutionService.CreatePartnerCourseByInstitutionAsync(institutionId, request, ct);
+        return Match(result, value => Created($"/api/institutions/partner/{institutionId}/courses", value));
+    }
+
+    [HttpPut("partner/courses/{courseId:int}")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> UpdatePartnerCourse(int courseId, [FromBody] UpdatePartnerCourseRequest request, CancellationToken ct)
+    {
+        var result = await institutionService.UpdatePartnerCourseAsync(courseId, request, ct);
         return Match(result, Ok);
     }
+
+    [HttpDelete("partner/courses/{courseId:int}")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> DeletePartnerCourse(int courseId, CancellationToken ct)
+    {
+        var result = await institutionService.DeletePartnerCourseAsync(courseId, ct);
+        return Match(result, _ => NoContent());
+    }
+
+    [HttpPost("partner/courses/merge")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> MergePartnerCourses([FromBody] MergePartnerCoursesRequest request, CancellationToken ct)
+    {
+        var result = await institutionService.MergePartnerCoursesAsync(request, ct);
+        return Match(result, Ok);
+    }
+
+    #endregion
 }

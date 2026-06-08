@@ -4,7 +4,6 @@ using Loom.Application.Interfaces.Services;
 using Loom.Application.Services;
 using Loom.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;

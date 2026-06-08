@@ -4,7 +4,7 @@ export interface RecognitionEntryResponse {
   id: string
   learningAgreementEntryId: string
   partnerCourseCode: string
-  partnerCourseNameEn: string
+  partnerCourseName: string
   partnerCourseNameHr: string | null
   partnerCourseHours: string | null
   partnerCourseEcts: number

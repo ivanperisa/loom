@@ -48,7 +48,7 @@ interface GradeData {
 
 interface CourseGroup {
   partnerCourseCode: string
-  partnerCourseNameEn: string
+  partnerCourseName: string
   partnerCourseNameHr: string | null
   partnerCourseEcts: number
   partnerCourseHours: string | null
@@ -66,7 +66,7 @@ const courseGroups = computed<CourseGroup[]>(() => {
     if (!map.has(code)) {
       map.set(code, {
         partnerCourseCode: code,
-        partnerCourseNameEn: entry.partnerCourseNameEn,
+        partnerCourseName: entry.partnerCourseName,
         partnerCourseNameHr: entry.partnerCourseNameHr,
         partnerCourseEcts: entry.partnerCourseEcts,
         partnerCourseHours: entry.partnerCourseHours,
@@ -302,7 +302,7 @@ const rejectedBg = '#FFCCCC'
             <tr>
               <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.partnerCode') }}</th>
               <th class="rec-th" style="min-width: 160px">
-                {{ t('recognition.col.partnerNameEn') }}
+                {{ t('recognition.col.partnerName') }}
               </th>
               <th class="rec-th" style="min-width: 90px">
                 {{ t('recognition.col.enrollmentStatus') }}
@@ -378,7 +378,7 @@ const rejectedBg = '#FFCCCC'
                   class="rec-td"
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
-                  {{ group.partnerCourseNameEn }}
+                  {{ group.partnerCourseName }}
                   <div
                     v-if="group.partnerCourseNameHr"
                     style="font-size: 9px; color: #555; font-style: italic"

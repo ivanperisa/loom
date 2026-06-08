@@ -1,5 +1,4 @@
 using Loom.Application.DTOs.Admin;
-using Loom.Application.DTOs.Institution;
 using Loom.Application.Interfaces.Services;
 using Loom.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -70,52 +69,6 @@ public class AdminController(IAdminService adminService) : ApiController
     public async Task<IActionResult> RemoveFromCoordinatorWhitelist(string email, CancellationToken ct)
     {
         var result = await adminService.RemoveFromCoordinatorWhitelistAsync(GetCurrentUserId(), Uri.UnescapeDataString(email), ct);
-        return Match(result, _ => NoContent());
-    }
-
-    #endregion
-
-    #region Institutions
-
-    [HttpPost("institutions")]
-    public async Task<IActionResult> CreatePartnerInstitution([FromBody] CreatePartnerInstitutionRequest request, CancellationToken ct)
-    {
-        var result = await adminService.CreatePartnerInstitutionAsync(request, ct);
-        return Match(result, value => Created($"/api/institutions/partner", value));
-    }
-
-    [HttpDelete("institutions/{institutionId:int}")]
-    public async Task<IActionResult> DeletePartnerInstitution(int institutionId, CancellationToken ct)
-    {
-        var result = await adminService.DeletePartnerInstitutionAsync(institutionId, ct);
-        return Match(result, _ => NoContent());
-    }
-
-    [HttpPost("institutions/{institutionId:int}/programs")]
-    public async Task<IActionResult> CreatePartnerProgram(int institutionId, [FromBody] CreatePartnerProgramRequest request, CancellationToken ct)
-    {
-        var result = await adminService.CreatePartnerProgramAsync(institutionId, request, ct);
-        return Match(result, value => Created($"/api/institutions/partner", value));
-    }
-
-    [HttpDelete("institutions/programs/{programId:int}")]
-    public async Task<IActionResult> DeletePartnerProgram(int programId, CancellationToken ct)
-    {
-        var result = await adminService.DeletePartnerProgramAsync(programId, ct);
-        return Match(result, _ => NoContent());
-    }
-
-    [HttpPost("institutions/programs/{programId:int}/courses")]
-    public async Task<IActionResult> CreatePartnerCourse(int programId, [FromBody] CreatePartnerCourseRequest request, CancellationToken ct)
-    {
-        var result = await adminService.CreatePartnerCourseAsync(programId, request, ct);
-        return Match(result, value => Created($"/api/institutions/partner", value));
-    }
-
-    [HttpDelete("institutions/programs/courses/{courseId:int}")]
-    public async Task<IActionResult> DeletePartnerCourse(int courseId, CancellationToken ct)
-    {
-        var result = await adminService.DeletePartnerCourseAsync(courseId, ct);
         return Match(result, _ => NoContent());
     }
 

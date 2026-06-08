@@ -6,7 +6,7 @@ public record LearningAgreementEntryResponse(
     string Mode,
     int? PartnerCourseId,
     string? PartnerCourseCode,
-    string? PartnerCourseNameEn,
+    string? PartnerCourseName,
     string? PartnerCourseNameHr,
     decimal? AwardedEcts,
     bool IsDeleted

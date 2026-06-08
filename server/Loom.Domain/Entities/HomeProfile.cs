@@ -7,7 +7,7 @@ public class HomeProfile : EntityBase
     public int ProgramId { get; set; }
     public HomeProgram Program { get; set; } = null!;
     public string Name { get; set; } = string.Empty;
-    public string NameEn { get; set; } = string.Empty;
+    public string? NameEn { get; set; }
 
     public ICollection<HomeSlot> Slots { get; set; } = null!;
 }

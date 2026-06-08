@@ -2,10 +2,9 @@ import { api } from './api'
 import type {
   InstitutionResponse,
   HomeProgramResponse,
-  PartnerProgramResponse,
   PartnerCourseResponse,
+  PartnerInstitutionAdminResponse,
 } from '@/types/institution.types'
-import type { PartnerInstitutionAdminResponse } from './admin.service'
 
 export const institutionService = {
   getHomeInstitutions: () =>
@@ -14,8 +13,27 @@ export const institutionService = {
     api.get<HomeProgramResponse[]>('/api/institutions/home-programs'),
   getPartnerInstitutions: () =>
     api.get<PartnerInstitutionAdminResponse[]>('/api/institutions/partner'),
-  getPartnerPrograms: () =>
-    api.get<PartnerProgramResponse[]>('/api/institutions/partner-programs'),
-  getPartnerCourses: (partnerProgramId: string) =>
-    api.get<PartnerCourseResponse[]>(`/api/institutions/partner-programs/${partnerProgramId}/courses`),
+  getPartnerCoursesByInstitution: (institutionId: string) =>
+    api.get<PartnerCourseResponse[]>(`/api/institutions/partner/${institutionId}/courses`),
+
+  createPartnerInstitution: (data: { name: string; nameHr: string; country: string; city?: string; erasmusCode?: string }) =>
+    api.post<PartnerInstitutionAdminResponse>('/api/institutions/partner', data),
+
+  deletePartnerInstitution: (id: string) =>
+    api.delete(`/api/institutions/partner/${id}`),
+
+  createPartnerCourseByInstitution: (institutionId: string, data: { code: string; nameHr?: string; name: string; ects: number; semester: string; level: string; lecturesH?: number; auditoryH?: number; labH?: number }) =>
+    api.post<PartnerCourseResponse>(`/api/institutions/partner/${institutionId}/courses`, data),
+
+  updatePartnerCourse: (courseId: string, data: { code: string; nameHr?: string; name: string; ects: number; semester: string; level: string; lecturesH?: number; auditoryH?: number; labH?: number }) =>
+    api.put<PartnerCourseResponse>(`/api/institutions/partner/courses/${courseId}`, data),
+
+  deletePartnerCourse: (courseId: string) =>
+    api.delete(`/api/institutions/partner/courses/${courseId}`),
+
+  mergePartnerCourses: (primaryCourseId: string, duplicateCourseIds: string[]) =>
+    api.post<PartnerCourseResponse>('/api/institutions/partner/courses/merge', {
+      primaryCourseId,
+      duplicateCourseIds,
+    }),
 }

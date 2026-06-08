@@ -4,7 +4,7 @@ public record RecognitionEntryResponse(
     int Id,
     int LearningAgreementEntryId,
     string PartnerCourseCode,
-    string PartnerCourseNameEn,
+    string PartnerCourseName,
     string? PartnerCourseNameHr,
     string? PartnerCourseHours,
     decimal PartnerCourseEcts,

@@ -13,8 +13,8 @@ public class Exchange : AuditableEntity
     public int HomeProfileId { get; set; }
     public HomeProfile HomeProfile { get; set; } = null!;
 
-    public int PartnerProgramId { get; set; }
-    public PartnerProgram PartnerProgram { get; set; } = null!;
+    public int PartnerInstitutionId { get; set; }
+    public Institution PartnerInstitution { get; set; } = null!;
 
     public int? CoordinatorId { get; set; }
     public User? Coordinator { get; set; }

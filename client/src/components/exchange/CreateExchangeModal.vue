@@ -8,7 +8,7 @@ import { exchangeSemester } from '@/utils/exchangeSemester'
 import type {
   HomeProgramResponse,
   HomeProfileResponse,
-  PartnerProgramResponse,
+  PartnerInstitutionAdminResponse,
 } from '@/types/institution.types'
 import type { AuthMeResponse } from '@/types/auth.types'
 import type { ExchangeSemester } from '@/types/exchange.types'
@@ -29,7 +29,11 @@ const emit = defineEmits<{
 const { t, locale } = useI18n()
 const exchangeStore = useExchangeStore()
 
-function localizedName(item: { name: string; nameEn?: string | null }): string {
+function localizedName(item: { name: string; nameHr?: string | null }): string {
+  return locale.value === 'hr' && item.nameHr ? item.nameHr : item.name
+}
+
+function localizedHomeName(item: { name: string; nameEn?: string | null }): string {
   return locale.value === 'en' && item.nameEn ? item.nameEn : item.name
 }
 
@@ -54,15 +58,15 @@ const selectedProfile = computed(
   () => availableProfiles.value.find((p) => p.id === selectedProfileId.value) ?? null,
 )
 
-// Step 2: Partner program
-const partnerPrograms = ref<PartnerProgramResponse[]>([])
-const loadingPartnerPrograms = ref(true)
-const selectedPartnerProgramId = ref<string | null>(null)
+// Step 2: Partner institution
+const partnerInstitutions = ref<PartnerInstitutionAdminResponse[]>([])
+const loadingPartnerInstitutions = ref(true)
+const selectedPartnerInstitutionId = ref<string | null>(null)
 const partnerSearch = ref('')
 const selectedCountry = ref<string | null>(null)
 
 const homeProgramOptions = computed(() =>
-  homePrograms.value.map((p) => ({ value: p.id, label: localizedName(p) })),
+  homePrograms.value.map((p) => ({ value: p.id, label: localizedHomeName(p) })),
 )
 
 const countryOptions = computed(() => [
@@ -71,31 +75,28 @@ const countryOptions = computed(() => [
 ])
 
 const availableCountries = computed(() => {
-  const countries = partnerPrograms.value
-    .map((p) => p.institutionCountry)
-    .filter((c): c is string => !!c)
+  const countries = partnerInstitutions.value.map((i) => i.country).filter((c): c is string => !!c)
   return [...new Set(countries)].sort()
 })
 
-const filteredPartnerPrograms = computed(() => {
-  let list = partnerPrograms.value
+const filteredPartnerInstitutions = computed(() => {
+  let list = partnerInstitutions.value
   if (selectedCountry.value)
-    list = list.filter((p) => p.institutionCountry === selectedCountry.value)
+    list = list.filter((i) => i.country === selectedCountry.value)
   if (partnerSearch.value.trim()) {
     const q = partnerSearch.value.trim().toLowerCase()
     list = list.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        (p.nameEn?.toLowerCase().includes(q) ?? false) ||
-        p.institutionName.toLowerCase().includes(q) ||
-        (p.institutionCity?.toLowerCase().includes(q) ?? false),
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        (i.nameHr?.toLowerCase().includes(q) ?? false) ||
+        (i.city?.toLowerCase().includes(q) ?? false),
     )
   }
   return list
 })
 
-const selectedPartnerProgram = computed(
-  () => partnerPrograms.value.find((p) => p.id === selectedPartnerProgramId.value) ?? null,
+const selectedPartnerInstitution = computed(
+  () => partnerInstitutions.value.find((i) => i.id === selectedPartnerInstitutionId.value) ?? null,
 )
 
 // Step 3: Coordinator
@@ -112,15 +113,19 @@ const selectedCoordinator = computed(
 )
 
 // Step 3: Details
-function defaultAcademicYear(): string {
+function currentAcademicYearStart(): number {
   const now = new Date()
   const y = now.getFullYear()
   const m = now.getMonth() + 1
-  const start = m >= 9 ? y : y - 1
-  return `${start + 1}/${start + 2}`
+  return m >= 9 ? y : y - 1
 }
 
-const academicYear = ref(defaultAcademicYear())
+const academicYearOptions = computed(() => {
+  const start = currentAcademicYearStart()
+  return [`${start}/${start + 1}`, `${start + 1}/${start + 2}`]
+})
+
+const academicYear = ref(academicYearOptions.value[0] ?? '')
 const semesterType = ref<ExchangeSemester>(exchangeSemester.Winter)
 const studySemesters = ref<number[]>([])
 
@@ -170,15 +175,15 @@ watch(selectedProgramId, () => {
 onMounted(async () => {
   const [programsRes, partnerRes, coordRes] = await Promise.allSettled([
     institutionService.getHomePrograms(),
-    institutionService.getPartnerPrograms(),
+    institutionService.getPartnerInstitutions(),
     coordinatorService.getCoordinators(),
   ])
 
   if (programsRes.status === 'fulfilled') homePrograms.value = programsRes.value.data
   loadingPrograms.value = false
 
-  if (partnerRes.status === 'fulfilled') partnerPrograms.value = partnerRes.value.data
-  loadingPartnerPrograms.value = false
+  if (partnerRes.status === 'fulfilled') partnerInstitutions.value = partnerRes.value.data
+  loadingPartnerInstitutions.value = false
 
   if (coordRes.status === 'fulfilled') coordinators.value = coordRes.value.data
 })
@@ -198,8 +203,8 @@ function validateStep(): boolean {
   }
 
   if (currentStep.value === 2) {
-    if (!selectedPartnerProgramId.value) {
-      errorMessage.value = t('createExchange.errors.partnerProgramRequired')
+    if (!selectedPartnerInstitutionId.value) {
+      errorMessage.value = t('createExchange.errors.partnerInstitutionRequired')
       return false
     }
   }
@@ -234,7 +239,7 @@ async function submitExchange() {
   try {
     const result = await exchangeStore.createExchange({
       homeProfileId: selectedProfileId.value!,
-      partnerProgramId: selectedPartnerProgramId.value!,
+      partnerInstitutionId: selectedPartnerInstitutionId.value!,
       academicYear: academicYear.value.trim(),
       semesterType: semesterType.value,
       studySemesters: studySemesters.value,
@@ -369,16 +374,16 @@ const stepKeys = [
                 "
                 @click="selectedProfileId = prof.id"
               >
-                {{ localizedName(prof) }}
+                {{ localizedHomeName(prof) }}
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Step 2: Partner program -->
+        <!-- Step 2: Partner institution -->
         <div v-if="currentStep === 2" class="flex flex-col gap-4">
           <label class="text-sm font-semibold text-primary-light">{{
-            t('createExchange.selectPartnerProgram')
+            t('createExchange.selectPartnerInstitution')
           }}</label>
 
           <!-- Filters -->
@@ -414,11 +419,11 @@ const stepKeys = [
 
           <!-- Results count -->
           <p class="text-xs text-slate-500">
-            {{ nWord(filteredPartnerPrograms.length, locale, { en: ['result', 'results'], hr: ['rezultat', 'rezultata', 'rezultata'] }) }}
+            {{ nWord(filteredPartnerInstitutions.length, locale, { en: ['result', 'results'], hr: ['rezultat', 'rezultata', 'rezultata'] }) }}
           </p>
 
           <!-- List -->
-          <template v-if="loadingPartnerPrograms">
+          <template v-if="loadingPartnerInstitutions">
             <div class="space-y-2">
               <div v-for="i in 5" :key="i" class="h-16 animate-pulse rounded-xl bg-white/5"></div>
             </div>
@@ -426,35 +431,31 @@ const stepKeys = [
           <template v-else>
             <div class="space-y-2 overflow-y-auto pr-1" style="max-height: 340px">
               <p
-                v-if="filteredPartnerPrograms.length === 0"
+                v-if="filteredPartnerInstitutions.length === 0"
                 class="py-8 text-center text-sm text-slate-500"
               >
                 {{ t('createExchange.noResults') }}
               </p>
               <button
-                v-for="pp in filteredPartnerPrograms"
-                :key="pp.id"
+                v-for="pi in filteredPartnerInstitutions"
+                :key="pi.id"
                 type="button"
                 class="group w-full rounded-xl border px-4 py-3.5 text-left transition"
                 :class="
-                  selectedPartnerProgramId === pp.id
+                  selectedPartnerInstitutionId === pi.id
                     ? 'border-primary bg-primary/10'
                     : 'border-white/10 bg-dark hover:border-primary/40 hover:bg-white/3'
                 "
-                @click="selectedPartnerProgramId = pp.id"
+                @click="selectedPartnerInstitutionId = pi.id"
               >
                 <div class="flex items-start justify-between gap-4">
                   <div class="min-w-0">
-                    <p class="truncate text-sm font-medium text-light">{{ localizedName(pp) }}</p>
-                    <p class="mt-0.5 truncate text-xs text-slate-400">{{ pp.institutionName }}</p>
+                    <p class="truncate text-sm font-medium text-light">{{ localizedName(pi) }}</p>
+                    <p v-if="pi.erasmusCode" class="mt-0.5 truncate text-xs text-slate-400">{{ pi.erasmusCode }}</p>
                   </div>
                   <div class="flex flex-shrink-0 flex-col items-end gap-1">
-                    <span v-if="pp.institutionCountry" class="text-xs text-slate-500">{{
-                      pp.institutionCountry
-                    }}</span>
-                    <span v-if="pp.institutionCity" class="text-xs text-slate-600">{{
-                      pp.institutionCity
-                    }}</span>
+                    <span v-if="pi.country" class="text-xs text-slate-500">{{ pi.country }}</span>
+                    <span v-if="pi.city" class="text-xs text-slate-600">{{ pi.city }}</span>
                   </div>
                 </div>
               </button>
@@ -469,12 +470,12 @@ const stepKeys = [
             <label class="mb-2 block text-sm font-semibold text-primary-light">{{
               t('exchange.academicYear')
             }}</label>
-            <input
+            <select
               v-model="academicYear"
-              type="text"
-              :placeholder="t('createExchange.academicYearPlaceholder')"
               class="w-full rounded-xl border border-white/10 bg-dark px-4 py-2.5 text-sm text-light transition focus:border-primary focus:outline-none"
-            />
+            >
+              <option v-for="year in academicYearOptions" :key="year" :value="year">{{ year }}</option>
+            </select>
           </div>
 
           <!-- Semester type -->
@@ -573,7 +574,7 @@ const stepKeys = [
             >
               <p class="text-xs text-slate-500">{{ t('createExchange.summaryProgram') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">
-                {{ selectedProgram ? localizedName(selectedProgram) : '' }}
+                {{ selectedProgram ? localizedHomeName(selectedProgram) : '' }}
               </p>
             </div>
             <div
@@ -581,22 +582,18 @@ const stepKeys = [
             >
               <p class="text-xs text-slate-500">{{ t('createExchange.summaryProfile') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">
-                {{ selectedProfile ? localizedName(selectedProfile) : '' }}
+                {{ selectedProfile ? localizedHomeName(selectedProfile) : '' }}
               </p>
             </div>
             <div class="col-span-2 rounded-xl border border-white/10 bg-dark px-4 py-3">
-              <p class="text-xs text-slate-500">{{ t('createExchange.summaryPartnerProgram') }}</p>
+              <p class="text-xs text-slate-500">{{ t('createExchange.summaryPartnerInstitution') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">
-                {{ selectedPartnerProgram ? localizedName(selectedPartnerProgram) : '' }}
+                {{ selectedPartnerInstitution ? localizedName(selectedPartnerInstitution) : '' }}
               </p>
-              <p v-if="selectedPartnerProgram" class="mt-0.5 text-xs text-slate-500">
-                {{ selectedPartnerProgram.institutionName }}
-                <template v-if="selectedPartnerProgram.institutionCity">
-                  · {{ selectedPartnerProgram.institutionCity }}</template
-                >
-                <template v-if="selectedPartnerProgram.institutionCountry">
-                  · {{ selectedPartnerProgram.institutionCountry }}</template
-                >
+              <p v-if="selectedPartnerInstitution" class="mt-0.5 text-xs text-slate-500">
+                <template v-if="selectedPartnerInstitution.city">{{ selectedPartnerInstitution.city }}</template>
+                <template v-if="selectedPartnerInstitution.city && selectedPartnerInstitution.country"> · </template>
+                <template v-if="selectedPartnerInstitution.country">{{ selectedPartnerInstitution.country }}</template>
               </p>
             </div>
             <div class="rounded-xl border border-white/10 bg-dark px-4 py-3">

@@ -2,7 +2,7 @@ namespace Loom.Application.DTOs.Exchange;
 
 public record CreateExchangeRequest(
     int HomeProfileId,
-    int PartnerProgramId,
+    int PartnerInstitutionId,
     string AcademicYear,
     string SemesterType,
     List<int> StudySemesters,

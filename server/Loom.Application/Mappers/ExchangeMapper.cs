@@ -16,7 +16,8 @@ public static class ExchangeMapper
         exchange.HomeProfile.Program.Institution.Name,
         exchange.HomeProfile.Program.Name,
         exchange.HomeProfile.ToResponse(),
-        exchange.PartnerProgram.ToResponse(),
+        exchange.PartnerInstitutionId,
+        exchange.PartnerInstitution.Name,
         exchange.CoordinatorId,
         exchange.Coordinator?.Name,
         exchange.Student.Mentor,
@@ -34,8 +35,7 @@ public static class ExchangeMapper
         exchange.StudentId,
         exchange.Student.Name,
         exchange.Student.Jmbag,
-        exchange.PartnerProgram.Institution.Name,
-        exchange.PartnerProgram.Name,
+        exchange.PartnerInstitution.Name,
         exchange.HomeProfile.Program.Institution.Name,
         exchange.HomeProfile.Program.Name,
         exchange.HomeProfile.Name,
@@ -68,7 +68,7 @@ public static class ExchangeMapper
         entry.Mode.ToString(),
         entry.PartnerCourseId,
         entry.PartnerCourse?.Code,
-        entry.PartnerCourse?.NameEn,
+        entry.PartnerCourse?.Name,
         entry.PartnerCourse?.NameHr,
         entry.AwardedEcts,
         entry.IsDeleted
@@ -77,12 +77,14 @@ public static class ExchangeMapper
     public static PartnerCourseResponse ToResponse(this PartnerCourse course) => new(
         course.Id,
         course.Code,
-        course.NameEn,
+        course.Name,
         course.NameHr,
         course.Ects,
         course.LecturesH,
         course.AuditoryH,
-        course.LabH
+        course.LabH,
+        course.Semester.ToString(),
+        course.Level.ToString()
     );
 
     public static RecognitionResponse ToResponse(this Recognition recognition) => new(
@@ -112,7 +114,7 @@ public static class ExchangeMapper
             entry.Id,
             entry.LearningAgreementEntryId,
             pc.Code,
-            pc.NameEn,
+            pc.Name,
             pc.NameHr,
             hours,
             pc.Ects,

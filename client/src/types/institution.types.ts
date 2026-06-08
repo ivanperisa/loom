@@ -1,7 +1,7 @@
 export interface InstitutionResponse {
   id: string
   name: string
-  nameEn: string | null
+  nameHr: string | null
   country: string | null
   city: string | null
   erasmusCode: string | null
@@ -22,23 +22,25 @@ export interface HomeProgramResponse {
   profiles: HomeProfileResponse[]
 }
 
-export interface PartnerProgramResponse {
+export interface PartnerInstitutionAdminResponse {
   id: string
   name: string
-  nameEn: string | null
-  level: string
-  institutionName: string
-  institutionCountry: string | null
-  institutionCity: string | null
+  nameHr: string | null
+  country: string
+  city: string | null
+  erasmusCode: string | null
+  courseCount: number
 }
 
 export interface PartnerCourseResponse {
   id: string
   code: string
-  nameEn: string
+  name: string
   nameHr: string | null
   ects: number
   lecturesH: number | null
   auditoryH: number | null
   labH: number | null
+  semester: string
+  level: string
 }

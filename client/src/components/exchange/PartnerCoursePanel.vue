@@ -5,10 +5,11 @@ import { institutionService } from '@/services/institution.service'
 import { useExchangeStore } from '@/stores/exchange.store'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
+import PartnerCourseFormModal from '@/components/common/PartnerCourseFormModal.vue'
 
 const props = withDefaults(
   defineProps<{
-    partnerProgramId: string
+    partnerInstitutionId: string
     exchangeId: string
     variant?: 'available' | 'mapped' | 'all'
   }>(),
@@ -20,11 +21,37 @@ const exchangeStore = useExchangeStore()
 
 const courses = ref<PartnerCourseResponse[]>([])
 const loading = ref(true)
-const searchCode = ref('')
+const searchQuery = ref('')
+
+const showAddForm = ref(false)
+const addingCourse = ref(false)
+const addError = ref<string | null>(null)
+
+function openAddForm() {
+  addError.value = null
+  showAddForm.value = true
+}
+
+async function submitAddCourse(payload: {
+  code: string; name: string; nameHr?: string; ects: number; semester: string; level: string
+  lecturesH?: number; auditoryH?: number; labH?: number
+}) {
+  addingCourse.value = true
+  addError.value = null
+  try {
+    const res = await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
+    courses.value.push(res.data)
+    showAddForm.value = false
+  } catch {
+    addError.value = t('partnerCourses.saveError')
+  } finally {
+    addingCourse.value = false
+  }
+}
 
 onMounted(async () => {
   try {
-    const res = await institutionService.getPartnerCourses(props.partnerProgramId)
+    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId)
     courses.value = res.data
   } catch {
     // keep empty
@@ -60,13 +87,31 @@ const availableCourses = computed(() =>
 )
 
 const searchResults = computed(() => {
-  const q = searchCode.value.trim().toLowerCase()
-  if (!q) return []
-  return availableCourses.value.filter((c) => c.code.toLowerCase().includes(q))
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return availableCourses.value
+  return availableCourses.value.filter(
+    (c) =>
+      c.code.toLowerCase().includes(q) ||
+      c.name.toLowerCase().includes(q) ||
+      (c.nameHr?.toLowerCase().includes(q) ?? false),
+  )
 })
 
 function onDragStart(course: PartnerCourseResponse) {
   exchangeStore.startDrag(course)
+}
+
+function levelLabel(level: string) {
+  const map: Record<string, string> = {
+    Undergraduate: t('admin.institutions.levelUndergraduate'),
+    Graduate: t('admin.institutions.levelGraduate'),
+    Postgraduate: t('admin.institutions.levelPostgraduate'),
+  }
+  return map[level] ?? level
+}
+
+function semesterLabel(semester: string) {
+  return t(`exchangeSemester.${semester}`)
 }
 </script>
 
@@ -78,16 +123,36 @@ function onDragStart(course: PartnerCourseResponse) {
 
     <template v-else>
       <template v-if="variant === 'available' || variant === 'all'">
-        <SearchInput
-          v-model="searchCode"
-          :placeholder="t('partnerCourses.searchPlaceholder')"
-          class="mb-3"
+        <div class="mb-3 flex items-center gap-2">
+          <SearchInput
+            v-model="searchQuery"
+            :placeholder="t('partnerCourses.searchPlaceholder')"
+            class="flex-1"
+          />
+          <button
+            v-if="!showAddForm"
+            type="button"
+            :title="t('partnerCourses.addCourse')"
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 text-light/60 transition hover:border-primary hover:text-primary-light"
+            @click="openAddForm"
+          >
+            <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="6" y1="1" x2="6" y2="11" /><line x1="1" y1="6" x2="11" y2="6" />
+            </svg>
+          </button>
+        </div>
+
+        <PartnerCourseFormModal
+          v-if="showAddForm"
+          mode="create"
+          :saving="addingCourse"
+          :error="addError"
+          @submit="submitAddCourse"
+          @close="showAddForm = false"
         />
+
         <div class="max-h-[400px] space-y-1.5 overflow-y-auto pr-1">
-          <p v-if="searchCode.trim() === ''" class="py-4 text-center text-xs text-light/60">
-            {{ t('partnerCourses.searchHint') }}
-          </p>
-          <p v-else-if="searchResults.length === 0" class="py-4 text-center text-xs text-light/60">
+          <p v-if="searchResults.length === 0" class="py-4 text-center text-xs text-light/60">
             {{ t('partnerCourses.noResults') }}
           </p>
           <div
@@ -105,8 +170,12 @@ function onDragStart(course: PartnerCourseResponse) {
             </svg>
             <div class="min-w-0 flex-1">
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
-              <div class="text-sm font-medium text-light">{{ course.nameEn }}</div>
+              <div class="text-sm font-medium text-light">{{ course.name }}</div>
               <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
+              <div class="mt-1 flex items-center gap-1.5">
+                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
+              </div>
             </div>
             <div class="shrink-0 flex items-center gap-2">
               <span
@@ -158,8 +227,12 @@ function onDragStart(course: PartnerCourseResponse) {
             </svg>
             <div class="min-w-0 flex-1">
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
-              <div class="text-sm font-medium text-light">{{ course.nameEn }}</div>
+              <div class="text-sm font-medium text-light">{{ course.name }}</div>
               <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
+              <div class="mt-1 flex items-center gap-1.5">
+                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
+              </div>
             </div>
             <div class="shrink-0 flex items-center gap-2">
               <span

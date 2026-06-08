@@ -16,6 +16,14 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, Ok);
     }
 
+    [AllowAnonymous]
+    [HttpGet("access/{exchangeGuid:guid}")]
+    public async Task<IActionResult> GetPublicExchange(Guid exchangeGuid, CancellationToken ct)
+    {
+        var result = await exchangeService.GetPublicExchangeAsync(exchangeGuid, ct);
+        return Match(result, Ok);
+    }
+
     [HttpGet("mine")]
     public async Task<IActionResult> GetMyExchanges(CancellationToken ct)
     {
