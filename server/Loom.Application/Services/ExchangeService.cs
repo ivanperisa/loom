@@ -114,6 +114,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (request.CoordinatorId.HasValue && student.CoordinatorId != request.CoordinatorId)
             student.CoordinatorId = request.CoordinatorId.Value;
 
+        if (!string.IsNullOrWhiteSpace(request.Mentor))
+            student.Mentor = request.Mentor.Trim();
+
         var exchange = new Exchange
         {
             StudentId = studentId,
@@ -199,6 +202,32 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             return Error.Forbidden("ACCESS_DENIED", "Only coordinators can update the message.");
 
         exchange.CoordinatorMessage = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
+        exchange.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        var saved = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
+            ?? throw new InvalidOperationException();
+        return saved.ToResponse();
+    }
+
+    public async Task<ErrorOr<ExchangeResponse>> UpdateEwpLinkAsync(Guid exchangeGuid, int? requesterId, string? ewpLink, CancellationToken ct = default)
+    {
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
+        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        if (requesterId.HasValue)
+        {
+            var requester = await db.Users.FindAsync([requesterId.Value], ct);
+            if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+            if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
+                return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        }
+
+        exchange.EwpLink = string.IsNullOrWhiteSpace(ewpLink) ? null : ewpLink.Trim();
         exchange.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 

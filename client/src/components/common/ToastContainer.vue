@@ -10,42 +10,11 @@ const icons: Record<ToastType, string> = {
   warning: '⚠',
   info: 'ℹ',
 }
-
-const styles: Record<ToastType, { border: string; bg: string; iconBg: string; iconText: string; text: string }> = {
-  success: {
-    border: 'border-green-400/30',
-    bg: 'bg-green-900/20',
-    iconBg: 'bg-green-500/20',
-    iconText: 'text-green-300',
-    text: 'text-green-100',
-  },
-  error: {
-    border: 'border-red-400/30',
-    bg: 'bg-red-900/20',
-    iconBg: 'bg-red-500/20',
-    iconText: 'text-red-300',
-    text: 'text-red-100',
-  },
-  warning: {
-    border: 'border-yellow-400/30',
-    bg: 'bg-yellow-900/20',
-    iconBg: 'bg-yellow-500/20',
-    iconText: 'text-yellow-300',
-    text: 'text-yellow-100',
-  },
-  info: {
-    border: 'border-primary/30',
-    bg: 'bg-primary/10',
-    iconBg: 'bg-primary/20',
-    iconText: 'text-primary-light',
-    text: 'text-light',
-  },
-}
 </script>
 
 <template>
   <Teleport to="body">
-    <div class="fixed right-5 bottom-5 z-50 flex flex-col gap-3" aria-live="polite">
+    <div class="toast-list" aria-live="polite">
       <TransitionGroup
         enter-active-class="transition-all duration-300 ease-out"
         enter-from-class="opacity-0 translate-x-8 scale-95"
@@ -57,35 +26,17 @@ const styles: Record<ToastType, { border: string; bg: string; iconBg: string; ic
         <div
           v-for="toast in toasts"
           :key="toast.id"
-          class="flex w-80 items-start gap-3 rounded-xl border p-4 shadow-lg shadow-black/40 backdrop-blur-sm"
-          :class="[styles[toast.type].border, styles[toast.type].bg]"
+          class="toast"
+          :class="`toast--${toast.type}`"
         >
-          <div
-            class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-            :class="[styles[toast.type].iconBg, styles[toast.type].iconText]"
-          >
-            {{ icons[toast.type] }}
+          <div class="toast__icon">{{ icons[toast.type] }}</div>
+
+          <div class="toast__body">
+            <p class="toast__title">{{ toast.title }}</p>
+            <p v-if="toast.message" class="toast__message">{{ toast.message }}</p>
           </div>
 
-          <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold leading-tight" :class="styles[toast.type].text">
-              {{ toast.title }}
-            </p>
-            <p
-              v-if="toast.message"
-              class="mt-1 text-xs leading-relaxed opacity-80"
-              :class="styles[toast.type].text"
-            >
-              {{ toast.message }}
-            </p>
-          </div>
-
-          <button
-            class="mt-0.5 shrink-0 cursor-pointer opacity-50 transition-opacity hover:opacity-100"
-            :class="styles[toast.type].text"
-            @click="removeToast(toast.id)"
-            aria-label="Close notification"
-          >
+          <button class="toast__close" aria-label="Close" @click="removeToast(toast.id)">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -95,3 +46,96 @@ const styles: Record<ToastType, { border: string; bg: string; iconBg: string; ic
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+.toast-list {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 320px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border-width: 1px;
+  border-style: solid;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.toast--success {
+  background: color-mix(in srgb, #16a34a 18%, var(--color-dark-2));
+  border-color: color-mix(in srgb, #16a34a 50%, transparent);
+}
+.toast--error {
+  background: color-mix(in srgb, #dc2626 18%, var(--color-dark-2));
+  border-color: color-mix(in srgb, #dc2626 50%, transparent);
+}
+.toast--warning {
+  background: color-mix(in srgb, #d97706 18%, var(--color-dark-2));
+  border-color: color-mix(in srgb, #d97706 50%, transparent);
+}
+.toast--info {
+  background: color-mix(in srgb, var(--color-primary) 18%, var(--color-dark-2));
+  border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
+
+.toast__icon {
+  margin-top: 1px;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.toast--success .toast__icon { background: color-mix(in srgb, #16a34a 25%, transparent); color: #16a34a; }
+.toast--error   .toast__icon { background: color-mix(in srgb, #dc2626 25%, transparent); color: #dc2626; }
+.toast--warning .toast__icon { background: color-mix(in srgb, #d97706 25%, transparent); color: #d97706; }
+.toast--info    .toast__icon { background: color-mix(in srgb, var(--color-primary) 25%, transparent); color: var(--color-primary); }
+
+.toast__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast__title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-light);
+  margin: 0;
+}
+
+.toast__message {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-light);
+  opacity: 0.75;
+  margin: 4px 0 0;
+}
+
+.toast__close {
+  margin-top: 2px;
+  flex-shrink: 0;
+  color: var(--color-light);
+  opacity: 0.45;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s;
+}
+.toast__close:hover { opacity: 0.9; }
+</style>

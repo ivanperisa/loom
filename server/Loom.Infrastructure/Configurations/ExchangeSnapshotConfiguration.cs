@@ -1,4 +1,5 @@
 using Loom.Domain.Entities;
+using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -14,6 +15,7 @@ public class ExchangeSnapshotConfiguration : IEntityTypeConfiguration<ExchangeSn
         builder.Property(x => x.ExchangeId).HasColumnName("exchange_id");
         builder.Property(x => x.ChangedById).HasColumnName("changed_by_id");
         builder.Property(x => x.Phase).HasColumnName("phase").HasConversion<string>();
+        builder.Property(x => x.Type).HasColumnName("type").HasMaxLength(20).HasConversion<string>().HasDefaultValue(SnapshotType.Auto);
         builder.Property(x => x.Snapshot).HasColumnName("snapshot").HasColumnType("jsonb");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
 

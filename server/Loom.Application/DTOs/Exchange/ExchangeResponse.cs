@@ -20,6 +20,8 @@ public record ExchangeResponse(
     string SemesterType,
     List<int> StudySemesters,
     string? CoordinatorMessage,
+    string? EwpLink,
+    bool StudentIsPlaceholder,
     DateTime CreatedAt,
     DateTime UpdatedAt
 );

@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter, useRoute } from 'vue-router'
 import AdminUsersTab from '@/components/admin/AdminUsersTab.vue'
 import AdminInstitutionsTab from '@/components/admin/AdminInstitutionsTab.vue'
 
 const { t } = useI18n()
+const router = useRouter()
+const route = useRoute()
 
 const tabs = [
   { key: 'users', label: () => t('admin.tabs.users') },
@@ -12,7 +15,14 @@ const tabs = [
 ] as const
 
 type Tab = typeof tabs[number]['key']
-const activeTab = ref<Tab>('users')
+const VALID_TABS = tabs.map((t) => t.key)
+const activeTab = ref<Tab>(
+  VALID_TABS.includes(route.query.tab as Tab) ? (route.query.tab as Tab) : 'users',
+)
+
+watch(activeTab, (tab) => {
+  router.replace({ query: { ...route.query, tab } })
+})
 </script>
 
 <template>

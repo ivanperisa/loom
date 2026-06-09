@@ -4,6 +4,7 @@ using Loom.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+
 namespace Loom.Api.Controllers;
 
 [Route("api/exchanges/{exchangeGuid:guid}/recognition")]
@@ -99,6 +100,48 @@ public class RecognitionController(IRecognitionService recognitionService, IExch
         if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
 
         var result = await recognitionService.SetEntryRecognizedAsync(exchangeGuid, entryId, studentIdResult.Value, request, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpPatch("message")]
+    public async Task<IActionResult> UpdateRecognitionMessage(
+        Guid exchangeGuid,
+        [FromBody] UpdateRecognitionMessageRequest request,
+        CancellationToken ct)
+    {
+        var result = await recognitionService.UpdateRecognitionMessageAsync(exchangeGuid, GetCurrentUserId(), request.Message, ct);
+        return Match(result, Ok);
+    }
+
+    [AllowAnonymous]
+    [HttpPatch("/api/exchanges/access/{exchangeGuid:guid}/recognition/message")]
+    public async Task<IActionResult> UpdatePublicRecognitionMessage(
+        Guid exchangeGuid,
+        [FromBody] UpdateRecognitionMessageRequest request,
+        CancellationToken ct)
+    {
+        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
+        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
+
+        var result = await recognitionService.UpdateRecognitionMessageAsync(exchangeGuid, studentIdResult.Value, request.Message, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpGet("history")]
+    public async Task<IActionResult> GetRecognitionHistory(Guid exchangeGuid, CancellationToken ct)
+    {
+        var result = await recognitionService.GetRecognitionHistoryAsync(exchangeGuid, GetCurrentUserId(), ct);
+        return Match(result, Ok);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("/api/exchanges/access/{exchangeGuid:guid}/recognition/history")]
+    public async Task<IActionResult> GetPublicRecognitionHistory(Guid exchangeGuid, CancellationToken ct)
+    {
+        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
+        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
+
+        var result = await recognitionService.GetRecognitionHistoryAsync(exchangeGuid, studentIdResult.Value, ct);
         return Match(result, Ok);
     }
 }

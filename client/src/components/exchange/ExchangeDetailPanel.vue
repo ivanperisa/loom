@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import LearningAgreementPanel from '@/components/exchange/LearningAgreementPanel.vue'
 import RecognitionPanel from '@/components/exchange/RecognitionPanel.vue'
+import NotesModal from '@/components/exchange/NotesModal.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import { useAuthStore } from '@/stores/auth.store'
 import { useConfirm } from '@/composables/useConfirm'
 import { documentStatus } from '@/utils/documentStatus'
+import { buildAccessLink } from '@/utils/accessLink'
+import { useNotification } from '@/composables/useNotification'
 
 const props = withDefaults(
   defineProps<{
@@ -19,46 +22,46 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
 const { isCoordinator } = useExchangePermissions()
 const authStore = useAuthStore()
 const { confirm } = useConfirm()
+const { notifySuccess } = useNotification()
 
-const activeTab = ref<'la' | 'recognition'>('la')
+const VALID_TABS = ['la', 'recognition'] as const
+type ExchangeTab = (typeof VALID_TABS)[number]
+const activeTab = ref<ExchangeTab>(
+  VALID_TABS.includes(route.query.tab as ExchangeTab) ? (route.query.tab as ExchangeTab) : 'la',
+)
 const deleting = ref(false)
 
-const coordinatorMessage = ref('')
-const isEditingMessage = ref(false)
-const isSavingMessage = ref(false)
 
-function startEditingMessage() {
-  coordinatorMessage.value = exchangeStore.exchange?.coordinatorMessage ?? ''
-  isEditingMessage.value = true
+const ewpLinkInput = ref('')
+const isEditingEwpLink = ref(false)
+const isSavingEwpLink = ref(false)
+
+function startEditingEwpLink() {
+  ewpLinkInput.value = exchangeStore.exchange?.ewpLink ?? ''
+  isEditingEwpLink.value = true
 }
 
-function cancelEditingMessage() {
-  coordinatorMessage.value = exchangeStore.exchange?.coordinatorMessage ?? ''
-  isEditingMessage.value = false
+function cancelEditingEwpLink() {
+  isEditingEwpLink.value = false
 }
 
-async function deleteMessage() {
-  const ok = await confirm({ title: t('exchange.deleteMessageConfirm') })
-  if (!ok) return
-  isSavingMessage.value = true
-  await exchangeStore.updateCoordinatorMessage(props.exchangeId, { message: null })
-  coordinatorMessage.value = ''
-  isEditingMessage.value = false
-  isSavingMessage.value = false
+async function saveEwpLink() {
+  isSavingEwpLink.value = true
+  await exchangeStore.updateEwpLink(props.exchangeId, ewpLinkInput.value.trim() || null)
+  isEditingEwpLink.value = false
+  isSavingEwpLink.value = false
 }
 
-async function saveMessage() {
-  isSavingMessage.value = true
-  await exchangeStore.updateCoordinatorMessage(props.exchangeId, {
-    message: coordinatorMessage.value.trim() || null,
-  })
-  isEditingMessage.value = false
-  isSavingMessage.value = false
+async function copyAccessLink() {
+  if (!exchangeStore.exchange) return
+  await navigator.clipboard.writeText(buildAccessLink(exchangeStore.exchange.guid))
+  notifySuccess(t('exchangeAccess.linkCopied'))
 }
 
 const canDelete = computed(
@@ -81,12 +84,30 @@ async function confirmDelete() {
   }
 }
 
+const showNotes = ref(false)
+const savingNotes = ref(false)
+
+async function saveNotes(la: string | null, recognition: string | null) {
+  savingNotes.value = true
+  await Promise.all([
+    exchangeStore.updateLaMessage(props.exchangeId, la),
+    exchangeStore.updateRecognitionMessage(props.exchangeId, recognition),
+  ])
+  savingNotes.value = false
+  showNotes.value = false
+}
+
 watch(
   () => exchangeStore.error,
   (err) => {
     if (err) router.push('/home')
   },
 )
+
+watch(activeTab, async (tab) => {
+  router.replace({ query: { ...route.query, tab } })
+  if (tab === 'recognition') await exchangeStore.fetchRecognition(props.exchangeId)
+})
 
 onMounted(async () => {
   await Promise.all([
@@ -115,15 +136,29 @@ onMounted(async () => {
   <template v-else-if="exchangeStore.exchange">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-light">{{ t('exchange.title') }}</h1>
-      <button
-        v-if="canDelete"
-        type="button"
-        class="rounded-lg border border-red-400/50 px-3 py-1.5 text-sm font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
-        :disabled="deleting"
-        @click="confirmDelete"
-      >
-        {{ deleting ? t('common.loading') : t('home.deleteExchange') }}
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          v-if="exchangeStore.exchange.studentIsPlaceholder"
+          type="button"
+          class="flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-semibold text-primary-light transition hover:bg-primary/10"
+          @click="copyAccessLink"
+        >
+          <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
+            <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
+          </svg>
+          {{ t('exchangeAccess.copyLink') }}
+        </button>
+        <button
+          v-if="canDelete"
+          type="button"
+          class="rounded-lg border border-red-400/50 px-3 py-1.5 text-sm font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+          :disabled="deleting"
+          @click="confirmDelete"
+        >
+          {{ deleting ? t('common.loading') : t('home.deleteExchange') }}
+        </button>
+      </div>
     </div>
 
     <!-- Exchange header -->
@@ -176,122 +211,89 @@ onMounted(async () => {
           <span class="text-light/60">{{ exchangeStore.exchange.mentor ?? '-' }}</span></span
         >
       </div>
-    </div>
 
-    <!-- Coordinator message -->
-    <div class="mt-4">
-      <!-- Student: read-only -->
-      <div
-        v-if="!isCoordinator && exchangeStore.exchange?.coordinatorMessage"
-        class="rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3"
-      >
-        <p class="text-xs font-semibold uppercase tracking-wide text-amber-400">
-          {{ t('exchange.coordinatorMessage') }}
-        </p>
-        <p class="mt-1 whitespace-pre-wrap text-sm text-amber-200">
-          {{ exchangeStore.exchange.coordinatorMessage }}
-        </p>
-      </div>
-
-      <!-- Coordinator: editable -->
-      <template v-if="isCoordinator">
-        <template v-if="isEditingMessage">
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-primary-light">
-            {{ t('exchange.coordinatorMessage') }}
-          </label>
-          <textarea
-            v-model="coordinatorMessage"
-            rows="3"
-            class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder-light/60 focus:border-primary focus:outline-none"
-            :placeholder="t('exchange.coordinatorMessagePlaceholder')"
-          ></textarea>
-          <div class="mt-2 flex gap-2">
-            <button
-              type="button"
-              class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
-              :disabled="isSavingMessage"
-              @click="saveMessage"
-            >
-              {{ isSavingMessage ? t('common.loading') : t('exchange.saveMessage') }}
+      <!-- EWP link -->
+      <div class="mt-2 text-sm">
+        <template v-if="isEditingEwpLink">
+          <div class="flex items-center gap-2">
+            <input
+              v-model="ewpLinkInput"
+              type="url"
+              class="flex-1 rounded-lg border border-primary/20 bg-dark px-3 py-1.5 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
+              :placeholder="t('exchange.ewpLinkPlaceholder')"
+              @keyup.enter="saveEwpLink"
+              @keyup.escape="cancelEditingEwpLink"
+            />
+            <button type="button" class="text-xs text-primary-light transition hover:text-white" :disabled="isSavingEwpLink" @click="saveEwpLink">
+              {{ isSavingEwpLink ? t('common.loading') : t('common.confirm') }}
             </button>
-            <button
-              type="button"
-              class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700/40"
-              @click="cancelEditingMessage"
-            >
+            <button type="button" class="text-xs text-light/50 transition hover:text-light" @click="cancelEditingEwpLink">
               {{ t('common.cancel') }}
             </button>
           </div>
         </template>
         <template v-else>
-          <div
-            v-if="exchangeStore.exchange?.coordinatorMessage"
-            class="rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3"
-          >
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-amber-400">
-                  {{ t('exchange.coordinatorMessage') }}
-                </p>
-                <p class="mt-1 whitespace-pre-wrap text-sm text-amber-200">
-                  {{ exchangeStore.exchange.coordinatorMessage }}
-                </p>
-              </div>
-              <div class="flex shrink-0 gap-3">
-                <button
-                  type="button"
-                  class="text-xs text-primary-light transition hover:text-white"
-                  @click="startEditingMessage"
-                >
-                  {{ t('exchange.editMessage') }}
-                </button>
-                <button
-                  type="button"
-                  class="text-xs text-red-400 transition hover:text-red-300"
-                  @click="deleteMessage"
-                >
-                  {{ t('exchange.deleteMessage') }}
-                </button>
-              </div>
-            </div>
+          <div class="flex items-center gap-2 text-sm">
+            <a
+              v-if="exchangeStore.exchange.ewpLink"
+              :href="exchangeStore.exchange.ewpLink"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+                <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+              </svg>
+              {{ t('exchange.ewpLink') }}
+            </a>
+            <button type="button" class="text-xs text-light/30 transition hover:text-primary-light" @click="startEditingEwpLink">
+              {{ exchangeStore.exchange.ewpLink ? t('common.edit') : '+ ' + t('exchange.ewpLink') }}
+            </button>
           </div>
-          <button
-            v-else
-            type="button"
-            class="text-xs text-light/60 transition hover:text-primary-light"
-            @click="startEditingMessage"
-          >
-            + {{ t('exchange.addMessage') }}
-          </button>
         </template>
-      </template>
+      </div>
     </div>
 
     <!-- Tabs -->
-    <div class="mt-6 flex border-b border-primary/20">
+    <div class="mt-6 flex items-center justify-between border-b border-primary/20">
+      <div class="flex">
+        <button
+          type="button"
+          class="px-4 py-2.5 text-sm font-semibold transition"
+          :class="
+            activeTab === 'la'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-light/60 hover:text-primary-light'
+          "
+          @click="activeTab = 'la'"
+        >
+          {{ t('exchange.tabs.learningAgreement') }}
+        </button>
+        <button
+          type="button"
+          class="px-4 py-2.5 text-sm font-semibold transition"
+          :class="
+            activeTab === 'recognition'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-light/60 hover:text-primary-light'
+          "
+          @click="activeTab = 'recognition'"
+        >
+          {{ t('exchange.tabs.recognition') }}
+        </button>
+      </div>
       <button
+        v-if="exchangeStore.serverLearningAgreement"
         type="button"
-        class="px-4 py-2.5 text-sm font-semibold transition"
-        :class="
-          activeTab === 'la'
-            ? 'border-b-2 border-primary text-primary'
-            : 'text-light/60 hover:text-primary-light'
-        "
-        @click="activeTab = 'la'"
+        class="relative mb-1 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-light transition hover:bg-primary/20"
+        @click="showNotes = true"
       >
-        {{ t('exchange.tabs.learningAgreement') }}
-      </button>
-      <button
-        type="button"
-        class="px-4 py-2.5 text-sm font-semibold transition"
-        :class="
-          activeTab === 'recognition'
-            ? 'border-b-2 border-primary text-primary'
-            : 'text-light/60 hover:text-primary-light'
-        "
-        @click="activeTab = 'recognition'"
-      >
-        {{ t('exchange.tabs.recognition') }}
+        {{ t('exchange.notes') }}
+        <span
+          v-if="exchangeStore.serverLearningAgreement?.message || exchangeStore.serverRecognition?.message"
+          class="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary"
+        ></span>
       </button>
     </div>
 
@@ -320,4 +322,13 @@ onMounted(async () => {
   >
     <p class="text-red-300">{{ exchangeStore.error }}</p>
   </div>
+
+  <NotesModal
+    v-if="showNotes"
+    :la-message="exchangeStore.serverLearningAgreement?.message ?? null"
+    :recognition-message="exchangeStore.serverRecognition?.message ?? null"
+    :saving="savingNotes"
+    @save="saveNotes"
+    @close="showNotes = false"
+  />
 </template>

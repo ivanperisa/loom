@@ -19,4 +19,8 @@ export const exchangeService = {
     api.delete(`/api/exchanges/${exchangeId}`),
   updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
     api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
+  updateEwpLink: (exchangeId: string, ewpLink: string | null, guest: boolean) =>
+    guest
+      ? api.patch<ExchangeResponse>(`/api/exchanges/access/${exchangeId}/ewp-link`, { ewpLink })
+      : api.patch<ExchangeResponse>(`/api/exchanges/${exchangeId}/ewp-link`, { ewpLink }),
 }

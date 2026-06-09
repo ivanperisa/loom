@@ -8,6 +8,7 @@ public class LearningAgreement : AuditableEntity
     public int ExchangeId { get; set; }
     public Exchange Exchange { get; set; } = null!;
     public DocumentStatus Status { get; set; }
+    public string? Message { get; set; }
 
     public ICollection<LearningAgreementEntry> Entries { get; set; } = null!;
 }

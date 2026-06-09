@@ -14,6 +14,7 @@ import type { AuthMeResponse } from '@/types/auth.types'
 import type { ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import { nWord } from '@/utils/plural'
+import { useAuthStore } from '@/stores/auth.store'
 
 const props = withDefaults(defineProps<{
   targetStudentId?: string | null
@@ -28,6 +29,7 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 const exchangeStore = useExchangeStore()
+const authStore = useAuthStore()
 
 function localizedName(item: { name: string; nameHr?: string | null }): string {
   return locale.value === 'hr' && item.nameHr ? item.nameHr : item.name
@@ -99,9 +101,10 @@ const selectedPartnerInstitution = computed(
   () => partnerInstitutions.value.find((i) => i.id === selectedPartnerInstitutionId.value) ?? null,
 )
 
-// Step 3: Coordinator
+// Step 3: Coordinator + Mentor
 const coordinators = ref<AuthMeResponse[]>([])
 const selectedCoordinatorId = ref<string | null>(null)
+const mentorInput = ref(authStore.user?.mentor ?? '')
 
 const coordinatorOptions = computed(() => [
   { value: null, label: t('exchange.noCoordinator') },
@@ -245,6 +248,7 @@ async function submitExchange() {
       studySemesters: studySemesters.value,
       coordinatorId: selectedCoordinatorId.value,
       targetStudentId: props.targetStudentId,
+      mentor: mentorInput.value.trim() || null,
     })
     if (result) {
       emit('created', result.guid)
@@ -559,6 +563,20 @@ const stepKeys = [
               :placeholder="t('createExchange.selectCoordinatorPlaceholder')"
               :search-placeholder="t('settings.profile.searchCoordinator')"
               :no-results-label="t('settings.profile.noCoordinatorResults')"
+            />
+          </div>
+
+          <!-- Mentor -->
+          <div class="col-span-2">
+            <label class="mb-2 block text-sm font-semibold text-primary-light">
+              {{ t('exchange.mentor') }}
+              <span class="ml-1 text-xs font-normal text-light/40">({{ t('common.optional') }})</span>
+            </label>
+            <input
+              v-model="mentorInput"
+              type="text"
+              class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
+              :placeholder="t('exchange.mentorPlaceholder')"
             />
           </div>
         </div>

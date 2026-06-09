@@ -23,6 +23,7 @@ public class Exchange : AuditableEntity
     public ExchangeSemester SemesterType { get; set; }
     public List<int> StudySemesters { get; set; } = [];
     public string? CoordinatorMessage { get; set; }
+    public string? EwpLink { get; set; }
 
     public LearningAgreement? LearningAgreement { get; set; }
     public Recognition? Recognition { get; set; }

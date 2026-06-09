@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -7,6 +7,8 @@ import type { RecognitionEntryResponse } from '@/types/recognition.types'
 import { exportExchangeExcel } from '@/utils/exportExchange'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
+import RecognitionHistoryDrawer from '@/components/exchange/RecognitionHistoryDrawer.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 import { documentStatus } from '@/utils/documentStatus'
 
 const props = defineProps<{
@@ -177,10 +179,17 @@ function doExport() {
 }
 
 const rejectedBg = '#FFCCCC'
+const showHistory = ref(false)
 </script>
 
 <template>
   <div>
+    <RecognitionHistoryDrawer
+      v-if="showHistory"
+      :exchange-id="exchangeId"
+      @close="showHistory = false"
+    />
+
     <div v-if="loading" class="space-y-3">
       <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded bg-primary/20"></div>
     </div>
@@ -189,7 +198,7 @@ const rejectedBg = '#FFCCCC'
       <!-- Status + actions bar -->
       <div class="relative mb-3 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <StatusBadge :status="exchangeStore.serverRecognition!.status" />
+          <StatusBadge :status="exchangeStore.serverRecognition!.status" i18n-prefix="recognitionStatus" />
         </div>
         <span
           class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80"
@@ -197,13 +206,11 @@ const rejectedBg = '#FFCCCC'
           {{ homeProfileName }}
         </span>
         <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="rounded-lg border border-primary/40 px-4 py-2 text-sm font-medium text-primary-light transition hover:bg-primary/10"
-            @click="doExport"
-          >
-            {{ t('recognition.export') }}
-          </button>
+          <ActionButton size="md" @click="doExport">{{ t('recognition.export') }}</ActionButton>
+          <ActionButton size="md" @click="showHistory = true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {{ t('recognition.actions.history') }}
+          </ActionButton>
           <!-- Student actions -->
           <template v-if="!isCoordinator">
             <button
@@ -247,7 +254,7 @@ const rejectedBg = '#FFCCCC'
                 class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
                 @click="approveRecognition"
               >
-                {{ t('recognition.actions.approve') }}
+                {{ t('recognition.actions.contractSigned') }}
               </button>
               <button
                 type="button"
@@ -258,10 +265,7 @@ const rejectedBg = '#FFCCCC'
               </button>
             </template>
             <button
-              v-if="
-                exchangeStore.serverRecognition!.status === documentStatus.Approved ||
-                exchangeStore.serverRecognition!.status === documentStatus.Rejected
-              "
+              v-if="exchangeStore.serverRecognition!.status !== documentStatus.Draft"
               type="button"
               class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
               @click="backToRecognitionDraft"
@@ -306,9 +310,6 @@ const rejectedBg = '#FFCCCC'
               </th>
               <th class="rec-th" style="min-width: 90px">
                 {{ t('recognition.col.enrollmentStatus') }}
-              </th>
-              <th class="rec-th" style="min-width: 140px">
-                {{ t('recognition.col.partnerNameHr') }}
               </th>
               <th class="rec-th" style="min-width: 70px">
                 {{ t('recognition.col.partnerHours') }}
@@ -379,12 +380,6 @@ const rejectedBg = '#FFCCCC'
                   :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
                 >
                   {{ group.partnerCourseName }}
-                  <div
-                    v-if="group.partnerCourseNameHr"
-                    style="font-size: 9px; color: #555; font-style: italic"
-                  >
-                    {{ group.partnerCourseNameHr }}
-                  </div>
                 </td>
 
                 <!-- C: Status predmeta -->
@@ -398,20 +393,9 @@ const rejectedBg = '#FFCCCC'
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.enrollmentStatus"
                     type="text"
-                    :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
-                </td>
-
-                <!-- D: Naziv - hrvatski -->
-                <td
-                  v-if="idx === 0"
-                  :rowspan="group.entries.length"
-                  class="rec-td rec-td--center rec-td--small"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
-                >
-                  {{ group.partnerCourseNameHr ?? '—' }}
                 </td>
 
                 <!-- E: Sati -->
@@ -501,7 +485,6 @@ const rejectedBg = '#FFCCCC'
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.originalGrade"
                     type="text"
-                    :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
@@ -517,7 +500,6 @@ const rejectedBg = '#FFCCCC'
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.ectsGrade"
                     type="text"
-                    :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
@@ -533,7 +515,6 @@ const rejectedBg = '#FFCCCC'
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.hrGrade"
                     type="text"
-                    :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
@@ -549,7 +530,6 @@ const rejectedBg = '#FFCCCC'
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.examDate"
                     type="date"
-                    :disabled="isCoordinator"
                     class="rec-input rec-input--date"
                   />
                 </td>
@@ -558,6 +538,7 @@ const rejectedBg = '#FFCCCC'
           </tbody>
         </table>
       </div>
+
     </template>
   </div>
 </template>

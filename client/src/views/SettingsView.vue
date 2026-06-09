@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { onBeforeRouteUpdate } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
 import { institutionService } from '@/services/institution.service'
@@ -47,7 +48,7 @@ const isDirty = computed(() =>
   coordinatorId.value !== (authStore.user?.coordinatorId ?? null),
 )
 
-onMounted(async () => {
+async function fetchData() {
   const [instRes, coordRes] = await Promise.all([
     institutionService.getHomeInstitutions(),
     coordinatorService.getCoordinators(),
@@ -55,7 +56,10 @@ onMounted(async () => {
   institutions.value = instRes.data
   coordinators.value = coordRes.data
   resetForm()
-})
+}
+
+onMounted(fetchData)
+onBeforeRouteUpdate(fetchData)
 
 function resetForm() {
   name.value = authStore.user?.name ?? ''

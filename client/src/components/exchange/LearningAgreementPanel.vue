@@ -4,13 +4,18 @@ import { useI18n } from 'vue-i18n'
 import PartnerCoursePanel from '@/components/exchange/PartnerCoursePanel.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
+import LearningAgreementHistoryDrawer from '@/components/exchange/LearningAgreementHistoryDrawer.vue'
+import ImportPreviewModal from '@/components/exchange/ImportPreviewModal.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
-import type { HomeSlotResponse, LocalSlotMapping, SlotMode } from '@/types/learningAgreement.types'
+import { useNotification } from '@/composables/useNotification'
+import type { HomeSlotResponse, LocalSlotMapping, SlotMode, MappingExportDto } from '@/types/learningAgreement.types'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import { documentStatus } from '@/utils/documentStatus'
 import { slotMode } from '@/utils/slotMode'
 import { useTheme } from '@/composables/useTheme'
+import { useConfirm } from '@/composables/useConfirm'
 
 const props = defineProps<{
   exchangeId: string
@@ -21,9 +26,33 @@ const { t, locale } = useI18n()
 const exchangeStore = useExchangeStore()
 const { isCoordinator, isEditable } = useExchangePermissions()
 const { theme } = useTheme()
+const { confirm } = useConfirm()
+const { notifyError } = useNotification()
 
 const isSavingLa = ref(false)
 const saveError = ref<string | null>(null)
+const showHistory = ref(false)
+const importDto = ref<MappingExportDto | null>(null)
+const importFileInput = ref<HTMLInputElement | null>(null)
+
+async function handleExport() {
+  await exchangeStore.exportMappings(props.exchangeId)
+}
+
+function handleImportFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    try {
+      importDto.value = JSON.parse(reader.result as string) as MappingExportDto
+    } catch {
+      notifyError(t('la.import.invalidJson'))
+    }
+  }
+  reader.readAsText(file)
+  ;(e.target as HTMLInputElement).value = ''
+}
 
 async function saveLa() {
   isSavingLa.value = true
@@ -82,7 +111,7 @@ const modeOutlineColor: Record<SlotMode, string> = {
   AfterExchange: '#000000',
 }
 
-const isDragging = computed(() => !!exchangeStore.draggingCourse)
+const isDragging = computed(() => !!exchangeStore.draggingCourse || !!exchangeStore.draggingSlotMapping)
 const dragOverSlotId = ref<string | null>(null)
 const pendingDrop = ref<{ slot: HomeSlotResponse; course: PartnerCourseResponse } | null>(null)
 const pendingEcts = ref<number>(0)
@@ -162,7 +191,7 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
   const state = lineFor(slot.id)
   const bg = slot.color
 
-  if (dragOverSlotId.value === slot.id && state?.mode === slotMode.AtExchange) {
+  if (dragOverSlotId.value === slot.id) {
     return {
       backgroundColor: 'color-mix(in srgb, var(--color-primary) 20%, transparent)',
       outline: '2px dashed var(--color-primary)',
@@ -171,7 +200,7 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
     }
   }
 
-  if (isDragging.value && state?.mode === slotMode.AtExchange) {
+  if (isDragging.value) {
     return {
       backgroundColor: bg,
       outline: '2px dashed var(--color-primary)',
@@ -202,6 +231,14 @@ function onDragLeave() {
 function onDrop(event: DragEvent, slot: HomeSlotResponse) {
   event.preventDefault()
   dragOverSlotId.value = null
+  const slotDrag = exchangeStore.draggingSlotMapping
+  if (slotDrag) {
+    if (slotDrag.fromSlotId !== slot.id) {
+      exchangeStore.localMoveSlotMapping(slotDrag.fromSlotId, slot.id, slotDrag.localId)
+    }
+    exchangeStore.endDrag()
+    return
+  }
   const course = exchangeStore.draggingCourse
   if (!course) return
   if (lineFor(slot.id)?.mode !== slotMode.AtExchange) {
@@ -230,9 +267,13 @@ function cancelDrop() {
   pendingDrop.value = null
 }
 
-function cycleMode(slot: HomeSlotResponse) {
+async function cycleMode(slot: HomeSlotResponse) {
   if (!isEditable.value || isThesisSlot(slot)) return
   const state = lineFor(slot.id)
+  if (state && state.mappings.length > 0) {
+    const ok = await confirm({ title: t('la.cycleModeConfirm') })
+    if (!ok) return
+  }
   if (!state) {
     exchangeStore.localSetSlotMode(slot.id, slotMode.AtHome)
   } else {
@@ -289,6 +330,28 @@ function slotSubLabel(slot: HomeSlotResponse): string {
 
 <template>
   <div>
+    <!-- History drawer + Import modal -->
+    <LearningAgreementHistoryDrawer
+      v-if="showHistory"
+      :exchange-id="exchangeId"
+      :guest-mode="exchangeStore.guestMode"
+      @close="showHistory = false"
+    />
+    <ImportPreviewModal
+      v-if="importDto"
+      :dto="importDto"
+      :exchange-id="exchangeId"
+      @close="importDto = null"
+      @imported="importDto = null"
+    />
+    <input
+      ref="importFileInput"
+      type="file"
+      accept=".json"
+      style="display: none"
+      @change="handleImportFileChange"
+    />
+
     <!-- Status + Actions bar -->
     <div class="relative mb-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
@@ -296,6 +359,21 @@ function slotSubLabel(slot: HomeSlotResponse): string {
           v-if="exchangeStore.serverLearningAgreement"
           :status="exchangeStore.serverLearningAgreement.status"
         />
+        <!-- Export / Import / History -->
+        <div style="display: flex; gap: 6px;">
+          <ActionButton @click="handleExport">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            {{ t('la.actions.export') }}
+          </ActionButton>
+          <ActionButton @click="importFileInput?.click()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            {{ t('la.actions.import') }}
+          </ActionButton>
+          <ActionButton @click="showHistory = true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {{ t('la.actions.history') }}
+          </ActionButton>
+        </div>
       </div>
       <span
         class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80"
@@ -418,37 +496,35 @@ function slotSubLabel(slot: HomeSlotResponse): string {
               @dragleave="onDragLeave()"
               @drop="onDrop($event, slot)"
             >
-              <div class="la-cell-name">
-                {{ slotDisplayCode(slot) ?? slotDisplayName(slot) }}
-              </div>
-              <div class="la-cell-sub">
-                {{ slotSubLabel(slot) }}
-              </div>
-
-              <div v-if="lineFor(slot.id)" style="margin-top: 3px">
-                <span
-                  style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 600;"
-                  :style="{
-                    color: modeOutlineColor[lineFor(slot.id)!.mode],
-                    border: `1px solid ${modeOutlineColor[lineFor(slot.id)!.mode]}`,
-                    background: 'rgba(255,255,255,0.6)',
-                  }"
-                >
-                  {{ t(`slotMode.${lineFor(slot.id)!.mode}`) }}
-                </span>
-              </div>
-
-              <div v-if="ectsLabel(slot)" style="margin-top: 3px">
-                <span
-                  style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 700;"
-                  :style="{
-                    color: ectsColor(slot),
-                    border: `1px solid ${ectsColor(slot)}`,
-                    background: theme === 'light' ? `${ectsColor(slot)}18` : 'rgba(255,255,255,0.08)',
-                  }"
-                >
-                  {{ ectsLabel(slot) }} ECTS
-                </span>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
+                <div style="min-width: 0;">
+                  <div class="la-cell-name">{{ slotDisplayCode(slot) ?? slotDisplayName(slot) }}</div>
+                  <div class="la-cell-sub">{{ slotSubLabel(slot) }}</div>
+                </div>
+                <div style="display: flex; flex-direction: row; align-items: flex-start; gap: 3px; flex-shrink: 0;">
+                  <span
+                    v-if="ectsLabel(slot)"
+                    style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 700; white-space: nowrap;"
+                    :style="{
+                      color: ectsColor(slot),
+                      border: `1px solid ${ectsColor(slot)}`,
+                      background: theme === 'light' ? `${ectsColor(slot)}18` : 'rgba(255,255,255,0.08)',
+                    }"
+                  >
+                    {{ ectsLabel(slot) }} ECTS
+                  </span>
+                  <span
+                    v-if="lineFor(slot.id)"
+                    style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 600; white-space: nowrap;"
+                    :style="{
+                      color: modeOutlineColor[lineFor(slot.id)!.mode],
+                      border: `1px solid ${modeOutlineColor[lineFor(slot.id)!.mode]}`,
+                      background: 'rgba(255,255,255,0.6)',
+                    }"
+                  >
+                    {{ t(`slotMode.${lineFor(slot.id)!.mode}`) }}
+                  </span>
+                </div>
               </div>
 
               <div
@@ -462,7 +538,7 @@ function slotSubLabel(slot: HomeSlotResponse): string {
                 </svg>
                 <span class="la-mapping-text">
                   <span style="font-weight: 700">{{ removed.partnerCourseCode }}</span><br />
-                  <span style="font-size: 10px; color: var(--color-primary-light)">{{ removed.partnerCourseName }}</span><br />
+                  <span style="font-size: 10px; color: #000">{{ removed.partnerCourseName }}</span><br />
                   <span style="font-size: 10px; color: #777">{{ removed.partnerCourseNameHr ?? '-' }}</span><br />
                   <span style="color: #555; font-size: 10px">{{ removed.awardedEcts }} ECTS</span>
                 </span>
@@ -472,11 +548,14 @@ function slotSubLabel(slot: HomeSlotResponse): string {
                 v-for="mapping in lineFor(slot.id)?.mappings ?? []"
                 :key="mapping.localId"
                 class="la-mapping-item"
+                :draggable="isEditable"
                 @click.stop
+                @dragstart.stop="isEditable && exchangeStore.startSlotDrag(slot.id, mapping.localId)"
+                @dragend.stop="exchangeStore.endDrag()"
               >
                 <span class="la-mapping-text">
                   <span style="font-weight: 700">{{ mapping.partnerCourseCode }}</span><br />
-                  <span style="font-size: 10px; color: var(--color-primary-light)">{{ mapping.partnerCourseName }}</span><br />
+                  <span style="font-size: 10px; color: #000">{{ mapping.partnerCourseName }}</span><br />
                   <span style="font-size: 10px; color: #777">{{ mapping.partnerCourseNameHr ?? '-' }}</span><br />
                   <template v-if="editingMapping?.localId === mapping.localId" :key="`edit-${mapping.localId}`">
                     <input
@@ -602,6 +681,7 @@ function slotSubLabel(slot: HomeSlotResponse): string {
         />
       </div>
     </div>
+
   </div>
 </template>
 

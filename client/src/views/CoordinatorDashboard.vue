@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { onBeforeRouteUpdate, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { coordinatorService } from '@/services/coordinator.service'
 import { institutionService } from '@/services/institution.service'
@@ -8,6 +8,7 @@ import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
 import type { ExchangeSummaryResponse } from '@/types/exchange.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { statusColorClass } from '@/utils/statusColors'
+import { buildAccessLink } from '@/utils/accessLink'
 import { nWord } from '@/utils/plural'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import { localizedName } from '@/utils/i18n.utils'
@@ -78,7 +79,9 @@ const filteredStudents = computed(() => {
   return students.value.filter((s) => exchangesByStudent.value.has(s.id))
 })
 
-onMounted(async () => {
+async function fetchData() {
+  loading.value = true
+  error.value = null
   try {
     const [studentsRes, exchangesRes, institutionsRes] = await Promise.allSettled([
       coordinatorService.getStudents(),
@@ -93,7 +96,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(fetchData)
+onBeforeRouteUpdate(fetchData)
 
 function toggleStudent(studentId: string) {
   expandedStudentId.value = expandedStudentId.value === studentId ? null : studentId
@@ -104,8 +110,7 @@ function viewExchange(exchangeId: string) {
 }
 
 async function copyAccessLink(exchangeGuid: string) {
-  const link = `${window.location.origin}/access/${exchangeGuid}`
-  await navigator.clipboard.writeText(link)
+  await navigator.clipboard.writeText(buildAccessLink(exchangeGuid))
   notifySuccess(t('exchangeAccess.linkCopied'))
 }
 
@@ -280,13 +285,27 @@ function onExchangeCreated(exchangeGuid: string) {
                       :class="statusColorClass[ex.recognitionStatus]"
                     >
                       {{ t('exchange.tabs.recognition') }}:
-                      {{ t(`documentStatus.${ex.recognitionStatus}`) }}
+                      {{ t(`recognitionStatus.${ex.recognitionStatus}`) }}
                     </span>
                   </div>
                   <p class="mt-2.5 text-sm font-semibold text-light">{{ ex.partnerInstitutionName }}</p>
                   <p class="mt-1.5 text-xs text-light/40">
                     {{ ex.homeProgramName }}<span v-if="ex.homeProfileName"> &middot; {{ ex.homeProfileName }}</span>
                   </p>
+                  <a
+                    v-if="ex.ewpLink"
+                    :href="ex.ewpLink"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
+                    @click.stop
+                  >
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+                      <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+                    </svg>
+                    {{ t('exchange.ewpLink') }}
+                  </a>
                   <button
                     v-if="student.isPlaceholder"
                     type="button"

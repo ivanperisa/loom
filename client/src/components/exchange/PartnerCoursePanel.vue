@@ -26,9 +26,11 @@ const searchQuery = ref('')
 const showAddForm = ref(false)
 const addingCourse = ref(false)
 const addError = ref<string | null>(null)
+const initialNameForForm = ref('')
 
 function openAddForm() {
   addError.value = null
+  initialNameForForm.value = searchQuery.value.trim()
   showAddForm.value = true
 }
 
@@ -39,8 +41,9 @@ async function submitAddCourse(payload: {
   addingCourse.value = true
   addError.value = null
   try {
-    const res = await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
-    courses.value.push(res.data)
+    await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
+    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId)
+    courses.value = res.data
     showAddForm.value = false
   } catch {
     addError.value = t('partnerCourses.saveError')
@@ -145,6 +148,7 @@ function semesterLabel(semester: string) {
         <PartnerCourseFormModal
           v-if="showAddForm"
           mode="create"
+          :initialName="initialNameForForm"
           :saving="addingCourse"
           :error="addError"
           @submit="submitAddCourse"
@@ -172,12 +176,10 @@ function semesterLabel(semester: string) {
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
               <div class="text-sm font-medium text-light">{{ course.name }}</div>
               <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
-              <div class="mt-1 flex items-center gap-1.5">
-                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
-                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
-              </div>
             </div>
             <div class="shrink-0 flex items-center gap-2">
+              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span
                 v-if="mappedEcts(course.id) > 0"
                 class="rounded px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300"
@@ -229,12 +231,10 @@ function semesterLabel(semester: string) {
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
               <div class="text-sm font-medium text-light">{{ course.name }}</div>
               <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
-              <div class="mt-1 flex items-center gap-1.5">
-                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
-                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
-              </div>
             </div>
             <div class="shrink-0 flex items-center gap-2">
+              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span
                 class="rounded px-2 py-0.5 text-xs font-semibold"
                 :class="

@@ -82,7 +82,7 @@ const showAddInstitution = ref(false)
 const addingInstitution = ref(false)
 const institutionForm = ref({ name: '', nameHr: '', country: '', city: '', erasmusCode: '' })
 
-const courseModal = ref<{ institutionId: string; institutionName: string; mode: 'create' | 'edit'; course?: PartnerCourseResponse } | null>(null)
+const courseModal = ref<{ institutionId: string; institutionName: string; mode: 'create' | 'edit'; course?: PartnerCourseResponse; initialName?: string } | null>(null)
 const savingCourse = ref(false)
 const courseError = ref<string | null>(null)
 
@@ -191,9 +191,9 @@ async function deleteInstitution(id: string) {
   }
 }
 
-function openCourseModal(inst: PartnerInstitutionAdminResponse) {
+function openCourseModal(inst: PartnerInstitutionAdminResponse, initialName?: string) {
   courseError.value = null
-  courseModal.value = { institutionId: inst.id, institutionName: inst.name, mode: 'create' }
+  courseModal.value = { institutionId: inst.id, institutionName: inst.name, mode: 'create', initialName }
   if (!expandedInstitutions.value.has(inst.id)) toggleInstitution(inst)
 }
 
@@ -390,7 +390,7 @@ function semesterLabel(semester: string) {
             </div>
           </button>
           <div class="flex flex-shrink-0 items-center gap-2">
-            <button type="button" class="rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-light transition hover:bg-primary/10 disabled:opacity-40" :disabled="!!deletingInstitution" @click="openCourseModal(inst)">
+            <button type="button" class="rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-light transition hover:bg-primary/10 disabled:opacity-40" :disabled="!!deletingInstitution" @click="openCourseModal(inst, courseSearch[inst.id] || undefined)">
               + {{ t('admin.institutions.addCourse') }}
             </button>
             <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-red-400/20 text-red-400/60 transition hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40" :disabled="deletingInstitution === inst.id" :title="t('admin.institutions.deleteInstitution')" @click="deleteInstitution(inst.id)">
@@ -541,6 +541,7 @@ function semesterLabel(semester: string) {
     :mode="courseModal.mode"
     :institution-name="courseModal.institutionName"
     :course="courseModal.course"
+    :initial-name="courseModal.initialName"
     :saving="savingCourse"
     :error="courseError"
     @submit="submitCourse"

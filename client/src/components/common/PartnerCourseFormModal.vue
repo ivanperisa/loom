@@ -8,10 +8,11 @@ const props = withDefaults(
     mode: 'create' | 'edit'
     institutionName?: string
     course?: PartnerCourseResponse | null
+    initialName?: string
     saving?: boolean
     error?: string | null
   }>(),
-  { saving: false, error: null, course: null },
+  { saving: false, error: null, course: null, initialName: '' },
 )
 
 const emit = defineEmits<{
@@ -35,7 +36,7 @@ const semesters = ['Winter', 'Summer', 'Both']
 const levels = ['Undergraduate', 'Graduate', 'Postgraduate']
 
 function formFromCourse(course: PartnerCourseResponse | null | undefined) {
-  if (!course) return { code: '', name: '', nameHr: '', ects: '', semester: 'Winter', level: 'Undergraduate', lecturesH: '', auditoryH: '', labH: '' }
+  if (!course) return { code: '', name: props.initialName || '', nameHr: '', ects: '', semester: 'Winter', level: 'Graduate', lecturesH: '', auditoryH: '', labH: '' }
   return {
     code: course.code,
     name: course.name,

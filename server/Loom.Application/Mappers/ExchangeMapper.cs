@@ -25,6 +25,8 @@ public static class ExchangeMapper
         exchange.SemesterType.ToString(),
         exchange.StudySemesters,
         exchange.CoordinatorMessage,
+        exchange.EwpLink,
+        string.IsNullOrEmpty(exchange.Student.Email),
         exchange.CreatedAt,
         exchange.UpdatedAt
     );
@@ -42,7 +44,8 @@ public static class ExchangeMapper
         exchange.AcademicYear,
         exchange.SemesterType.ToString(),
         exchange.LearningAgreement!.Status.ToString(),
-        exchange.Recognition?.Status.ToString()
+        exchange.Recognition?.Status.ToString(),
+        exchange.EwpLink
     );
 
     public static HomeSlotResponse ToResponse(this HomeSlot slot) => new(
@@ -91,6 +94,7 @@ public static class ExchangeMapper
         recognition.Id,
         recognition.ExchangeId,
         recognition.Status.ToString(),
+        recognition.Message,
         recognition.Entries.Select(e => e.ToResponse()).ToList(),
         recognition.CreatedAt,
         recognition.UpdatedAt

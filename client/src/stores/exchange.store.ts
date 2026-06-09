@@ -24,7 +24,14 @@ import type {
   RecognitionResponse,
   SaveRecognitionRequest,
   UpdateRecognitionStatusRequest,
+  RecognitionSnapshotSummary,
 } from '@/types/recognition.types'
+import type {
+  LaSnapshotSummary,
+  SnapshotListItem,
+  MappingExportDto,
+  MappingImportResult,
+} from '@/types/learningAgreement.types'
 
 function buildLocalFromServer(la: LearningAgreementResponse): LocalSlotState[] {
   const map = new Map<string, LocalSlotState>()
@@ -62,6 +69,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const draggingCourse = ref<PartnerCourseResponse | null>(null)
+  const draggingSlotMapping = ref<{ fromSlotId: string; localId: string } | null>(null)
   const stagedPartnerCourseIds = ref<Set<string>>(new Set())
   const guestMode = ref(false)
 
@@ -73,10 +81,34 @@ export const useExchangeStore = defineStore('exchange', () => {
 
   function startDrag(course: PartnerCourseResponse) {
     draggingCourse.value = course
+    draggingSlotMapping.value = null
   }
 
   function endDrag() {
     draggingCourse.value = null
+    draggingSlotMapping.value = null
+  }
+
+  function startSlotDrag(fromSlotId: string, localId: string) {
+    draggingSlotMapping.value = { fromSlotId, localId }
+    draggingCourse.value = null
+  }
+
+  function localMoveSlotMapping(fromSlotId: string, toSlotId: string, localId: string) {
+    const fromState = localSlotStates.value.find((s) => s.homeSlotId === fromSlotId)
+    if (!fromState) return
+    const mappingIdx = fromState.mappings.findIndex((m) => m.localId === localId)
+    if (mappingIdx === -1) return
+    const [mapping] = fromState.mappings.splice(mappingIdx, 1)
+    let toState = localSlotStates.value.find((s) => s.homeSlotId === toSlotId)
+    if (!toState) {
+      toState = { homeSlotId: toSlotId, mode: slotMode.AtExchange, mappings: [] }
+      localSlotStates.value.push(toState)
+    } else if (toState.mode !== slotMode.AtExchange) {
+      toState.mode = slotMode.AtExchange
+    }
+    toState.mappings.push(mapping!)
+    isDirty.value = true
   }
 
   function stagePartnerCourse(id: string) {
@@ -232,6 +264,7 @@ export const useExchangeStore = defineStore('exchange', () => {
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
       isDirty.value = false
+      await fetchRecognition(exchangeId)
     } catch (e: unknown) {
       throw e
     }
@@ -256,6 +289,21 @@ export const useExchangeStore = defineStore('exchange', () => {
   ) {
     const res = await exchangeService.updateCoordinatorMessage(exchangeId, request)
     exchange.value = res.data
+  }
+
+  async function updateEwpLink(exchangeId: string, ewpLink: string | null) {
+    const res = await exchangeService.updateEwpLink(exchangeId, ewpLink, guestMode.value)
+    exchange.value = res.data
+  }
+
+  async function updateLaMessage(exchangeId: string, message: string | null) {
+    const res = await learningAgreementService.updateMessage(exchangeId, message, guestMode.value)
+    serverLearningAgreement.value = res.data
+  }
+
+  async function updateRecognitionMessage(exchangeId: string, message: string | null) {
+    const res = await recognitionService.updateMessage(exchangeId, message, guestMode.value)
+    serverRecognition.value = res.data
   }
 
   // Recognition
@@ -283,6 +331,42 @@ export const useExchangeStore = defineStore('exchange', () => {
     serverRecognition.value = res.data
   }
 
+  async function exportMappings(exchangeId: string): Promise<void> {
+    const res = await learningAgreementService.exportMappings(exchangeId, guestMode.value)
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/json' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `la-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function importMappings(exchangeId: string, dto: MappingExportDto): Promise<MappingImportResult> {
+    const res = await learningAgreementService.importMappings(exchangeId, dto, guestMode.value)
+    await fetchLearningAgreement(exchangeId)
+    return res.data
+  }
+
+  async function fetchLaHistory(exchangeId: string): Promise<LaSnapshotSummary[]> {
+    const res = await learningAgreementService.getHistory(exchangeId, guestMode.value)
+    return res.data
+  }
+
+  async function fetchSnapshots(exchangeId: string): Promise<SnapshotListItem[]> {
+    const res = await learningAgreementService.getSnapshots(exchangeId, guestMode.value)
+    return res.data
+  }
+
+  async function restoreSnapshot(exchangeId: string, snapshotId: number): Promise<void> {
+    await learningAgreementService.restoreSnapshot(exchangeId, snapshotId)
+    await fetchLearningAgreement(exchangeId)
+  }
+
+  async function fetchRecognitionHistory(exchangeId: string): Promise<RecognitionSnapshotSummary[]> {
+    const res = await recognitionService.getHistory(exchangeId, guestMode.value)
+    return res.data
+  }
+
   return {
     summaries,
     exchange,
@@ -294,11 +378,14 @@ export const useExchangeStore = defineStore('exchange', () => {
     loading,
     error,
     draggingCourse,
+    draggingSlotMapping,
     stagedPartnerCourseIds,
     guestMode,
     setGuestMode,
     startDrag,
     endDrag,
+    startSlotDrag,
+    localMoveSlotMapping,
     stagePartnerCourse,
     unstagePartnerCourse,
     localSetSlotMode,
@@ -315,9 +402,18 @@ export const useExchangeStore = defineStore('exchange', () => {
     saveLearningAgreement,
     updateLearningAgreementStatus,
     updateCoordinatorMessage,
+    updateEwpLink,
+    updateLaMessage,
     fetchRecognition,
     saveRecognition,
     updateRecognitionStatus,
     setEntryRecognized,
+    updateRecognitionMessage,
+    exportMappings,
+    importMappings,
+    fetchLaHistory,
+    fetchSnapshots,
+    restoreSnapshot,
+    fetchRecognitionHistory,
   }
 })

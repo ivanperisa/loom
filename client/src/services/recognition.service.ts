@@ -3,6 +3,7 @@ import type {
   RecognitionResponse,
   SaveRecognitionRequest,
   UpdateRecognitionStatusRequest,
+  RecognitionSnapshotSummary,
 } from '@/types/recognition.types'
 
 function basePath(exchangeId: string, guest: boolean) {
@@ -18,4 +19,8 @@ export const recognitionService = {
     api.patch<RecognitionResponse>(`${basePath(exchangeId, guest)}/recognition/status`, request),
   setEntryRecognized: (exchangeId: string, entryId: string, isRecognized: boolean | null, guest = false) =>
     api.patch<RecognitionResponse>(`${basePath(exchangeId, guest)}/recognition/entries/${entryId}/recognized`, { isRecognized }),
+  updateMessage: (exchangeId: string, message: string | null, guest = false) =>
+    api.patch<RecognitionResponse>(`${basePath(exchangeId, guest)}/recognition/message`, { message }),
+  getHistory: (exchangeId: string, guest = false) =>
+    api.get<RecognitionSnapshotSummary[]>(`${basePath(exchangeId, guest)}/recognition/history`),
 }

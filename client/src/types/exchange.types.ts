@@ -13,6 +13,7 @@ export interface CreateExchangeRequest {
   studySemesters: number[]
   coordinatorId?: string | null
   targetStudentId?: string | null
+  mentor?: string | null
 }
 
 export interface ExchangeResponse {
@@ -33,6 +34,8 @@ export interface ExchangeResponse {
   semesterType: ExchangeSemester
   studySemesters: number[]
   coordinatorMessage: string | null
+  ewpLink: string | null
+  studentIsPlaceholder: boolean
   createdAt: string
   updatedAt: string
 }
@@ -51,6 +54,7 @@ export interface ExchangeSummaryResponse {
   semesterType: ExchangeSemester
   learningAgreementStatus: DocumentStatus
   recognitionStatus: DocumentStatus
+  ewpLink: string | null
 }
 
 export interface UpdateCoordinatorMessageRequest {

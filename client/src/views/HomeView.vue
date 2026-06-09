@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onBeforeRouteUpdate, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import { useAuthStore } from '@/stores/auth.store'
@@ -20,6 +20,8 @@ const requestingCoordinator = ref(false)
 const displayName = computed(() => authStore.name?.trim() || t('common.user'))
 const coordinatorRequestStatus = computed(() => authStore.user?.coordinatorRequestStatus ?? null)
 
+const loading = ref(true)
+
 const selectedAcademicYear = ref<string | null>(null)
 
 const academicYears = computed(() => {
@@ -32,9 +34,14 @@ const filteredSummaries = computed(() => {
   return exchangeStore.summaries.filter((ex) => ex.academicYear === selectedAcademicYear.value)
 })
 
-onMounted(async () => {
+async function fetchData() {
+  loading.value = true
   await exchangeStore.fetchMySummaries()
-})
+  loading.value = false
+}
+
+onMounted(fetchData)
+onBeforeRouteUpdate(fetchData)
 
 function openCreateModal() {
   showCreateModal.value = true
@@ -89,7 +96,7 @@ async function reRequestCoordinatorRole() {
 
       <!-- Loading skeleton -->
       <div
-        v-if="exchangeStore.loading"
+        v-if="loading"
         class="mt-8 rounded-xl border border-primary/20 bg-dark-2 p-6"
       >
         <div class="animate-pulse space-y-4">
@@ -170,7 +177,7 @@ async function reRequestCoordinatorRole() {
                   :class="statusColorClass[ex.recognitionStatus]"
                 >
                   {{ t('exchange.tabs.recognition') }}:
-                  {{ t(`documentStatus.${ex.recognitionStatus}`) }}
+                  {{ t(`recognitionStatus.${ex.recognitionStatus}`) }}
                 </span>
               </div>
 
@@ -182,6 +189,22 @@ async function reRequestCoordinatorRole() {
                 {{ ex.homeProgramName
                 }}<span v-if="ex.homeProfileName"> &middot; {{ ex.homeProfileName }}</span>
               </p>
+
+              <!-- Row 4: EWP link -->
+              <a
+                v-if="ex.ewpLink"
+                :href="ex.ewpLink"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
+                @click.stop
+              >
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+                  <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+                </svg>
+                {{ t('exchange.ewpLink') }}
+              </a>
             </div>
 
             <svg

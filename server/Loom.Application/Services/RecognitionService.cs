@@ -32,15 +32,9 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         .Include(r => r.Entries)
             .ThenInclude(e => e.RecognizedAsCourse);
 
-    private async Task<ErrorOr<int>> ResolveExchangeIdAsync(Guid guid, CancellationToken ct)
-    {
-        var id = await db.Exchanges.Where(e => e.Guid == guid).Select(e => e.Id).FirstOrDefaultAsync(ct);
-        return id == 0 ? Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.") : id;
-    }
-
     public async Task<ErrorOr<RecognitionResponse>> GetOrCreateRecognitionAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default)
     {
-        var idResult = await ResolveExchangeIdAsync(exchangeGuid, ct);
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
@@ -95,13 +89,17 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
 
     public async Task<ErrorOr<RecognitionResponse>> SaveRecognitionAsync(Guid exchangeGuid, int studentId, SaveRecognitionRequest request, CancellationToken ct = default)
     {
-        var idResult = await ResolveExchangeIdAsync(exchangeGuid, ct);
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await db.Exchanges.FindAsync([exchangeId], ct);
+        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-        if (exchange.StudentId != studentId) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+
+        var requester = await db.Users.FindAsync([studentId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+        var canEdit = exchange.StudentId == studentId || requester.IsCoordinatorFor(exchange.CoordinatorId);
+        if (!canEdit) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
         var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
@@ -146,7 +144,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
 
     public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionStatusAsync(Guid exchangeGuid, int requesterId, UpdateRecognitionStatusRequest request, CancellationToken ct = default)
     {
-        var idResult = await ResolveExchangeIdAsync(exchangeGuid, ct);
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
@@ -177,17 +175,44 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         recognition.Status = newStatus;
         recognition.UpdatedAt = DateTime.UtcNow;
 
-        await db.SaveChangesAsync(ct);
-
-        var statusResponse = recognition.ToResponse();
         if (newStatus == DocumentStatus.Approved)
-            await SaveSnapshotAsync(exchangeId, requesterId, SnapshotPhase.Recognition, statusResponse, ct);
-        return statusResponse;
+        {
+            var recWithEntries = await RecognitionsWithIncludes()
+                .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
+
+            var snapshotData = new RecognitionSnapshotData(
+                recWithEntries?.Entries.Select(e => new RecognitionSnapshotEntry(
+                    e.LearningAgreementEntry.HomeSlot.Course?.Name
+                        ?? e.LearningAgreementEntry.HomeSlot.CourseGroup?.Name
+                        ?? $"Slot {e.LearningAgreementEntry.HomeSlotId}",
+                    e.LearningAgreementEntry.PartnerCourse?.Code,
+                    e.LearningAgreementEntry.PartnerCourse?.Name,
+                    e.EnrollmentStatus,
+                    e.OriginalGrade,
+                    e.EctsGrade,
+                    e.HrGrade,
+                    e.ExamDate,
+                    e.IsRecognized,
+                    e.RecognizedAsCourse?.Name
+                )).ToList() ?? []);
+
+            db.ExchangeSnapshots.Add(new ExchangeSnapshot
+            {
+                ExchangeId = exchangeId,
+                ChangedById = requesterId,
+                Phase = SnapshotPhase.Recognition,
+                Type = SnapshotType.Auto,
+                Snapshot = JsonSerializer.Serialize(snapshotData, JsonHelper.DefaultOptions),
+            });
+        }
+
+        await db.SaveChangesAsync(ct);
+        return recognition.ToResponse();
     }
 
     public async Task<ErrorOr<RecognitionResponse>> SetEntryRecognizedAsync(Guid exchangeGuid, int entryId, int coordinatorId, SetEntryRecognizedRequest request, CancellationToken ct = default)
     {
-        var idResult = await ResolveExchangeIdAsync(exchangeGuid, ct);
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
@@ -214,15 +239,89 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         return await GetOrCreateRecognitionAsync(exchangeGuid, coordinatorId, ct);
     }
 
-    private async Task SaveSnapshotAsync(int exchangeId, int changedById, SnapshotPhase phase, object payload, CancellationToken ct)
+    public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionMessageAsync(Guid exchangeGuid, int requesterId, string? message, CancellationToken ct = default)
     {
-        db.ExchangeSnapshots.Add(new ExchangeSnapshot
-        {
-            ExchangeId = exchangeId,
-            ChangedById = changedById,
-            Phase = phase,
-            Snapshot = JsonSerializer.Serialize(payload, JsonHelper.DefaultOptions),
-        });
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
+        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
+            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+
+        var recognition = await db.Recognitions.FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
+        if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
+
+        recognition.Message = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
+        recognition.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+
+        return await GetOrCreateRecognitionAsync(exchangeGuid, requesterId, ct);
+    }
+
+    public async Task<ErrorOr<List<RecognitionSnapshotSummary>>> GetRecognitionHistoryAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default)
+    {
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
+        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
+            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+
+        var snapshots = await db.ExchangeSnapshots
+            .AsNoTracking()
+            .Include(s => s.ChangedBy)
+            .Where(s => s.ExchangeId == exchangeId && s.Phase == SnapshotPhase.Recognition && s.Type == SnapshotType.Auto)
+            .OrderBy(s => s.CreatedAt)
+            .ToListAsync(ct);
+
+        var result = new List<RecognitionSnapshotSummary>();
+        RecognitionSnapshotData? previous = null;
+
+        foreach (var snapshot in snapshots)
+        {
+            var data = JsonSerializer.Deserialize<RecognitionSnapshotData>(snapshot.Snapshot, JsonHelper.DefaultOptions);
+            if (data is null) continue;
+
+            var diff = previous is not null ? ComputeRecognitionDiff(data, previous) : null;
+            result.Add(new RecognitionSnapshotSummary(snapshot.Id, snapshot.CreatedAt, snapshot.ChangedBy.Name, data.Entries.Count, diff));
+            previous = data;
+        }
+
+        result.Reverse();
+        return result;
+    }
+
+    private static RecognitionSnapshotDiff ComputeRecognitionDiff(RecognitionSnapshotData current, RecognitionSnapshotData previous)
+    {
+        static string Key(RecognitionSnapshotEntry e) => $"{e.HomeSlotLabel}|{e.PartnerCourseCode}";
+
+        var prevByKey = previous.Entries.ToDictionary(Key);
+        var currByKey = current.Entries.ToDictionary(Key);
+
+        var added = currByKey.Where(kv => !prevByKey.ContainsKey(kv.Key)).Select(kv => kv.Value).ToList();
+        var removed = prevByKey.Where(kv => !currByKey.ContainsKey(kv.Key)).Select(kv => kv.Value).ToList();
+        var modified = currByKey
+            .Where(kv => prevByKey.TryGetValue(kv.Key, out var prev) && (
+                prev.EnrollmentStatus != kv.Value.EnrollmentStatus ||
+                prev.OriginalGrade != kv.Value.OriginalGrade ||
+                prev.EctsGrade != kv.Value.EctsGrade ||
+                prev.HrGrade != kv.Value.HrGrade ||
+                prev.IsRecognized != kv.Value.IsRecognized))
+            .Select(kv => new RecognitionSnapshotEntryChange(prevByKey[kv.Key], kv.Value))
+            .ToList();
+
+        return new RecognitionSnapshotDiff(added, removed, modified);
     }
 }

@@ -1,10 +1,11 @@
 ﻿<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { onBeforeRouteUpdate, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
 import { institutionService } from '@/services/institution.service'
-import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
+import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import { useTheme } from '@/composables/useTheme'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { localizedName } from '@/utils/i18n.utils'
 import { userRole } from '../utils/userRole'
@@ -12,6 +13,7 @@ import { userRole } from '../utils/userRole'
 const router = useRouter()
 const authStore = useAuthStore()
 const { t } = useI18n()
+const { theme, toggleTheme } = useTheme()
 
 const isCoordinatorOrAdmin = computed(() => authStore.canActAsCoordinator)
 
@@ -62,7 +64,8 @@ const isJmbagValid = computed(() => /^\d{10}$/.test(jmbag.value))
 const institutionStep = computed(() => (isCoordinatorOrAdmin.value ? 1 : 2))
 const jmbagStep = computed(() => (isCoordinatorOrAdmin.value ? -1 : 3))
 
-onMounted(async () => {
+async function fetchInstitutions() {
+  loadingInstitutions.value = true
   try {
     const res = await institutionService.getHomeInstitutions()
     institutions.value = res.data
@@ -71,7 +74,10 @@ onMounted(async () => {
   } finally {
     loadingInstitutions.value = false
   }
-})
+}
+
+onMounted(fetchInstitutions)
+onBeforeRouteUpdate(fetchInstitutions)
 
 function goNext() {
   errorMessage.value = null
@@ -152,7 +158,21 @@ async function logout() {
       <div class="page-container flex h-16 items-center justify-between !py-0">
         <span class="text-lg font-bold text-white">{{ t('common.appName') }}</span>
         <div class="flex items-center gap-3">
-          <LanguageSwitcher variant="dark" />
+          <button
+            type="button"
+            class="flex h-9 w-9 items-center justify-center rounded-lg text-light/70 transition hover:bg-white/5 hover:text-white"
+            @click="toggleTheme"
+          >
+            <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
+            <svg v-else class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+          </button>
+          <LocaleSwitcher variant="compact" />
           <button
             type="button"
             class="text-sm font-semibold text-light transition hover:text-red-300"

@@ -29,6 +29,7 @@ export interface RecognitionResponse {
   id: string
   exchangeId: string
   status: DocumentStatus
+  message: string | null
   entries: RecognitionEntryResponse[]
   createdAt: string
   updatedAt: string
@@ -49,4 +50,36 @@ export interface SaveRecognitionRequest {
 
 export interface UpdateRecognitionStatusRequest {
   status: DocumentStatus
+}
+
+export interface RecognitionSnapshotEntry {
+  homeSlotLabel: string
+  partnerCourseCode: string | null
+  partnerCourseName: string | null
+  enrollmentStatus: string | null
+  originalGrade: string | null
+  ectsGrade: string | null
+  hrGrade: string | null
+  examDate: string | null
+  isRecognized: boolean | null
+  recognizedAsCourseName: string | null
+}
+
+export interface RecognitionSnapshotEntryChange {
+  before: RecognitionSnapshotEntry
+  after: RecognitionSnapshotEntry
+}
+
+export interface RecognitionSnapshotDiff {
+  added: RecognitionSnapshotEntry[]
+  removed: RecognitionSnapshotEntry[]
+  modified: RecognitionSnapshotEntryChange[]
+}
+
+export interface RecognitionSnapshotSummary {
+  id: number
+  approvedAt: string
+  approvedByName: string
+  entryCount: number
+  diff: RecognitionSnapshotDiff | null
 }
