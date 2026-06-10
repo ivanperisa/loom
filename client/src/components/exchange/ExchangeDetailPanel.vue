@@ -4,6 +4,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import LearningAgreementPanel from '@/components/exchange/LearningAgreementPanel.vue'
 import RecognitionPanel from '@/components/exchange/RecognitionPanel.vue'
+import MappingSchemePanel from '@/components/exchange/MappingSchemePanel.vue'
+import GradesPanel from '@/components/exchange/GradesPanel.vue'
 import NotesModal from '@/components/exchange/NotesModal.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
@@ -30,7 +32,7 @@ const authStore = useAuthStore()
 const { confirm } = useConfirm()
 const { notifySuccess } = useNotification()
 
-const VALID_TABS = ['la', 'recognition'] as const
+const VALID_TABS = ['la', 'recognition', 'mappingScheme', 'grades'] as const
 type ExchangeTab = (typeof VALID_TABS)[number]
 const activeTab = ref<ExchangeTab>(
   VALID_TABS.includes(route.query.tab as ExchangeTab) ? (route.query.tab as ExchangeTab) : 'la',
@@ -282,6 +284,30 @@ onMounted(async () => {
         >
           {{ t('exchange.tabs.recognition') }}
         </button>
+        <button
+          type="button"
+          class="px-4 py-2.5 text-sm font-semibold transition"
+          :class="
+            activeTab === 'mappingScheme'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-light/60 hover:text-primary-light'
+          "
+          @click="activeTab = 'mappingScheme'"
+        >
+          {{ t('exchange.tabs.mappingScheme') }}
+        </button>
+        <button
+          type="button"
+          class="px-4 py-2.5 text-sm font-semibold transition"
+          :class="
+            activeTab === 'grades'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-light/60 hover:text-primary-light'
+          "
+          @click="activeTab = 'grades'"
+        >
+          {{ t('exchange.tabs.grades') }}
+        </button>
       </div>
       <button
         v-if="exchangeStore.serverLearningAgreement"
@@ -311,6 +337,14 @@ onMounted(async () => {
           :exchange-id="exchangeId"
           :home-profile-name="exchangeStore.exchange.homeProfile.name"
         />
+      </template>
+
+      <template v-else-if="activeTab === 'mappingScheme'">
+        <MappingSchemePanel :exchange-id="exchangeId" />
+      </template>
+
+      <template v-else-if="activeTab === 'grades'">
+        <GradesPanel :exchange-id="exchangeId" />
       </template>
     </div>
   </template>

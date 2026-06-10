@@ -38,6 +38,10 @@ export interface LearningAgreementResponse {
   message: string | null
   slots: HomeSlotResponse[]
   entries: LearningAgreementEntryResponse[]
+  lastModifiedAt: string | null
+  lastModifiedByName: string | null
+  signedAt: string | null
+  signedByName: string | null
 }
 
 export interface UpdateLearningAgreementStatusRequest {

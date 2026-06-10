@@ -83,10 +83,6 @@ const courseGroups = computed<CourseGroup[]>(() => {
   return Array.from(map.values())
 })
 
-function groupIsRejected(group: CourseGroup): boolean {
-  return group.entries.some((e) => e.isRecognized === false)
-}
-
 function initGrades() {
   const rec = exchangeStore.serverRecognition
   if (!rec) return
@@ -137,29 +133,8 @@ async function saveAll() {
   }
 }
 
-async function toggleGroupRecognition(group: CourseGroup) {
-  if (!isCoordinator.value || !exchangeStore.serverRecognition) return
-  isSaving.value = true
-  try {
-    const newValue = groupIsRejected(group)
-    for (const entry of group.entries) {
-      await exchangeStore.setEntryRecognized(props.exchangeId, entry.id, newValue)
-    }
-  } finally {
-    isSaving.value = false
-  }
-}
-
-async function submitRecognition() {
-  await exchangeStore.updateRecognitionStatus(props.exchangeId, {
-    status: documentStatus.Submitted,
-  })
-}
-async function approveRecognition() {
+async function signRecognition() {
   await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Approved })
-}
-async function rejectRecognition() {
-  await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Rejected })
 }
 async function backToRecognitionDraft() {
   await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Draft })
@@ -178,8 +153,17 @@ function doExport() {
   )
 }
 
-const rejectedBg = '#FFCCCC'
 const showHistory = ref(false)
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString(locale.value === 'hr' ? 'hr-HR' : 'en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 </script>
 
 <template>
@@ -211,61 +195,18 @@ const showHistory = ref(false)
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             {{ t('recognition.actions.history') }}
           </ActionButton>
-          <!-- Student actions -->
-          <template v-if="!isCoordinator">
+          <!-- Coordinator actions -->
+          <template v-if="isCoordinator">
             <button
               v-if="exchangeStore.serverRecognition!.status === documentStatus.Draft"
               type="button"
-              class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
-              @click="submitRecognition"
+              class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
+              @click="signRecognition"
             >
-              {{ t('recognition.actions.submit') }}
+              {{ t('exchange.actions.sign') }}
             </button>
-            <template
-              v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Submitted"
-            >
-              <span
-                class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60"
-              >
-                {{ t('exchange.status.waitingApproval') }}
-              </span>
-              <button
-                type="button"
-                class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
-                @click="backToRecognitionDraft"
-              >
-                {{ t('recognition.actions.backToDraft') }}
-              </button>
-            </template>
             <button
-              v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Rejected"
-              type="button"
-              class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
-              @click="backToRecognitionDraft"
-            >
-              {{ t('recognition.actions.backToDraft') }}
-            </button>
-          </template>
-          <!-- Coordinator actions -->
-          <template v-if="isCoordinator">
-            <template v-if="exchangeStore.serverRecognition!.status === documentStatus.Submitted">
-              <button
-                type="button"
-                class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
-                @click="approveRecognition"
-              >
-                {{ t('recognition.actions.contractSigned') }}
-              </button>
-              <button
-                type="button"
-                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
-                @click="rejectRecognition"
-              >
-                {{ t('recognition.actions.reject') }}
-              </button>
-            </template>
-            <button
-              v-if="exchangeStore.serverRecognition!.status !== documentStatus.Draft"
+              v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Approved"
               type="button"
               class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
               @click="backToRecognitionDraft"
@@ -274,6 +215,21 @@ const showHistory = ref(false)
             </button>
           </template>
         </div>
+      </div>
+
+      <!-- Audit info -->
+      <div
+        v-if="exchangeStore.serverRecognition?.lastModifiedAt || exchangeStore.serverRecognition?.signedAt"
+        class="-mt-2 mb-4 flex flex-col gap-y-1 text-xs text-light/50"
+      >
+        <span v-if="exchangeStore.serverRecognition?.lastModifiedAt">
+          {{ t('exchange.audit.lastModified') }}: {{ formatDate(exchangeStore.serverRecognition.lastModifiedAt) }}
+          <template v-if="exchangeStore.serverRecognition?.lastModifiedByName"> — {{ exchangeStore.serverRecognition.lastModifiedByName }}</template>
+        </span>
+        <span v-if="exchangeStore.serverRecognition?.signedAt">
+          {{ t('exchange.audit.signed') }}: {{ formatDate(exchangeStore.serverRecognition.signedAt) }}
+          <template v-if="exchangeStore.serverRecognition?.signedByName"> — {{ exchangeStore.serverRecognition.signedByName }}</template>
+        </span>
       </div>
 
       <!-- Unsaved changes bar -->
@@ -349,27 +305,9 @@ const showHistory = ref(false)
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td rec-td--center rec-td--bold"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
-                  <div class="mb-1">{{ group.partnerCourseCode }}</div>
-                  <div v-if="isCoordinator">
-                    <button
-                      type="button"
-                      @click="toggleGroupRecognition(group)"
-                      class="w-full rounded border py-1 px-0.5 text-[9px] uppercase tracking-tighter transition-all active:scale-95"
-                      :class="
-                        groupIsRejected(group)
-                          ? 'bg-green-600 border-green-700 text-white shadow-sm'
-                          : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white'
-                      "
-                    >
-                      {{
-                        groupIsRejected(group)
-                          ? t('recognition.actions.approve')
-                          : t('recognition.actions.reject')
-                      }}
-                    </button>
-                  </div>
+                  {{ group.partnerCourseCode }}
                 </td>
 
                 <!-- B: Naziv engleski -->
@@ -377,7 +315,7 @@ const showHistory = ref(false)
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ group.partnerCourseName }}
                 </td>
@@ -387,7 +325,7 @@ const showHistory = ref(false)
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"
@@ -403,7 +341,7 @@ const showHistory = ref(false)
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ group.partnerCourseHours ?? '—' }}
                 </td>
@@ -413,7 +351,7 @@ const showHistory = ref(false)
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td rec-td--center rec-td--bold"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ group.partnerCourseEcts }}
                 </td>
@@ -421,7 +359,7 @@ const showHistory = ref(false)
                 <!-- G: Rbr. -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ idx + 1 }}
                 </td>
@@ -429,7 +367,7 @@ const showHistory = ref(false)
                 <!-- H: Priznaje se za predmet -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ entry.homeSlotCourseIsvuCode }}
                 </td>
@@ -437,7 +375,7 @@ const showHistory = ref(false)
                 <!-- I: Naziv -->
                 <td
                   class="rec-td"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ entry.homeSlotCourseName }}
                 </td>
@@ -445,7 +383,7 @@ const showHistory = ref(false)
                 <!-- J: Izb. grupa -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ entry.homeSlotCourseGroupIsvuCode ?? '—' }}
                 </td>
@@ -453,7 +391,7 @@ const showHistory = ref(false)
                 <!-- K: Naziv izb. grupe -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.homeSlotColor }"
+                  :style="{ background: entry.homeSlotColor }"
                 >
                   {{ entry.homeSlotCourseGroupName || t('recognition.col.mandatoryCourse') }}
                 </td>
@@ -461,7 +399,7 @@ const showHistory = ref(false)
                 <!-- L: Semestar -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ entry.homeSlotSemester }}
                 </td>
@@ -469,7 +407,7 @@ const showHistory = ref(false)
                 <!-- M: Priznato ECTS-a -->
                 <td
                   class="rec-td rec-td--center rec-td--bold"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.homeSlotColor }"
+                  :style="{ background: entry.homeSlotColor }"
                 >
                   {{ entry.awardedEcts }}
                 </td>
@@ -479,7 +417,7 @@ const showHistory = ref(false)
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
+                  style="background: #ddd9c3"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"
@@ -494,7 +432,7 @@ const showHistory = ref(false)
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
+                  style="background: #ddd9c3"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"
@@ -509,7 +447,7 @@ const showHistory = ref(false)
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
+                  style="background: #ddd9c3"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"
@@ -524,7 +462,7 @@ const showHistory = ref(false)
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
+                  style="background: #ddd9c3"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"

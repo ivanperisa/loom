@@ -16,10 +16,23 @@ public class RecognitionConfiguration : IEntityTypeConfiguration<Recognition>
         builder.Property(x => x.Message).HasColumnName("message");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
+        builder.Property(x => x.LastModifiedById).HasColumnName("updated_by");
+        builder.Property(x => x.SignedById).HasColumnName("approved_by");
+        builder.Property(x => x.SignedAt).HasColumnName("approved_at");
 
         builder.HasOne(x => x.Exchange)
             .WithOne(x => x.Recognition)
             .HasForeignKey<Recognition>(x => x.ExchangeId);
+
+        builder.HasOne(x => x.LastModifiedByUser)
+            .WithMany()
+            .HasForeignKey(x => x.LastModifiedById)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.SignedByUser)
+            .WithMany()
+            .HasForeignKey(x => x.SignedById)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasIndex(x => x.ExchangeId).IsUnique();
     }

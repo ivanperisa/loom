@@ -54,9 +54,15 @@ const mismatches = computed((): Mismatch[] => {
   return result
 })
 
-const applicableCount = computed(
-  () => props.dto.mappings.filter((m) => m.partnerCourse !== null).length,
-)
+const applicableCount = computed(() => {
+  const ids = new Set(
+    props.dto.mappings
+      .filter((m) => m.partnerCourse !== null)
+      .map((m) => m.partnerCourse!.id),
+  )
+  return ids.size
+})
+
 
 async function apply() {
   try {
@@ -157,7 +163,7 @@ async function apply() {
             :style="(applicableCount === 0 || mismatches.length > 0) ? 'opacity: 0.4; cursor: not-allowed;' : ''"
             @click="apply"
           >
-            {{ t('la.import.apply', { applied: applicableCount, total: dto.mappings.length }) }}
+            {{ t('la.import.apply') }}
           </ActionButton>
         </div>
       </div>

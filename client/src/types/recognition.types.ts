@@ -33,6 +33,10 @@ export interface RecognitionResponse {
   entries: RecognitionEntryResponse[]
   createdAt: string
   updatedAt: string
+  lastModifiedAt: string | null
+  lastModifiedByName: string | null
+  signedAt: string | null
+  signedByName: string | null
 }
 
 export interface UpsertRecognitionEntryRequest {

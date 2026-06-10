@@ -10,5 +10,12 @@ public class LearningAgreement : AuditableEntity
     public DocumentStatus Status { get; set; }
     public string? Message { get; set; }
 
+    public int? LastModifiedById { get; set; }
+    public User? LastModifiedByUser { get; set; }
+
+    public int? SignedById { get; set; }
+    public User? SignedByUser { get; set; }
+    public DateTime? SignedAt { get; set; }
+
     public ICollection<LearningAgreementEntry> Entries { get; set; } = null!;
 }

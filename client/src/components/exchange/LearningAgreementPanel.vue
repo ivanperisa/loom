@@ -70,16 +70,6 @@ async function discardLa() {
   await exchangeStore.fetchLearningAgreement(props.exchangeId)
 }
 
-async function submitExchange() {
-  if (exchangeStore.isDirty) {
-    await exchangeStore.saveLearningAgreement(props.exchangeId)
-  }
-  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
-    status: documentStatus.Submitted,
-  })
-  await exchangeStore.fetchExchange(props.exchangeId)
-}
-
 async function backToDraft() {
   await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
     status: documentStatus.Draft,
@@ -87,28 +77,20 @@ async function backToDraft() {
   await exchangeStore.fetchExchange(props.exchangeId)
 }
 
-async function approveExchange() {
+async function signExchange() {
   await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
     status: documentStatus.Approved,
   })
   await exchangeStore.fetchExchange(props.exchangeId)
 }
 
-async function rejectExchange() {
-  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
-    status: documentStatus.Rejected,
-  })
-  await exchangeStore.fetchExchange(props.exchangeId)
-}
-
 const TOTAL_COLS = 30
 const SEMESTERS = [1, 2, 3, 4]
-const modes: SlotMode[] = [slotMode.AtHome, slotMode.AtExchange, slotMode.AfterExchange]
+const modes: SlotMode[] = [slotMode.AtHome, slotMode.AtExchange]
 
-const modeOutlineColor: Record<SlotMode, string> = {
+const modeOutlineColor: Record<string, string> = {
   AtHome: '#4472C4',
   AtExchange: '#FF0000',
-  AfterExchange: '#000000',
 }
 
 const isDragging = computed(() => !!exchangeStore.draggingCourse || !!exchangeStore.draggingSlotMapping)
@@ -209,11 +191,12 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
     }
   }
 
-  const outline = state ? `3px solid ${modeOutlineColor[state.mode]}` : `1px solid #aaa`
+  const showOutline = !!state && state.mode !== slotMode.AfterExchange
+  const outline = showOutline ? `3px solid ${modeOutlineColor[state!.mode]}` : `1px solid #aaa`
   return {
     backgroundColor: bg,
     outline,
-    outlineOffset: state ? '-3px' : '-1px',
+    outlineOffset: showOutline ? '-3px' : '-1px',
     cursor: !isEditable.value || isThesisSlot(slot) ? 'default' : 'pointer',
   }
 }
@@ -278,7 +261,7 @@ async function cycleMode(slot: HomeSlotResponse) {
     exchangeStore.localSetSlotMode(slot.id, slotMode.AtHome)
   } else {
     const currentIndex = modes.indexOf(state.mode)
-    if (currentIndex === modes.length - 1) {
+    if (currentIndex === -1 || currentIndex === modes.length - 1) {
       exchangeStore.localRemoveSlotState(slot.id)
     } else {
       exchangeStore.localSetSlotMode(slot.id, modes[currentIndex + 1]!)
@@ -325,6 +308,16 @@ function slotSubLabel(slot: HomeSlotResponse): string {
       : slotDisplayName(slot)
   }
   return slot.courseTypeName
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString(locale.value === 'hr' ? 'hr-HR' : 'en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 </script>
 
@@ -381,66 +374,18 @@ function slotSubLabel(slot: HomeSlotResponse): string {
         {{ homeProfileName }}
       </span>
       <div class="flex flex-wrap gap-2">
-        <!-- Student actions -->
-        <template v-if="!isCoordinator">
+        <!-- Coordinator actions -->
+        <template v-if="isCoordinator">
           <button
             v-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Draft"
             type="button"
-            class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
-            @click="submitExchange"
+            class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
+            @click="signExchange"
           >
-            {{ t('exchange.actions.submit') }}
+            {{ t('exchange.actions.sign') }}
           </button>
-          <template
-            v-else-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Submitted"
-          >
-            <span
-              class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60"
-            >
-              {{ t('exchange.status.waitingApproval') }}
-            </span>
-            <button
-              type="button"
-              class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
-              @click="backToDraft"
-            >
-              {{ t('exchange.actions.backToDraft') }}
-            </button>
-          </template>
           <button
-            v-else-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Rejected"
-            type="button"
-            class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
-            @click="backToDraft"
-          >
-            {{ t('exchange.actions.backToDraft') }}
-          </button>
-        </template>
-        <!-- Coordinator actions -->
-        <template v-if="isCoordinator">
-          <template
-            v-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Submitted"
-          >
-            <button
-              type="button"
-              class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
-              @click="approveExchange"
-            >
-              {{ t('exchange.actions.approve') }}
-            </button>
-            <button
-              type="button"
-              class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
-              @click="rejectExchange"
-            >
-              {{ t('exchange.actions.reject') }}
-            </button>
-          </template>
-          <button
-            v-if="
-              exchangeStore.serverLearningAgreement?.status === documentStatus.Approved ||
-              exchangeStore.serverLearningAgreement?.status === documentStatus.Rejected
-            "
+            v-else-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Approved"
             type="button"
             class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
             @click="backToDraft"
@@ -449,6 +394,21 @@ function slotSubLabel(slot: HomeSlotResponse): string {
           </button>
         </template>
       </div>
+    </div>
+
+    <!-- Audit info -->
+    <div
+      v-if="exchangeStore.serverLearningAgreement?.lastModifiedAt || exchangeStore.serverLearningAgreement?.signedAt"
+      class="-mt-2 mb-4 flex flex-col gap-y-1 text-xs text-light/50"
+    >
+      <span v-if="exchangeStore.serverLearningAgreement?.lastModifiedAt">
+        {{ t('exchange.audit.lastModified') }}: {{ formatDate(exchangeStore.serverLearningAgreement.lastModifiedAt) }}
+        <template v-if="exchangeStore.serverLearningAgreement?.lastModifiedByName"> — {{ exchangeStore.serverLearningAgreement.lastModifiedByName }}</template>
+      </span>
+      <span v-if="exchangeStore.serverLearningAgreement?.signedAt">
+        {{ t('exchange.audit.signed') }}: {{ formatDate(exchangeStore.serverLearningAgreement.signedAt) }}
+        <template v-if="exchangeStore.serverLearningAgreement?.signedByName"> — {{ exchangeStore.serverLearningAgreement.signedByName }}</template>
+      </span>
     </div>
 
     <UnsavedChangesBar
@@ -511,18 +471,7 @@ function slotSubLabel(slot: HomeSlotResponse): string {
                       background: theme === 'light' ? `${ectsColor(slot)}18` : 'rgba(255,255,255,0.08)',
                     }"
                   >
-                    {{ ectsLabel(slot) }} ECTS
-                  </span>
-                  <span
-                    v-if="lineFor(slot.id)"
-                    style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 600; white-space: nowrap;"
-                    :style="{
-                      color: modeOutlineColor[lineFor(slot.id)!.mode],
-                      border: `1px solid ${modeOutlineColor[lineFor(slot.id)!.mode]}`,
-                      background: 'rgba(255,255,255,0.6)',
-                    }"
-                  >
-                    {{ t(`slotMode.${lineFor(slot.id)!.mode}`) }}
+                    {{ ectsLabel(slot) }}
                   </span>
                 </div>
               </div>

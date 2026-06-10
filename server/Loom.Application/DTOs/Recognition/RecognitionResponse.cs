@@ -7,5 +7,9 @@ public record RecognitionResponse(
     string? Message,
     List<RecognitionEntryResponse> Entries,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    DateTime? LastModifiedAt,
+    string? LastModifiedByName,
+    DateTime? SignedAt,
+    string? SignedByName
 );

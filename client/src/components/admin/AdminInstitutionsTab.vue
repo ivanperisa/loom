@@ -27,11 +27,14 @@ const institutionSearch = ref('')
 const institutionPage = ref(1)
 const courseSearch = ref<Record<string, string>>({})
 const coursePage = ref<Record<string, number>>({})
+const showDeleted = ref(false)
 
 const filteredInstitutions = computed(() => {
   const q = institutionSearch.value.trim().toLowerCase()
-  if (!q) return institutions.value
-  return institutions.value.filter(i =>
+  let list = institutions.value
+  if (!showDeleted.value) list = list.filter(i => !i.isDeleted)
+  if (!q) return list
+  return list.filter(i =>
     i.name.toLowerCase().includes(q) ||
     i.nameHr?.toLowerCase().includes(q) ||
     i.country.toLowerCase().includes(q) ||
@@ -39,6 +42,7 @@ const filteredInstitutions = computed(() => {
     i.erasmusCode?.toLowerCase().includes(q)
   )
 })
+
 
 const totalInstPages = computed(() => Math.max(1, Math.ceil(filteredInstitutions.value.length / INST_PER_PAGE)))
 
@@ -50,14 +54,17 @@ const pagedInstitutions = computed(() => {
 function onInstSearch() { institutionPage.value = 1 }
 
 function filteredCourses(institutionId: string) {
-  const courses = loadedCourses.value[institutionId] ?? []
+  let courses = loadedCourses.value[institutionId] ?? []
+  if (!showDeleted.value) courses = courses.filter(c => !c.isDeleted)
   const q = (courseSearch.value[institutionId] ?? '').trim().toLowerCase()
-  if (!q) return courses
-  return courses.filter(c =>
-    c.code.toLowerCase().includes(q) ||
-    c.name.toLowerCase().includes(q) ||
-    c.nameHr?.toLowerCase().includes(q)
-  )
+  if (q) {
+    courses = courses.filter(c =>
+      c.code.toLowerCase().includes(q) ||
+      c.name.toLowerCase().includes(q) ||
+      c.nameHr?.toLowerCase().includes(q)
+    )
+  }
+  return [...courses].sort((a, b) => a.name.localeCompare(b.name))
 }
 
 function pagedCourses(institutionId: string) {
@@ -80,6 +87,7 @@ const loadingCourses = ref<Set<string>>(new Set())
 
 const showAddInstitution = ref(false)
 const addingInstitution = ref(false)
+const editingInstitutionId = ref<string | null>(null)
 const institutionForm = ref({ name: '', nameHr: '', country: '', city: '', erasmusCode: '' })
 
 const courseModal = ref<{ institutionId: string; institutionName: string; mode: 'create' | 'edit'; course?: PartnerCourseResponse; initialName?: string } | null>(null)
@@ -127,7 +135,7 @@ async function loadInstitutions() {
   loading.value = true
   error.value = null
   try {
-    const res = await institutionService.getPartnerInstitutions()
+    const res = await institutionService.getPartnerInstitutions(true)
     institutions.value = res.data
   } catch {
     error.value = t('admin.institutions.saveError')
@@ -136,36 +144,63 @@ async function loadInstitutions() {
   }
 }
 
+async function loadCourses(institutionId: string) {
+  loadingCourses.value.add(institutionId)
+  try {
+    const res = await institutionService.getPartnerCoursesByInstitution(institutionId, true)
+    loadedCourses.value[institutionId] = res.data
+  } finally {
+    loadingCourses.value.delete(institutionId)
+  }
+}
+
 async function toggleInstitution(inst: PartnerInstitutionAdminResponse) {
   if (expandedInstitutions.value.has(inst.id)) { expandedInstitutions.value.delete(inst.id); return }
   expandedInstitutions.value.add(inst.id)
   if (!loadedCourses.value[inst.id]) {
-    loadingCourses.value.add(inst.id)
-    try {
-      const res = await institutionService.getPartnerCoursesByInstitution(inst.id)
-      loadedCourses.value[inst.id] = res.data
-    } finally {
-      loadingCourses.value.delete(inst.id)
-    }
+    await loadCourses(inst.id)
   }
 }
 
 function resetInstitutionForm() {
   institutionForm.value = { name: '', nameHr: '', country: '', city: '', erasmusCode: '' }
+  editingInstitutionId.value = null
 }
 
-async function addInstitution() {
+function openEditInstitution(inst: PartnerInstitutionAdminResponse) {
+  editingInstitutionId.value = inst.id
+  institutionForm.value = {
+    name: inst.name,
+    nameHr: inst.nameHr ?? '',
+    country: inst.country,
+    city: inst.city ?? '',
+    erasmusCode: inst.erasmusCode ?? '',
+  }
+  showAddInstitution.value = true
+}
+
+async function submitInstitutionForm() {
   const f = institutionForm.value
   if (!f.name.trim() || !f.country.trim()) return
   addingInstitution.value = true
   error.value = null
   try {
-    const res = await institutionService.createPartnerInstitution({
-      name: f.name.trim(), nameHr: f.nameHr.trim() || f.name.trim(),
-      country: f.country.trim(), city: f.city.trim() || undefined,
-      erasmusCode: f.erasmusCode.trim() || undefined,
-    })
-    institutions.value.push(res.data)
+    if (editingInstitutionId.value) {
+      const res = await institutionService.updatePartnerInstitution(editingInstitutionId.value, {
+        name: f.name.trim(), nameHr: f.nameHr.trim() || f.name.trim(),
+        country: f.country.trim(), city: f.city.trim() || undefined,
+        erasmusCode: f.erasmusCode.trim() || undefined,
+      })
+      const idx = institutions.value.findIndex(i => i.id === editingInstitutionId.value)
+      if (idx !== -1) institutions.value[idx] = res.data
+    } else {
+      const res = await institutionService.createPartnerInstitution({
+        name: f.name.trim(), nameHr: f.nameHr.trim() || f.name.trim(),
+        country: f.country.trim(), city: f.city.trim() || undefined,
+        erasmusCode: f.erasmusCode.trim() || undefined,
+      })
+      institutions.value.push(res.data)
+    }
     institutions.value.sort((a, b) => a.country.localeCompare(b.country) || a.name.localeCompare(b.name))
     showAddInstitution.value = false
     resetInstitutionForm()
@@ -182,10 +217,23 @@ async function deleteInstitution(id: string) {
   error.value = null
   try {
     await institutionService.deletePartnerInstitution(id)
-    institutions.value = institutions.value.filter(i => i.id !== id)
+    await loadInstitutions()
   } catch (e: unknown) {
     const err = e as { response?: { status?: number } }
     error.value = err.response?.status === 409 ? t('admin.institutions.hasExchanges') : t('admin.institutions.saveError')
+  } finally {
+    deletingInstitution.value = null
+  }
+}
+
+async function restoreInstitution(id: string) {
+  deletingInstitution.value = id
+  error.value = null
+  try {
+    await institutionService.restorePartnerInstitution(id)
+    await loadInstitutions()
+  } catch {
+    error.value = t('admin.institutions.saveError')
   } finally {
     deletingInstitution.value = null
   }
@@ -241,10 +289,20 @@ async function deleteCourse(institutionId: string, courseId: string) {
   error.value = null
   try {
     await institutionService.deletePartnerCourse(courseId)
-    if (loadedCourses.value[institutionId])
-      loadedCourses.value[institutionId] = loadedCourses.value[institutionId].filter(c => c.id !== courseId)
-    const inst = institutions.value.find(i => i.id === institutionId)
-    if (inst) inst.courseCount--
+    await loadCourses(institutionId)
+  } catch {
+    error.value = t('admin.institutions.saveError')
+  } finally {
+    deletingCourse.value = null
+  }
+}
+
+async function restoreCourse(institutionId: string, courseId: string) {
+  deletingCourse.value = courseId
+  error.value = null
+  try {
+    await institutionService.restorePartnerCourse(courseId)
+    await loadCourses(institutionId)
   } catch {
     error.value = t('admin.institutions.saveError')
   } finally {
@@ -293,7 +351,7 @@ function semesterLabel(semester: string) {
       <button
         type="button"
         class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
-        @click="showAddInstitution = !showAddInstitution"
+        @click="resetInstitutionForm(); showAddInstitution = !showAddInstitution"
       >
         {{ t('admin.institutions.addButton') }}
       </button>
@@ -304,7 +362,7 @@ function semesterLabel(semester: string) {
     </p>
 
     <div v-if="showAddInstitution" class="rounded-xl border border-primary/20 bg-dark-2 p-5">
-      <h3 class="mb-4 text-sm font-semibold text-primary-light">{{ t('admin.institutions.addTitle') }}</h3>
+      <h3 class="mb-4 text-sm font-semibold text-primary-light">{{ editingInstitutionId ? t('admin.institutions.editTitle') : t('admin.institutions.addTitle') }}</h3>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div>
           <label class="mb-1 block text-xs text-light/60">{{ t('admin.institutions.name') }} *</label>
@@ -338,9 +396,9 @@ function semesterLabel(semester: string) {
           type="button"
           class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
           :disabled="addingInstitution || !institutionForm.name.trim() || !institutionForm.country.trim()"
-          @click="addInstitution"
+          @click="submitInstitutionForm"
         >
-          {{ addingInstitution ? t('common.loading') : t('admin.institutions.save') }}
+          {{ addingInstitution ? t('common.loading') : (editingInstitutionId ? t('admin.institutions.saveEdit') : t('admin.institutions.save')) }}
         </button>
         <button type="button" class="rounded-lg border border-white/10 px-4 py-2 text-sm text-light/60 transition hover:text-light" @click="showAddInstitution = false; resetInstitutionForm()">
           {{ t('admin.institutions.cancel') }}
@@ -348,11 +406,18 @@ function semesterLabel(semester: string) {
       </div>
     </div>
 
-    <SearchInput
-      v-model="institutionSearch"
-      :placeholder="t('admin.institutions.searchInstitutions')"
-      @update:model-value="onInstSearch"
-    />
+    <div class="flex items-center gap-3">
+      <SearchInput
+        v-model="institutionSearch"
+        :placeholder="t('admin.institutions.searchInstitutions')"
+        class="flex-1"
+        @update:model-value="onInstSearch"
+      />
+      <label class="flex shrink-0 items-center gap-2 text-xs text-light/60">
+        <input v-model="showDeleted" type="checkbox" class="accent-primary" />
+        {{ t('admin.institutions.showDeleted') }}
+      </label>
+    </div>
 
     <div v-if="loading" class="space-y-3">
       <div v-for="i in 4" :key="i" class="h-16 animate-pulse rounded-xl bg-dark-2"></div>
@@ -364,7 +429,7 @@ function semesterLabel(semester: string) {
 
     <!-- Institutions list -->
     <div v-else class="space-y-3">
-      <div v-for="inst in pagedInstitutions" :key="inst.id" class="rounded-xl border border-primary/20 bg-dark-2">
+      <div v-for="inst in pagedInstitutions" :key="inst.id" class="rounded-xl border border-primary/20 bg-dark-2" :class="inst.isDeleted ? 'opacity-60' : ''">
 
         <!-- Institution header -->
         <div class="flex items-center gap-3 px-5 py-4">
@@ -376,6 +441,7 @@ function semesterLabel(semester: string) {
               <div class="flex flex-wrap items-baseline gap-x-2">
                 <p class="font-semibold text-light">{{ inst.name }}</p>
                 <span v-if="inst.erasmusCode" class="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-xs text-primary-light">{{ inst.erasmusCode }}</span>
+                <span v-if="inst.isDeleted" class="rounded border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-xs text-red-300">{{ t('admin.institutions.deleted') }}</span>
               </div>
               <p v-if="inst.nameHr && inst.nameHr !== inst.name" class="text-xs text-light/40">{{ inst.nameHr }}</p>
               <p class="mt-0.5 flex items-center gap-1 text-xs text-light/40">
@@ -390,13 +456,23 @@ function semesterLabel(semester: string) {
             </div>
           </button>
           <div class="flex flex-shrink-0 items-center gap-2">
-            <button type="button" class="rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-light transition hover:bg-primary/10 disabled:opacity-40" :disabled="!!deletingInstitution" @click="openCourseModal(inst, courseSearch[inst.id] || undefined)">
-              + {{ t('admin.institutions.addCourse') }}
-            </button>
-            <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-red-400/20 text-red-400/60 transition hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40" :disabled="deletingInstitution === inst.id" :title="t('admin.institutions.deleteInstitution')" @click="deleteInstitution(inst.id)">
-              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+            <template v-if="!inst.isDeleted">
+              <button type="button" class="rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-light transition hover:bg-primary/10 disabled:opacity-40" :disabled="!!deletingInstitution" @click="openCourseModal(inst, courseSearch[inst.id] || undefined)">
+                + {{ t('admin.institutions.addCourse') }}
+              </button>
+              <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-primary/20 text-light/60 transition hover:border-primary/50 hover:bg-primary/10 hover:text-primary-light disabled:opacity-40" :disabled="!!deletingInstitution" :title="t('admin.institutions.editInstitution')" @click="openEditInstitution(inst)">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-red-400/20 text-red-400/60 transition hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40" :disabled="deletingInstitution === inst.id" :title="t('admin.institutions.deleteInstitution')" @click="deleteInstitution(inst.id)">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </template>
+            <button v-else type="button" class="rounded-lg border border-green-400/30 px-3 py-1.5 text-xs font-medium text-green-300 transition hover:bg-green-500/10 disabled:opacity-40" :disabled="deletingInstitution === inst.id" @click="restoreInstitution(inst.id)">
+              {{ t('admin.institutions.restore') }}
             </button>
           </div>
         </div>
@@ -451,6 +527,7 @@ function semesterLabel(semester: string) {
                   v-for="course in pagedCourses(inst.id)"
                   :key="course.id"
                   class="flex items-center justify-between py-1.5"
+                  :class="course.isDeleted ? 'opacity-60' : ''"
                 >
                   <div class="flex min-w-0 items-center gap-3">
                     <input
@@ -464,6 +541,7 @@ function semesterLabel(semester: string) {
                     <div class="min-w-0">
                       <span class="text-xs text-light">{{ course.name }}</span>
                       <span v-if="course.nameHr" class="ml-2 text-xs text-light/40">/ {{ course.nameHr }}</span>
+                      <span v-if="course.isDeleted" class="ml-2 rounded border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">{{ t('admin.institutions.deleted') }}</span>
                     </div>
                   </div>
                   <div class="flex flex-shrink-0 items-center gap-3 text-xs text-light/40">
@@ -471,26 +549,37 @@ function semesterLabel(semester: string) {
                     <span class="w-28 flex-shrink-0 truncate rounded bg-white/5 px-2 py-0.5 text-left text-xs text-light/40">{{ levelLabel(course.level) }}</span>
                     <span class="font-medium text-light/60">{{ course.ects }} ECTS</span>
                     <button
+                      v-if="course.isDeleted"
                       type="button"
-                      class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light disabled:opacity-40"
-                      :title="t('admin.institutions.editCourse')"
-                      @click="openEditCourseModal(inst, course)"
-                    >
-                      <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      class="flex h-6 w-6 items-center justify-center rounded text-red-400/50 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
+                      class="rounded border border-green-400/30 px-2 py-0.5 text-xs font-medium text-green-300 transition hover:bg-green-500/10 disabled:opacity-40"
                       :disabled="deletingCourse === course.id"
-                      :title="t('admin.institutions.deleteCourse')"
-                      @click="deleteCourse(inst.id, course.id)"
+                      @click="restoreCourse(inst.id, course.id)"
                     >
-                      <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      {{ t('admin.institutions.restore') }}
                     </button>
+                    <template v-else>
+                      <button
+                        type="button"
+                        class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light disabled:opacity-40"
+                        :title="t('admin.institutions.editCourse')"
+                        @click="openEditCourseModal(inst, course)"
+                      >
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        class="flex h-6 w-6 items-center justify-center rounded text-red-400/50 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
+                        :disabled="deletingCourse === course.id"
+                        :title="t('admin.institutions.deleteCourse')"
+                        @click="deleteCourse(inst.id, course.id)"
+                      >
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </template>
                   </div>
                 </div>
               </div>

@@ -30,7 +30,9 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
                 .ThenInclude(e => e.HomeSlot)
                     .ThenInclude(s => s.CourseGroup)
         .Include(r => r.Entries)
-            .ThenInclude(e => e.RecognizedAsCourse);
+            .ThenInclude(e => e.RecognizedAsCourse)
+        .Include(r => r.LastModifiedByUser)
+        .Include(r => r.SignedByUser);
 
     public async Task<ErrorOr<RecognitionResponse>> GetOrCreateRecognitionAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default)
     {
@@ -137,6 +139,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         }
 
         recognition.UpdatedAt = DateTime.UtcNow;
+        recognition.LastModifiedById = studentId;
         await db.SaveChangesAsync(ct);
 
         return await GetOrCreateRecognitionAsync(exchangeGuid, studentId, ct);
@@ -174,6 +177,18 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
 
         recognition.Status = newStatus;
         recognition.UpdatedAt = DateTime.UtcNow;
+        recognition.LastModifiedById = requesterId;
+
+        if (newStatus == DocumentStatus.Approved)
+        {
+            recognition.SignedAt = DateTime.UtcNow;
+            recognition.SignedById = requesterId;
+        }
+        else if (newStatus == DocumentStatus.Draft)
+        {
+            recognition.SignedAt = null;
+            recognition.SignedById = null;
+        }
 
         if (newStatus == DocumentStatus.Approved)
         {
@@ -259,6 +274,7 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
 
         recognition.Message = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
         recognition.UpdatedAt = DateTime.UtcNow;
+        recognition.LastModifiedById = requesterId;
         await db.SaveChangesAsync(ct);
 
         return await GetOrCreateRecognitionAsync(exchangeGuid, requesterId, ct);

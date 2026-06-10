@@ -23,6 +23,8 @@ public class InstitutionConfiguration : IEntityTypeConfiguration<Institution>
             .HasMaxLength(10)
             .HasDefaultValue(InstitutionType.Partner)
             .IsRequired();
+        builder.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false).IsRequired();
+        builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
     }
 }

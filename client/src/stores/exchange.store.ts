@@ -278,9 +278,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   ) {
     const res = await learningAgreementService.updateStatus(exchangeId, request, guestMode.value)
     exchange.value = res.data
-    if (serverLearningAgreement.value) {
-      serverLearningAgreement.value = { ...serverLearningAgreement.value, status: request.status }
-    }
+    await fetchLearningAgreement(exchangeId)
   }
 
   async function updateCoordinatorMessage(
@@ -323,11 +321,6 @@ export const useExchangeStore = defineStore('exchange', () => {
     request: UpdateRecognitionStatusRequest,
   ) {
     const res = await recognitionService.updateRecognitionStatus(exchangeId, request, guestMode.value)
-    serverRecognition.value = res.data
-  }
-
-  async function setEntryRecognized(exchangeId: string, entryId: string, isRecognized: boolean | null) {
-    const res = await recognitionService.setEntryRecognized(exchangeId, entryId, isRecognized, guestMode.value)
     serverRecognition.value = res.data
   }
 
@@ -407,7 +400,6 @@ export const useExchangeStore = defineStore('exchange', () => {
     fetchRecognition,
     saveRecognition,
     updateRecognitionStatus,
-    setEntryRecognized,
     updateRecognitionMessage,
     exportMappings,
     importMappings,

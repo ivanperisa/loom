@@ -66,6 +66,10 @@ router.beforeEach(async (to) => {
     return '/'
   }
 
+  if (to.path === '/' && authStore.isLoggedIn) {
+    return '/home'
+  }
+
   if (to.meta.requiresOnboarding && !authStore.isOnboarded) {
     return '/onboarding'
   }

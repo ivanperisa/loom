@@ -17,8 +17,6 @@ export const recognitionService = {
     api.put<RecognitionResponse>(`${basePath(exchangeId, guest)}/recognition/entries`, request),
   updateRecognitionStatus: (exchangeId: string, request: UpdateRecognitionStatusRequest, guest = false) =>
     api.patch<RecognitionResponse>(`${basePath(exchangeId, guest)}/recognition/status`, request),
-  setEntryRecognized: (exchangeId: string, entryId: string, isRecognized: boolean | null, guest = false) =>
-    api.patch<RecognitionResponse>(`${basePath(exchangeId, guest)}/recognition/entries/${entryId}/recognized`, { isRecognized }),
   updateMessage: (exchangeId: string, message: string | null, guest = false) =>
     api.patch<RecognitionResponse>(`${basePath(exchangeId, guest)}/recognition/message`, { message }),
   getHistory: (exchangeId: string, guest = false) =>

@@ -5,5 +5,9 @@ public record LearningAgreementResponse(
     string Status,
     string? Message,
     List<HomeSlotResponse> Slots,
-    List<LearningAgreementEntryResponse> Entries
+    List<LearningAgreementEntryResponse> Entries,
+    DateTime? LastModifiedAt,
+    string? LastModifiedByName,
+    DateTime? SignedAt,
+    string? SignedByName
 );

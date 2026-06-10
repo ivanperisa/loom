@@ -27,17 +27,17 @@ public class InstitutionController(IInstitutionService institutionService) : Api
     }
 
     [HttpGet("partner")]
-    public async Task<IActionResult> GetPartnerInstitutions(CancellationToken ct)
+    public async Task<IActionResult> GetPartnerInstitutions([FromQuery] bool includeDeleted, CancellationToken ct)
     {
-        var result = await institutionService.GetPartnerInstitutionsAsync(ct);
+        var result = await institutionService.GetPartnerInstitutionsAsync(includeDeleted, ct);
         return Match(result, Ok);
     }
 
     [AllowAnonymous]
     [HttpGet("partner/{institutionId:int}/courses")]
-    public async Task<IActionResult> GetPartnerCoursesByInstitution(int institutionId, CancellationToken ct)
+    public async Task<IActionResult> GetPartnerCoursesByInstitution(int institutionId, [FromQuery] bool includeDeleted, CancellationToken ct)
     {
-        var result = await institutionService.GetPartnerCoursesByInstitutionAsync(institutionId, ct);
+        var result = await institutionService.GetPartnerCoursesByInstitutionAsync(institutionId, includeDeleted, ct);
         return Match(result, Ok);
     }
 
@@ -53,11 +53,27 @@ public class InstitutionController(IInstitutionService institutionService) : Api
         return Match(result, value => Created($"/api/institutions/partner", value));
     }
 
+    [HttpPut("partner/{institutionId:int}")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> UpdatePartnerInstitution(int institutionId, [FromBody] UpdateInstitutionRequest request, CancellationToken ct)
+    {
+        var result = await institutionService.UpdatePartnerInstitutionAsync(institutionId, request, ct);
+        return Match(result, Ok);
+    }
+
     [HttpDelete("partner/{institutionId:int}")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> DeletePartnerInstitution(int institutionId, CancellationToken ct)
     {
         var result = await institutionService.DeletePartnerInstitutionAsync(institutionId, ct);
+        return Match(result, _ => NoContent());
+    }
+
+    [HttpPatch("partner/{institutionId:int}/restore")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> RestorePartnerInstitution(int institutionId, CancellationToken ct)
+    {
+        var result = await institutionService.RestorePartnerInstitutionAsync(institutionId, ct);
         return Match(result, _ => NoContent());
     }
 
@@ -86,6 +102,14 @@ public class InstitutionController(IInstitutionService institutionService) : Api
     public async Task<IActionResult> DeletePartnerCourse(int courseId, CancellationToken ct)
     {
         var result = await institutionService.DeletePartnerCourseAsync(courseId, ct);
+        return Match(result, _ => NoContent());
+    }
+
+    [HttpPatch("partner/courses/{courseId:int}/restore")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> RestorePartnerCourse(int courseId, CancellationToken ct)
+    {
+        var result = await institutionService.RestorePartnerCourseAsync(courseId, ct);
         return Match(result, _ => NoContent());
     }
 

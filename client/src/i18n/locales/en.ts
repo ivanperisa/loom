@@ -174,7 +174,7 @@ export default {
       colHomeCourse: 'Home Course',
       colPartnerCourse: 'Partner Course',
       colStatus: 'Status',
-      apply: 'Apply import ({applied}/{total})',
+      apply: 'Apply import',
       successTitle: 'Import successful',
       successMessage: 'Applied {count} mappings.',
       errorTitle: 'Import error',
@@ -207,19 +207,23 @@ export default {
     tabs: {
       learningAgreement: 'Learning Agreement',
       recognition: 'Recognition',
+      mappingScheme: 'Mapping Scheme',
+      grades: 'Grades',
       history: 'History',
+    },
+    placeholder: {
+      comingSoon: 'Coming soon.',
     },
     history: {
       empty: 'No changes recorded yet.',
     },
-    status: {
-      waitingApproval: 'Waiting for coordinator approval',
-    },
     actions: {
-      submit: 'Submit for Review',
+      sign: 'Sign',
       backToDraft: 'Back to Draft',
-      approve: 'Approve',
-      reject: 'Reject',
+    },
+    audit: {
+      lastModified: 'Last modified',
+      signed: 'Signed',
     },
     institution: 'Institution',
     program: 'Program',
@@ -291,7 +295,7 @@ export default {
   documentStatus: {
     Draft: 'Draft',
     Submitted: 'Submitted',
-    Approved: 'Approved',
+    Approved: 'Signed',
     Rejected: 'Rejected',
   },
   recognitionStatus: {
@@ -326,18 +330,11 @@ export default {
     export: 'Export to Excel',
     totalAwarded: 'Total: {ects} ECTS',
     actions: {
-      submit: 'Submit for Review',
-      approve: 'Approve',
-      contractSigned: 'Contract Signed',
-      reject: 'Reject',
       backToDraft: 'Back to Draft',
       history: 'History',
     },
     message: 'Notes',
     messagePlaceholder: 'Notes visible to both student and coordinator...',
-    status: {
-      waitingApproval: 'Waiting for coordinator approval',
-    },
     history: {
       title: 'Recognition - History',
       empty: 'No approvals yet.',
@@ -584,6 +581,8 @@ export default {
       searchCourses: 'Search courses...',
       addButton: 'Add Institution',
       addTitle: 'New Institution',
+      editTitle: 'Edit Institution',
+      editInstitution: 'Edit institution',
       name: 'Name',
       nameHr: 'Name (Croatian)',
       country: 'Country',
@@ -591,6 +590,9 @@ export default {
       city: 'City',
       erasmusCode: 'Erasmus Code',
       optional: 'optional',
+      showDeleted: 'Show deleted',
+      deleted: 'Deleted',
+      restore: 'Restore',
       deleteInstitution: 'Delete institution',
       deleteConfirm: 'Delete this institution and all its programs and courses?',
       hasExchanges: 'Cannot delete — has active exchanges.',

@@ -11,6 +11,8 @@ public class Institution : EntityBase
     public string? City { get; set; }
     public string? ErasmusCode { get; set; }
     public InstitutionType Type { get; set; } = InstitutionType.Partner;
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
 
     public ICollection<HomeProgram> HomePrograms { get; set; } = [];
     public ICollection<PartnerCourse> PartnerCourses { get; set; } = [];

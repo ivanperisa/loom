@@ -10,5 +10,6 @@ public record PartnerCourseResponse(
     int? AuditoryH,
     int? LabH,
     string Semester,
-    string Level
+    string Level,
+    bool IsDeleted
 );

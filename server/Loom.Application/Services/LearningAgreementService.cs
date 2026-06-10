@@ -37,6 +37,8 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
             .AsNoTracking()
             .Include(la => la.Entries)
                 .ThenInclude(e => e.PartnerCourse)
+            .Include(la => la.LastModifiedByUser)
+            .Include(la => la.SignedByUser)
             .FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
 
         var activeEntries = la?.Entries.Select(e => e.ToResponse()).ToList() ?? [];
@@ -79,7 +81,11 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
             la?.Status.ToString() ?? DocumentStatus.Draft.ToString(),
             la?.Message,
             slots.Select(s => s.ToResponse()).ToList(),
-            [.. activeEntries, .. deletedEntries]
+            [.. activeEntries, .. deletedEntries],
+            la?.UpdatedAt,
+            la?.LastModifiedByUser?.Name,
+            la?.SignedAt,
+            la?.SignedByUser?.Name
         );
     }
 
@@ -119,6 +125,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         var upsertResult = await UpsertEntriesAsync(laEntity.Id, request, ct);
         if (upsertResult.IsError) return upsertResult.Errors;
 
+        laEntity.LastModifiedById = requesterId;
         await db.SaveChangesAsync(ct);
         return await GetLearningAgreementAsync(exchangeGuid, requesterId, ct);
     }
@@ -154,6 +161,18 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
 
         la.Status = newStatus;
         la.UpdatedAt = DateTime.UtcNow;
+        la.LastModifiedById = requesterId;
+
+        if (newStatus == DocumentStatus.Approved)
+        {
+            la.SignedAt = DateTime.UtcNow;
+            la.SignedById = requesterId;
+        }
+        else if (newStatus == DocumentStatus.Draft)
+        {
+            la.SignedAt = null;
+            la.SignedById = null;
+        }
 
         if (isCoordinatorOrAdmin && request.Message is not null)
             exchange.CoordinatorMessage = string.IsNullOrWhiteSpace(request.Message) ? null : request.Message.Trim();
@@ -218,6 +237,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
 
         la.Message = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
         la.UpdatedAt = DateTime.UtcNow;
+        la.LastModifiedById = requesterId;
         await db.SaveChangesAsync(ct);
 
         return await GetLearningAgreementAsync(exchangeGuid, requesterId, ct);
@@ -367,12 +387,21 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
                 var laRecord = await db.LearningAgreements.FirstAsync(l => l.ExchangeId == exchangeId, ct);
                 laRecord.Status = DocumentStatus.Draft;
                 laRecord.UpdatedAt = DateTime.UtcNow;
+                laRecord.SignedAt = null;
+                laRecord.SignedById = null;
             }
 
+            laEntity.LastModifiedById = requesterId;
             await db.SaveChangesAsync(ct);
         }
 
-        return new MappingImportResult(applyList.Count, skipped);
+        var appliedCourseCount = applyList
+            .Where(a => a.resolvedCourseId.HasValue)
+            .Select(a => a.resolvedCourseId!.Value)
+            .Distinct()
+            .Count();
+
+        return new MappingImportResult(appliedCourseCount, skipped);
     }
 
     public async Task<ErrorOr<List<LaSnapshotSummary>>> GetLearningAgreementHistoryAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default)
@@ -475,6 +504,9 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         var la = await db.LearningAgreements.FirstAsync(l => l.ExchangeId == exchangeId, ct);
         la.Status = DocumentStatus.Draft;
         la.UpdatedAt = DateTime.UtcNow;
+        la.LastModifiedById = requesterId;
+        la.SignedAt = null;
+        la.SignedById = null;
 
         await db.SaveChangesAsync(ct);
         return Result.Updated;

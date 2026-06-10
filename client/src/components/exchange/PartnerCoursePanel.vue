@@ -63,6 +63,20 @@ onMounted(async () => {
   }
 })
 
+const visibleCourses = computed(() => {
+  const semesterType = exchangeStore.exchange?.semesterType
+  return courses.value
+    .filter((c) => !c.isDeleted)
+    .filter(
+      (c) =>
+        !semesterType ||
+        semesterType === 'Both' ||
+        c.semester === 'Both' ||
+        c.semester === semesterType,
+    )
+    .sort((a, b) => a.name.localeCompare(b.name))
+})
+
 const mappedEctsMap = computed(() => {
   const map = new Map<string, number>()
   for (const state of exchangeStore.localSlotStates) {
@@ -78,15 +92,17 @@ function mappedEcts(courseId: string): number {
 }
 
 const mappedCourses = computed(() => {
-  const withEcts = courses.value.filter((c) => mappedEcts(c.id) > 0)
-  const stagedOnly = courses.value.filter(
+  const withEcts = courses.value
+    .filter((c) => mappedEcts(c.id) > 0)
+    .sort((a, b) => a.name.localeCompare(b.name))
+  const stagedOnly = visibleCourses.value.filter(
     (c) => exchangeStore.stagedPartnerCourseIds.has(c.id) && mappedEcts(c.id) === 0,
   )
   return [...withEcts, ...stagedOnly]
 })
 
 const availableCourses = computed(() =>
-  courses.value.filter((c) => mappedEcts(c.id) === 0 && !exchangeStore.stagedPartnerCourseIds.has(c.id))
+  visibleCourses.value.filter((c) => mappedEcts(c.id) === 0 && !exchangeStore.stagedPartnerCourseIds.has(c.id))
 )
 
 const searchResults = computed(() => {
@@ -149,6 +165,7 @@ function semesterLabel(semester: string) {
           v-if="showAddForm"
           mode="create"
           :initialName="initialNameForForm"
+          :defaultSemester="exchangeStore.exchange?.semesterType"
           :saving="addingCourse"
           :error="addError"
           @submit="submitAddCourse"

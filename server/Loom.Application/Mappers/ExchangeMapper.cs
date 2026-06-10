@@ -87,7 +87,8 @@ public static class ExchangeMapper
         course.AuditoryH,
         course.LabH,
         course.Semester.ToString(),
-        course.Level.ToString()
+        course.Level.ToString(),
+        course.IsDeleted
     );
 
     public static RecognitionResponse ToResponse(this Recognition recognition) => new(
@@ -97,7 +98,11 @@ public static class ExchangeMapper
         recognition.Message,
         recognition.Entries.Select(e => e.ToResponse()).ToList(),
         recognition.CreatedAt,
-        recognition.UpdatedAt
+        recognition.UpdatedAt,
+        recognition.UpdatedAt,
+        recognition.LastModifiedByUser?.Name,
+        recognition.SignedAt,
+        recognition.SignedByUser?.Name
     );
 
     public static RecognitionEntryResponse ToResponse(this RecognitionEntry entry)
