@@ -13,5 +13,6 @@ public record ExchangeSummaryResponse(
     string AcademicYear,
     string SemesterType,
     string LearningAgreementStatus,
-    string? RecognitionStatus
+    string? RecognitionStatus,
+    string? EwpLink
 );

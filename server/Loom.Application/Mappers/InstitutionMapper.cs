@@ -21,7 +21,8 @@ public static class InstitutionMapper
         institution.Country,
         institution.City,
         institution.ErasmusCode,
-        institution.PartnerCourses.Count
+        institution.PartnerCourses.Count,
+        institution.IsDeleted
     );
 
     public static HomeProgramResponse ToResponse(this HomeProgram program) => new(

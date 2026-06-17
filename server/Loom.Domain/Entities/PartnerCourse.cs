@@ -16,4 +16,6 @@ public class PartnerCourse : EntityBase
     public int? LabH { get; set; }
     public ExchangeSemester Semester { get; set; }
     public StudyProgramLevel Level { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
 }

@@ -30,6 +30,7 @@ export interface PartnerInstitutionAdminResponse {
   city: string | null
   erasmusCode: string | null
   courseCount: number
+  isDeleted: boolean
 }
 
 export interface PartnerCourseResponse {
@@ -43,4 +44,5 @@ export interface PartnerCourseResponse {
   labH: number | null
   semester: string
   level: string
+  isDeleted: boolean
 }

@@ -21,6 +21,8 @@ public class PartnerCourseConfiguration : IEntityTypeConfiguration<PartnerCourse
         builder.Property(x => x.LabH).HasColumnName("lab_h");
         builder.Property(x => x.Semester).HasColumnName("semester").HasConversion<string>().HasMaxLength(10);
         builder.Property(x => x.Level).HasColumnName("level").HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
+        builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
 
         builder.HasOne(x => x.Institution)

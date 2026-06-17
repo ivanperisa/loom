@@ -34,11 +34,11 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         return programs.Select(p => p.ToResponse()).ToList();
     }
 
-    public async Task<ErrorOr<List<PartnerInstitutionAdminResponse>>> GetPartnerInstitutionsAsync(CancellationToken ct = default)
+    public async Task<ErrorOr<List<PartnerInstitutionAdminResponse>>> GetPartnerInstitutionsAsync(bool includeDeleted = false, CancellationToken ct = default)
     {
         var institutions = await db.Institutions
             .AsNoTracking()
-            .Where(i => i.Type == InstitutionType.Partner)
+            .Where(i => i.Type == InstitutionType.Partner && (includeDeleted || !i.IsDeleted))
             .Include(i => i.PartnerCourses)
             .OrderBy(i => i.Country)
             .ThenBy(i => i.Name)
@@ -46,11 +46,11 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         return institutions.Select(i => i.ToAdminResponse()).ToList();
     }
 
-    public async Task<ErrorOr<List<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, CancellationToken ct = default)
+    public async Task<ErrorOr<List<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, bool includeDeleted = false, CancellationToken ct = default)
     {
         var courses = await db.PartnerCourses
             .AsNoTracking()
-            .Where(c => c.InstitutionId == institutionId)
+            .Where(c => c.InstitutionId == institutionId && (includeDeleted || !c.IsDeleted))
             .OrderBy(c => c.Code)
             .ToListAsync(ct);
         return courses.Select(c => c.ToResponse()).ToList();
@@ -87,6 +87,32 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         return saved.ToAdminResponse();
     }
 
+    public async Task<ErrorOr<PartnerInstitutionAdminResponse>> UpdatePartnerInstitutionAsync(int institutionId, UpdateInstitutionRequest request, CancellationToken ct = default)
+    {
+        var institution = await db.Institutions
+            .FirstOrDefaultAsync(i => i.Id == institutionId && i.Type == InstitutionType.Partner, ct);
+        if (institution is null) return Error.NotFound("INSTITUTION_NOT_FOUND", "Institution not found.");
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return Error.Validation("INVALID_NAME", "Institution name is required.");
+        if (string.IsNullOrWhiteSpace(request.Country))
+            return Error.Validation("INVALID_COUNTRY", "Country is required.");
+
+        institution.Name = request.Name.Trim();
+        institution.NameHr = string.IsNullOrWhiteSpace(request.NameHr) ? request.Name.Trim() : request.NameHr.Trim();
+        institution.Country = request.Country.Trim();
+        institution.City = string.IsNullOrWhiteSpace(request.City) ? null : request.City.Trim();
+        institution.ErasmusCode = string.IsNullOrWhiteSpace(request.ErasmusCode) ? null : request.ErasmusCode.Trim();
+        await db.SaveChangesAsync(ct);
+
+        var saved = await db.Institutions
+            .AsNoTracking()
+            .Where(i => i.Id == institution.Id)
+            .Include(i => i.PartnerCourses)
+            .FirstAsync(ct);
+        return saved.ToAdminResponse();
+    }
+
     public async Task<ErrorOr<Deleted>> DeletePartnerInstitutionAsync(int institutionId, CancellationToken ct = default)
     {
         var institution = await db.Institutions
@@ -94,11 +120,29 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         if (institution is null) return Error.NotFound("INSTITUTION_NOT_FOUND", "Institution not found.");
 
         var hasExchanges = await db.Exchanges.AnyAsync(e => e.PartnerInstitutionId == institutionId, ct);
-        if (hasExchanges) return Error.Conflict("HAS_EXCHANGES", "Cannot delete institution with active exchanges.");
+        if (hasExchanges)
+        {
+            institution.IsDeleted = true;
+            institution.DeletedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Result.Deleted;
+        }
 
         db.Institutions.Remove(institution);
         await db.SaveChangesAsync(ct);
         return Result.Deleted;
+    }
+
+    public async Task<ErrorOr<Updated>> RestorePartnerInstitutionAsync(int institutionId, CancellationToken ct = default)
+    {
+        var institution = await db.Institutions
+            .FirstOrDefaultAsync(i => i.Id == institutionId && i.Type == InstitutionType.Partner, ct);
+        if (institution is null) return Error.NotFound("INSTITUTION_NOT_FOUND", "Institution not found.");
+
+        institution.IsDeleted = false;
+        institution.DeletedAt = null;
+        await db.SaveChangesAsync(ct);
+        return Result.Updated;
     }
 
     #endregion
@@ -172,9 +216,29 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         var course = await db.PartnerCourses.FindAsync([courseId], ct);
         if (course is null) return Error.NotFound("COURSE_NOT_FOUND", "Course not found.");
 
+        var isUsed = await db.LearningAgreementEntries.AnyAsync(e => e.PartnerCourseId == courseId, ct);
+        if (isUsed)
+        {
+            course.IsDeleted = true;
+            course.DeletedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Result.Deleted;
+        }
+
         db.PartnerCourses.Remove(course);
         await db.SaveChangesAsync(ct);
         return Result.Deleted;
+    }
+
+    public async Task<ErrorOr<Updated>> RestorePartnerCourseAsync(int courseId, CancellationToken ct = default)
+    {
+        var course = await db.PartnerCourses.FindAsync([courseId], ct);
+        if (course is null) return Error.NotFound("COURSE_NOT_FOUND", "Course not found.");
+
+        course.IsDeleted = false;
+        course.DeletedAt = null;
+        await db.SaveChangesAsync(ct);
+        return Result.Updated;
     }
 
     public async Task<ErrorOr<PartnerCourseResponse>> MergePartnerCoursesAsync(MergePartnerCoursesRequest request, CancellationToken ct = default)

@@ -10,7 +10,7 @@ const { t } = useI18n()
   <Teleport to="body">
     <div
       v-if="state"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
       @mousedown.self="respond(false)"
     >
       <div class="w-full max-w-sm rounded-xl border border-primary/30 bg-dark p-6 shadow-xl">

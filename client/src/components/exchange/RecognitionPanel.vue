@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -7,6 +7,8 @@ import type { RecognitionEntryResponse } from '@/types/recognition.types'
 import { exportExchangeExcel } from '@/utils/exportExchange'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
+import RecognitionHistoryDrawer from '@/components/exchange/RecognitionHistoryDrawer.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 import { documentStatus } from '@/utils/documentStatus'
 
 const props = defineProps<{
@@ -81,10 +83,6 @@ const courseGroups = computed<CourseGroup[]>(() => {
   return Array.from(map.values())
 })
 
-function groupIsRejected(group: CourseGroup): boolean {
-  return group.entries.some((e) => e.isRecognized === false)
-}
-
 function initGrades() {
   const rec = exchangeStore.serverRecognition
   if (!rec) return
@@ -135,29 +133,8 @@ async function saveAll() {
   }
 }
 
-async function toggleGroupRecognition(group: CourseGroup) {
-  if (!isCoordinator.value || !exchangeStore.serverRecognition) return
-  isSaving.value = true
-  try {
-    const newValue = groupIsRejected(group)
-    for (const entry of group.entries) {
-      await exchangeStore.setEntryRecognized(props.exchangeId, entry.id, newValue)
-    }
-  } finally {
-    isSaving.value = false
-  }
-}
-
-async function submitRecognition() {
-  await exchangeStore.updateRecognitionStatus(props.exchangeId, {
-    status: documentStatus.Submitted,
-  })
-}
-async function approveRecognition() {
+async function signRecognition() {
   await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Approved })
-}
-async function rejectRecognition() {
-  await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Rejected })
 }
 async function backToRecognitionDraft() {
   await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Draft })
@@ -176,11 +153,27 @@ function doExport() {
   )
 }
 
-const rejectedBg = '#FFCCCC'
+const showHistory = ref(false)
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString(locale.value === 'hr' ? 'hr-HR' : 'en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 </script>
 
 <template>
   <div>
+    <RecognitionHistoryDrawer
+      v-if="showHistory"
+      :exchange-id="exchangeId"
+      @close="showHistory = false"
+    />
+
     <div v-if="loading" class="space-y-3">
       <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded bg-primary/20"></div>
     </div>
@@ -189,7 +182,7 @@ const rejectedBg = '#FFCCCC'
       <!-- Status + actions bar -->
       <div class="relative mb-3 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <StatusBadge :status="exchangeStore.serverRecognition!.status" />
+          <StatusBadge :status="exchangeStore.serverRecognition!.status" i18n-prefix="recognitionStatus" />
         </div>
         <span
           class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80"
@@ -197,71 +190,23 @@ const rejectedBg = '#FFCCCC'
           {{ homeProfileName }}
         </span>
         <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="rounded-lg border border-primary/40 px-4 py-2 text-sm font-medium text-primary-light transition hover:bg-primary/10"
-            @click="doExport"
-          >
-            {{ t('recognition.export') }}
-          </button>
-          <!-- Student actions -->
-          <template v-if="!isCoordinator">
+          <ActionButton size="md" @click="doExport">{{ t('recognition.export') }}</ActionButton>
+          <ActionButton size="md" @click="showHistory = true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {{ t('recognition.actions.history') }}
+          </ActionButton>
+          <!-- Coordinator actions -->
+          <template v-if="isCoordinator">
             <button
               v-if="exchangeStore.serverRecognition!.status === documentStatus.Draft"
               type="button"
-              class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
-              @click="submitRecognition"
+              class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
+              @click="signRecognition"
             >
-              {{ t('recognition.actions.submit') }}
+              {{ t('exchange.actions.sign') }}
             </button>
-            <template
-              v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Submitted"
-            >
-              <span
-                class="inline-block rounded-lg border border-primary/20 px-4 py-2 text-sm text-light/60"
-              >
-                {{ t('exchange.status.waitingApproval') }}
-              </span>
-              <button
-                type="button"
-                class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
-                @click="backToRecognitionDraft"
-              >
-                {{ t('recognition.actions.backToDraft') }}
-              </button>
-            </template>
             <button
-              v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Rejected"
-              type="button"
-              class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
-              @click="backToRecognitionDraft"
-            >
-              {{ t('recognition.actions.backToDraft') }}
-            </button>
-          </template>
-          <!-- Coordinator actions -->
-          <template v-if="isCoordinator">
-            <template v-if="exchangeStore.serverRecognition!.status === documentStatus.Submitted">
-              <button
-                type="button"
-                class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
-                @click="approveRecognition"
-              >
-                {{ t('recognition.actions.approve') }}
-              </button>
-              <button
-                type="button"
-                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
-                @click="rejectRecognition"
-              >
-                {{ t('recognition.actions.reject') }}
-              </button>
-            </template>
-            <button
-              v-if="
-                exchangeStore.serverRecognition!.status === documentStatus.Approved ||
-                exchangeStore.serverRecognition!.status === documentStatus.Rejected
-              "
+              v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Approved"
               type="button"
               class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
               @click="backToRecognitionDraft"
@@ -270,6 +215,21 @@ const rejectedBg = '#FFCCCC'
             </button>
           </template>
         </div>
+      </div>
+
+      <!-- Audit info -->
+      <div
+        v-if="exchangeStore.serverRecognition?.lastModifiedAt || exchangeStore.serverRecognition?.signedAt"
+        class="-mt-2 mb-4 flex flex-col gap-y-1 text-xs text-light/50"
+      >
+        <span v-if="exchangeStore.serverRecognition?.lastModifiedAt">
+          {{ t('exchange.audit.lastModified') }}: {{ formatDate(exchangeStore.serverRecognition.lastModifiedAt) }}
+          <template v-if="exchangeStore.serverRecognition?.lastModifiedByName"> — {{ exchangeStore.serverRecognition.lastModifiedByName }}</template>
+        </span>
+        <span v-if="exchangeStore.serverRecognition?.signedAt">
+          {{ t('exchange.audit.signed') }}: {{ formatDate(exchangeStore.serverRecognition.signedAt) }}
+          <template v-if="exchangeStore.serverRecognition?.signedByName"> — {{ exchangeStore.serverRecognition.signedByName }}</template>
+        </span>
       </div>
 
       <!-- Unsaved changes bar -->
@@ -306,9 +266,6 @@ const rejectedBg = '#FFCCCC'
               </th>
               <th class="rec-th" style="min-width: 90px">
                 {{ t('recognition.col.enrollmentStatus') }}
-              </th>
-              <th class="rec-th" style="min-width: 140px">
-                {{ t('recognition.col.partnerNameHr') }}
               </th>
               <th class="rec-th" style="min-width: 70px">
                 {{ t('recognition.col.partnerHours') }}
@@ -348,27 +305,9 @@ const rejectedBg = '#FFCCCC'
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td rec-td--center rec-td--bold"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
-                  <div class="mb-1">{{ group.partnerCourseCode }}</div>
-                  <div v-if="isCoordinator">
-                    <button
-                      type="button"
-                      @click="toggleGroupRecognition(group)"
-                      class="w-full rounded border py-1 px-0.5 text-[9px] uppercase tracking-tighter transition-all active:scale-95"
-                      :class="
-                        groupIsRejected(group)
-                          ? 'bg-green-600 border-green-700 text-white shadow-sm'
-                          : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white'
-                      "
-                    >
-                      {{
-                        groupIsRejected(group)
-                          ? t('recognition.actions.approve')
-                          : t('recognition.actions.reject')
-                      }}
-                    </button>
-                  </div>
+                  {{ group.partnerCourseCode }}
                 </td>
 
                 <!-- B: Naziv engleski -->
@@ -376,15 +315,9 @@ const rejectedBg = '#FFCCCC'
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ group.partnerCourseName }}
-                  <div
-                    v-if="group.partnerCourseNameHr"
-                    style="font-size: 9px; color: #555; font-style: italic"
-                  >
-                    {{ group.partnerCourseNameHr }}
-                  </div>
                 </td>
 
                 <!-- C: Status predmeta -->
@@ -392,26 +325,15 @@ const rejectedBg = '#FFCCCC'
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.enrollmentStatus"
                     type="text"
-                    :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
-                </td>
-
-                <!-- D: Naziv - hrvatski -->
-                <td
-                  v-if="idx === 0"
-                  :rowspan="group.entries.length"
-                  class="rec-td rec-td--center rec-td--small"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
-                >
-                  {{ group.partnerCourseNameHr ?? '—' }}
                 </td>
 
                 <!-- E: Sati -->
@@ -419,7 +341,7 @@ const rejectedBg = '#FFCCCC'
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ group.partnerCourseHours ?? '—' }}
                 </td>
@@ -429,7 +351,7 @@ const rejectedBg = '#FFCCCC'
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td rec-td--center rec-td--bold"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ group.partnerCourseEcts }}
                 </td>
@@ -437,7 +359,7 @@ const rejectedBg = '#FFCCCC'
                 <!-- G: Rbr. -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ idx + 1 }}
                 </td>
@@ -445,7 +367,7 @@ const rejectedBg = '#FFCCCC'
                 <!-- H: Priznaje se za predmet -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ entry.homeSlotCourseIsvuCode }}
                 </td>
@@ -453,7 +375,7 @@ const rejectedBg = '#FFCCCC'
                 <!-- I: Naziv -->
                 <td
                   class="rec-td"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ entry.homeSlotCourseName }}
                 </td>
@@ -461,7 +383,7 @@ const rejectedBg = '#FFCCCC'
                 <!-- J: Izb. grupa -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ entry.homeSlotCourseGroupIsvuCode ?? '—' }}
                 </td>
@@ -469,7 +391,7 @@ const rejectedBg = '#FFCCCC'
                 <!-- K: Naziv izb. grupe -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.homeSlotColor }"
+                  :style="{ background: entry.homeSlotColor }"
                 >
                   {{ entry.homeSlotCourseGroupName || t('recognition.col.mandatoryCourse') }}
                 </td>
@@ -477,7 +399,7 @@ const rejectedBg = '#FFCCCC'
                 <!-- L: Semestar -->
                 <td
                   class="rec-td rec-td--center"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#fff' }"
+                  style="background: #fff"
                 >
                   {{ entry.homeSlotSemester }}
                 </td>
@@ -485,7 +407,7 @@ const rejectedBg = '#FFCCCC'
                 <!-- M: Priznato ECTS-a -->
                 <td
                   class="rec-td rec-td--center rec-td--bold"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : entry.homeSlotColor }"
+                  :style="{ background: entry.homeSlotColor }"
                 >
                   {{ entry.awardedEcts }}
                 </td>
@@ -495,13 +417,12 @@ const rejectedBg = '#FFCCCC'
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
+                  style="background: #ddd9c3"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.originalGrade"
                     type="text"
-                    :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
@@ -511,13 +432,12 @@ const rejectedBg = '#FFCCCC'
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
+                  style="background: #ddd9c3"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.ectsGrade"
                     type="text"
-                    :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
@@ -527,13 +447,12 @@ const rejectedBg = '#FFCCCC'
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
+                  style="background: #ddd9c3"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.hrGrade"
                     type="text"
-                    :disabled="isCoordinator"
                     class="rec-input"
                     placeholder="—"
                   />
@@ -543,13 +462,12 @@ const rejectedBg = '#FFCCCC'
                   v-if="idx === 0"
                   :rowspan="group.entries.length"
                   class="rec-td-grade"
-                  :style="{ background: groupIsRejected(group) ? rejectedBg : '#ddd9c3' }"
+                  style="background: #ddd9c3"
                 >
                   <input
                     v-if="editableGrades[group.partnerCourseCode]"
                     v-model="editableGrades[group.partnerCourseCode]!.examDate"
                     type="date"
-                    :disabled="isCoordinator"
                     class="rec-input rec-input--date"
                   />
                 </td>
@@ -558,6 +476,7 @@ const rejectedBg = '#FFCCCC'
           </tbody>
         </table>
       </div>
+
     </template>
   </div>
 </template>

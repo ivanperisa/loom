@@ -7,5 +7,6 @@ public record PartnerInstitutionAdminResponse(
     string Country,
     string? City,
     string? ErasmusCode,
-    int CourseCount
+    int CourseCount,
+    bool IsDeleted
 );

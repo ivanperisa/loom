@@ -26,9 +26,11 @@ const searchQuery = ref('')
 const showAddForm = ref(false)
 const addingCourse = ref(false)
 const addError = ref<string | null>(null)
+const initialNameForForm = ref('')
 
 function openAddForm() {
   addError.value = null
+  initialNameForForm.value = searchQuery.value.trim()
   showAddForm.value = true
 }
 
@@ -39,8 +41,9 @@ async function submitAddCourse(payload: {
   addingCourse.value = true
   addError.value = null
   try {
-    const res = await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
-    courses.value.push(res.data)
+    await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
+    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId)
+    courses.value = res.data
     showAddForm.value = false
   } catch {
     addError.value = t('partnerCourses.saveError')
@@ -60,6 +63,20 @@ onMounted(async () => {
   }
 })
 
+const visibleCourses = computed(() => {
+  const semesterType = exchangeStore.exchange?.semesterType
+  return courses.value
+    .filter((c) => !c.isDeleted)
+    .filter(
+      (c) =>
+        !semesterType ||
+        semesterType === 'Both' ||
+        c.semester === 'Both' ||
+        c.semester === semesterType,
+    )
+    .sort((a, b) => a.name.localeCompare(b.name))
+})
+
 const mappedEctsMap = computed(() => {
   const map = new Map<string, number>()
   for (const state of exchangeStore.localSlotStates) {
@@ -75,15 +92,17 @@ function mappedEcts(courseId: string): number {
 }
 
 const mappedCourses = computed(() => {
-  const withEcts = courses.value.filter((c) => mappedEcts(c.id) > 0)
-  const stagedOnly = courses.value.filter(
+  const withEcts = courses.value
+    .filter((c) => mappedEcts(c.id) > 0)
+    .sort((a, b) => a.name.localeCompare(b.name))
+  const stagedOnly = visibleCourses.value.filter(
     (c) => exchangeStore.stagedPartnerCourseIds.has(c.id) && mappedEcts(c.id) === 0,
   )
   return [...withEcts, ...stagedOnly]
 })
 
 const availableCourses = computed(() =>
-  courses.value.filter((c) => mappedEcts(c.id) === 0 && !exchangeStore.stagedPartnerCourseIds.has(c.id))
+  visibleCourses.value.filter((c) => mappedEcts(c.id) === 0 && !exchangeStore.stagedPartnerCourseIds.has(c.id))
 )
 
 const searchResults = computed(() => {
@@ -145,6 +164,8 @@ function semesterLabel(semester: string) {
         <PartnerCourseFormModal
           v-if="showAddForm"
           mode="create"
+          :initialName="initialNameForForm"
+          :defaultSemester="exchangeStore.exchange?.semesterType"
           :saving="addingCourse"
           :error="addError"
           @submit="submitAddCourse"
@@ -172,12 +193,10 @@ function semesterLabel(semester: string) {
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
               <div class="text-sm font-medium text-light">{{ course.name }}</div>
               <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
-              <div class="mt-1 flex items-center gap-1.5">
-                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
-                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
-              </div>
             </div>
             <div class="shrink-0 flex items-center gap-2">
+              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span
                 v-if="mappedEcts(course.id) > 0"
                 class="rounded px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300"
@@ -229,12 +248,10 @@ function semesterLabel(semester: string) {
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
               <div class="text-sm font-medium text-light">{{ course.name }}</div>
               <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
-              <div class="mt-1 flex items-center gap-1.5">
-                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
-                <span class="truncate rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
-              </div>
             </div>
             <div class="shrink-0 flex items-center gap-2">
+              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span
                 class="rounded px-2 py-0.5 text-xs font-semibold"
                 :class="

@@ -51,4 +51,19 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         var result = await exchangeService.UpdateCoordinatorMessageAsync(exchangeGuid, GetCurrentUserId(), request.Message, ct);
         return Match(result, Ok);
     }
+
+    [HttpPatch("{exchangeGuid:guid}/ewp-link")]
+    public async Task<IActionResult> UpdateEwpLink(Guid exchangeGuid, [FromBody] UpdateEwpLinkRequest request, CancellationToken ct)
+    {
+        var result = await exchangeService.UpdateEwpLinkAsync(exchangeGuid, GetCurrentUserId(), request.EwpLink, ct);
+        return Match(result, Ok);
+    }
+
+    [AllowAnonymous]
+    [HttpPatch("access/{exchangeGuid:guid}/ewp-link")]
+    public async Task<IActionResult> UpdateEwpLinkPublic(Guid exchangeGuid, [FromBody] UpdateEwpLinkRequest request, CancellationToken ct)
+    {
+        var result = await exchangeService.UpdateEwpLinkAsync(exchangeGuid, null, request.EwpLink, ct);
+        return Match(result, Ok);
+    }
 }

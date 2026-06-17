@@ -10,7 +10,7 @@ const exchangeId = computed(() => route.params.exchangeId as string)
 <template>
   <main class="min-h-screen bg-dark">
     <section class="page-container">
-      <ExchangeDetailPanel :exchange-id="exchangeId" />
+      <ExchangeDetailPanel :key="exchangeId" :exchange-id="exchangeId" />
     </section>
   </main>
 </template>
