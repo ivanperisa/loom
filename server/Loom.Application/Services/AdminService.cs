@@ -102,7 +102,7 @@ public class AdminService(IAppDbContext db) : IAdminService
         var requests = await db.Users
             .AsNoTracking()
             .Include(u => u.Institution)
-            .Where(u => u.CoordinatorRequestStatus == "Pending")
+            .Where(u => u.CoordinatorRequestStatus == "Pending" && u.Role == UserRole.Student)
             .Select(u => new CoordinatorRequestResponse(u.Id, u.Name, u.Email, u.Institution != null ? u.Institution.Name : null))
             .ToListAsync(ct);
 
