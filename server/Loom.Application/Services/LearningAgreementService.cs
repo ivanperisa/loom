@@ -57,21 +57,27 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
                 .Select(e => (e.HomeSlotId, e.PartnerCourseId!.Value))
                 .ToHashSet();
 
-            var seen = new HashSet<(int, int)>();
-            foreach (var snapshot in snapshots)
+            var lastSeenIn = new Dictionary<(int, int), (int SnapshotIndex, LaSnapshotEntry Entry)>();
+            for (var i = 0; i < snapshots.Count; i++)
             {
-                var data = JsonSerializer.Deserialize<LaSnapshotData>(snapshot.Snapshot, JsonHelper.DefaultOptions);
+                var data = JsonSerializer.Deserialize<LaSnapshotData>(snapshots[i].Snapshot, JsonHelper.DefaultOptions);
                 if (data is null) continue;
                 foreach (var entry in data.Entries.Where(e => e.PartnerCourseId.HasValue))
                 {
                     var key = (entry.HomeSlotId, entry.PartnerCourseId!.Value);
-                    if (!activeKeys.Contains(key) && seen.Add(key))
-                    {
-                        deletedEntries.Add(new LearningAgreementEntryResponse(
-                            0, entry.HomeSlotId, entry.Mode,
-                            entry.PartnerCourseId, entry.PartnerCourseCode, entry.PartnerCourseName, null,
-                            entry.AwardedEcts, IsDeleted: true));
-                    }
+                    lastSeenIn[key] = (i + 1, entry);
+                }
+            }
+
+            foreach (var kvp in lastSeenIn)
+            {
+                if (!activeKeys.Contains(kvp.Key))
+                {
+                    var (amendmentNumber, entry) = kvp.Value;
+                    deletedEntries.Add(new LearningAgreementEntryResponse(
+                        0, entry.HomeSlotId, entry.Mode,
+                        entry.PartnerCourseId, entry.PartnerCourseCode, entry.PartnerCourseName, null,
+                        entry.AwardedEcts, IsDeleted: true, AmendmentNumber: amendmentNumber));
                 }
             }
         }
@@ -85,7 +91,8 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
             la?.UpdatedAt,
             la?.LastModifiedByUser?.Name,
             la?.SignedAt,
-            la?.SignedByUser?.Name
+            la?.SignedByUser?.Name,
+            snapshots.Count
         );
     }
 

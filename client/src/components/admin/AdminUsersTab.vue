@@ -2,9 +2,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminService, type CoordinatorRequestResponse, type CoordinatorWhitelistEntryResponse, type UserListResponse } from '@/services/admin.service'
+import { coordinatorService } from '@/services/coordinator.service'
+import { institutionService } from '@/services/institution.service'
 import { userRole } from '@/utils/userRole'
 import SearchInput from '@/components/common/SearchInput.vue'
 import { useConfirm } from '@/composables/useConfirm'
+import AdminEditUserModal from '@/components/admin/AdminEditUserModal.vue'
+import type { AuthMeResponse } from '@/types/auth.types'
+import type { InstitutionResponse } from '@/types/institution.types'
 
 const { t } = useI18n()
 const { confirm } = useConfirm()
@@ -13,6 +18,8 @@ const requests = ref<CoordinatorRequestResponse[]>([])
 const whitelist = ref<CoordinatorWhitelistEntryResponse[]>([])
 const users = ref<UserListResponse[]>([])
 const newEmail = ref('')
+const coordinatorsList = ref<AuthMeResponse[]>([])
+const institutionsList = ref<InstitutionResponse[]>([])
 
 const loadingRequests = ref(true)
 const loadingWhitelist = ref(true)
@@ -23,6 +30,19 @@ const addingEmail = ref(false)
 const errorMessage = ref<string | null>(null)
 const userActionId = ref<string | null>(null)
 const openMenuId = ref<string | null>(null)
+
+const editingUser = ref<UserListResponse | null>(null)
+
+function openEditDialog(user: UserListResponse) {
+  editingUser.value = user
+  openMenuId.value = null
+}
+
+function onUserSaved(updated: UserListResponse) {
+  const idx = users.value.findIndex(u => u.id === updated.id)
+  if (idx !== -1) users.value[idx] = updated
+  editingUser.value = null
+}
 
 const admins = computed(() => users.value.filter(u => u.role === userRole.Admin))
 const coordinators = computed(() => users.value.filter(u => u.role === userRole.Coordinator))
@@ -37,7 +57,8 @@ const filteredStudents = computed(() => {
   if (!q) return allStudents.value
   return allStudents.value.filter(u =>
     u.name.toLowerCase().includes(q) ||
-    u.email.toLowerCase().includes(q)
+    u.email.toLowerCase().includes(q) ||
+    (u.jmbag && u.jmbag.includes(q))
   )
 })
 
@@ -60,7 +81,7 @@ function handleOutsideClick(e: MouseEvent) {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchRequests(), fetchWhitelist(), fetchUsers()])
+  await Promise.all([fetchRequests(), fetchWhitelist(), fetchUsers(), fetchCoordinators(), fetchInstitutions()])
   document.addEventListener('click', handleOutsideClick)
 })
 
@@ -76,6 +97,20 @@ async function fetchUsers() {
   } finally {
     loadingUsers.value = false
   }
+}
+
+async function fetchCoordinators() {
+  try {
+    const res = await coordinatorService.getCoordinators()
+    coordinatorsList.value = res.data
+  } catch { /* non-critical */ }
+}
+
+async function fetchInstitutions() {
+  try {
+    const res = await institutionService.getHomeInstitutions()
+    institutionsList.value = res.data
+  } catch { /* non-critical */ }
 }
 
 async function makeCoordinatorFromList(userId: string) {
@@ -258,7 +293,6 @@ function formatDate(iso: string) {
               <div>
                 <span class="text-sm font-medium text-light">{{ u.name }}</span>
                 <span class="ml-2 text-xs text-light/50">{{ u.email }}</span>
-                <span v-if="u.institutionName" class="ml-2 text-xs text-light/40">· {{ u.institutionName }}</span>
               </div>
               <div class="relative" data-menu-anchor>
                 <button
@@ -271,6 +305,11 @@ function formatDate(iso: string) {
                   v-if="openMenuId === u.id"
                   class="absolute right-0 top-full z-50 mt-1 min-w-[11rem] overflow-hidden rounded-xl border border-primary/20 bg-dark-2 px-1 py-1 shadow-2xl shadow-black/50"
                 >
+                  <button
+                    type="button"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20"
+                    @click.stop="openEditDialog(u)"
+                  >{{ t('admin.users.editUser') }}</button>
                   <button
                     type="button"
                     class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
@@ -300,14 +339,22 @@ function formatDate(iso: string) {
           <p v-if="filteredStudents.length === 0" class="text-sm text-light/40">{{ t('admin.users.empty') }}</p>
           <div v-else class="divide-y divide-white/5 rounded-xl bg-dark">
             <div v-for="u in students" :key="u.id" class="flex items-center justify-between px-4 py-3">
-              <div>
-                <span class="text-sm font-medium text-light">{{ u.name }}</span>
-                <span class="ml-2 text-xs text-light/50">{{ u.email }}</span>
-                <span
-                  v-if="u.coordinatorRequestStatus"
-                  class="ml-2 rounded-full border border-yellow-400/40 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-300"
-                >{{ t('admin.users.pending') }}</span>
+              <div class="min-w-0">
+                <div class="flex items-baseline gap-2">
+                  <span class="text-sm font-medium text-light">{{ u.name }}</span>
+                  <span v-if="u.jmbag" class="text-xs font-mono text-light/35">{{ u.jmbag }}</span>
+                </div>
+                <p v-if="u.email" class="mt-0.5 text-xs text-light/40">{{ u.email }}</p>
               </div>
+              <div class="flex items-center gap-2">
+                <span
+                  v-if="u.coordinatorRequestStatus === 'Pending'"
+                  class="whitespace-nowrap rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary-light"
+                >{{ t('admin.users.coordinatorRequest') }}</span>
+                <span
+                  v-else-if="!u.email"
+                  class="whitespace-nowrap rounded-full border border-yellow-400/30 bg-yellow-500/10 px-2.5 py-0.5 text-[11px] font-medium text-yellow-300"
+                >{{ t('admin.users.notOnboarded') }}</span>
               <div class="relative" data-menu-anchor>
                 <button
                   type="button"
@@ -321,11 +368,17 @@ function formatDate(iso: string) {
                 >
                   <button
                     type="button"
-                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-primary-light transition hover:bg-primary/20 disabled:opacity-50"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20"
+                    @click.stop="openEditDialog(u)"
+                  >{{ t('admin.users.editUser') }}</button>
+                  <button
+                    type="button"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20 disabled:opacity-50"
                     :disabled="userActionId === u.id"
                     @click.stop="makeCoordinatorFromList(u.id); openMenuId = null"
                   >{{ t('admin.users.makeCoordinator') }}</button>
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -402,5 +455,14 @@ function formatDate(iso: string) {
       </div>
     </section>
 
+    <!-- Edit user modal -->
+    <AdminEditUserModal
+      v-if="editingUser"
+      :user="editingUser"
+      :coordinators="coordinatorsList"
+      :institutions="institutionsList"
+      @close="editingUser = null"
+      @saved="onUserSaved"
+    />
   </div>
 </template>

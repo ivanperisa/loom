@@ -110,7 +110,10 @@ function deletedEntriesForSlot(slotId: string) {
     (e) => e.homeSlotId === slotId && e.partnerCourseId !== null,
   )
   const localIds = new Set((lineFor(slotId)?.mappings ?? []).map((m) => m.partnerCourseId))
-  return serverEntries.filter((e) => e.isDeleted || !localIds.has(e.partnerCourseId!))
+  const wasSigned = (exchangeStore.serverLearningAgreement?.signedCount ?? 0) > 0
+  return serverEntries.filter((e) =>
+    !localIds.has(e.partnerCourseId!) && (e.isDeleted || wasSigned),
+  )
 }
 
 function slotsForSemester(sem: number): HomeSlotResponse[] {
@@ -125,13 +128,13 @@ function mappedEcts(slot: HomeSlotResponse): number {
 
 function ectsLabel(slot: HomeSlotResponse): string {
   const state = lineFor(slot.id)
-  if (!state || state.mode !== slotMode.AtExchange) return ''
+  if (!state || state.mode !== slotMode.AtExchange || state.mappings.length === 0) return ''
   return `${mappedEcts(slot)}/${slot.ects}`
 }
 
 function ectsColor(slot: HomeSlotResponse): string {
   const state = lineFor(slot.id)
-  if (!state || state.mode !== slotMode.AtExchange) return 'transparent'
+  if (!state || state.mode !== slotMode.AtExchange || state.mappings.length === 0) return 'transparent'
   const mapped = mappedEcts(slot)
   const light = theme.value === 'light'
   if (mapped === 0) return light ? '#78716c' : '#94a3b8'
@@ -191,7 +194,8 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
     }
   }
 
-  const showOutline = !!state && state.mode !== slotMode.AfterExchange
+  const hasActiveMappings = !!state && state.mode === slotMode.AtExchange && state.mappings.length > 0
+  const showOutline = !!state && state.mode !== slotMode.AfterExchange && (state.mode === slotMode.AtHome || hasActiveMappings)
   const outline = showOutline ? `3px solid ${modeOutlineColor[state!.mode]}` : `1px solid #aaa`
   return {
     backgroundColor: bg,
@@ -260,17 +264,16 @@ async function cycleMode(slot: HomeSlotResponse) {
   if (!state) {
     exchangeStore.localSetSlotMode(slot.id, slotMode.AtHome)
   } else {
-    const currentIndex = modes.indexOf(state.mode)
-    if (currentIndex === -1 || currentIndex === modes.length - 1) {
-      exchangeStore.localRemoveSlotState(slot.id)
-    } else {
-      exchangeStore.localSetSlotMode(slot.id, modes[currentIndex + 1]!)
-    }
+    exchangeStore.localRemoveSlotState(slot.id)
   }
 }
 
 function removeMapping(homeSlotId: string, localId: string) {
   exchangeStore.localRemoveSlotMapping(homeSlotId, localId)
+  const state = lineFor(homeSlotId)
+  if (state && state.mode === slotMode.AtExchange && state.mappings.length === 0) {
+    exchangeStore.localRemoveSlotState(homeSlotId)
+  }
 }
 
 function startEditEcts(homeSlotId: string, mapping: LocalSlotMapping) {
@@ -352,6 +355,10 @@ function formatDate(iso: string): string {
           v-if="exchangeStore.serverLearningAgreement"
           :status="exchangeStore.serverLearningAgreement.status"
         />
+        <span
+          v-if="exchangeStore.serverLearningAgreement && exchangeStore.serverLearningAgreement.signedCount > 0"
+          class="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary-light"
+        >{{ t('la.amendmentLabel', { n: exchangeStore.serverLearningAgreement.signedCount }) }}</span>
         <!-- Export / Import / History -->
         <div style="display: flex; gap: 6px;">
           <ActionButton @click="handleExport">
@@ -485,6 +492,7 @@ function formatDate(iso: string): string {
                   <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
                   <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
                 </svg>
+                <span class="la-mapping-amendment">{{ t('la.amendmentLabel', { n: removed.amendmentNumber ?? exchangeStore.serverLearningAgreement?.signedCount }) }}</span>
                 <span class="la-mapping-text">
                   <span style="font-weight: 700">{{ removed.partnerCourseCode }}</span><br />
                   <span style="font-size: 10px; color: #000">{{ removed.partnerCourseName }}</span><br />
@@ -694,6 +702,19 @@ function formatDate(iso: string): string {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  overflow: visible;
+  overflow: hidden;
+}
+.la-mapping-amendment {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  font-size: 9px;
+  font-weight: 800;
+  color: #cc0000;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0 3px;
+  line-height: 1.4;
+  pointer-events: none;
 }
 </style>

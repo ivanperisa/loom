@@ -9,5 +9,6 @@ public record LearningAgreementEntryResponse(
     string? PartnerCourseName,
     string? PartnerCourseNameHr,
     decimal? AwardedEcts,
-    bool IsDeleted
+    bool IsDeleted,
+    int? AmendmentNumber
 );

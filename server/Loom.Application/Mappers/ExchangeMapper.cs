@@ -74,7 +74,8 @@ public static class ExchangeMapper
         entry.PartnerCourse?.Name,
         entry.PartnerCourse?.NameHr,
         entry.AwardedEcts,
-        entry.IsDeleted
+        entry.IsDeleted,
+        AmendmentNumber: null
     );
 
     public static PartnerCourseResponse ToResponse(this PartnerCourse course) => new(

@@ -9,5 +9,6 @@ public record LearningAgreementResponse(
     DateTime? LastModifiedAt,
     string? LastModifiedByName,
     DateTime? SignedAt,
-    string? SignedByName
+    string? SignedByName,
+    int SignedCount
 );

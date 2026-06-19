@@ -28,6 +28,7 @@ public class AdminService(IAppDbContext db) : IAdminService
         var users = await db.Users
             .AsNoTracking()
             .Include(u => u.Institution)
+            .Include(u => u.Coordinator)
             .OrderBy(u => u.Name)
             .Select(u => new UserListResponse(
                 u.Id,
@@ -35,10 +36,57 @@ public class AdminService(IAppDbContext db) : IAdminService
                 u.Email,
                 u.Role.ToString(),
                 u.Institution != null ? u.Institution.Name : null,
-                u.CoordinatorRequestStatus))
+                u.InstitutionId,
+                u.CoordinatorRequestStatus,
+                u.IsOnboarded,
+                u.Jmbag,
+                u.Mentor,
+                u.CoordinatorId,
+                u.Coordinator != null ? u.Coordinator.Name : null))
             .ToListAsync(ct);
 
         return users;
+    }
+
+    public async Task<ErrorOr<UserListResponse>> UpdateUserAsync(int adminId, int targetUserId, AdminUpdateUserRequest request, CancellationToken ct = default)
+    {
+        var admin = await db.Users.FindAsync([adminId], ct);
+        if (admin is null || admin.Role != UserRole.Admin)
+            return Error.Forbidden("FORBIDDEN", "Only admins can update users.");
+
+        var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
+        if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        target.Name = request.Name;
+        target.Jmbag = request.Jmbag;
+        target.Mentor = request.Mentor;
+        target.InstitutionId = request.InstitutionId;
+        if (target.Role != UserRole.Coordinator)
+            target.CoordinatorId = request.CoordinatorId;
+        await db.SaveChangesAsync(ct);
+
+        var saved = await db.Users
+            .AsNoTracking()
+            .Include(u => u.Institution)
+            .Include(u => u.Coordinator)
+            .Where(u => u.Id == targetUserId)
+            .Select(u => new UserListResponse(
+                u.Id,
+                u.Name,
+                u.Email,
+                u.Role.ToString(),
+                u.Institution != null ? u.Institution.Name : null,
+                u.InstitutionId,
+                u.CoordinatorRequestStatus,
+                u.IsOnboarded,
+                u.Jmbag,
+                u.Mentor,
+                u.CoordinatorId,
+                u.Coordinator != null ? u.Coordinator.Name : null))
+            .FirstOrDefaultAsync(ct)
+            ?? throw new InvalidOperationException();
+
+        return saved;
     }
 
     #endregion

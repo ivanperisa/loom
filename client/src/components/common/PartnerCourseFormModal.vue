@@ -106,7 +106,7 @@ function submit() {
           <div class="flex gap-3">
             <div class="w-36 flex-shrink-0">
               <label class="mb-1.5 block text-sm text-light/70">{{ t('admin.institutions.courseCode') }} *</label>
-              <input v-model="courseForm.code" type="text" class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none font-mono uppercase" placeholder="e.g. CS101" />
+              <input v-model="courseForm.code" type="text" class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none font-mono" placeholder="e.g. CS101" />
             </div>
             <div class="w-28 flex-shrink-0">
               <label class="mb-1.5 block text-sm text-light/70">{{ t('admin.institutions.courseEcts') }} *</label>

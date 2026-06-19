@@ -30,6 +30,7 @@ export interface LearningAgreementEntryResponse {
   partnerCourseNameHr: string | null
   awardedEcts: number | null
   isDeleted: boolean
+  amendmentNumber: number | null
 }
 
 export interface LearningAgreementResponse {
@@ -42,6 +43,7 @@ export interface LearningAgreementResponse {
   lastModifiedByName: string | null
   signedAt: string | null
   signedByName: string | null
+  signedCount: number
 }
 
 export interface UpdateLearningAgreementStatusRequest {

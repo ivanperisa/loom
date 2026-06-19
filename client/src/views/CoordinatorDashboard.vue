@@ -240,7 +240,7 @@ function onExchangeCreated(exchangeGuid: string) {
                   <h3 class="text-lg font-semibold text-light">{{ student.name }}</h3>
                   <span
                     v-if="student.isPlaceholder"
-                    class="rounded-full bg-yellow-500/20 px-2 py-0.5 text-xs font-medium text-yellow-300"
+                    class="rounded-full border border-yellow-400/30 bg-yellow-500/10 px-2.5 py-0.5 text-xs font-medium text-yellow-300"
                   >
                     {{ t('coordinator.placeholder') }}
                   </span>

@@ -6,5 +6,11 @@ public record UserListResponse(
     string Email,
     string Role,
     string? InstitutionName,
-    string? CoordinatorRequestStatus
+    int? InstitutionId,
+    string? CoordinatorRequestStatus,
+    bool IsOnboarded,
+    string? Jmbag,
+    string? Mentor,
+    int? CoordinatorId,
+    string? CoordinatorName
 );

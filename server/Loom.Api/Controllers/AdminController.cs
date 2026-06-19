@@ -19,6 +19,13 @@ public class AdminController(IAdminService adminService) : ApiController
         return Match(result, Ok);
     }
 
+    [HttpPut("users/{userId:int}")]
+    public async Task<IActionResult> UpdateUser(int userId, [FromBody] AdminUpdateUserRequest request, CancellationToken ct)
+    {
+        var result = await adminService.UpdateUserAsync(GetCurrentUserId(), userId, request, ct);
+        return Match(result, Ok);
+    }
+
     #endregion
 
     #region Coordinator Requests & Whitelist

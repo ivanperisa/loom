@@ -6,7 +6,21 @@ export interface UserListResponse {
   email: string
   role: string
   institutionName: string | null
+  institutionId: string | null
   coordinatorRequestStatus: string | null
+  isOnboarded: boolean
+  jmbag: string | null
+  mentor: string | null
+  coordinatorId: string | null
+  coordinatorName: string | null
+}
+
+export interface AdminUpdateUserRequest {
+  name: string
+  jmbag: string | null
+  mentor: string | null
+  coordinatorId: string | null
+  institutionId: string | null
 }
 
 export interface CoordinatorRequestResponse {
@@ -44,4 +58,7 @@ export const adminService = {
 
   removeFromWhitelist: (email: string) =>
     api.delete(`/api/admin/coordinator-whitelist/${encodeURIComponent(email)}`),
+
+  updateUser: (userId: string, data: AdminUpdateUserRequest) =>
+    api.put<UserListResponse>(`/api/admin/users/${userId}`, data),
 }
