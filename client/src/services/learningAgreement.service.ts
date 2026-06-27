@@ -27,8 +27,8 @@ export const learningAgreementService = {
     api.get<LaSnapshotSummary[]>(`${basePath(exchangeId, guest)}/learning-agreement/history`),
   getSnapshots: (exchangeId: string, guest = false) =>
     api.get<SnapshotListItem[]>(`${basePath(exchangeId, guest)}/learning-agreement/snapshots`),
-  restoreSnapshot: (exchangeId: string, snapshotId: number) =>
-    api.post<void>(`/api/exchanges/${exchangeId}/learning-agreement/snapshots/${snapshotId}/restore`),
+  restoreSnapshot: (exchangeId: string, snapshotId: number, guest = false) =>
+    api.post<void>(`${basePath(exchangeId, guest)}/learning-agreement/snapshots/${snapshotId}/restore`),
   exportMappings: (exchangeId: string, guest = false) =>
     api.get<Blob>(`${basePath(exchangeId, guest)}/learning-agreement/export`, { responseType: 'blob' }),
   importMappings: (exchangeId: string, dto: MappingExportDto, guest = false) =>

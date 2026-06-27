@@ -209,11 +209,7 @@ export default {
       learningAgreement: 'Ugovor o učenju',
       recognition: 'Priznavanje',
       mappingScheme: 'Shema preslikavanja',
-      grades: 'Ocjene',
       history: 'Povijest',
-    },
-    placeholder: {
-      comingSoon: 'Uskoro dostupno.',
     },
     history: {
       empty: 'Nema zabilježenih izmjena.',
@@ -328,6 +324,15 @@ export default {
   recognition: {
     notApproved: 'Priznavanje je dostupno tek nakon potisivanja razmjene.',
     noEntries: 'Nema stavki za priznavanje.',
+    agreedMappingTitle: 'Dogovoreno preslikavanje',
+    finalRecognitionTitle: 'Konačno priznavanje i ocjene',
+    finalRecognitionHint:
+      'Ovdje se unose ocjene, datum ispita i status položenosti. Nakon prvog unosa raspored se prenosi u Shemu preslikavanja, gdje se može preurediti.',
+    enrollment: {
+      none: '—',
+      passed: 'Položeno',
+      notPassed: 'Nepoloženo',
+    },
     export: 'Izvezi u Excel',
     totalAwarded: 'Ukupno: {ects} ECTS',
     actions: {
@@ -398,6 +403,13 @@ export default {
       sheetRecognition: 'Priznavanje',
       sheetLA: 'Ugovor o učenju',
     },
+  },
+  mappingScheme: {
+    lockedPhase1:
+      'Shema preslikavanja postaje dostupna nakon unosa prve ocjene ili statusa položenosti u Priznavanju.',
+    dragHint:
+      'Povuci predmet u drugi slot za razmještaj. Klikni × za nepoloženo, a prekriženi predmet za povratak u položeno.',
+    markNotPassed: 'Označi nepoloženim',
   },
   exchangeCourse: {
     add: 'Dodaj predmet',

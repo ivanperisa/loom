@@ -4,6 +4,7 @@ import { i18n } from '@/i18n'
 import { exchangeService } from '@/services/exchange.service'
 import { learningAgreementService } from '@/services/learningAgreement.service'
 import { recognitionService } from '@/services/recognition.service'
+import { mappingSchemeService } from '@/services/mappingScheme.service'
 import { slotMode } from '@/utils/slotMode'
 import type {
   ExchangeSummaryResponse,
@@ -26,6 +27,10 @@ import type {
   UpdateRecognitionStatusRequest,
   RecognitionSnapshotSummary,
 } from '@/types/recognition.types'
+import type {
+  MappingSchemeResponse,
+  SaveMappingSchemeRequest,
+} from '@/types/mappingScheme.types'
 import type {
   LaSnapshotSummary,
   SnapshotListItem,
@@ -64,6 +69,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   const exchange = ref<ExchangeResponse | null>(null)
   const serverLearningAgreement = ref<LearningAgreementResponse | null>(null)
   const serverRecognition = ref<RecognitionResponse | null>(null)
+  const serverMappingScheme = ref<MappingSchemeResponse | null>(null)
   const localSlotStates = ref<LocalSlotState[]>([])
   const isDirty = ref(false)
   const loading = ref(false)
@@ -307,13 +313,31 @@ export const useExchangeStore = defineStore('exchange', () => {
   // Recognition
 
   async function fetchRecognition(exchangeId: string) {
-    const res = await recognitionService.getOrCreate(exchangeId, guestMode.value)
-    serverRecognition.value = res.data
+    const [rec, ms] = await Promise.all([
+      recognitionService.getOrCreate(exchangeId, guestMode.value),
+      mappingSchemeService.get(exchangeId, guestMode.value),
+    ])
+    serverRecognition.value = rec.data
+    serverMappingScheme.value = ms.data
   }
 
   async function saveRecognition(exchangeId: string, request: SaveRecognitionRequest) {
     const res = await recognitionService.saveRecognition(exchangeId, request, guestMode.value)
     serverRecognition.value = res.data
+    const ms = await mappingSchemeService.get(exchangeId, guestMode.value)
+    serverMappingScheme.value = ms.data
+  }
+
+  async function fetchMappingScheme(exchangeId: string) {
+    const res = await mappingSchemeService.get(exchangeId, guestMode.value)
+    serverMappingScheme.value = res.data
+  }
+
+  async function saveMappingScheme(exchangeId: string, request: SaveMappingSchemeRequest) {
+    const res = await mappingSchemeService.save(exchangeId, request, guestMode.value)
+    serverMappingScheme.value = res.data
+    const rec = await recognitionService.getOrCreate(exchangeId, guestMode.value)
+    serverRecognition.value = rec.data
   }
 
   async function updateRecognitionStatus(
@@ -351,7 +375,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   }
 
   async function restoreSnapshot(exchangeId: string, snapshotId: number): Promise<void> {
-    await learningAgreementService.restoreSnapshot(exchangeId, snapshotId)
+    await learningAgreementService.restoreSnapshot(exchangeId, snapshotId, guestMode.value)
     await fetchLearningAgreement(exchangeId)
   }
 
@@ -365,6 +389,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchange,
     serverLearningAgreement,
     serverRecognition,
+    serverMappingScheme,
     localSlotStates,
     isDirty,
     slots,
@@ -399,6 +424,8 @@ export const useExchangeStore = defineStore('exchange', () => {
     updateLaMessage,
     fetchRecognition,
     saveRecognition,
+    fetchMappingScheme,
+    saveMappingScheme,
     updateRecognitionStatus,
     updateRecognitionMessage,
     exportMappings,

@@ -210,7 +210,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return saved.ToResponse();
     }
 
-    public async Task<ErrorOr<ExchangeResponse>> UpdateEwpLinkAsync(Guid exchangeGuid, int? requesterId, string? ewpLink, CancellationToken ct = default)
+    public async Task<ErrorOr<ExchangeResponse>> UpdateEwpLinkAsync(Guid exchangeGuid, int requesterId, string? ewpLink, CancellationToken ct = default)
     {
         var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
         if (idResult.IsError) return idResult.Errors;
@@ -219,13 +219,10 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
-        if (requesterId.HasValue)
-        {
-            var requester = await db.Users.FindAsync([requesterId.Value], ct);
-            if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-            if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
-                return Error.Forbidden("ACCESS_DENIED", "Access denied.");
-        }
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
+            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
         exchange.EwpLink = string.IsNullOrWhiteSpace(ewpLink) ? null : ewpLink.Trim();
         exchange.UpdatedAt = DateTime.UtcNow;

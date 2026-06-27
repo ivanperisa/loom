@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Loom.Application.Services;
 
-public class RecognitionService(IAppDbContext db) : IRecognitionService
+public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingSchemeService) : IRecognitionService
 {
     private IQueryable<Recognition> RecognitionsWithIncludes() => db.Recognitions
         .Include(r => r.Entries)
@@ -86,8 +86,52 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
                 .FirstAsync(r => r.ExchangeId == exchangeId, ct);
         }
 
-        return recognition.ToResponse();
+        var response = recognition.ToResponse();
+        return await OverlayMappingGradesAsync(exchangeId, response, ct);
     }
+
+    private async Task<RecognitionResponse> OverlayMappingGradesAsync(int exchangeId, RecognitionResponse response, CancellationToken ct)
+    {
+        var byCode = await GetMappingGradesByCodeAsync(exchangeId, ct);
+        if (byCode.Count == 0) return response;
+
+        var entries = response.Entries.Select(e =>
+            byCode.TryGetValue(e.PartnerCourseCode, out var ms)
+                ? e with
+                {
+                    EnrollmentStatus = ms.EnrollmentStatus?.ToString(),
+                    OriginalGrade = ms.OriginalGrade,
+                    EctsGrade = ms.EctsGrade,
+                    HrGrade = ms.HrGrade,
+                    ExamDate = ms.ExamDate,
+                    IsRecognized = ms.IsRecognized,
+                }
+                : e
+        ).ToList();
+
+        return response with { Entries = entries };
+    }
+
+    private async Task<Dictionary<string, MappingSchemeEntry>> GetMappingGradesByCodeAsync(int exchangeId, CancellationToken ct)
+    {
+        var msEntries = await db.MappingSchemeEntries
+            .AsNoTracking()
+            .Include(e => e.PartnerCourse)
+            .Where(e => e.ExchangeId == exchangeId && e.PartnerCourseId != null)
+            .ToListAsync(ct);
+
+        return msEntries
+            .Where(e => e.PartnerCourse != null)
+            .GroupBy(e => e.PartnerCourse!.Code)
+            .ToDictionary(g => g.Key, g => g.First());
+    }
+
+    private static bool HasGrade(UpsertRecognitionEntryRequest e) =>
+        !string.IsNullOrWhiteSpace(e.EnrollmentStatus)
+        || !string.IsNullOrWhiteSpace(e.OriginalGrade)
+        || !string.IsNullOrWhiteSpace(e.EctsGrade)
+        || !string.IsNullOrWhiteSpace(e.HrGrade)
+        || e.ExamDate is not null;
 
     public async Task<ErrorOr<RecognitionResponse>> SaveRecognitionAsync(Guid exchangeGuid, int studentId, SaveRecognitionRequest request, CancellationToken ct = default)
     {
@@ -112,37 +156,78 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
         var entries = await db.LearningAgreementEntries.Where(e => entryIds.Contains(e.Id)).ToListAsync(ct);
         if (entries.Count != entryIds.Count) return Error.NotFound("ENTRY_NOT_FOUND", "Some learning agreement entries were not found.");
 
-        foreach (var entryReq in request.Entries)
+        recognition.UpdatedAt = DateTime.UtcNow;
+        recognition.LastModifiedById = studentId;
+
+        var mappingExists = await db.MappingSchemeEntries.AnyAsync(e => e.ExchangeId == exchangeId, ct);
+
+        if (mappingExists)
         {
-            var existing = recognition.Entries.FirstOrDefault(e => e.LearningAgreementEntryId == entryReq.LearningAgreementEntryId);
-            if (existing is null)
+            await ApplyGradesToMappingSchemeAsync(exchangeId, request, entries, ct);
+            await db.SaveChangesAsync(ct);
+        }
+        else
+        {
+            foreach (var entryReq in request.Entries)
             {
-                db.RecognitionEntries.Add(new RecognitionEntry
+                var existing = recognition.Entries.FirstOrDefault(e => e.LearningAgreementEntryId == entryReq.LearningAgreementEntryId);
+                if (existing is null)
                 {
-                    RecognitionId = recognition.Id,
-                    LearningAgreementEntryId = entryReq.LearningAgreementEntryId,
-                    EnrollmentStatus = entryReq.EnrollmentStatus,
-                    OriginalGrade = entryReq.OriginalGrade,
-                    EctsGrade = entryReq.EctsGrade,
-                    HrGrade = entryReq.HrGrade,
-                    ExamDate = entryReq.ExamDate
-                });
+                    db.RecognitionEntries.Add(new RecognitionEntry
+                    {
+                        RecognitionId = recognition.Id,
+                        LearningAgreementEntryId = entryReq.LearningAgreementEntryId,
+                        EnrollmentStatus = entryReq.EnrollmentStatus,
+                        OriginalGrade = entryReq.OriginalGrade,
+                        EctsGrade = entryReq.EctsGrade,
+                        HrGrade = entryReq.HrGrade,
+                        ExamDate = entryReq.ExamDate
+                    });
+                }
+                else
+                {
+                    existing.EnrollmentStatus = entryReq.EnrollmentStatus;
+                    existing.OriginalGrade = entryReq.OriginalGrade;
+                    existing.EctsGrade = entryReq.EctsGrade;
+                    existing.HrGrade = entryReq.HrGrade;
+                    existing.ExamDate = entryReq.ExamDate;
+                }
             }
-            else
+
+            await db.SaveChangesAsync(ct);
+
+            if (request.Entries.Any(HasGrade))
             {
-                existing.EnrollmentStatus = entryReq.EnrollmentStatus;
-                existing.OriginalGrade = entryReq.OriginalGrade;
-                existing.EctsGrade = entryReq.EctsGrade;
-                existing.HrGrade = entryReq.HrGrade;
-                existing.ExamDate = entryReq.ExamDate;
+                await mappingSchemeService.EnsureMappingSchemeInitializedAsync(exchangeId, ct);
+                await ApplyGradesToMappingSchemeAsync(exchangeId, request, entries, ct);
             }
         }
 
-        recognition.UpdatedAt = DateTime.UtcNow;
-        recognition.LastModifiedById = studentId;
-        await db.SaveChangesAsync(ct);
-
         return await GetOrCreateRecognitionAsync(exchangeGuid, studentId, ct);
+    }
+
+    private async Task ApplyGradesToMappingSchemeAsync(int exchangeId, SaveRecognitionRequest request, List<LearningAgreementEntry> laEntries, CancellationToken ct)
+    {
+        var laById = laEntries.ToDictionary(e => e.Id);
+        var gradesByPartner = new Dictionary<int, UpsertRecognitionEntryRequest>();
+        foreach (var r in request.Entries)
+            if (laById.TryGetValue(r.LearningAgreementEntryId, out var la) && la.PartnerCourseId is int pcId)
+                gradesByPartner[pcId] = r;
+
+        if (gradesByPartner.Count == 0) return;
+
+        var msEntries = await db.MappingSchemeEntries.Where(e => e.ExchangeId == exchangeId).ToListAsync(ct);
+        foreach (var ms in msEntries)
+            if (ms.PartnerCourseId is int pid && gradesByPartner.TryGetValue(pid, out var g))
+            {
+                ms.EnrollmentStatus = MappingSchemeService.ParseStatus(g.EnrollmentStatus);
+                ms.OriginalGrade = g.OriginalGrade;
+                ms.EctsGrade = g.EctsGrade;
+                ms.HrGrade = g.HrGrade;
+                ms.ExamDate = g.ExamDate;
+            }
+
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionStatusAsync(Guid exchangeGuid, int requesterId, UpdateRecognitionStatusRequest request, CancellationToken ct = default)
@@ -195,21 +280,28 @@ public class RecognitionService(IAppDbContext db) : IRecognitionService
             var recWithEntries = await RecognitionsWithIncludes()
                 .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
 
+            var byCode = await GetMappingGradesByCodeAsync(exchangeId, ct);
+
             var snapshotData = new RecognitionSnapshotData(
-                recWithEntries?.Entries.Select(e => new RecognitionSnapshotEntry(
-                    e.LearningAgreementEntry.HomeSlot.Course?.Name
-                        ?? e.LearningAgreementEntry.HomeSlot.CourseGroup?.Name
-                        ?? $"Slot {e.LearningAgreementEntry.HomeSlotId}",
-                    e.LearningAgreementEntry.PartnerCourse?.Code,
-                    e.LearningAgreementEntry.PartnerCourse?.Name,
-                    e.EnrollmentStatus,
-                    e.OriginalGrade,
-                    e.EctsGrade,
-                    e.HrGrade,
-                    e.ExamDate,
-                    e.IsRecognized,
-                    e.RecognizedAsCourse?.Name
-                )).ToList() ?? []);
+                recWithEntries?.Entries.Select(e =>
+                {
+                    var code = e.LearningAgreementEntry.PartnerCourse?.Code;
+                    var ms = code is not null && byCode.TryGetValue(code, out var m) ? m : null;
+                    return new RecognitionSnapshotEntry(
+                        e.LearningAgreementEntry.HomeSlot.Course?.Name
+                            ?? e.LearningAgreementEntry.HomeSlot.CourseGroup?.Name
+                            ?? $"Slot {e.LearningAgreementEntry.HomeSlotId}",
+                        code,
+                        e.LearningAgreementEntry.PartnerCourse?.Name,
+                        ms?.EnrollmentStatus?.ToString() ?? e.EnrollmentStatus,
+                        ms?.OriginalGrade ?? e.OriginalGrade,
+                        ms?.EctsGrade ?? e.EctsGrade,
+                        ms?.HrGrade ?? e.HrGrade,
+                        ms?.ExamDate ?? e.ExamDate,
+                        ms?.IsRecognized ?? e.IsRecognized,
+                        e.RecognizedAsCourse?.Name
+                    );
+                }).ToList() ?? []);
 
             db.ExchangeSnapshots.Add(new ExchangeSnapshot
             {
