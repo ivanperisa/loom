@@ -61,18 +61,55 @@ public class MappingSchemeService(IAppDbContext db) : IMappingSchemeService
             .Where(e => e.ExchangeId == exchangeId)
             .ToListAsync(ct);
 
+        var validPartnerCourseIds = entries
+            .Where(e => e.PartnerCourseId != null)
+            .Select(e => e.PartnerCourseId!.Value)
+            .ToHashSet();
+
+        var keepIds = new HashSet<int>();
+
         foreach (var req in request.Entries)
         {
-            var existing = entries.FirstOrDefault(e => e.Id == req.Id);
-            if (existing is null) continue;
+            if (req.AwardedEcts < 0)
+                return Error.Validation("INVALID_ECTS", "Awarded ECTS cannot be negative.");
 
-            existing.HomeSlotId = req.HomeSlotId;
-            existing.EnrollmentStatus = ParseStatus(req.EnrollmentStatus);
-            existing.OriginalGrade = req.OriginalGrade;
-            existing.EctsGrade = req.EctsGrade;
-            existing.HrGrade = req.HrGrade;
-            existing.ExamDate = req.ExamDate;
+            if (req.Id > 0)
+            {
+                var existing = entries.FirstOrDefault(e => e.Id == req.Id);
+                if (existing is null) continue;
+
+                existing.HomeSlotId = req.HomeSlotId;
+                existing.AwardedEcts = req.AwardedEcts;
+                existing.EnrollmentStatus = ParseStatus(req.EnrollmentStatus);
+                existing.OriginalGrade = req.OriginalGrade;
+                existing.EctsGrade = req.EctsGrade;
+                existing.HrGrade = req.HrGrade;
+                existing.ExamDate = req.ExamDate;
+                keepIds.Add(existing.Id);
+            }
+            else
+            {
+                if (req.PartnerCourseId is not int pcId || !validPartnerCourseIds.Contains(pcId))
+                    return Error.Validation("INVALID_PARTNER_COURSE", "Split entry must reference a partner course already in the scheme.");
+
+                db.MappingSchemeEntries.Add(new MappingSchemeEntry
+                {
+                    ExchangeId = exchangeId,
+                    HomeSlotId = req.HomeSlotId,
+                    PartnerCourseId = pcId,
+                    AwardedEcts = req.AwardedEcts,
+                    EnrollmentStatus = ParseStatus(req.EnrollmentStatus),
+                    OriginalGrade = req.OriginalGrade,
+                    EctsGrade = req.EctsGrade,
+                    HrGrade = req.HrGrade,
+                    ExamDate = req.ExamDate,
+                });
+            }
         }
+
+        foreach (var e in entries)
+            if (!keepIds.Contains(e.Id))
+                db.MappingSchemeEntries.Remove(e);
 
         await db.SaveChangesAsync(ct);
         return await GetMappingSchemeAsync(exchangeGuid, requesterId, ct);

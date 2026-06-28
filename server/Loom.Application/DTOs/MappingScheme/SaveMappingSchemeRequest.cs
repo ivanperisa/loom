@@ -5,6 +5,8 @@ public record SaveMappingSchemeRequest(List<SaveMappingSchemeEntryRequest> Entri
 public record SaveMappingSchemeEntryRequest(
     int Id,
     int HomeSlotId,
+    int? PartnerCourseId,
+    decimal AwardedEcts,
     string? EnrollmentStatus,
     string? OriginalGrade,
     string? EctsGrade,

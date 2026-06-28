@@ -113,7 +113,13 @@ export const useExchangeStore = defineStore('exchange', () => {
     } else if (toState.mode !== slotMode.AtExchange) {
       toState.mode = slotMode.AtExchange
     }
-    toState.mappings.push(mapping!)
+    // Merge into an existing mapping for the same partner course instead of duplicating it.
+    const existing = toState.mappings.find((m) => m.partnerCourseCode === mapping!.partnerCourseCode)
+    if (existing) {
+      existing.awardedEcts = Math.round((existing.awardedEcts + mapping!.awardedEcts) * 10) / 10
+    } else {
+      toState.mappings.push(mapping!)
+    }
     isDirty.value = true
   }
 
@@ -146,7 +152,13 @@ export const useExchangeStore = defineStore('exchange', () => {
   function localAddSlotMapping(homeSlotId: string, mapping: LocalSlotMapping) {
     const state = localSlotStates.value.find((s) => s.homeSlotId === homeSlotId)
     if (state) {
-      state.mappings.push(mapping)
+      // Merge into an existing mapping for the same partner course instead of duplicating it.
+      const existing = state.mappings.find((m) => m.partnerCourseCode === mapping.partnerCourseCode)
+      if (existing) {
+        existing.awardedEcts = Math.round((existing.awardedEcts + mapping.awardedEcts) * 10) / 10
+      } else {
+        state.mappings.push(mapping)
+      }
       isDirty.value = true
     }
   }

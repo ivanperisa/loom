@@ -408,7 +408,7 @@ export default {
     lockedPhase1:
       'The Mapping Scheme becomes available after the first grade or pass/fail status is entered in Recognition.',
     dragHint:
-      'Drag a course to another slot to move it. Click × to mark not passed, click a crossed-out course to restore.',
+      'Click x to mark not passed, click a crossed-out course to restore.',
     markNotPassed: 'Mark as not passed',
   },
   exchangeCourse: {
@@ -517,6 +517,7 @@ export default {
   partnerCourses: {
     dragHint: 'Drag a course onto a cell in the learning agreement',
     addMapping: 'Add Mapping',
+    moveMapping: 'Move Mapping',
     availableEcts: 'Available ECTS',
     awardedEcts: 'Awarded ECTS',
     mappedCourses: 'Mapped courses',

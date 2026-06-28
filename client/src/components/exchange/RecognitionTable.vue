@@ -67,8 +67,26 @@ const courseGroups = computed<CourseGroup[]>(() => {
 <template>
   <div class="overflow-x-auto doc-table-wrap">
     <table
-      style="border-collapse: collapse; width: 100%; min-width: 1200px; font-size: 11px; color: #000;"
+      style="border-collapse: collapse; width: 100%; min-width: 1200px; font-size: 11px; color: #000; table-layout: fixed;"
     >
+      <colgroup>
+        <col style="width: 70px" />
+        <col style="width: 160px" />
+        <col style="width: 90px" />
+        <col style="width: 70px" />
+        <col style="width: 40px" />
+        <col style="width: 28px" />
+        <col style="width: 70px" />
+        <col style="width: 130px" />
+        <col style="width: 55px" />
+        <col style="width: 110px" />
+        <col style="width: 38px" />
+        <col style="width: 50px" />
+        <col style="width: 60px" />
+        <col style="width: 55px" />
+        <col style="width: 55px" />
+        <col style="width: 80px" />
+      </colgroup>
       <thead>
         <tr>
           <th class="rec-th" style="min-width: 70px">{{ t('recognition.col.partnerCode') }}</th>
@@ -184,11 +202,13 @@ const courseGroups = computed<CourseGroup[]>(() => {
   font-size: 9px;
   font-weight: bold;
   color: #000;
+  word-break: break-word;
 }
 .rec-td {
   border: 1px solid #aaa;
   padding: 3px 4px;
   vertical-align: middle;
+  word-break: break-word;
 }
 .rec-td--center {
   text-align: center;

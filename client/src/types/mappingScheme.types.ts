@@ -30,8 +30,10 @@ export interface MappingSchemeResponse {
 }
 
 export interface SaveMappingSchemeEntryRequest {
-  id: string
-  homeSlotId: string
+  id: number
+  homeSlotId: number
+  partnerCourseId: number | null
+  awardedEcts: number
   enrollmentStatus: string | null
   originalGrade: string | null
   ectsGrade: string | null

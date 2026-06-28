@@ -55,9 +55,9 @@ function formatDate(iso: string): string {
 function mappingCount(n: number): string {
   if (locale.value !== 'hr') return `${n} ${n === 1 ? 'mapping' : 'mappings'}`
   const t2 = n % 100, t1 = n % 10
-  if (t2 >= 11 && t2 <= 19) return `${n} mapiranja`
-  if (t1 === 1) return `${n} mapiranje`
-  return `${n} mapiranja`
+  if (t2 >= 11 && t2 <= 19) return `${n} preslikavanja`
+  if (t1 === 1) return `${n} preslikavanje`
+  return `${n} preslikavanja`
 }
 
 async function restore(snapshotId: number) {

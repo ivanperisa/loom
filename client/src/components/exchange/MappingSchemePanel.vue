@@ -37,11 +37,17 @@ function rebuildLocal() {
 const isActive = computed(() => (exchangeStore.serverMappingScheme?.entries.length ?? 0) > 0)
 
 const isDirty = computed(() => {
-  const byId = new Map((exchangeStore.serverMappingScheme?.entries ?? []).map((e) => [e.id, e]))
+  const server = exchangeStore.serverMappingScheme?.entries ?? []
+  if (server.length !== localEntries.value.length) return true
+  const byId = new Map(server.map((e) => [e.id, e]))
   return localEntries.value.some((e) => {
     const s = byId.get(e.id)
     if (!s) return true
-    return s.homeSlotId !== e.homeSlotId || (s.enrollmentStatus ?? '') !== (e.enrollmentStatus ?? '')
+    return (
+      s.homeSlotId !== e.homeSlotId ||
+      s.awardedEcts !== e.awardedEcts ||
+      (s.enrollmentStatus ?? '') !== (e.enrollmentStatus ?? '')
+    )
   })
 })
 
@@ -82,10 +88,23 @@ function ectsColor(slot: HomeSlotResponse): string {
   return '#ef4444'
 }
 
-// Drag & drop — moves an entry to another slot (changes homeSlotId only).
+// Drag & drop — drops open a dialog to choose how many ECTS move to the target slot.
 const draggingId = ref<string | null>(null)
 const dragOverSlotId = ref<string | null>(null)
 const isDragging = computed(() => draggingId.value !== null)
+
+let tempId = -1
+function round1(n: number): number {
+  return Math.round(n * 10) / 10
+}
+
+const pendingTransfer = ref<{ entryId: string; toSlotId: string; max: number } | null>(null)
+const transferEcts = ref(0)
+const transferSource = computed(() =>
+  pendingTransfer.value
+    ? (localEntries.value.find((e) => e.id === pendingTransfer.value!.entryId) ?? null)
+    : null,
+)
 
 function onDragStart(entry: MappingSchemeEntryResponse) {
   draggingId.value = entry.id
@@ -99,7 +118,46 @@ function onDrop(slot: HomeSlotResponse) {
   draggingId.value = null
   if (id === null) return
   const entry = localEntries.value.find((e) => e.id === id)
-  if (entry) entry.homeSlotId = slot.id
+  if (!entry || entry.homeSlotId === slot.id || entry.awardedEcts <= 0) return
+  pendingTransfer.value = { entryId: entry.id, toSlotId: slot.id, max: entry.awardedEcts }
+  transferEcts.value = entry.awardedEcts
+}
+
+function confirmTransfer() {
+  const p = pendingTransfer.value
+  if (!p) return
+  pendingTransfer.value = null
+  const amount = round1(Math.min(Math.max(transferEcts.value, 0), p.max))
+  if (amount <= 0) return
+
+  const source = localEntries.value.find((e) => e.id === p.entryId)
+  if (!source) return
+  const target = localEntries.value.find(
+    (e) =>
+      e.id !== source.id &&
+      String(e.homeSlotId) === String(p.toSlotId) &&
+      e.partnerCourseCode === source.partnerCourseCode,
+  )
+
+  if (amount >= source.awardedEcts) {
+    if (target) {
+      target.awardedEcts = round1(target.awardedEcts + source.awardedEcts)
+      localEntries.value = localEntries.value.filter((e) => e.id !== source.id)
+    } else {
+      source.homeSlotId = p.toSlotId
+    }
+  } else {
+    source.awardedEcts = round1(source.awardedEcts - amount)
+    if (target) {
+      target.awardedEcts = round1(target.awardedEcts + amount)
+    } else {
+      localEntries.value.push({ ...source, id: String(tempId--), homeSlotId: p.toSlotId, awardedEcts: amount })
+    }
+  }
+}
+
+function cancelTransfer() {
+  pendingTransfer.value = null
 }
 
 function cellStyle(slot: HomeSlotResponse): Record<string, string> {
@@ -164,8 +222,10 @@ async function save() {
   try {
     await exchangeStore.saveMappingScheme(props.exchangeId, {
       entries: localEntries.value.map((e) => ({
-        id: e.id,
-        homeSlotId: e.homeSlotId,
+        id: Number(e.id),
+        homeSlotId: Number(e.homeSlotId),
+        partnerCourseId: e.partnerCourseId === null ? null : Number(e.partnerCourseId),
+        awardedEcts: e.awardedEcts,
         enrollmentStatus: e.enrollmentStatus || null,
         originalGrade: e.originalGrade,
         ectsGrade: e.ectsGrade,
@@ -303,6 +363,53 @@ onMounted(async () => {
         </div>
       </div>
     </template>
+
+    <!-- ECTS transfer dialog -->
+    <div
+      v-if="pendingTransfer"
+      style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50;"
+      @mousedown.self="cancelTransfer"
+    >
+      <div style="background: var(--color-dark-2); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); border-radius: 8px; padding: 24px; min-width: 320px;">
+        <h3 style="color: var(--color-light); font-size: 14px; font-weight: 600; margin-bottom: 16px">
+          {{ t('partnerCourses.moveMapping') }}
+        </h3>
+        <div v-if="transferSource" style="color: var(--color-primary-light); font-size: 12px; margin-bottom: 4px">
+          {{ transferSource.partnerCourseCode }} — {{ transferSource.partnerCourseName }}
+        </div>
+        <div style="color: var(--color-light); opacity: 0.6; font-size: 11px; margin-bottom: 16px">
+          {{ t('partnerCourses.availableEcts') }}: {{ pendingTransfer.max }} ECTS
+        </div>
+        <label style="display: block; color: var(--color-light); font-size: 12px; margin-bottom: 6px">
+          {{ t('partnerCourses.awardedEcts') }}
+        </label>
+        <input
+          v-model.number="transferEcts"
+          type="number"
+          :min="0.5"
+          :max="pendingTransfer.max"
+          step="0.5"
+          style="width: 100%; background: var(--color-dark); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); color: var(--color-light); padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 16px;"
+          @keydown.enter.prevent="confirmTransfer"
+        />
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button
+            type="button"
+            style="padding: 8px 16px; border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); background: transparent; color: var(--color-primary-light); border-radius: 4px; cursor: pointer; font-size: 13px;"
+            @click="cancelTransfer"
+          >
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            type="button"
+            style="padding: 8px 16px; background: var(--color-primary); border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;"
+            @click="confirmTransfer"
+          >
+            {{ t('common.confirm') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
