@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useExchangeStore } from '@/stores/exchange.store'
-import type { RecognitionSnapshotSummary } from '@/types/recognition.types'
+import type { RecognitionSnapshotSummary, RecognitionSnapshotDiff } from '@/types/recognition.types'
 
 const props = defineProps<{ exchangeId: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -31,6 +31,11 @@ function entryCount(n: number): string {
   if (t1 >= 2 && t1 <= 4) return `${n} stavke`
   return `${n} stavki`
 }
+
+function hasChanges(diff: RecognitionSnapshotDiff | null): boolean {
+  return !!diff && (diff.added.length > 0 || diff.removed.length > 0 || diff.modified.length > 0)
+}
+
 
 function toggleExpand(id: number) {
   if (expandedIds.value.has(id)) expandedIds.value.delete(id)
@@ -73,12 +78,11 @@ function formatDate(iso: string): string {
               <div v-if="item.diff" class="diff-badges">
                 <span v-if="item.diff.added.length" class="diff-badge diff-badge--added">+{{ item.diff.added.length }}</span>
                 <span v-if="item.diff.removed.length" class="diff-badge diff-badge--removed">-{{ item.diff.removed.length }}</span>
-                <span v-if="item.diff.modified.length" class="diff-badge diff-badge--modified">~{{ item.diff.modified.length }}</span>
               </div>
             </div>
 
             <button
-              v-if="item.diff"
+              v-if="hasChanges(item.diff)"
               type="button"
               class="snapshot-card__toggle"
               @click="toggleExpand(item.id)"
@@ -92,31 +96,14 @@ function formatDate(iso: string): string {
                 :key="`add-${e.homeSlotLabel}-${e.partnerCourseCode}`"
                 class="diff-row diff-row--added"
               >
-                + {{ e.homeSlotLabel }} → {{ e.partnerCourseCode ?? '—' }}
+                + {{ e.homeSlotLabel }} → {{ e.partnerCourseCode ?? '—' }}<template v-if="e.partnerCourseName">&nbsp;{{ e.partnerCourseName }}</template>
               </div>
               <div
                 v-for="e in item.diff.removed"
                 :key="`rem-${e.homeSlotLabel}-${e.partnerCourseCode}`"
                 class="diff-row diff-row--removed"
               >
-                - {{ e.homeSlotLabel }} → {{ e.partnerCourseCode ?? '—' }}
-              </div>
-              <div
-                v-for="e in item.diff.modified"
-                :key="`mod-${e.before.homeSlotLabel}-${e.before.partnerCourseCode}`"
-                class="diff-row diff-row--modified"
-              >
-                ~ {{ e.before.homeSlotLabel }}:
-                <template v-if="e.before.originalGrade !== e.after.originalGrade">
-                  {{ t('recognition.history.gradeChanged', { before: e.before.originalGrade ?? '–', after: e.after.originalGrade ?? '–' }) }}
-                </template>
-                <template v-else-if="e.before.isRecognized !== e.after.isRecognized">
-                  {{ t('recognition.history.recognizedChanged', {
-                    before: e.before.isRecognized ? t('recognition.history.yes') : t('recognition.history.no'),
-                    after: e.after.isRecognized ? t('recognition.history.yes') : t('recognition.history.no'),
-                  }) }}
-                </template>
-                <template v-else>{{ t('recognition.history.modified') }}</template>
+                - {{ e.homeSlotLabel }} → {{ e.partnerCourseCode ?? '—' }}<template v-if="e.partnerCourseName">&nbsp;{{ e.partnerCourseName }}</template>
               </div>
             </div>
           </div>
@@ -264,5 +251,4 @@ function formatDate(iso: string): string {
 
 .diff-row--added   { background: color-mix(in srgb, #16a34a 8%, transparent); color: #16a34a; }
 .diff-row--removed { background: color-mix(in srgb, #dc2626 8%, transparent); color: #dc2626; }
-.diff-row--modified{ background: color-mix(in srgb, #d97706 8%, transparent); color: #d97706; }
 </style>

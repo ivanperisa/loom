@@ -142,14 +142,14 @@ async function restore(snapshotId: number) {
                   :key="`add-${e.homeSlotId}-${e.partnerCourseId}`"
                   class="diff-row diff-row--added"
                 >
-                  + {{ e.homeSlotLabel }} → {{ e.partnerCourseCode ?? '—' }}<span v-if="e.awardedEcts"> ({{ e.awardedEcts }} ECTS)</span>
+                  + {{ e.homeSlotLabel }} → {{ e.partnerCourseCode ?? '—' }}<template v-if="e.partnerCourseName">&nbsp;{{ e.partnerCourseName }}</template><span v-if="e.awardedEcts"> ({{ e.awardedEcts }} ECTS)</span>
                 </div>
                 <div
                   v-for="e in item.diff.removed"
                   :key="`rem-${e.homeSlotId}-${e.partnerCourseId}`"
                   class="diff-row diff-row--removed"
                 >
-                  - {{ e.homeSlotLabel }} → {{ e.partnerCourseCode ?? '—' }}
+                  - {{ e.homeSlotLabel }} → {{ e.partnerCourseCode ?? '—' }}<template v-if="e.partnerCourseName">&nbsp;{{ e.partnerCourseName }}</template><span v-if="e.awardedEcts"> ({{ e.awardedEcts }} ECTS)</span>
                 </div>
                 <div
                   v-for="e in item.diff.modified"

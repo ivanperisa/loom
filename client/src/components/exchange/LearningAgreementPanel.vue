@@ -105,6 +105,18 @@ function lineFor(homeSlotId: string) {
   return exchangeStore.localSlotStates.find((s) => s.homeSlotId === homeSlotId)
 }
 
+const amendmentBadge = computed<number | null>(() => {
+  const la = exchangeStore.serverLearningAgreement
+  if (!la || la.signedCount < 1) return null
+  const n = la.status === documentStatus.Approved ? la.signedCount - 1 : la.signedCount
+  return n >= 1 ? n : null
+})
+
+function mappingAmendment(amendmentNumber: number | null | undefined): number | null {
+  const n = amendmentNumber ?? (exchangeStore.serverLearningAgreement?.signedCount ?? 0)
+  return n >= 1 ? n : null
+}
+
 function deletedEntriesForSlot(slotId: string) {
   const serverEntries = (exchangeStore.serverLearningAgreement?.entries ?? []).filter(
     (e) => e.homeSlotId === slotId && e.partnerCourseId !== null,
@@ -356,9 +368,9 @@ function formatDate(iso: string): string {
           :status="exchangeStore.serverLearningAgreement.status"
         />
         <span
-          v-if="exchangeStore.serverLearningAgreement && exchangeStore.serverLearningAgreement.signedCount > 0"
+          v-if="amendmentBadge !== null"
           class="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary-light"
-        >{{ t('la.amendmentLabel', { n: exchangeStore.serverLearningAgreement.signedCount }) }}</span>
+        >{{ t('la.amendmentLabel', { n: amendmentBadge }) }}</span>
         <!-- Export / Import / History -->
         <div style="display: flex; gap: 6px;">
           <ActionButton @click="handleExport">
@@ -492,7 +504,10 @@ function formatDate(iso: string): string {
                   <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
                   <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
                 </svg>
-                <span class="la-mapping-amendment">{{ t('la.amendmentLabel', { n: removed.amendmentNumber ?? exchangeStore.serverLearningAgreement?.signedCount }) }}</span>
+                <span
+                  v-if="mappingAmendment(removed.isDeleted ? removed.amendmentNumber : null) !== null"
+                  class="la-mapping-amendment"
+                >{{ t('la.amendmentLabel', { n: mappingAmendment(removed.isDeleted ? removed.amendmentNumber : null) }) }}</span>
                 <span class="la-mapping-text">
                   <span style="font-weight: 700">{{ removed.partnerCourseCode }}</span><br />
                   <span style="font-size: 10px; color: #000">{{ removed.partnerCourseName }}</span><br />
@@ -510,6 +525,10 @@ function formatDate(iso: string): string {
                 @dragstart.stop="isEditable && exchangeStore.startSlotDrag(slot.id, mapping.localId)"
                 @dragend.stop="exchangeStore.endDrag()"
               >
+                <span
+                  v-if="mappingAmendment(mapping.amendmentNumber) !== null"
+                  class="la-mapping-amendment"
+                >{{ t('la.amendmentLabel', { n: mappingAmendment(mapping.amendmentNumber) }) }}</span>
                 <span class="la-mapping-text">
                   <span style="font-weight: 700">{{ mapping.partnerCourseCode }}</span><br />
                   <span style="font-size: 10px; color: #000">{{ mapping.partnerCourseName }}</span><br />
@@ -677,6 +696,7 @@ function formatDate(iso: string): string {
 }
 
 .la-mapping-item {
+  position: relative;
   margin-top: 3px;
   display: flex;
   align-items: flex-start;
@@ -696,6 +716,7 @@ function formatDate(iso: string): string {
   opacity: 0.65;
   pointer-events: none;
 }
+
 .la-mapping-x {
   position: absolute;
   inset: 0;
@@ -704,17 +725,18 @@ function formatDate(iso: string): string {
   pointer-events: none;
   overflow: hidden;
 }
+
 .la-mapping-amendment {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 2;
   font-size: 9px;
   font-weight: 800;
+  letter-spacing: 0.3px;
   color: #cc0000;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 0 3px;
-  line-height: 1.4;
+  line-height: 1.2;
   pointer-events: none;
 }
 </style>

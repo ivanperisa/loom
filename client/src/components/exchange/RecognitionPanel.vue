@@ -134,6 +134,7 @@ function doExport() {
   if (!exchangeStore.serverRecognition) return
   exportExchangeExcel(
     exchangeStore.serverRecognition,
+    exchangeStore.serverMappingScheme ?? { exchangeId: props.exchangeId, entries: [] },
     exchangeStore.serverLearningAgreement!,
     exchangeStore.exchange!,
     locale.value,
@@ -169,7 +170,18 @@ function formatDate(iso: string): string {
       <!-- Status + actions bar -->
       <div class="relative mb-3 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <StatusBadge :status="exchangeStore.serverRecognition!.status" i18n-prefix="recognitionStatus" />
+          <StatusBadge :status="exchangeStore.serverRecognition!.status" />
+          <!-- Export / History -->
+          <div style="display: flex; gap: 6px;">
+            <ActionButton @click="doExport">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              {{ t('recognition.export') }}
+            </ActionButton>
+            <ActionButton @click="showHistory = true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {{ t('recognition.actions.history') }}
+            </ActionButton>
+          </div>
         </div>
         <span
           class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80"
@@ -177,11 +189,6 @@ function formatDate(iso: string): string {
           {{ homeProfileName }}
         </span>
         <div class="flex flex-wrap gap-2">
-          <ActionButton size="md" @click="doExport">{{ t('recognition.export') }}</ActionButton>
-          <ActionButton size="md" @click="showHistory = true">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            {{ t('recognition.actions.history') }}
-          </ActionButton>
           <template v-if="isCoordinator">
             <button
               v-if="exchangeStore.serverRecognition!.status === documentStatus.Draft"

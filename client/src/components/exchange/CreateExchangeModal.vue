@@ -103,7 +103,9 @@ const selectedPartnerInstitution = computed(
 
 // Step 3: Coordinator + Mentor
 const coordinators = ref<AuthMeResponse[]>([])
-const selectedCoordinatorId = ref<string | null>(null)
+const selectedCoordinatorId = ref<string | null>(
+  props.targetStudentId ? (authStore.user?.id ?? null) : (authStore.user?.coordinatorId ?? null),
+)
 const mentorInput = ref(authStore.user?.mentor ?? '')
 
 const coordinatorOptions = computed(() => [

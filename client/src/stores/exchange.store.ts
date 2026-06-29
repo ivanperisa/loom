@@ -56,6 +56,7 @@ function buildLocalFromServer(la: LearningAgreementResponse): LocalSlotState[] {
         partnerCourseName: entry.partnerCourseName ?? '',
         partnerCourseNameHr: entry.partnerCourseNameHr ?? null,
         awardedEcts: entry.awardedEcts ?? 0,
+        amendmentNumber: entry.amendmentNumber,
       })
     }
   }

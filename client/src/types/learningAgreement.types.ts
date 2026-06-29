@@ -75,6 +75,7 @@ export interface LocalSlotMapping {
   partnerCourseName: string
   partnerCourseNameHr: string | null
   awardedEcts: number
+  amendmentNumber?: number | null
 }
 
 export interface LaSnapshotEntry {

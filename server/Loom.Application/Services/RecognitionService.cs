@@ -150,7 +150,6 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Create recognition first.");
-        if (recognition.Status == DocumentStatus.Approved) return Error.Conflict("RECOGNITION_LOCKED", "Approved recognition cannot be modified.");
 
         var entryIds = request.Entries.Select(e => e.LearningAgreementEntryId).ToList();
         var entries = await db.LearningAgreementEntries.Where(e => entryIds.Contains(e.Id)).ToListAsync(ct);
@@ -420,16 +419,6 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
 
         var added = currByKey.Where(kv => !prevByKey.ContainsKey(kv.Key)).Select(kv => kv.Value).ToList();
         var removed = prevByKey.Where(kv => !currByKey.ContainsKey(kv.Key)).Select(kv => kv.Value).ToList();
-        var modified = currByKey
-            .Where(kv => prevByKey.TryGetValue(kv.Key, out var prev) && (
-                prev.EnrollmentStatus != kv.Value.EnrollmentStatus ||
-                prev.OriginalGrade != kv.Value.OriginalGrade ||
-                prev.EctsGrade != kv.Value.EctsGrade ||
-                prev.HrGrade != kv.Value.HrGrade ||
-                prev.IsRecognized != kv.Value.IsRecognized))
-            .Select(kv => new RecognitionSnapshotEntryChange(prevByKey[kv.Key], kv.Value))
-            .ToList();
-
-        return new RecognitionSnapshotDiff(added, removed, modified);
+        return new RecognitionSnapshotDiff(added, removed, []);
     }
 }

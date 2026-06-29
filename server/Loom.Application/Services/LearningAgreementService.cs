@@ -58,6 +58,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
                 .ToHashSet();
 
             var lastSeenIn = new Dictionary<(int, int), (int SnapshotIndex, LaSnapshotEntry Entry)>();
+            var firstSeenIn = new Dictionary<(int, int), int>();
             for (var i = 0; i < snapshots.Count; i++)
             {
                 var data = JsonSerializer.Deserialize<LaSnapshotData>(snapshots[i].Snapshot, JsonHelper.DefaultOptions);
@@ -66,7 +67,15 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
                 {
                     var key = (entry.HomeSlotId, entry.PartnerCourseId!.Value);
                     lastSeenIn[key] = (i + 1, entry);
+                    if (!firstSeenIn.ContainsKey(key)) firstSeenIn[key] = i + 1;
                 }
+            }
+
+            for (var idx = 0; idx < activeEntries.Count; idx++)
+            {
+                var e = activeEntries[idx];
+                if (e.PartnerCourseId is int pcid && firstSeenIn.TryGetValue((e.HomeSlotId, pcid), out var firstIndex))
+                    activeEntries[idx] = e with { AmendmentNumber = firstIndex - 1 };
             }
 
             foreach (var kvp in lastSeenIn)
@@ -435,7 +444,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
             var data = JsonSerializer.Deserialize<LaSnapshotData>(snapshot.Snapshot, JsonHelper.DefaultOptions);
             if (data is null) continue;
 
-            var diff = previous is not null ? ComputeLaDiff(data, previous) : null;
+            var diff = ComputeLaDiff(data, previous ?? new LaSnapshotData([]));
             result.Add(new LaSnapshotSummary(snapshot.Id, snapshot.CreatedAt, snapshot.ChangedBy.Name, data.Entries.Count, diff));
             previous = data;
         }
