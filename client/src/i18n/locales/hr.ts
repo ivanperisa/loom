@@ -327,7 +327,7 @@ export default {
     agreedMappingTitle: 'Dogovoreno preslikavanje',
     finalRecognitionTitle: 'Konačno priznavanje i ocjene',
     finalRecognitionHint:
-      'Ovdje se unose ocjene, datum ispita i status položenosti. Nakon prvog unosa raspored se prenosi u Shemu preslikavanja, gdje se može preurediti.',
+      'Ovdje se unose ocjene, datum ispita i status položenosti. Nakon prvog unosa raspored se prenosi u Shemu preslikavanja, gdje se mogu raditi izmjene.',
     enrollment: {
       none: '—',
       passed: 'Položeno',

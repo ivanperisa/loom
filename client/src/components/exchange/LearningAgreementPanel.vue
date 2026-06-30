@@ -86,7 +86,7 @@ async function signExchange() {
 
 const TOTAL_COLS = 30
 const SEMESTERS = [1, 2, 3, 4]
-const modes: SlotMode[] = [slotMode.AtHome, slotMode.AtExchange]
+const modes: SlotMode[] = [slotMode.AtHome]
 
 const modeOutlineColor: Record<string, string> = {
   AtHome: '#4472C4',
@@ -206,8 +206,7 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
     }
   }
 
-  const hasActiveMappings = !!state && state.mode === slotMode.AtExchange && state.mappings.length > 0
-  const showOutline = !!state && state.mode !== slotMode.AfterExchange && (state.mode === slotMode.AtHome || hasActiveMappings)
+  const showOutline = !!state && state.mode === slotMode.AtHome
   const outline = showOutline ? `3px solid ${modeOutlineColor[state!.mode]}` : `1px solid #aaa`
   return {
     backgroundColor: bg,

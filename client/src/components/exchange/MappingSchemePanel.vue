@@ -21,7 +21,7 @@ const saving = ref(false)
 
 const TOTAL_COLS = 30
 const SEMESTERS = [1, 2, 3, 4]
-const modes: SlotMode[] = [slotMode.AtHome, slotMode.AtExchange]
+const modes: SlotMode[] = [slotMode.AtHome]
 const modeOutlineColor: Record<string, string> = {
   AtHome: '#4472C4',
   AtExchange: '#FF0000',
@@ -182,9 +182,8 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
 
   const hasEntries = entriesForSlot(slot.id).length > 0
   const mode: SlotMode | undefined = hasEntries ? slotMode.AtExchange : laModeBySlot.value.get(slot.id)
-  const showOutline =
-    !!mode && mode !== slotMode.AfterExchange && (mode === slotMode.AtHome || hasEntries)
-  const outline = showOutline ? `3px solid ${modeOutlineColor[mode!]}` : `1px solid #aaa`
+  const showOutline = mode === slotMode.AtHome
+  const outline = showOutline ? `3px solid ${modeOutlineColor.AtHome}` : `1px solid #aaa`
   return {
     backgroundColor: bg,
     outline,
