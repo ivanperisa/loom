@@ -7,6 +7,9 @@ import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import LearningAgreementHistoryDrawer from '@/components/exchange/LearningAgreementHistoryDrawer.vue'
 import ImportPreviewModal from '@/components/exchange/ImportPreviewModal.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
+import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
+import PanelHeaderBar from '@/components/common/PanelHeaderBar.vue'
+import AuditInfo from '@/components/common/AuditInfo.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import { useNotification } from '@/composables/useNotification'
@@ -16,6 +19,8 @@ import { documentStatus } from '@/utils/documentStatus'
 import { slotMode } from '@/utils/slotMode'
 import { useTheme } from '@/composables/useTheme'
 import { useConfirm } from '@/composables/useConfirm'
+import { slotDisplayCode, slotDisplayName, slotSubLabel } from '@/utils/slotDisplay'
+import { ectsIndicatorColor } from '@/utils/ectsIndicator'
 
 const props = defineProps<{
   exchangeId: string
@@ -97,6 +102,15 @@ const isDragging = computed(() => !!exchangeStore.draggingCourse || !!exchangeSt
 const dragOverSlotId = ref<string | null>(null)
 const pendingDrop = ref<{ slot: HomeSlotResponse; course: PartnerCourseResponse } | null>(null)
 const pendingEcts = ref<number>(0)
+const pendingMove = ref<{
+  fromSlotId: string
+  toSlotId: string
+  localId: string
+  max: number
+  courseCode: string
+  courseName: string
+} | null>(null)
+const moveEcts = ref<number>(0)
 const editingMapping = ref<{ homeSlotId: string; localId: string } | null>(null)
 const editingEcts = ref(0)
 const ectsInputRef = ref<HTMLInputElement | null>(null)
@@ -104,6 +118,27 @@ const ectsInputRef = ref<HTMLInputElement | null>(null)
 function lineFor(homeSlotId: string) {
   return exchangeStore.localSlotStates.find((s) => s.homeSlotId === homeSlotId)
 }
+
+function sortedMappingsFor(homeSlotId: string) {
+  return (lineFor(homeSlotId)?.mappings ?? [])
+    .slice()
+    .sort((a, b) => a.partnerCourseName.localeCompare(b.partnerCourseName))
+}
+
+const totalAwardedEcts = computed(() => {
+  let sum = 0
+  for (const state of exchangeStore.localSlotStates) {
+    for (const m of state.mappings) sum += m.awardedEcts
+  }
+  return Math.round(sum * 10) / 10
+})
+
+const totalAvailableEcts = computed(() => {
+  const studySemesters = exchangeStore.exchange?.studySemesters ?? []
+  return exchangeStore.slots
+    .filter((slot) => studySemesters.includes(slot.semester))
+    .reduce((sum, slot) => sum + slot.ects, 0)
+})
 
 const amendmentBadge = computed<number | null>(() => {
   const la = exchangeStore.serverLearningAgreement
@@ -147,12 +182,7 @@ function ectsLabel(slot: HomeSlotResponse): string {
 function ectsColor(slot: HomeSlotResponse): string {
   const state = lineFor(slot.id)
   if (!state || state.mode !== slotMode.AtExchange || state.mappings.length === 0) return 'transparent'
-  const mapped = mappedEcts(slot)
-  const light = theme.value === 'light'
-  if (mapped === 0) return light ? '#78716c' : '#94a3b8'
-  if (mapped < slot.ects) return light ? '#b45309' : '#f59e0b'
-  if (mapped === slot.ects) return light ? '#16a34a' : '#22c55e'
-  return '#ef4444'
+  return ectsIndicatorColor(mappedEcts(slot), slot.ects, theme.value === 'light')
 }
 
 function alreadyMappedEcts(courseId: string): number {
@@ -232,7 +262,18 @@ function onDrop(event: DragEvent, slot: HomeSlotResponse) {
   const slotDrag = exchangeStore.draggingSlotMapping
   if (slotDrag) {
     if (slotDrag.fromSlotId !== slot.id) {
-      exchangeStore.localMoveSlotMapping(slotDrag.fromSlotId, slot.id, slotDrag.localId)
+      const mapping = lineFor(slotDrag.fromSlotId)?.mappings.find((m) => m.localId === slotDrag.localId)
+      if (mapping) {
+        pendingMove.value = {
+          fromSlotId: slotDrag.fromSlotId,
+          toSlotId: slot.id,
+          localId: slotDrag.localId,
+          max: mapping.awardedEcts,
+          courseCode: mapping.partnerCourseCode,
+          courseName: mapping.partnerCourseName,
+        }
+        moveEcts.value = mapping.awardedEcts
+      }
     }
     exchangeStore.endDrag()
     return
@@ -246,8 +287,21 @@ function onDrop(event: DragEvent, slot: HomeSlotResponse) {
   exchangeStore.endDrag()
 }
 
+function confirmMove() {
+  const p = pendingMove.value
+  if (!p) return
+  if (moveEcts.value > p.max) return
+  exchangeStore.localMoveSlotMapping(p.fromSlotId, p.toSlotId, p.localId, Math.max(moveEcts.value, 0.5))
+  pendingMove.value = null
+}
+
+function cancelMove() {
+  pendingMove.value = null
+}
+
 function confirmDrop() {
   if (!pendingDrop.value) return
+  if (pendingEcts.value > remainingEcts.value) return
   const { slot, course } = pendingDrop.value
   const mapping: LocalSlotMapping = {
     localId: crypto.randomUUID(),
@@ -255,7 +309,7 @@ function confirmDrop() {
     partnerCourseCode: course.code,
     partnerCourseName: course.name,
     partnerCourseNameHr: course.nameHr ?? null,
-    awardedEcts: pendingEcts.value,
+    awardedEcts: Math.max(pendingEcts.value, 0.5),
   }
   exchangeStore.localAddSlotMapping(slot.id, mapping)
   pendingDrop.value = null
@@ -306,33 +360,6 @@ function cancelEditEcts() {
   editingMapping.value = null
 }
 
-function slotDisplayName(slot: HomeSlotResponse): string {
-  return slot.courseName ?? slot.courseGroupName ?? ''
-}
-
-function slotDisplayCode(slot: HomeSlotResponse): string | number | null {
-  return slot.courseIsvuCode ?? slot.courseGroupIsvuCode ?? null
-}
-
-function slotSubLabel(slot: HomeSlotResponse): string {
-  const code = slotDisplayCode(slot)
-  if (code !== null) {
-    return locale.value === 'en'
-      ? (slot.courseNameEn ?? slot.courseGroupNameEn ?? slot.courseTypeName)
-      : slotDisplayName(slot)
-  }
-  return slot.courseTypeName
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString(locale.value === 'hr' ? 'hr-HR' : 'en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 </script>
 
 <template>
@@ -360,8 +387,8 @@ function formatDate(iso: string): string {
     />
 
     <!-- Status + Actions bar -->
-    <div class="relative mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
+    <PanelHeaderBar :home-profile-name="homeProfileName">
+      <template #left>
         <StatusBadge
           v-if="exchangeStore.serverLearningAgreement"
           :status="exchangeStore.serverLearningAgreement.status"
@@ -385,13 +412,8 @@ function formatDate(iso: string): string {
             {{ t('la.actions.history') }}
           </ActionButton>
         </div>
-      </div>
-      <span
-        class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80"
-      >
-        {{ homeProfileName }}
-      </span>
-      <div class="flex flex-wrap gap-2">
+      </template>
+      <template #right>
         <!-- Coordinator actions -->
         <template v-if="isCoordinator">
           <button
@@ -411,24 +433,16 @@ function formatDate(iso: string): string {
             {{ t('exchange.actions.backToDraft') }}
           </button>
         </template>
-      </div>
-    </div>
+      </template>
+    </PanelHeaderBar>
 
     <!-- Audit info -->
-    <div
-      v-if="exchangeStore.serverLearningAgreement?.lastModifiedAt || exchangeStore.serverLearningAgreement?.signedAt"
-      class="-mt-2 mb-4 flex flex-col gap-y-1 text-xs text-light/50"
-    >
-      <span v-if="exchangeStore.serverLearningAgreement?.lastModifiedAt">
-        {{ t('exchange.audit.lastModified') }}: {{ formatDate(exchangeStore.serverLearningAgreement.lastModifiedAt) }}
-        <template v-if="exchangeStore.serverLearningAgreement?.lastModifiedByName"> — {{ exchangeStore.serverLearningAgreement.lastModifiedByName }}</template>
-      </span>
-      <span v-if="exchangeStore.serverLearningAgreement?.signedAt">
-        {{ t('exchange.audit.signed') }}: {{ formatDate(exchangeStore.serverLearningAgreement.signedAt) }}
-        <template v-if="exchangeStore.serverLearningAgreement?.signedByName"> — {{ exchangeStore.serverLearningAgreement.signedByName }}</template>
-      </span>
-    </div>
-
+    <AuditInfo
+      :last-modified-at="exchangeStore.serverLearningAgreement?.lastModifiedAt"
+      :last-modified-by-name="exchangeStore.serverLearningAgreement?.lastModifiedByName"
+      :signed-at="exchangeStore.serverLearningAgreement?.signedAt"
+      :signed-by-name="exchangeStore.serverLearningAgreement?.signedByName"
+    />
     <UnsavedChangesBar
       v-if="isEditable && exchangeStore.isDirty"
       :saving="isSavingLa"
@@ -477,7 +491,7 @@ function formatDate(iso: string): string {
               <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
                 <div style="min-width: 0;">
                   <div class="la-cell-name">{{ slotDisplayCode(slot) ?? slotDisplayName(slot) }}</div>
-                  <div class="la-cell-sub">{{ slotSubLabel(slot) }}</div>
+                  <div class="la-cell-sub">{{ slotSubLabel(slot, locale) }}</div>
                 </div>
                 <div style="display: flex; flex-direction: row; align-items: flex-start; gap: 3px; flex-shrink: 0;">
                   <span
@@ -516,7 +530,7 @@ function formatDate(iso: string): string {
               </div>
 
               <div
-                v-for="mapping in lineFor(slot.id)?.mappings ?? []"
+                v-for="mapping in sortedMappingsFor(slot.id)"
                 :key="mapping.localId"
                 class="la-mapping-item"
                 :draggable="isEditable"
@@ -555,7 +569,7 @@ function formatDate(iso: string): string {
                       cursor: !isEditable ? 'default' : 'pointer',
                       textDecoration: !isEditable ? 'none' : 'underline dotted',
                     }"
-                    :title="isEditable ? 'Klikni za izmjenu' : ''"
+                    :title="isEditable ? t('la.clickToEditEcts') : ''"
                     @click.stop="startEditEcts(slot.id, mapping)"
                     >{{ mapping.awardedEcts }} ECTS</span
                   >
@@ -587,50 +601,30 @@ function formatDate(iso: string): string {
     </div>
 
     <!-- ECTS input popup -->
-    <div
+    <EctsAmountDialog
       v-if="pendingDrop"
-      style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50;"
-      @mousedown.self="cancelDrop"
-    >
-      <div style="background: var(--color-dark-2); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); border-radius: 8px; padding: 24px; min-width: 320px;">
-        <h3 style="color: var(--color-light); font-size: 14px; font-weight: 600; margin-bottom: 16px">
-          {{ t('partnerCourses.addMapping') }}
-        </h3>
-        <div style="color: var(--color-primary-light); font-size: 12px; margin-bottom: 4px">
-          {{ pendingDrop.course.code }} — {{ pendingDrop.course.name }}
-        </div>
-        <div style="color: var(--color-light); opacity: 0.6; font-size: 11px; margin-bottom: 16px">
-          {{ t('partnerCourses.availableEcts') }}: {{ remainingEcts }} / {{ pendingDrop.course.ects }} ECTS
-        </div>
-        <label style="display: block; color: var(--color-light); font-size: 12px; margin-bottom: 6px">
-          {{ t('partnerCourses.awardedEcts') }}
-        </label>
-        <input
-          v-model.number="pendingEcts"
-          type="number"
-          :min="0.5"
-          :max="remainingEcts"
-          step="0.5"
-          style="width: 100%; background: var(--color-dark); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); color: var(--color-light); padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 16px;"
-        />
-        <div style="display: flex; gap: 8px; justify-content: flex-end">
-          <button
-            type="button"
-            style="padding: 8px 16px; border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); background: transparent; color: var(--color-primary-light); border-radius: 4px; cursor: pointer; font-size: 13px;"
-            @click="cancelDrop"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            type="button"
-            style="padding: 8px 16px; background: var(--color-primary); border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;"
-            @click="confirmDrop"
-          >
-            {{ t('common.confirm') }}
-          </button>
-        </div>
-      </div>
-    </div>
+      :title="t('partnerCourses.addMapping')"
+      :course-code="pendingDrop.course.code"
+      :course-name="pendingDrop.course.name"
+      :max="remainingEcts"
+      :total-ects="pendingDrop.course.ects"
+      :model-value="pendingEcts"
+      @update:model-value="pendingEcts = $event"
+      @confirm="confirmDrop"
+      @cancel="cancelDrop"
+    />
+
+    <EctsAmountDialog
+      v-if="pendingMove"
+      :title="t('partnerCourses.moveMapping')"
+      :course-code="pendingMove.courseCode"
+      :course-name="pendingMove.courseName"
+      :max="pendingMove.max"
+      :model-value="moveEcts"
+      @update:model-value="moveEcts = $event"
+      @confirm="confirmMove"
+      @cancel="cancelMove"
+    />
 
     <!-- Course panels (editable only) -->
     <div v-if="isEditable && exchangeStore.exchange" class="mt-6 flex gap-6 items-start">
@@ -646,8 +640,9 @@ function formatDate(iso: string): string {
         />
       </div>
       <div class="min-w-0 basis-[35%] rounded-xl border border-primary/20 bg-dark-2 p-4">
-        <h3 class="mb-2 text-sm font-semibold text-green-400">
-          {{ t('partnerCourses.mappedCourses') }}
+        <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-green-400">
+          <span>{{ t('partnerCourses.mappedCourses') }}</span>
+          <span class="text-xs font-normal text-light/60">{{ totalAwardedEcts }} / {{ totalAvailableEcts }} ECTS</span>
         </h3>
         <PartnerCoursePanel
           :partner-institution-id="exchangeStore.exchange.partnerInstitutionId"

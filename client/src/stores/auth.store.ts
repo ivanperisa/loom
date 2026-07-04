@@ -73,8 +73,6 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await userService.completeOnboarding(request)
       user.value = response.data
-    } catch (e: unknown) {
-      throw e
     } finally {
       loading.value = false
     }
@@ -86,8 +84,6 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await userService.updateProfile(request)
       user.value = response.data
-    } catch (e: unknown) {
-      throw e
     } finally {
       loading.value = false
     }

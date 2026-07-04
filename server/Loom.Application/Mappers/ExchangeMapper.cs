@@ -135,14 +135,11 @@ public static class ExchangeMapper
             slot.SlotType.Color,
             slot.Semester,
             laEntry.AwardedEcts!.Value,
-            entry.RecognizedAsCourseId,
-            entry.RecognizedAsCourse?.Name,
             entry.EnrollmentStatus,
             entry.OriginalGrade,
             entry.EctsGrade,
             entry.HrGrade,
-            entry.ExamDate,
-            entry.IsRecognized
+            entry.ExamDate
         );
     }
 }

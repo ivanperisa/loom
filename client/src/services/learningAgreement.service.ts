@@ -1,4 +1,5 @@
 import { api } from './api'
+import { exchangeBasePath as basePath } from './exchangeBasePath'
 import type { ExchangeResponse } from '@/types/exchange.types'
 import type {
   LearningAgreementResponse,
@@ -10,15 +11,13 @@ import type {
   MappingImportResult,
 } from '@/types/learningAgreement.types'
 
-function basePath(exchangeId: string, guest: boolean) {
-  return guest ? `/api/exchanges/access/${exchangeId}` : `/api/exchanges/${exchangeId}`
-}
-
 export const learningAgreementService = {
   get: (exchangeId: string, guest = false) =>
     api.get<LearningAgreementResponse>(`${basePath(exchangeId, guest)}/learning-agreement`),
   save: (exchangeId: string, request: SaveLearningAgreementRequest, guest = false) =>
-    api.put<LearningAgreementResponse>(`${basePath(exchangeId, guest)}/learning-agreement`, request),
+    api.put<LearningAgreementResponse>(`${basePath(exchangeId, guest)}/learning-agreement`, request, {
+      suppressErrorToast: true,
+    }),
   updateStatus: (exchangeId: string, request: UpdateLearningAgreementStatusRequest, guest = false) =>
     api.patch<ExchangeResponse>(`${basePath(exchangeId, guest)}/learning-agreement/status`, request),
   updateMessage: (exchangeId: string, message: string | null, guest = false) =>

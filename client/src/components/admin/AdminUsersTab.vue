@@ -443,7 +443,6 @@ function formatDate(iso: string) {
         >
           <div>
             <p class="text-sm font-medium text-light">{{ entry.email }}</p>
-            <p class="text-xs text-light/50">{{ t('admin.whitelist.addedOn') }} {{ formatDate(entry.createdAt) }}</p>
           </div>
           <button
             type="button"

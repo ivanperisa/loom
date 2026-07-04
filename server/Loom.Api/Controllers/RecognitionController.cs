@@ -38,17 +38,6 @@ public class RecognitionController(IRecognitionService recognitionService, IExch
         return Match(result, Ok);
     }
 
-    [HttpPatch("entries/{entryId:int}/recognized")]
-    public async Task<IActionResult> SetEntryRecognized(
-        Guid exchangeGuid,
-        int entryId,
-        [FromBody] SetEntryRecognizedRequest request,
-        CancellationToken ct)
-    {
-        var result = await recognitionService.SetEntryRecognizedAsync(exchangeGuid, entryId, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
     [AllowAnonymous]
     [HttpGet("/api/exchanges/access/{exchangeGuid:guid}/recognition")]
     public async Task<IActionResult> GetOrCreatePublic(Guid exchangeGuid, CancellationToken ct)
@@ -85,21 +74,6 @@ public class RecognitionController(IRecognitionService recognitionService, IExch
         if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
 
         var result = await recognitionService.UpdateRecognitionStatusAsync(exchangeGuid, studentIdResult.Value, request, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpPatch("/api/exchanges/access/{exchangeGuid:guid}/recognition/entries/{entryId:int}/recognized")]
-    public async Task<IActionResult> SetPublicEntryRecognized(
-        Guid exchangeGuid,
-        int entryId,
-        [FromBody] SetEntryRecognizedRequest request,
-        CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await recognitionService.SetEntryRecognizedAsync(exchangeGuid, entryId, studentIdResult.Value, request, ct);
         return Match(result, Ok);
     }
 

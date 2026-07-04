@@ -110,7 +110,7 @@ function submit() {
             </div>
             <div class="w-28 flex-shrink-0">
               <label class="mb-1.5 block text-sm text-light/70">{{ t('admin.institutions.courseEcts') }} *</label>
-              <input v-model="courseForm.ects" type="number" step="0.5" min="0" class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none" placeholder="6" />
+              <input v-model="courseForm.ects" type="number" step="0.5" min="0" class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none" />
             </div>
           </div>
           <!-- Semester + Level -->
@@ -155,7 +155,7 @@ function submit() {
           <!-- Hours -->
           <div>
             <label class="mb-1.5 block text-sm text-light/70">
-              Sati nastave
+              {{ t('admin.institutions.teachingHours') }}
               <span class="text-light/30">({{ t('admin.institutions.optional') }})</span>
             </label>
             <div class="grid grid-cols-3 gap-3">

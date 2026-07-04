@@ -29,14 +29,11 @@ public static class MappingSchemeMapper
             slot.SlotType.Color,
             slot.Semester,
             entry.AwardedEcts ?? 0,
-            entry.RecognizedAsCourseId,
-            entry.RecognizedAsCourse?.Name,
             entry.EnrollmentStatus?.ToString(),
             entry.OriginalGrade,
             entry.EctsGrade,
             entry.HrGrade,
-            entry.ExamDate,
-            entry.IsRecognized
+            entry.ExamDate
         );
     }
 

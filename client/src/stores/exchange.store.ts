@@ -6,6 +6,8 @@ import { learningAgreementService } from '@/services/learningAgreement.service'
 import { recognitionService } from '@/services/recognition.service'
 import { mappingSchemeService } from '@/services/mappingScheme.service'
 import { slotMode } from '@/utils/slotMode'
+import { extractApiError } from '@/utils/apiError'
+import { useNotification } from '@/composables/useNotification'
 import type {
   ExchangeSummaryResponse,
   ExchangeResponse,
@@ -101,12 +103,15 @@ export const useExchangeStore = defineStore('exchange', () => {
     draggingCourse.value = null
   }
 
-  function localMoveSlotMapping(fromSlotId: string, toSlotId: string, localId: string) {
+  function localMoveSlotMapping(fromSlotId: string, toSlotId: string, localId: string, amount?: number) {
     const fromState = localSlotStates.value.find((s) => s.homeSlotId === fromSlotId)
     if (!fromState) return
     const mappingIdx = fromState.mappings.findIndex((m) => m.localId === localId)
     if (mappingIdx === -1) return
-    const [mapping] = fromState.mappings.splice(mappingIdx, 1)
+    const mapping = fromState.mappings[mappingIdx]!
+    const moveAmount = amount === undefined ? mapping.awardedEcts : Math.min(amount, mapping.awardedEcts)
+    if (moveAmount <= 0) return
+
     let toState = localSlotStates.value.find((s) => s.homeSlotId === toSlotId)
     if (!toState) {
       toState = { homeSlotId: toSlotId, mode: slotMode.AtExchange, mappings: [] }
@@ -114,24 +119,58 @@ export const useExchangeStore = defineStore('exchange', () => {
     } else if (toState.mode !== slotMode.AtExchange) {
       toState.mode = slotMode.AtExchange
     }
-    // Merge into an existing mapping for the same partner course instead of duplicating it.
-    const existing = toState.mappings.find((m) => m.partnerCourseCode === mapping!.partnerCourseCode)
-    if (existing) {
-      existing.awardedEcts = Math.round((existing.awardedEcts + mapping!.awardedEcts) * 10) / 10
+
+    const existing = toState.mappings.find((m) => m.partnerCourseCode === mapping.partnerCourseCode)
+
+    if (moveAmount >= mapping.awardedEcts) {
+      fromState.mappings.splice(mappingIdx, 1)
+      if (existing) {
+        existing.awardedEcts = Math.round((existing.awardedEcts + mapping.awardedEcts) * 10) / 10
+      } else {
+        toState.mappings.push(mapping)
+      }
     } else {
-      toState.mappings.push(mapping!)
+      mapping.awardedEcts = Math.round((mapping.awardedEcts - moveAmount) * 10) / 10
+      if (existing) {
+        existing.awardedEcts = Math.round((existing.awardedEcts + moveAmount) * 10) / 10
+      } else {
+        toState.mappings.push({ ...mapping, localId: crypto.randomUUID(), awardedEcts: moveAmount })
+      }
     }
     isDirty.value = true
   }
 
+  function stagedStorageKey(exchangeId: string) {
+    return `loom.stagedPartnerCourses.${exchangeId}`
+  }
+
+  function saveStagedPartnerCourses() {
+    if (!exchange.value) return
+    localStorage.setItem(
+      stagedStorageKey(exchange.value.guid),
+      JSON.stringify([...stagedPartnerCourseIds.value]),
+    )
+  }
+
+  function loadStagedPartnerCourses(exchangeId: string): Set<string> {
+    try {
+      const raw = localStorage.getItem(stagedStorageKey(exchangeId))
+      return raw ? new Set(JSON.parse(raw)) : new Set()
+    } catch {
+      return new Set()
+    }
+  }
+
   function stagePartnerCourse(id: string) {
     stagedPartnerCourseIds.value = new Set([...stagedPartnerCourseIds.value, id])
+    saveStagedPartnerCourses()
   }
 
   function unstagePartnerCourse(id: string) {
     const next = new Set(stagedPartnerCourseIds.value)
     next.delete(id)
     stagedPartnerCourseIds.value = next
+    saveStagedPartnerCourses()
   }
 
   function localSetSlotMode(homeSlotId: string, mode: SlotMode) {
@@ -246,7 +285,7 @@ export const useExchangeStore = defineStore('exchange', () => {
       const res = await learningAgreementService.get(exchangeId, guestMode.value)
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
-      stagedPartnerCourseIds.value = new Set()
+      stagedPartnerCourseIds.value = loadStagedPartnerCourses(exchangeId)
       isDirty.value = false
     } catch {
       error.value = t('common.error')
@@ -285,6 +324,17 @@ export const useExchangeStore = defineStore('exchange', () => {
       isDirty.value = false
       await fetchRecognition(exchangeId)
     } catch (e: unknown) {
+      const { title, message } = extractApiError(e)
+      const match = message?.match(/^(Awarded ECTS for course )(\S+)( exceeds available .+)$/)
+      if (match) {
+        const mapping = localSlotStates.value
+          .flatMap((s) => s.mappings)
+          .find((m) => String(m.partnerCourseId) === match[2])
+        const label = mapping ? `${mapping.partnerCourseCode} (${mapping.partnerCourseName})` : match[2]
+        useNotification().notifyError(title, `${match[1]}${label}${match[3]}`)
+      } else {
+        useNotification().notifyError(title, message)
+      }
       throw e
     }
   }

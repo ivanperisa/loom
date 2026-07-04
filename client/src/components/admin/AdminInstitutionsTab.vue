@@ -28,6 +28,9 @@ const institutionPage = ref(1)
 const courseSearch = ref<Record<string, string>>({})
 const coursePage = ref<Record<string, number>>({})
 const showDeleted = ref(false)
+const showDeletedCourses = ref<Record<string, boolean>>({})
+
+const hasDeletedInstitutions = computed(() => institutions.value.some(i => i.isDeleted))
 
 const filteredInstitutions = computed(() => {
   const q = institutionSearch.value.trim().toLowerCase()
@@ -53,9 +56,13 @@ const pagedInstitutions = computed(() => {
 
 function onInstSearch() { institutionPage.value = 1 }
 
+function hasDeletedCourses(institutionId: string) {
+  return (loadedCourses.value[institutionId] ?? []).some(c => c.isDeleted)
+}
+
 function filteredCourses(institutionId: string) {
   let courses = loadedCourses.value[institutionId] ?? []
-  if (!showDeleted.value) courses = courses.filter(c => !c.isDeleted)
+  if (!showDeletedCourses.value[institutionId]) courses = courses.filter(c => !c.isDeleted)
   const q = (courseSearch.value[institutionId] ?? '').trim().toLowerCase()
   if (q) {
     courses = courses.filter(c =>
@@ -413,7 +420,7 @@ function semesterLabel(semester: string) {
         class="flex-1"
         @update:model-value="onInstSearch"
       />
-      <label class="flex shrink-0 items-center gap-2 text-xs text-light/60">
+      <label v-if="hasDeletedInstitutions" class="flex shrink-0 items-center gap-2 text-xs text-light/60">
         <input v-model="showDeleted" type="checkbox" class="accent-primary" />
         {{ t('admin.institutions.showDeleted') }}
       </label>
@@ -491,8 +498,12 @@ function semesterLabel(semester: string) {
                 class="flex-1"
                 @update:model-value="onCourseSearch(inst.id)"
               />
+              <label v-if="hasDeletedCourses(inst.id)" class="flex shrink-0 items-center gap-2 text-xs text-light/60">
+                <input v-model="showDeletedCourses[inst.id]" type="checkbox" class="accent-primary" />
+                {{ t('admin.institutions.showDeleted') }}
+              </label>
               <button
-                v-if="mergeSelectInstitutionId !== inst.id"
+                v-if="mergeSelectInstitutionId !== inst.id && filteredCourses(inst.id).length > 1"
                 type="button"
                 class="shrink-0 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-light transition hover:bg-primary/10"
                 @click="startMergeSelection(inst.id)"
@@ -537,11 +548,13 @@ function semesterLabel(semester: string) {
                       :checked="selectedForMerge.has(course.id)"
                       @change="toggleCourseForMerge(course.id)"
                     />
-                    <span class="w-16 flex-shrink-0 font-mono text-xs text-light/50">{{ course.code }}</span>
-                    <div class="min-w-0">
-                      <span class="text-xs text-light">{{ course.name }}</span>
-                      <span v-if="course.nameHr" class="ml-2 text-xs text-light/40">/ {{ course.nameHr }}</span>
-                      <span v-if="course.isDeleted" class="ml-2 rounded border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">{{ t('admin.institutions.deleted') }}</span>
+                    <div class="flex min-w-0 items-baseline gap-3">
+                      <span class="w-16 flex-shrink-0 font-mono text-xs text-light/50">{{ course.code }}</span>
+                      <div class="min-w-0">
+                        <span class="text-xs text-light">{{ course.name }}</span>
+                        <span v-if="course.nameHr" class="ml-2 text-xs text-light/40">/ {{ course.nameHr }}</span>
+                        <span v-if="course.isDeleted" class="ml-2 rounded border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">{{ t('admin.institutions.deleted') }}</span>
+                      </div>
                     </div>
                   </div>
                   <div class="flex flex-shrink-0 items-center gap-3 text-xs text-light/40">
@@ -665,9 +678,9 @@ function semesterLabel(semester: string) {
           >
             <input type="radio" :value="course.id" v-model="mergeModal.primaryId" class="accent-primary" />
             <div class="min-w-0 flex-1">
-              <span class="font-mono text-xs text-light/50">{{ course.code }}</span>
-              <span class="ml-2 text-sm text-light">{{ course.name }}</span>
-              <span v-if="course.nameHr" class="ml-1 text-xs text-light/40">/ {{ course.nameHr }}</span>
+              <div class="font-mono text-xs text-light/50">{{ course.code }}</div>
+              <div class="text-sm text-light">{{ course.name }}</div>
+              <div v-if="course.nameHr" class="text-xs text-light/40">{{ course.nameHr }}</div>
             </div>
             <span
               class="shrink-0 rounded px-2 py-0.5 text-[11px] font-semibold"

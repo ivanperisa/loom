@@ -8,5 +8,3 @@ public record UpsertRecognitionEntryRequest(
     string? HrGrade,
     DateOnly? ExamDate
 );
-
-public record SetEntryRecognizedRequest(bool? IsRecognized);

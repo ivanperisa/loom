@@ -6,12 +6,12 @@ import { useAuthStore } from '@/stores/auth.store'
 import type { RecognitionEntryResponse } from '@/types/recognition.types'
 import type { MappingSchemeEntryResponse } from '@/types/mappingScheme.types'
 import { exportExchangeExcel } from '@/utils/exportExchange'
-import StatusBadge from '@/components/common/StatusBadge.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
-import RecognitionHistoryDrawer from '@/components/exchange/RecognitionHistoryDrawer.vue'
 import RecognitionTable from '@/components/exchange/RecognitionTable.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import { documentStatus } from '@/utils/documentStatus'
+import PanelHeaderBar from '@/components/common/PanelHeaderBar.vue'
+import AuditInfo from '@/components/common/AuditInfo.vue'
 
 const props = defineProps<{
   exchangeId: string
@@ -35,9 +35,13 @@ interface GradeData {
 
 const isCoordinator = computed(() => authStore.canActAsCoordinator)
 
+function byCourseName<T extends { partnerCourseName: string | null }>(entries: T[]): T[] {
+  return entries.slice().sort((a, b) => (a.partnerCourseName ?? '').localeCompare(b.partnerCourseName ?? ''))
+}
+
 // Top table: the agreed mapping straight from the learning agreement (read-only).
 const topEntries = computed<RecognitionEntryResponse[]>(
-  () => exchangeStore.serverRecognition?.entries ?? [],
+  () => byCourseName(exchangeStore.serverRecognition?.entries ?? []),
 )
 
 // Phase 2 begins once mapping_scheme_entry rows exist for the exchange.
@@ -47,9 +51,11 @@ const isPhase2 = computed(
 
 // Bottom table: editable grades. Phase 1 -> recognition entries, phase 2 -> mapping scheme entries.
 const bottomEntries = computed<(RecognitionEntryResponse | MappingSchemeEntryResponse)[]>(() =>
-  isPhase2.value
-    ? (exchangeStore.serverMappingScheme?.entries ?? [])
-    : (exchangeStore.serverRecognition?.entries ?? []),
+  byCourseName<RecognitionEntryResponse | MappingSchemeEntryResponse>(
+    isPhase2.value
+      ? (exchangeStore.serverMappingScheme?.entries ?? [])
+      : (exchangeStore.serverRecognition?.entries ?? []),
+  ),
 )
 
 const editableGrades = reactive<Record<string, GradeData>>({})
@@ -120,9 +126,6 @@ async function saveAll() {
   }
 }
 
-async function signRecognition() {
-  await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Approved })
-}
 async function backToRecognitionDraft() {
   await exchangeStore.updateRecognitionStatus(props.exchangeId, { status: documentStatus.Draft })
 }
@@ -141,65 +144,30 @@ function doExport() {
   )
 }
 
-const showHistory = ref(false)
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString(locale.value === 'hr' ? 'hr-HR' : 'en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 </script>
 
 <template>
   <div>
-    <RecognitionHistoryDrawer
-      v-if="showHistory"
-      :exchange-id="exchangeId"
-      @close="showHistory = false"
-    />
-
     <div v-if="loading" class="space-y-3">
       <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded bg-primary/20"></div>
     </div>
 
     <template v-else-if="exchangeStore.serverRecognition">
       <!-- Status + actions bar -->
-      <div class="relative mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <StatusBadge :status="exchangeStore.serverRecognition!.status" />
-          <!-- Export / History -->
+      <PanelHeaderBar :home-profile-name="homeProfileName">
+        <template #left>
+          <!-- Export -->
           <div style="display: flex; gap: 6px;">
             <ActionButton @click="doExport">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               {{ t('recognition.export') }}
             </ActionButton>
-            <ActionButton @click="showHistory = true">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              {{ t('recognition.actions.history') }}
-            </ActionButton>
           </div>
-        </div>
-        <span
-          class="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-light/80"
-        >
-          {{ homeProfileName }}
-        </span>
-        <div class="flex flex-wrap gap-2">
+        </template>
+        <template #right>
           <template v-if="isCoordinator">
             <button
-              v-if="exchangeStore.serverRecognition!.status === documentStatus.Draft"
-              type="button"
-              class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
-              @click="signRecognition"
-            >
-              {{ t('exchange.actions.sign') }}
-            </button>
-            <button
-              v-else-if="exchangeStore.serverRecognition!.status === documentStatus.Approved"
+              v-if="exchangeStore.serverRecognition!.status === documentStatus.Approved"
               type="button"
               class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
               @click="backToRecognitionDraft"
@@ -207,23 +175,16 @@ function formatDate(iso: string): string {
               {{ t('recognition.actions.backToDraft') }}
             </button>
           </template>
-        </div>
-      </div>
+        </template>
+      </PanelHeaderBar>
 
       <!-- Audit info -->
-      <div
-        v-if="exchangeStore.serverRecognition?.lastModifiedAt || exchangeStore.serverRecognition?.signedAt"
-        class="-mt-2 mb-4 flex flex-col gap-y-1 text-xs text-light/50"
-      >
-        <span v-if="exchangeStore.serverRecognition?.lastModifiedAt">
-          {{ t('exchange.audit.lastModified') }}: {{ formatDate(exchangeStore.serverRecognition.lastModifiedAt) }}
-          <template v-if="exchangeStore.serverRecognition?.lastModifiedByName"> — {{ exchangeStore.serverRecognition.lastModifiedByName }}</template>
-        </span>
-        <span v-if="exchangeStore.serverRecognition?.signedAt">
-          {{ t('exchange.audit.signed') }}: {{ formatDate(exchangeStore.serverRecognition.signedAt) }}
-          <template v-if="exchangeStore.serverRecognition?.signedByName"> — {{ exchangeStore.serverRecognition.signedByName }}</template>
-        </span>
-      </div>
+      <AuditInfo
+        :last-modified-at="exchangeStore.serverRecognition?.lastModifiedAt"
+        :last-modified-by-name="exchangeStore.serverRecognition?.lastModifiedByName"
+        :signed-at="exchangeStore.serverRecognition?.signedAt"
+        :signed-by-name="exchangeStore.serverRecognition?.signedByName"
+      />
 
       <UnsavedChangesBar
         v-if="hasUnsavedChanges"
@@ -247,11 +208,13 @@ function formatDate(iso: string): string {
         <RecognitionTable :entries="topEntries" :readonly="true" />
 
         <!-- Bottom table: final recognition + grades (editable) -->
-        <h3 class="mb-2 mt-8 text-sm font-semibold text-light/80">
-          {{ t('recognition.finalRecognitionTitle') }}
-        </h3>
-        <RecognitionTable :entries="bottomEntries" :readonly="false" :editable-grades="editableGrades" />
-        <p class="mt-2 text-xs text-light/50">{{ t('recognition.finalRecognitionHint') }}</p>
+        <template v-if="(exchangeStore.serverLearningAgreement?.signedCount ?? 0) > 0">
+          <h3 class="mb-2 mt-8 text-sm font-semibold text-light/80">
+            {{ t('recognition.finalRecognitionTitle') }}
+          </h3>
+          <RecognitionTable :entries="bottomEntries" :readonly="false" :editable-grades="editableGrades" />
+          <p class="mt-2 text-xs text-light/50">{{ t('recognition.finalRecognitionHint') }}</p>
+        </template>
       </template>
     </template>
   </div>

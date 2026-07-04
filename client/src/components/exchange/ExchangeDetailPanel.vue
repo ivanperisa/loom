@@ -328,7 +328,10 @@ onMounted(async () => {
       </template>
 
       <template v-else-if="activeTab === 'mappingScheme'">
-        <MappingSchemePanel :exchange-id="exchangeId" />
+        <MappingSchemePanel
+          :exchange-id="exchangeId"
+          :home-profile-name="exchangeStore.exchange.homeProfile.name"
+        />
       </template>
     </div>
   </template>

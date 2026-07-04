@@ -1,9 +1,6 @@
 import { api } from './api'
+import { exchangeBasePath as basePath } from './exchangeBasePath'
 import type { MappingSchemeResponse, SaveMappingSchemeRequest } from '@/types/mappingScheme.types'
-
-function basePath(exchangeId: string, guest: boolean) {
-  return guest ? `/api/exchanges/access/${exchangeId}` : `/api/exchanges/${exchangeId}`
-}
 
 export const mappingSchemeService = {
   get: (exchangeId: string, guest = false) =>

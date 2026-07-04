@@ -280,13 +280,6 @@ function onExchangeCreated(exchangeGuid: string) {
                       {{ t('exchange.tabs.learningAgreement') }}:
                       {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
                     </span>
-                    <span
-                      class="rounded-full border px-2 py-0.5 text-xs font-semibold"
-                      :class="statusColorClass[ex.recognitionStatus]"
-                    >
-                      {{ t('exchange.tabs.recognition') }}:
-                      {{ t(`recognitionStatus.${ex.recognitionStatus}`) }}
-                    </span>
                   </div>
                   <p class="mt-2.5 text-sm font-semibold text-light">{{ ex.partnerInstitutionName }}</p>
                   <p class="mt-1.5 text-xs text-light/40">

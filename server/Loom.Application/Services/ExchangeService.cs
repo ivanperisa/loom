@@ -18,7 +18,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        var exchange = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
         var requester = await db.Users.FindAsync([requesterId], ct);
@@ -36,7 +36,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        var exchange = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
         if (!string.IsNullOrEmpty(exchange.Student.Email))
@@ -133,7 +133,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         db.LearningAgreements.Add(new LearningAgreement { ExchangeId = exchange.Id, Status = DocumentStatus.Draft });
         await db.SaveChangesAsync(ct);
 
-        var saved = await ExchangeWithIncludes()
+        var saved = await db.ExchangeWithFullIncludes()
             .FirstOrDefaultAsync(e => e.Id == exchange.Id, ct)
             ?? throw new InvalidOperationException();
         return saved.ToResponse();
@@ -145,15 +145,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await db.Exchanges
-            .Include(e => e.Student)
-            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        if (exchange.StudentId != requesterId &&
-            exchange.Student.CoordinatorId != requesterId)
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, ct: ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
+        var exchange = accessCheck.Value.Exchange;
 
         var la = await db.LearningAgreements
             .Include(l => l.Entries)
@@ -205,7 +199,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         exchange.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        var saved = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
+        var saved = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
             ?? throw new InvalidOperationException();
         return saved.ToResponse();
     }
@@ -216,32 +210,17 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, ct: ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
+        var exchange = accessCheck.Value.Exchange;
 
         exchange.EwpLink = string.IsNullOrWhiteSpace(ewpLink) ? null : ewpLink.Trim();
         exchange.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        var saved = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
+        var saved = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
             ?? throw new InvalidOperationException();
         return saved.ToResponse();
     }
 
-    #region Private Methods
-
-    private IQueryable<Exchange> ExchangeWithIncludes() => db.Exchanges
-        .AsNoTracking()
-        .Include(e => e.Student)
-        .Include(e => e.Coordinator)
-        .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
-        .Include(e => e.PartnerInstitution)
-        .Include(e => e.LearningAgreement);
-
-    #endregion
 }

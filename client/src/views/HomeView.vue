@@ -172,13 +172,6 @@ async function reRequestCoordinatorRole() {
                   {{ t('exchange.tabs.learningAgreement') }}:
                   {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
                 </span>
-                <span
-                  class="rounded-full border px-2 py-0.5 text-xs font-semibold"
-                  :class="statusColorClass[ex.recognitionStatus]"
-                >
-                  {{ t('exchange.tabs.recognition') }}:
-                  {{ t(`recognitionStatus.${ex.recognitionStatus}`) }}
-                </span>
               </div>
 
               <!-- Row 2: strani fakultet -->

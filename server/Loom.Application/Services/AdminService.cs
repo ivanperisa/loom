@@ -17,42 +17,49 @@ public class AdminService(IAppDbContext db) : IAdminService
         .Include(u => u.Institution)
         .Include(u => u.Coordinator);
 
+    private async Task<ErrorOr<Success>> EnsureAdminAsync(int adminId, string action, CancellationToken ct)
+    {
+        var admin = await db.Users.FindAsync([adminId], ct);
+        if (admin is null || admin.Role != UserRole.Admin)
+            return Error.Forbidden("FORBIDDEN", $"Only admins can {action}.");
+        return Result.Success;
+    }
+
+    private static List<UserListResponse> ToUserListResponses(IEnumerable<User> users) =>
+        users.Select(u => new UserListResponse(
+            u.Id,
+            u.Name,
+            u.Email,
+            u.Role.ToString(),
+            u.Institution != null ? u.Institution.Name : null,
+            u.InstitutionId,
+            u.CoordinatorRequestStatus,
+            u.IsOnboarded,
+            u.Jmbag,
+            u.Mentor,
+            u.CoordinatorId,
+            u.Coordinator != null ? u.Coordinator.Name : null))
+            .ToList();
+
     #region Users
 
     public async Task<ErrorOr<List<UserListResponse>>> GetAllUsersAsync(int adminId, CancellationToken ct = default)
     {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", "Only admins can list users.");
+        var ensureAdmin = await EnsureAdminAsync(adminId, "list users", ct);
+        if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
-        var users = await db.Users
+        var users = await UsersWithIncludes()
             .AsNoTracking()
-            .Include(u => u.Institution)
-            .Include(u => u.Coordinator)
             .OrderBy(u => u.Name)
-            .Select(u => new UserListResponse(
-                u.Id,
-                u.Name,
-                u.Email,
-                u.Role.ToString(),
-                u.Institution != null ? u.Institution.Name : null,
-                u.InstitutionId,
-                u.CoordinatorRequestStatus,
-                u.IsOnboarded,
-                u.Jmbag,
-                u.Mentor,
-                u.CoordinatorId,
-                u.Coordinator != null ? u.Coordinator.Name : null))
             .ToListAsync(ct);
 
-        return users;
+        return ToUserListResponses(users);
     }
 
     public async Task<ErrorOr<UserListResponse>> UpdateUserAsync(int adminId, int targetUserId, AdminUpdateUserRequest request, CancellationToken ct = default)
     {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", "Only admins can update users.");
+        var ensureAdmin = await EnsureAdminAsync(adminId, "update users", ct);
+        if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
         var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
         if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -65,28 +72,12 @@ public class AdminService(IAppDbContext db) : IAdminService
             target.CoordinatorId = request.CoordinatorId;
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.Users
+        var saved = await UsersWithIncludes()
             .AsNoTracking()
-            .Include(u => u.Institution)
-            .Include(u => u.Coordinator)
-            .Where(u => u.Id == targetUserId)
-            .Select(u => new UserListResponse(
-                u.Id,
-                u.Name,
-                u.Email,
-                u.Role.ToString(),
-                u.Institution != null ? u.Institution.Name : null,
-                u.InstitutionId,
-                u.CoordinatorRequestStatus,
-                u.IsOnboarded,
-                u.Jmbag,
-                u.Mentor,
-                u.CoordinatorId,
-                u.Coordinator != null ? u.Coordinator.Name : null))
-            .FirstOrDefaultAsync(ct)
+            .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
             ?? throw new InvalidOperationException();
 
-        return saved;
+        return ToUserListResponses([saved])[0];
     }
 
     #endregion
@@ -95,9 +86,8 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<List<CoordinatorRequestResponse>>> GetCoordinatorRequestsAsync(int adminId, CancellationToken ct = default)
     {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", "Only admins can view coordinator requests.");
+        var ensureAdmin = await EnsureAdminAsync(adminId, "view coordinator requests", ct);
+        if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
         var requests = await db.Users
             .AsNoTracking()
@@ -111,9 +101,8 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<AuthMeResponse>> MakeCoordinatorAsync(int adminId, int targetUserId, CancellationToken ct = default)
     {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", "Only admins can assign coordinator role.");
+        var ensureAdmin = await EnsureAdminAsync(adminId, "assign coordinator role", ct);
+        if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
         var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
         if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -131,9 +120,8 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<AuthMeResponse>> RejectCoordinatorRequestAsync(int adminId, int targetUserId, CancellationToken ct = default)
     {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", "Only admins can reject coordinator requests.");
+        var ensureAdmin = await EnsureAdminAsync(adminId, "reject coordinator requests", ct);
+        if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
         var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
         if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -152,9 +140,8 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<AuthMeResponse>> RemoveCoordinatorAsync(int adminId, int targetUserId, CancellationToken ct = default)
     {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", "Only admins can remove coordinator role.");
+        var ensureAdmin = await EnsureAdminAsync(adminId, "remove coordinator role", ct);
+        if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
         var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
         if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
@@ -178,9 +165,8 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<List<CoordinatorWhitelistEntryResponse>>> GetCoordinatorWhitelistAsync(int adminId, CancellationToken ct = default)
     {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", "Only admins can view the coordinator whitelist.");
+        var ensureAdmin = await EnsureAdminAsync(adminId, "view the coordinator whitelist", ct);
+        if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
         var entries = await db.CoordinatorWhitelist
             .AsNoTracking()
@@ -193,9 +179,8 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<CoordinatorWhitelistEntryResponse>> AddToCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default)
     {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", "Only admins can manage the coordinator whitelist.");
+        var ensureAdmin = await EnsureAdminAsync(adminId, "manage the coordinator whitelist", ct);
+        if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
         if (string.IsNullOrWhiteSpace(email))
             return Error.Validation("INVALID_EMAIL", "Email is required.");
@@ -212,9 +197,8 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<Deleted>> RemoveFromCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default)
     {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", "Only admins can manage the coordinator whitelist.");
+        var ensureAdmin = await EnsureAdminAsync(adminId, "manage the coordinator whitelist", ct);
+        if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
         var entry = await db.CoordinatorWhitelist.FirstOrDefaultAsync(e => e.Email == email.ToLowerInvariant(), ct);
         if (entry is null) return Error.NotFound("EMAIL_NOT_FOUND", "Email not found on the coordinator whitelist.");
