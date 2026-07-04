@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LearningAgreementEntry> LearningAgreementEntries => Set<LearningAgreementEntry>();
     public DbSet<Recognition> Recognitions => Set<Recognition>();
     public DbSet<RecognitionEntry> RecognitionEntries => Set<RecognitionEntry>();
+    public DbSet<MappingSchemeEntry> MappingSchemeEntries => Set<MappingSchemeEntry>();
     public DbSet<ExchangeSnapshot> ExchangeSnapshots => Set<ExchangeSnapshot>();
     public DbSet<CoordinatorWhitelist> CoordinatorWhitelist => Set<CoordinatorWhitelist>();
 

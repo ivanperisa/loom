@@ -128,6 +128,17 @@ public class LearningAgreementController(ILearningAgreementService learningAgree
         return Match(result, _ => NoContent());
     }
 
+    [AllowAnonymous]
+    [HttpPost("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement/snapshots/{snapshotId:int}/restore")]
+    public async Task<IActionResult> RestorePublicSnapshot(Guid exchangeGuid, int snapshotId, CancellationToken ct)
+    {
+        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
+        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
+
+        var result = await learningAgreementService.RestoreSnapshotAsync(exchangeGuid, snapshotId, studentIdResult.Value, ct);
+        return Match(result, _ => NoContent());
+    }
+
     [HttpGet("export")]
     public async Task<IActionResult> ExportMappings(Guid exchangeGuid, CancellationToken ct)
     {

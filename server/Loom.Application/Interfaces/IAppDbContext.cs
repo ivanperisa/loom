@@ -19,6 +19,7 @@ public interface IAppDbContext
     DbSet<LearningAgreementEntry> LearningAgreementEntries { get; }
     DbSet<Recognition> Recognitions { get; }
     DbSet<RecognitionEntry> RecognitionEntries { get; }
+    DbSet<MappingSchemeEntry> MappingSchemeEntries { get; }
     DbSet<ExchangeSnapshot> ExchangeSnapshots { get; }
     DbSet<CoordinatorWhitelist> CoordinatorWhitelist { get; }
 

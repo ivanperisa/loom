@@ -41,6 +41,7 @@ try
   builder.Services.AddScoped<IExchangeService, ExchangeService>();
   builder.Services.AddScoped<ILearningAgreementService, LearningAgreementService>();
   builder.Services.AddScoped<IRecognitionService, RecognitionService>();
+  builder.Services.AddScoped<IMappingSchemeService, MappingSchemeService>();
   builder.Services.AddScoped<ICoordinatorService, CoordinatorService>();
   builder.Services.AddScoped<IAdminService, AdminService>();
 

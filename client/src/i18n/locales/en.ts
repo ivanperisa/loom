@@ -209,11 +209,7 @@ export default {
       learningAgreement: 'Learning Agreement',
       recognition: 'Recognition',
       mappingScheme: 'Mapping Scheme',
-      grades: 'Grades',
       history: 'History',
-    },
-    placeholder: {
-      comingSoon: 'Coming soon.',
     },
     history: {
       empty: 'No changes recorded yet.',
@@ -326,6 +322,15 @@ export default {
     Thesis: 'Thesis',
   },
   recognition: {
+    agreedMappingTitle: 'Agreed mapping',
+    finalRecognitionTitle: 'Final recognition and grades',
+    finalRecognitionHint:
+      'Enter grades, exam dates and pass/fail status here. After the first entry the layout is copied into the Mapping Scheme, where it can be rearranged.',
+    enrollment: {
+      none: '—',
+      passed: 'Passed',
+      notPassed: 'Not passed',
+    },
     notApproved: 'Recognition is available after the exchange is approved.',
     noEntries: 'No entries for recognition.',
     export: 'Export to Excel',
@@ -398,6 +403,13 @@ export default {
       sheetRecognition: 'Recognition',
       sheetLA: 'Learning Agreement',
     },
+  },
+  mappingScheme: {
+    lockedPhase1:
+      'The Mapping Scheme becomes available after the first grade or pass/fail status is entered in Recognition.',
+    dragHint:
+      'Click x to mark not passed, click a crossed-out course to restore.',
+    markNotPassed: 'Mark as not passed',
   },
   exchangeCourse: {
     add: 'Add Course',
@@ -505,6 +517,7 @@ export default {
   partnerCourses: {
     dragHint: 'Drag a course onto a cell in the learning agreement',
     addMapping: 'Add Mapping',
+    moveMapping: 'Move Mapping',
     availableEcts: 'Available ECTS',
     awardedEcts: 'Awarded ECTS',
     mappedCourses: 'Mapped courses',

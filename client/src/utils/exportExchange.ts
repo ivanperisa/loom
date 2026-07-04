@@ -1,8 +1,11 @@
 import XLSX from 'xlsx-js-style'
 import { exchangeSemester } from '@/utils/exchangeSemester'
-import type { RecognitionResponse } from '@/types/recognition.types'
+import type { RecognitionResponse, RecognitionEntryResponse } from '@/types/recognition.types'
 import type { ExchangeResponse } from '@/types/exchange.types'
-import type { LearningAgreementResponse, LearningAgreementEntryResponse } from '@/types/learningAgreement.types'
+import type { LearningAgreementResponse } from '@/types/learningAgreement.types'
+import type { MappingSchemeResponse, MappingSchemeEntryResponse } from '@/types/mappingScheme.types'
+
+type ExportEntry = RecognitionEntryResponse | MappingSchemeEntryResponse
 
 // Style helpers
 
@@ -100,6 +103,8 @@ const T: Record<string, Record<Lang, string>> = {
   colEctsGrade:     { hr: 'Ocjena\nECTS\n(F-A)', en: 'ECTS\nGrade\n(F-A)' },
   colHrGrade:       { hr: 'Ocjena\nhrv.\n(1-5)', en: 'Croatian\nGrade\n(1-5)' },
   colDate:          { hr: 'Datum polaganja', en: 'Exam Date' },
+  statusPassed:     { hr: 'Položeno', en: 'Passed' },
+  statusNotPassed:  { hr: 'Nepoloženo', en: 'Not passed' },
   laAtHome:         { hr: 'položeno na FER-u', en: 'Taken at home institution' },
   laAtExchange:     { hr: 'polaže na mobilnosti', en: 'Taken on exchange' },
   laAfterExchange:  { hr: 'ostaje nakon mobilnosti', en: 'Taken after exchange' },
@@ -112,7 +117,7 @@ function tr(key: string, lang: Lang): string {
 // Sheet 1: Recognition
 
 function buildRecognitionSheet(
-  recognition: RecognitionResponse,
+  entries: ExportEntry[],
   exchange: ExchangeResponse,
   lang: Lang,
 ): Record<string, XlsxCell> {
@@ -161,8 +166,8 @@ function buildRecognitionSheet(
   ws['P16'] = hdrGrade(tr('colHrGrade', lang))
   ws['Q16'] = hdrGrade(tr('colDate', lang))
 
-  const groups = new Map<string, typeof recognition.entries>()
-  for (const entry of recognition.entries) {
+  const groups = new Map<string, ExportEntry[]>()
+  for (const entry of entries) {
     if (!groups.has(entry.partnerCourseCode)) groups.set(entry.partnerCourseCode, [])
     groups.get(entry.partnerCourseCode)!.push(entry)
   }
@@ -192,7 +197,9 @@ function buildRecognitionSheet(
           ? link(entry.partnerCourseName, codeUrl, partnerBg)
           : c(entry.partnerCourseName, { bg: partnerBg, wrap: true })
 
-        ws[`C${row}`] = c(entry.enrollmentStatus, { bg: partnerBg })
+        const statusKey = entry.enrollmentStatus === 'Passed' ? 'statusPassed'
+          : entry.enrollmentStatus === 'NotPassed' ? 'statusNotPassed' : null
+        ws[`C${row}`] = c(statusKey ? tr(statusKey, lang) : '', { bg: partnerBg })
         ws[`D${row}`] = c(entry.partnerCourseNameHr, { bg: partnerBg, wrap: true })
         ws[`E${row}`] = c(entry.partnerCourseHours, { bg: partnerBg, halign: 'center' })
         ws[`F${row}`] = c(entry.partnerCourseEcts, { bg: partnerBg, halign: 'center', bold: true })
@@ -233,7 +240,7 @@ function buildRecognitionSheet(
     }
   }
 
-  const totalEcts = Math.round(recognition.entries.reduce((s, e) => s + e.awardedEcts, 0) * 10) / 10
+  const totalEcts = Math.round(entries.reduce((s, e) => s + e.awardedEcts, 0) * 10) / 10
   ws[`A${row}`] = c(tr('ukupno', lang), { bold: true, bg: HEADER_BG, halign: 'right' })
   for (let ci = 1; ci <= 11; ci++) ws[`${colLetter(ci)}${row}`] = empty(HEADER_BG)
   merges.push({ s: { r: row - 1, c: 0 }, e: { r: row - 1, c: 11 } })
@@ -315,16 +322,33 @@ const MODE_TEXT_COLOR: Record<string, string> = {
 
 function buildLASheet(
   la: LearningAgreementResponse,
+  mappingEntries: MappingSchemeEntryResponse[],
   exchange: ExchangeResponse,
   lang: Lang,
 ): Record<string, XlsxCell> {
   const ws: XLSX.WorkSheet = {}
   const merges: XLSX.Range[] = []
 
-  const stateMap = new Map<string, { mode: string; entries: LearningAgreementEntryResponse[] }>()
-  for (const e of la.entries) {
-    if (!stateMap.has(e.homeSlotId)) stateMap.set(e.homeSlotId, { mode: e.mode, entries: [] })
-    if (e.partnerCourseId && !e.isDeleted) stateMap.get(e.homeSlotId)!.entries.push(e)
+  type SlotState = { mode: string; entries: { partnerCourseCode: string | null; partnerCourseName: string | null; partnerCourseNameHr: string | null; awardedEcts: number | null }[] }
+  const stateMap = new Map<string, SlotState>()
+
+  if (mappingEntries.length > 0) {
+    const laModeBySlot = new Map<string, string>()
+    for (const e of la.entries) {
+      if (!e.isDeleted) laModeBySlot.set(e.homeSlotId, e.mode)
+    }
+    for (const e of mappingEntries) {
+      if (!stateMap.has(e.homeSlotId)) stateMap.set(e.homeSlotId, { mode: 'AtExchange', entries: [] })
+      stateMap.get(e.homeSlotId)!.entries.push(e)
+    }
+    for (const [slotId, mode] of laModeBySlot) {
+      if (!stateMap.has(slotId)) stateMap.set(slotId, { mode, entries: [] })
+    }
+  } else {
+    for (const e of la.entries) {
+      if (!stateMap.has(e.homeSlotId)) stateMap.set(e.homeSlotId, { mode: e.mode, entries: [] })
+      if (e.partnerCourseId && !e.isDeleted) stateMap.get(e.homeSlotId)!.entries.push(e)
+    }
   }
 
   const TOTAL_COLS = 30
@@ -442,6 +466,7 @@ function buildLASheet(
 
 export function exportExchangeExcel(
   recognition: RecognitionResponse,
+  mappingScheme: MappingSchemeResponse,
   la: LearningAgreementResponse,
   exchange: ExchangeResponse,
   locale: string = 'hr',
@@ -449,10 +474,13 @@ export function exportExchangeExcel(
   const lang: Lang = locale === 'en' ? 'en' : 'hr'
   const wb = XLSX.utils.book_new()
 
-  const wsRecognition = buildRecognitionSheet(recognition, exchange, lang)
+  const bottomEntries: ExportEntry[] =
+    mappingScheme.entries.length > 0 ? mappingScheme.entries : recognition.entries
+
+  const wsRecognition = buildRecognitionSheet(bottomEntries, exchange, lang)
   XLSX.utils.book_append_sheet(wb, wsRecognition, tr('sheetRecognition', lang))
 
-  const wsLA = buildLASheet(la, exchange, lang)
+  const wsLA = buildLASheet(la, mappingScheme.entries, exchange, lang)
   XLSX.utils.book_append_sheet(wb, wsLA, tr('sheetLA', lang))
 
   const studentName = exchange.studentName.replace(/\s+/g, '_')

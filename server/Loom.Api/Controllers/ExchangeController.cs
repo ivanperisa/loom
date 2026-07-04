@@ -1,3 +1,4 @@
+using Loom.Api.Extensions;
 using Loom.Application.DTOs.Exchange;
 using Loom.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -63,7 +64,10 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
     [HttpPatch("access/{exchangeGuid:guid}/ewp-link")]
     public async Task<IActionResult> UpdateEwpLinkPublic(Guid exchangeGuid, [FromBody] UpdateEwpLinkRequest request, CancellationToken ct)
     {
-        var result = await exchangeService.UpdateEwpLinkAsync(exchangeGuid, null, request.EwpLink, ct);
+        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
+        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
+
+        var result = await exchangeService.UpdateEwpLinkAsync(exchangeGuid, studentIdResult.Value, request.EwpLink, ct);
         return Match(result, Ok);
     }
 }

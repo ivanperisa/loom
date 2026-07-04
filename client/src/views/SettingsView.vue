@@ -52,6 +52,7 @@ async function fetchData() {
   const [instRes, coordRes] = await Promise.all([
     institutionService.getHomeInstitutions(),
     coordinatorService.getCoordinators(),
+    authStore.init(true),
   ])
   institutions.value = instRes.data
   coordinators.value = coordRes.data
@@ -149,18 +150,6 @@ async function save() {
             />
           </div>
 
-          <!-- Mentor (student only) -->
-          <div v-if="isStudent">
-            <label for="mentor" class="block text-sm text-light/60">{{ t('settings.profile.mentor') }}</label>
-            <input
-              id="mentor"
-              v-model="mentor"
-              type="text"
-              :placeholder="t('createExchange.mentorPlaceholder')"
-              class="mt-1 w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder-light/60 focus:border-primary focus:outline-none"
-            />
-          </div>
-
           <!-- Coordinator (student only) -->
           <div v-if="isStudent">
             <label class="block text-sm text-light/60">{{ t('settings.profile.coordinator') }}</label>
@@ -170,6 +159,18 @@ async function save() {
               :search-placeholder="t('settings.profile.searchCoordinator')"
               :no-results-label="t('settings.profile.noCoordinatorResults')"
               class="mt-1"
+            />
+          </div>
+
+          <!-- Mentor (student only) -->
+          <div v-if="isStudent">
+            <label for="mentor" class="block text-sm text-light/60">{{ t('settings.profile.mentor') }}</label>
+            <input
+              id="mentor"
+              v-model="mentor"
+              type="text"
+              :placeholder="t('createExchange.mentorPlaceholder')"
+              class="mt-1 w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder-light/60 focus:border-primary focus:outline-none"
             />
           </div>
         </div>
