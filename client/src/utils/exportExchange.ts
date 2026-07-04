@@ -490,8 +490,13 @@ function buildLASheet(
         if (endCol > startCol) merges.push({ s: { r: row - 1, c: startCol }, e: { r: row - 1, c: endCol } })
       }
 
-      writeRow(headerCodeRow, isvuCode ? String(isvuCode) : '', { bold: true, top: outlineBorder, bottom: noBorder })
-      writeRow(headerNameRow, name, { top: noBorder, bottom: headerNameBottomBorder })
+      if (isvuCode) {
+        writeRow(headerCodeRow, String(isvuCode), { bold: true, top: outlineBorder, bottom: noBorder })
+        writeRow(headerNameRow, name, { top: noBorder, bottom: headerNameBottomBorder })
+      } else {
+        writeRow(headerCodeRow, name, { top: outlineBorder, bottom: noBorder })
+        writeRow(headerNameRow, '', { top: noBorder, bottom: headerNameBottomBorder })
+      }
 
       for (let i = 0; i < maxEntryRows; i++) {
         const codeRow = headerNameRow + 1 + i * 2
@@ -515,9 +520,16 @@ function buildLASheet(
       }
     }
 
-    const headerNameLines = slotData.reduce((max, sd) => Math.max(max, wrappedLineCount(sd.name, Math.max(1, sd.slot.ects) * CHARS_PER_COL)), 1)
-    rowHeights.push(14)
-    rowHeights.push(Math.max(16, headerNameLines * LINE_HEIGHT_PT))
+    const headerCodeRowLines = slotData.reduce((max, sd) => {
+      const cw = Math.max(1, sd.slot.ects) * CHARS_PER_COL
+      return Math.max(max, sd.isvuCode ? 1 : wrappedLineCount(sd.name, cw))
+    }, 1)
+    const headerNameRowLines = slotData.reduce((max, sd) => {
+      const cw = Math.max(1, sd.slot.ects) * CHARS_PER_COL
+      return Math.max(max, sd.isvuCode ? wrappedLineCount(sd.name, cw) : 1)
+    }, 1)
+    rowHeights.push(Math.max(14, headerCodeRowLines * LINE_HEIGHT_PT))
+    rowHeights.push(Math.max(16, headerNameRowLines * LINE_HEIGHT_PT))
     for (let i = 0; i < maxEntryRows; i++) {
       let detailsPt = DEFAULT_ENTRY_ROW_PT
       for (const sd of slotData) {
