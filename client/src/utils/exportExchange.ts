@@ -222,13 +222,13 @@ function buildRecognitionSheet(
       ws[`G${row}`] = c(i + 1, { bg: plainBg, halign: 'center' })
       ws[`H${row}`] = c(entry.homeSlotCourseIsvuCode, { bg: plainBg, halign: 'center' })
       ws[`I${row}`] = c(entry.homeSlotCourseName, { bg: plainBg, wrap: true })
-      ws[`J${row}`] = c(entry.homeSlotCourseGroupIsvuCode ?? '—', { bg: plainBg, halign: 'center' })
+      ws[`J${row}`] = c(entry.homeSlotCourseGroupIsvuCode, { bg: plainBg, halign: 'center' })
       ws[`K${row}`] = c(entry.homeSlotCourseGroupName || tr('mandatoryCourse', lang), { bg: slotBg, wrap: true })
       ws[`L${row}`] = c(entry.homeSlotSemester, { bg: plainBg, halign: 'center' })
       ws[`M${row}`] = c(mergedEcts, { bg: slotBg, halign: 'center', bold: true })
 
       if (i === 0) {
-        ws[`N${row}`] = c(entry.originalGrade, { bg: gradeBg })
+        ws[`N${row}`] = c(entry.originalGrade, { bg: gradeBg, halign: 'center' })
         ws[`O${row}`] = c(entry.ectsGrade, { bg: gradeBg, halign: 'center' })
         ws[`P${row}`] = c(entry.hrGrade, { bg: gradeBg, halign: 'center' })
         ws[`Q${row}`] = c(formatDdMmYyyy(entry.examDate), { bg: gradeBg })
@@ -236,11 +236,13 @@ function buildRecognitionSheet(
         for (const col of ['N', 'O', 'P', 'Q']) ws[`${col}${row}`] = empty(gradeBg)
       }
 
-      const catKey = entry.homeSlotCourseGroupName
-      if (!categoryTotals.has(catKey)) {
-        categoryTotals.set(catKey, { name: catKey, color: entry.homeSlotColor.replace('#', ''), ects: 0 })
+      if (!isNotPassed) {
+        const catKey = entry.homeSlotCourseGroupName || tr('mandatoryCourse', lang)
+        if (!categoryTotals.has(catKey)) {
+          categoryTotals.set(catKey, { name: catKey, color: entry.homeSlotColor.replace('#', ''), ects: 0 })
+        }
+        categoryTotals.get(catKey)!.ects = Math.round((categoryTotals.get(catKey)!.ects + mergedEcts) * 10) / 10
       }
-      categoryTotals.get(catKey)!.ects = Math.round((categoryTotals.get(catKey)!.ects + mergedEcts) * 10) / 10
 
       row++
     }
@@ -252,7 +254,9 @@ function buildRecognitionSheet(
     }
   }
 
-  const totalEcts = Math.round(entries.reduce((s, e) => s + e.awardedEcts, 0) * 10) / 10
+  const totalEcts = Math.round(
+    entries.filter(e => e.enrollmentStatus !== 'NotPassed').reduce((s, e) => s + e.awardedEcts, 0) * 10,
+  ) / 10
   ws[`A${row}`] = c(tr('ukupno', lang), { bold: true, bg: HEADER_BG, halign: 'right' })
   for (let ci = 1; ci <= 11; ci++) ws[`${colLetter(ci)}${row}`] = empty(HEADER_BG)
   merges.push({ s: { r: row - 1, c: 0 }, e: { r: row - 1, c: 11 } })
@@ -351,7 +355,7 @@ function entryRowHeightPt(entry: LaEntryLine, slotEcts: number): number {
   const colWidthChars = Math.max(1, slotEcts) * CHARS_PER_COL
   let lines = wrappedLineCount(entry.name, colWidthChars)
   if (entry.nameHr) lines += wrappedLineCount(entry.nameHr, colWidthChars)
-  lines += 1
+  lines += 2
   return Math.max(DEFAULT_ENTRY_ROW_PT, lines * LINE_HEIGHT_PT)
 }
 
@@ -504,7 +508,7 @@ function buildLASheet(
 
         const detailsLines = [entry.name]
         if (entry.nameHr) detailsLines.push(entry.nameHr)
-        detailsLines.push(`${entry.ects} ECTS`)
+        detailsLines.push(`${entry.ects} ECTS`, '')
 
         writeRow(codeRow, entry.code, { bold: true, strike: entry.deleted, color: entry.deleted ? 'CC0000' : '000000', top: noBorder, bottom: noBorder })
         writeRow(detailsRow, detailsLines.join('\n'), { strike: entry.deleted, color: entry.deleted ? 'CC0000' : '000000', top: noBorder, bottom: detailsBottom })
