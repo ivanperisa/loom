@@ -227,6 +227,12 @@ export default {
   },
   createExchange: {
     title: 'Nova razmjena',
+    steps: {
+      program: 'Program',
+      partner: 'Partner',
+      details: 'Detalji',
+      confirm: 'Potvrda',
+    },
     selectProgram: 'Odaberite studijski program',
     selectProgramPlaceholder: '— odaberite program —',
     selectProfile: 'Odaberite profil',

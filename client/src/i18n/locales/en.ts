@@ -227,6 +227,12 @@ export default {
   },
   createExchange: {
     title: 'New Exchange',
+    steps: {
+      program: 'Program',
+      partner: 'Partner',
+      details: 'Details',
+      confirm: 'Confirm',
+    },
     selectProgram: 'Select study program',
     selectProgramPlaceholder: '— select program —',
     selectProfile: 'Select profile',
