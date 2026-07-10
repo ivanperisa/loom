@@ -78,10 +78,11 @@ async function save() {
       <div class="w-full max-w-lg rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
         <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
           <div>
-            <h3 class="font-semibold text-light">{{ t('admin.users.editUser') }}</h3>
-            <p class="mt-0.5 text-xs text-light/40">{{ user.email }}
-              <span class="ml-1 rounded-full border border-white/10 px-1.5 py-0.5 text-[10px] text-light/30">{{ t(`admin.users.role.${user.role}`) }}</span>
-            </p>
+            <div class="flex items-center gap-2">
+              <h3 class="font-semibold text-light">{{ t('admin.users.editUser') }}</h3>
+              <span class="rounded-full border border-white/10 px-1.5 py-0.5 text-[10px] text-light/30">{{ t(`admin.users.role.${user.role}`) }}</span>
+            </div>
+            <p class="mt-0.5 text-xs text-light/40">{{ user.email }}</p>
           </div>
           <button type="button" class="text-light/40 transition hover:text-white" @click="emit('close')">
             <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

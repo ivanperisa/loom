@@ -4,11 +4,16 @@ import type {
   ExchangeResponse,
   ExchangeSummaryResponse,
   UpdateCoordinatorMessageRequest,
+  UpdateExchangeRequest,
 } from '@/types/exchange.types'
 
 export const exchangeService = {
   create: (request: CreateExchangeRequest) =>
     api.post<ExchangeResponse>('/api/exchanges', request),
+  update: (exchangeId: string, request: UpdateExchangeRequest, guest: boolean) =>
+    guest
+      ? api.put<ExchangeResponse>(`/api/exchanges/access/${exchangeId}`, request)
+      : api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}`, request),
   getById: (exchangeId: string) =>
     api.get<ExchangeResponse>(`/api/exchanges/${exchangeId}`),
   getPublic: (exchangeGuid: string) =>
@@ -19,8 +24,4 @@ export const exchangeService = {
     api.delete(`/api/exchanges/${exchangeId}`),
   updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
     api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
-  updateEwpLink: (exchangeId: string, ewpLink: string | null, guest: boolean) =>
-    guest
-      ? api.patch<ExchangeResponse>(`/api/exchanges/access/${exchangeId}/ewp-link`, { ewpLink })
-      : api.patch<ExchangeResponse>(`/api/exchanges/${exchangeId}/ewp-link`, { ewpLink }),
 }

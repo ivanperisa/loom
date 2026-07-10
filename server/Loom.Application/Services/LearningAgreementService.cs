@@ -142,6 +142,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (upsertResult.IsError) return upsertResult.Errors;
 
         laEntity.LastModifiedById = requesterId;
+        laEntity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         return await GetLearningAgreementAsync(exchangeGuid, requesterId, ct);
     }
@@ -408,6 +409,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
             }
 
             laEntity.LastModifiedById = requesterId;
+            laEntity.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
         }
 

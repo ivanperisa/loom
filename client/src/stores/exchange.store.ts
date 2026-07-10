@@ -13,6 +13,7 @@ import type {
   ExchangeResponse,
   CreateExchangeRequest,
   UpdateCoordinatorMessageRequest,
+  UpdateExchangeRequest,
 } from '@/types/exchange.types'
 import type {
   LearningAgreementResponse,
@@ -358,9 +359,10 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchange.value = res.data
   }
 
-  async function updateEwpLink(exchangeId: string, ewpLink: string | null) {
-    const res = await exchangeService.updateEwpLink(exchangeId, ewpLink, guestMode.value)
+  async function updateExchange(exchangeId: string, request: UpdateExchangeRequest) {
+    const res = await exchangeService.update(exchangeId, request, guestMode.value)
     exchange.value = res.data
+    return res.data
   }
 
   async function updateLaMessage(exchangeId: string, message: string | null) {
@@ -483,7 +485,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     saveLearningAgreement,
     updateLearningAgreementStatus,
     updateCoordinatorMessage,
-    updateEwpLink,
+    updateExchange,
     updateLaMessage,
     fetchRecognition,
     saveRecognition,

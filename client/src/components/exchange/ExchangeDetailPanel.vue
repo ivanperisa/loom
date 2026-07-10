@@ -6,6 +6,7 @@ import LearningAgreementPanel from '@/components/exchange/LearningAgreementPanel
 import RecognitionPanel from '@/components/exchange/RecognitionPanel.vue'
 import MappingSchemePanel from '@/components/exchange/MappingSchemePanel.vue'
 import NotesModal from '@/components/exchange/NotesModal.vue'
+import EditExchangeModal from '@/components/exchange/EditExchangeModal.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import { useAuthStore } from '@/stores/auth.store'
@@ -38,27 +39,6 @@ const activeTab = ref<ExchangeTab>(
 )
 const deleting = ref(false)
 
-
-const ewpLinkInput = ref('')
-const isEditingEwpLink = ref(false)
-const isSavingEwpLink = ref(false)
-
-function startEditingEwpLink() {
-  ewpLinkInput.value = exchangeStore.exchange?.ewpLink ?? ''
-  isEditingEwpLink.value = true
-}
-
-function cancelEditingEwpLink() {
-  isEditingEwpLink.value = false
-}
-
-async function saveEwpLink() {
-  isSavingEwpLink.value = true
-  await exchangeStore.updateEwpLink(props.exchangeId, ewpLinkInput.value.trim() || null)
-  isEditingEwpLink.value = false
-  isSavingEwpLink.value = false
-}
-
 async function copyAccessLink() {
   if (!exchangeStore.exchange) return
   await navigator.clipboard.writeText(buildAccessLink(exchangeStore.exchange.guid))
@@ -83,6 +63,14 @@ async function confirmDelete() {
   } finally {
     deleting.value = false
   }
+}
+
+const showEdit = ref(false)
+const laHasEntries = computed(() => (exchangeStore.serverLearningAgreement?.entries?.length ?? 0) > 0)
+
+async function onExchangeSaved() {
+  showEdit.value = false
+  await exchangeStore.fetchExchange(props.exchangeId)
 }
 
 const showNotes = ref(false)
@@ -136,41 +124,39 @@ onMounted(async () => {
 
   <!-- Exchange loaded -->
   <template v-else-if="exchangeStore.exchange">
-    <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-light">{{ t('exchange.title') }}</h1>
-      <div class="flex items-center gap-2">
-        <button
-          v-if="exchangeStore.exchange.studentIsPlaceholder"
-          type="button"
-          class="flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-semibold text-primary-light transition hover:bg-primary/10"
-          @click="copyAccessLink"
-        >
-          <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
-            <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
-          </svg>
-          {{ t('exchangeAccess.copyLink') }}
-        </button>
-        <button
-          v-if="canDelete"
-          type="button"
-          class="rounded-lg border border-red-400/50 px-3 py-1.5 text-sm font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
-          :disabled="deleting"
-          @click="confirmDelete"
-        >
-          {{ deleting ? t('common.loading') : t('home.deleteExchange') }}
-        </button>
-      </div>
-    </div>
-
     <!-- Exchange header -->
-    <div class="mt-4 rounded-xl border border-primary/20 bg-dark-2 px-5 py-4">
-      <p class="text-xs font-semibold uppercase tracking-wide text-light/50">
-        {{ t('exchange.partnerInstitution') }}
-      </p>
-      <p class="mt-1 text-base font-semibold text-light">
-        {{ exchangeStore.exchange.partnerInstitutionName }}
-      </p>
+    <div class="rounded-xl border border-primary/20 bg-dark-2 px-5 py-4">
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <p
+            v-if="isCoordinator && exchangeStore.exchange.studentName"
+            class="text-xs font-medium text-light/50"
+          >
+            {{ exchangeStore.exchange.studentName }}
+          </p>
+          <p class="text-base font-semibold text-light">
+            {{ exchangeStore.exchange.partnerInstitutionName }}
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-medium text-primary-light transition hover:bg-primary/10"
+            @click="showEdit = true"
+          >
+            {{ t('common.edit') }}
+          </button>
+          <button
+            v-if="canDelete"
+            type="button"
+            class="rounded-lg border border-red-400/50 px-3 py-1.5 text-sm font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+            :disabled="deleting"
+            @click="confirmDelete"
+          >
+            {{ deleting ? t('common.loading') : t('home.deleteExchange') }}
+          </button>
+        </div>
+      </div>
 
       <div class="my-3 border-t border-primary/15"></div>
 
@@ -193,67 +179,48 @@ onMounted(async () => {
             exchangeStore.exchange.studySemesters.slice().sort((a: number, b: number) => a - b).join(', ')
           }}</span></span
         >
-        <span v-if="isCoordinator && exchangeStore.exchange.studentName" class="text-light/50"
-          >{{ t('exchange.student') }}:
-          <span class="font-medium text-light">{{
-            exchangeStore.exchange.studentName
-          }}</span></span
-        >
       </div>
 
       <div class="mt-1.5 flex flex-wrap gap-x-6 gap-y-1 text-sm text-light/40">
         <span
           >{{ t('exchange.coordinatorLabel') }}:
-          <span class="text-light/60">{{
+          <span class="font-semibold text-light/60">{{
             exchangeStore.exchange.coordinatorName ?? t('exchange.noCoordinator')
           }}</span></span
         >
         <span
           >{{ t('exchange.mentor') }}:
-          <span class="text-light/60">{{ exchangeStore.exchange.mentor ?? '-' }}</span></span
+          <span class="font-semibold text-light/60">{{ exchangeStore.exchange.mentor ?? '-' }}</span></span
         >
       </div>
 
       <!-- EWP link -->
-      <div class="mt-2 text-sm">
-        <template v-if="isEditingEwpLink">
-          <div class="flex items-center gap-2">
-            <input
-              v-model="ewpLinkInput"
-              type="url"
-              class="flex-1 rounded-lg border border-primary/20 bg-dark px-3 py-1.5 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
-              :placeholder="t('exchange.ewpLinkPlaceholder')"
-              @keyup.enter="saveEwpLink"
-              @keyup.escape="cancelEditingEwpLink"
-            />
-            <button type="button" class="text-xs text-primary-light transition hover:text-white" :disabled="isSavingEwpLink" @click="saveEwpLink">
-              {{ isSavingEwpLink ? t('common.loading') : t('common.confirm') }}
-            </button>
-            <button type="button" class="text-xs text-light/50 transition hover:text-light" @click="cancelEditingEwpLink">
-              {{ t('common.cancel') }}
-            </button>
-          </div>
-        </template>
-        <template v-else>
-          <div class="flex items-center gap-2 text-sm">
-            <a
-              v-if="exchangeStore.exchange.ewpLink"
-              :href="exchangeStore.exchange.ewpLink"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-              </svg>
-              {{ t('exchange.ewpLink') }}
-            </a>
-            <button type="button" class="text-xs text-light/30 transition hover:text-primary-light" @click="startEditingEwpLink">
-              {{ exchangeStore.exchange.ewpLink ? t('common.edit') : '+ ' + t('exchange.ewpLink') }}
-            </button>
-          </div>
-        </template>
+      <div v-if="exchangeStore.exchange.ewpLink || exchangeStore.exchange.studentIsPlaceholder" class="mt-2 flex items-center gap-2 text-sm">
+        <a
+          v-if="exchangeStore.exchange.ewpLink"
+          :href="exchangeStore.exchange.ewpLink"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+            <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+          </svg>
+          {{ t('exchange.ewpLink') }}
+        </a>
+        <button
+          v-if="exchangeStore.exchange.studentIsPlaceholder"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
+          @click="copyAccessLink"
+        >
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
+            <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
+          </svg>
+          {{ t('exchangeAccess.copyLink') }}
+        </button>
       </div>
     </div>
 
@@ -351,5 +318,13 @@ onMounted(async () => {
     :saving="savingNotes"
     @save="saveNotes"
     @close="showNotes = false"
+  />
+
+  <EditExchangeModal
+    v-if="showEdit && exchangeStore.exchange"
+    :exchange="exchangeStore.exchange"
+    :la-has-entries="laHasEntries"
+    @saved="onExchangeSaved"
+    @close="showEdit = false"
   />
 </template>

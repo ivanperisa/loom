@@ -10,7 +10,7 @@ public interface IExchangeService
     Task<ErrorOr<int>> ResolveGuestStudentIdAsync(Guid exchangeGuid, CancellationToken ct = default);
     Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyExchangesAsync(int studentId, CancellationToken ct = default);
     Task<ErrorOr<ExchangeResponse>> CreateExchangeAsync(int requesterId, CreateExchangeRequest request, CancellationToken ct = default);
+    Task<ErrorOr<ExchangeResponse>> UpdateExchangeAsync(Guid exchangeGuid, int requesterId, UpdateExchangeRequest request, CancellationToken ct = default);
     Task<ErrorOr<Deleted>> DeleteExchangeAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default);
     Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeGuid, int requesterId, string? message, CancellationToken ct = default);
-    Task<ErrorOr<ExchangeResponse>> UpdateEwpLinkAsync(Guid exchangeGuid, int requesterId, string? ewpLink, CancellationToken ct = default);
 }

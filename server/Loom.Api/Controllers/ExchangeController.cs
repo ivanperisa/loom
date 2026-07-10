@@ -39,6 +39,24 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, value => CreatedAtAction(nameof(GetExchange), new { exchangeGuid = value.Guid }, value));
     }
 
+    [HttpPut("{exchangeGuid:guid}")]
+    public async Task<IActionResult> UpdateExchange(Guid exchangeGuid, [FromBody] UpdateExchangeRequest request, CancellationToken ct)
+    {
+        var result = await exchangeService.UpdateExchangeAsync(exchangeGuid, GetCurrentUserId(), request, ct);
+        return Match(result, Ok);
+    }
+
+    [AllowAnonymous]
+    [HttpPut("access/{exchangeGuid:guid}")]
+    public async Task<IActionResult> UpdateExchangePublic(Guid exchangeGuid, [FromBody] UpdateExchangeRequest request, CancellationToken ct)
+    {
+        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
+        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
+
+        var result = await exchangeService.UpdateExchangeAsync(exchangeGuid, studentIdResult.Value, request, ct);
+        return Match(result, Ok);
+    }
+
     [HttpDelete("{exchangeGuid:guid}")]
     public async Task<IActionResult> DeleteExchange(Guid exchangeGuid, CancellationToken ct)
     {
@@ -53,21 +71,4 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, Ok);
     }
 
-    [HttpPatch("{exchangeGuid:guid}/ewp-link")]
-    public async Task<IActionResult> UpdateEwpLink(Guid exchangeGuid, [FromBody] UpdateEwpLinkRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.UpdateEwpLinkAsync(exchangeGuid, GetCurrentUserId(), request.EwpLink, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpPatch("access/{exchangeGuid:guid}/ewp-link")]
-    public async Task<IActionResult> UpdateEwpLinkPublic(Guid exchangeGuid, [FromBody] UpdateEwpLinkRequest request, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await exchangeService.UpdateEwpLinkAsync(exchangeGuid, studentIdResult.Value, request.EwpLink, ct);
-        return Match(result, Ok);
-    }
 }
