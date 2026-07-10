@@ -16,6 +16,15 @@ export interface CreateExchangeRequest {
   mentor?: string | null
 }
 
+export interface UpdateExchangeRequest {
+  academicYear: string
+  semesterType: ExchangeSemester
+  studySemesters: number[]
+  coordinatorId?: string | null
+  mentor?: string | null
+  ewpLink?: string | null
+}
+
 export interface ExchangeResponse {
   id: string
   guid: string

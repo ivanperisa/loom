@@ -11,6 +11,7 @@ import { statusColorClass } from '@/utils/statusColors'
 import { buildAccessLink } from '@/utils/accessLink'
 import { nWord } from '@/utils/plural'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
+import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import { localizedName } from '@/utils/i18n.utils'
 import { useNotification } from '@/composables/useNotification'
 
@@ -58,6 +59,11 @@ const academicYears = computed(() => {
   const years = new Set(exchanges.value.map((ex) => ex.academicYear))
   return Array.from(years).sort().reverse()
 })
+
+const academicYearFilterOptions = computed(() => [
+  { value: null, label: t('home.allYears') },
+  ...academicYears.value.map((year) => ({ value: year, label: year })),
+])
 
 const filteredExchanges = computed(() => {
   if (!selectedAcademicYear.value) return exchanges.value
@@ -172,14 +178,13 @@ function onExchangeCreated(exchangeGuid: string) {
       <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-2xl font-bold text-light">{{ t('coordinator.title') }}</h1>
         <div class="flex items-center gap-3">
-          <select
-            v-if="academicYears.length >= 1"
-            v-model="selectedAcademicYear"
-            class="rounded-lg border border-primary/30 bg-dark-2 px-3 py-2 text-sm text-light focus:border-primary focus:outline-none"
-          >
-            <option :value="null">{{ t('home.allYears') }}</option>
-            <option v-for="year in academicYears" :key="year" :value="year">{{ year }}</option>
-          </select>
+          <div v-if="academicYears.length >= 1" class="w-40">
+            <SearchableSelect
+              v-model="selectedAcademicYear"
+              :searchable="false"
+              :options="academicYearFilterOptions"
+            />
+          </div>
           <button
             type="button"
             class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
@@ -265,39 +270,40 @@ function onExchangeCreated(exchangeGuid: string) {
               <div
                 v-for="ex in exchangesByStudent.get(student.id)"
                 :key="ex.id"
-                class="flex cursor-pointer items-center justify-between rounded-lg border border-primary/20 bg-dark px-4 py-3 transition hover:border-light/60"
+                class="cursor-pointer rounded-lg border border-primary/20 bg-dark px-4 py-3 transition hover:border-light/60"
                 @click="viewExchange(ex.guid)"
               >
-                <div class="flex-1">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-xs font-medium text-light/50">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="text-sm font-semibold text-light">{{ ex.partnerInstitutionName }}</p>
+                      <span
+                        class="rounded-full border px-2 py-0.5 text-xs font-semibold"
+                        :class="statusColorClass[ex.learningAgreementStatus]"
+                      >
+                        {{ t('exchange.tabs.learningAgreement') }}:
+                        {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
+                      </span>
+                    </div>
+                    <p class="mt-2 text-xs font-medium text-light/50">
                       {{ ex.academicYear }} &middot; {{ t(`exchangeSemester.${ex.semesterType}`) }}
-                    </span>
-                    <span
-                      class="rounded-full border px-2 py-0.5 text-xs font-semibold"
-                      :class="statusColorClass[ex.learningAgreementStatus]"
-                    >
-                      {{ t('exchange.tabs.learningAgreement') }}:
-                      {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
-                    </span>
-                    <span
-                      class="rounded-full border px-2 py-0.5 text-xs font-semibold"
-                      :class="statusColorClass[ex.recognitionStatus]"
-                    >
-                      {{ t('exchange.tabs.recognition') }}:
-                      {{ t(`recognitionStatus.${ex.recognitionStatus}`) }}
-                    </span>
+                    </p>
+                    <p class="mt-0.5 text-xs text-light/40">
+                      {{ ex.homeProgramName }}<span v-if="ex.homeProfileName"> &middot; {{ ex.homeProfileName }}</span>
+                    </p>
                   </div>
-                  <p class="mt-2.5 text-sm font-semibold text-light">{{ ex.partnerInstitutionName }}</p>
-                  <p class="mt-1.5 text-xs text-light/40">
-                    {{ ex.homeProgramName }}<span v-if="ex.homeProfileName"> &middot; {{ ex.homeProfileName }}</span>
-                  </p>
+                  <svg class="mt-0.5 h-5 w-5 shrink-0 text-light/60" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+
+                <div v-if="ex.ewpLink || student.isPlaceholder" class="mt-2.5 flex flex-wrap items-center gap-2">
                   <a
                     v-if="ex.ewpLink"
                     :href="ex.ewpLink"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
                     @click.stop
                   >
                     <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -309,7 +315,7 @@ function onExchangeCreated(exchangeGuid: string) {
                   <button
                     v-if="student.isPlaceholder"
                     type="button"
-                    class="mt-2 flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-semibold text-primary-light transition hover:bg-primary/10"
+                    class="flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-semibold text-primary-light transition hover:bg-primary/10"
                     @click.stop="copyAccessLink(ex.guid)"
                   >
                     <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -319,9 +325,6 @@ function onExchangeCreated(exchangeGuid: string) {
                     {{ t('exchangeAccess.copyLink') }}
                   </button>
                 </div>
-                <svg class="h-5 w-5 text-light/60" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                </svg>
               </div>
             </div>
 

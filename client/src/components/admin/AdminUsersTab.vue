@@ -342,9 +342,8 @@ function formatDate(iso: string) {
               <div class="min-w-0">
                 <div class="flex items-baseline gap-2">
                   <span class="text-sm font-medium text-light">{{ u.name }}</span>
-                  <span v-if="u.jmbag" class="text-xs font-mono text-light/35">{{ u.jmbag }}</span>
+                  <span v-if="u.email" class="text-xs text-light/35">{{ u.email }}</span>
                 </div>
-                <p v-if="u.email" class="mt-0.5 text-xs text-light/40">{{ u.email }}</p>
               </div>
               <div class="flex items-center gap-2">
                 <span
@@ -443,7 +442,6 @@ function formatDate(iso: string) {
         >
           <div>
             <p class="text-sm font-medium text-light">{{ entry.email }}</p>
-            <p class="text-xs text-light/50">{{ t('admin.whitelist.addedOn') }} {{ formatDate(entry.createdAt) }}</p>
           </div>
           <button
             type="button"

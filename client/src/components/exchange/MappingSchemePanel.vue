@@ -4,12 +4,16 @@ import { useI18n } from 'vue-i18n'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useTheme } from '@/composables/useTheme'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
+import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
 import type { HomeSlotResponse, SlotMode } from '@/types/learningAgreement.types'
 import type { MappingSchemeEntryResponse } from '@/types/mappingScheme.types'
 import { slotMode } from '@/utils/slotMode'
+import { slotDisplayCode, slotDisplayName, slotSubLabel } from '@/utils/slotDisplay'
+import { ectsIndicatorColor } from '@/utils/ectsIndicator'
 
 const props = defineProps<{
   exchangeId: string
+  homeProfileName: string
 }>()
 
 const { t, locale } = useI18n()
@@ -29,6 +33,14 @@ const modeOutlineColor: Record<string, string> = {
 
 // Editable working copy (homeSlotId + enrollmentStatus only).
 const localEntries = ref<MappingSchemeEntryResponse[]>([])
+
+const laModeBySlot = computed(() => {
+  const m = new Map<string, SlotMode>()
+  for (const e of exchangeStore.serverLearningAgreement?.entries ?? []) {
+    if (!e.isDeleted) m.set(e.homeSlotId, e.mode)
+  }
+  return m
+})
 
 function rebuildLocal() {
   localEntries.value = (exchangeStore.serverMappingScheme?.entries ?? []).map((e) => ({ ...e }))
@@ -51,15 +63,6 @@ const isDirty = computed(() => {
   })
 })
 
-// Slot modes come from the learning agreement (the scheme itself doesn't store them).
-const laModeBySlot = computed(() => {
-  const m = new Map<string, SlotMode>()
-  for (const e of exchangeStore.serverLearningAgreement?.entries ?? []) {
-    if (!e.isDeleted) m.set(e.homeSlotId, e.mode)
-  }
-  return m
-})
-
 function slotsForSemester(sem: number): HomeSlotResponse[] {
   return exchangeStore.slots
     .filter((s) => s.semester === sem)
@@ -71,7 +74,13 @@ function entriesForSlot(slotId: string): MappingSchemeEntryResponse[] {
 }
 
 function mappedEcts(slot: HomeSlotResponse): number {
-  return Math.round(entriesForSlot(slot.id).reduce((sum, e) => sum + e.awardedEcts, 0) * 10) / 10
+  return (
+    Math.round(
+      entriesForSlot(slot.id)
+        .filter((e) => e.enrollmentStatus !== 'NotPassed')
+        .reduce((sum, e) => sum + e.awardedEcts, 0) * 10,
+    ) / 10
+  )
 }
 
 function ectsLabel(slot: HomeSlotResponse): string {
@@ -80,12 +89,7 @@ function ectsLabel(slot: HomeSlotResponse): string {
 
 function ectsColor(slot: HomeSlotResponse): string {
   if (entriesForSlot(slot.id).length === 0) return 'transparent'
-  const mapped = mappedEcts(slot)
-  const light = theme.value === 'light'
-  if (mapped === 0) return light ? '#78716c' : '#94a3b8'
-  if (mapped < slot.ects) return light ? '#b45309' : '#f59e0b'
-  if (mapped === slot.ects) return light ? '#16a34a' : '#22c55e'
-  return '#ef4444'
+  return ectsIndicatorColor(mappedEcts(slot), slot.ects, theme.value === 'light')
 }
 
 // Drag & drop — drops open a dialog to choose how many ECTS move to the target slot.
@@ -183,7 +187,7 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
   const hasEntries = entriesForSlot(slot.id).length > 0
   const mode: SlotMode | undefined = hasEntries ? slotMode.AtExchange : laModeBySlot.value.get(slot.id)
   const showOutline = mode === slotMode.AtHome
-  const outline = showOutline ? `3px solid ${modeOutlineColor.AtHome}` : `1px solid #aaa`
+  const outline = showOutline ? `3px solid ${modeOutlineColor.AtHome}` : '1px solid #aaa'
   return {
     backgroundColor: bg,
     outline,
@@ -194,27 +198,18 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
 function isNotPassed(entry: MappingSchemeEntryResponse): boolean {
   return entry.enrollmentStatus === 'NotPassed'
 }
+function entriesForCourse(partnerCourseCode: string): MappingSchemeEntryResponse[] {
+  return localEntries.value.filter((e) => e.partnerCourseCode === partnerCourseCode)
+}
 function markNotPassed(entry: MappingSchemeEntryResponse) {
-  entry.enrollmentStatus = 'NotPassed'
+  for (const e of entriesForCourse(entry.partnerCourseCode)) e.enrollmentStatus = 'NotPassed'
 }
 function onItemClick(entry: MappingSchemeEntryResponse) {
-  if (isNotPassed(entry)) entry.enrollmentStatus = 'Passed'
+  if (isNotPassed(entry)) {
+    for (const e of entriesForCourse(entry.partnerCourseCode)) e.enrollmentStatus = 'Passed'
+  }
 }
 
-function slotDisplayCode(slot: HomeSlotResponse): string | number | null {
-  return slot.courseIsvuCode ?? slot.courseGroupIsvuCode ?? null
-}
-function slotDisplayName(slot: HomeSlotResponse): string {
-  return slot.courseName ?? slot.courseGroupName ?? slot.courseTypeName
-}
-function slotSubLabel(slot: HomeSlotResponse): string {
-  if (slotDisplayCode(slot) !== null) {
-    return locale.value === 'en'
-      ? (slot.courseNameEn ?? slot.courseGroupNameEn ?? slot.courseTypeName)
-      : slotDisplayName(slot)
-  }
-  return slot.courseTypeName
-}
 
 async function save() {
   saving.value = true
@@ -261,15 +256,20 @@ onMounted(async () => {
       <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded bg-primary/20"></div>
     </div>
 
-    <!-- Phase 1: not yet available -->
-    <div
-      v-else-if="!isActive"
-      class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center text-light/60"
-    >
-      {{ t('mappingScheme.lockedPhase1') }}
-    </div>
-
     <template v-else>
+      <div class="relative mb-4 flex min-h-[38px] items-center justify-center">
+        <span class="text-sm font-semibold text-light/80">{{ homeProfileName }}</span>
+      </div>
+
+      <!-- Phase 1: not yet available -->
+      <div
+        v-if="!isActive"
+        class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center text-light/60"
+      >
+        {{ t('mappingScheme.lockedPhase1') }}
+      </div>
+
+      <template v-else>
       <p class="mb-3 text-xs text-light/60">{{ t('mappingScheme.dragHint') }}</p>
 
       <UnsavedChangesBar v-if="isDirty" :saving="saving" @save="save" @discard="discard" />
@@ -303,7 +303,7 @@ onMounted(async () => {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
                   <div style="min-width: 0;">
                     <div class="ms-cell-name">{{ slotDisplayCode(slot) ?? slotDisplayName(slot) }}</div>
-                    <div class="ms-cell-sub">{{ slotSubLabel(slot) }}</div>
+                    <div class="ms-cell-sub">{{ slotSubLabel(slot, locale) }}</div>
                   </div>
                   <span
                     v-if="ectsLabel(slot)"
@@ -364,51 +364,18 @@ onMounted(async () => {
     </template>
 
     <!-- ECTS transfer dialog -->
-    <div
-      v-if="pendingTransfer"
-      style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50;"
-      @mousedown.self="cancelTransfer"
-    >
-      <div style="background: var(--color-dark-2); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); border-radius: 8px; padding: 24px; min-width: 320px;">
-        <h3 style="color: var(--color-light); font-size: 14px; font-weight: 600; margin-bottom: 16px">
-          {{ t('partnerCourses.moveMapping') }}
-        </h3>
-        <div v-if="transferSource" style="color: var(--color-primary-light); font-size: 12px; margin-bottom: 4px">
-          {{ transferSource.partnerCourseCode }} — {{ transferSource.partnerCourseName }}
-        </div>
-        <div style="color: var(--color-light); opacity: 0.6; font-size: 11px; margin-bottom: 16px">
-          {{ t('partnerCourses.availableEcts') }}: {{ pendingTransfer.max }} ECTS
-        </div>
-        <label style="display: block; color: var(--color-light); font-size: 12px; margin-bottom: 6px">
-          {{ t('partnerCourses.awardedEcts') }}
-        </label>
-        <input
-          v-model.number="transferEcts"
-          type="number"
-          :min="0.5"
-          :max="pendingTransfer.max"
-          step="0.5"
-          style="width: 100%; background: var(--color-dark); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); color: var(--color-light); padding: 8px; border-radius: 4px; font-size: 13px; margin-bottom: 16px;"
-          @keydown.enter.prevent="confirmTransfer"
-        />
-        <div style="display: flex; gap: 8px; justify-content: flex-end">
-          <button
-            type="button"
-            style="padding: 8px 16px; border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); background: transparent; color: var(--color-primary-light); border-radius: 4px; cursor: pointer; font-size: 13px;"
-            @click="cancelTransfer"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            type="button"
-            style="padding: 8px 16px; background: var(--color-primary); border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;"
-            @click="confirmTransfer"
-          >
-            {{ t('common.confirm') }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <EctsAmountDialog
+      v-if="pendingTransfer && transferSource"
+      :title="t('partnerCourses.moveMapping')"
+      :course-code="transferSource.partnerCourseCode"
+      :course-name="transferSource.partnerCourseName"
+      :max="pendingTransfer.max"
+      :model-value="transferEcts"
+      @update:model-value="transferEcts = $event"
+      @confirm="confirmTransfer"
+      @cancel="cancelTransfer"
+    />
+    </template>
   </div>
 </template>
 

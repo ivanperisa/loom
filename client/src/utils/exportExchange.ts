@@ -44,13 +44,13 @@ function c(
   }
 }
 
-function link(value: string, url: string, bg?: string): XlsxCell {
-  const cell = c(value, { color: '0563C1', underline: true, bg, borders: true, wrap: true }) as XlsxCell
-  if (url) cell.l = { Target: url }
-  return cell
-}
-
 function empty(bg?: string, borders = true): XlsxCell { return c('', { bg, borders }) }
+
+function formatDdMmYyyy(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  return y && m && d ? `${d}/${m}/${y}` : iso
+}
 
 function colLetter(idx: number): string {
   let s = ''; let n = idx + 1
@@ -63,7 +63,6 @@ function colLetter(idx: number): string {
 type Lang = 'hr' | 'en' | string
 
 const T: Record<string, Record<Lang, string>> = {
-  title:            { hr: 'ISVU-obrazac za priznavanje predmeta ERASMUS-studentima', en: 'ISVU-form for course recognition — Erasmus students' },
   student:          { hr: 'Student:', en: 'Student:' },
   jmbag:            { hr: 'JMBAG:', en: 'JMBAG:' },
   studyType:        { hr: 'Studij (prediplomski/diplomski):', en: 'Study (undergraduate/graduate):' },
@@ -97,6 +96,7 @@ const T: Record<string, Record<Lang, string>> = {
   colSlotName:      { hr: 'Naziv', en: 'Name' },
   colSlotCode:      { hr: 'Izb. grupa', en: 'Elective group' },
   colSlotCategory:  { hr: 'Naziv izb. grupe', en: 'Elective group name' },
+  mandatoryCourse:  { hr: 'Obavezan predmet', en: 'Mandatory course' },
   colSemester:      { hr: 'Semestar', en: 'Semester' },
   colAwarded:       { hr: 'Priznato ECTS-a', en: 'Awarded ECTS' },
   colOrigGrade:     { hr: 'Ocjena\noriginalna', en: 'Original\nGrade' },
@@ -105,9 +105,7 @@ const T: Record<string, Record<Lang, string>> = {
   colDate:          { hr: 'Datum polaganja', en: 'Exam Date' },
   statusPassed:     { hr: 'Položeno', en: 'Passed' },
   statusNotPassed:  { hr: 'Nepoloženo', en: 'Not passed' },
-  laAtHome:         { hr: 'položeno na FER-u', en: 'Taken at home institution' },
-  laAtExchange:     { hr: 'polaže na mobilnosti', en: 'Taken on exchange' },
-  laAfterExchange:  { hr: 'ostaje nakon mobilnosti', en: 'Taken after exchange' },
+  laAtHome:         { hr: 'Položeno na FER-u', en: 'Taken at home institution' },
 }
 
 function tr(key: string, lang: Lang): string {
@@ -128,8 +126,6 @@ function buildRecognitionSheet(
     ws[`D${row}`] = c(label, { bold: true, halign: 'right', borders: false, color: labelColor })
     ws[`E${row}`] = c(value ?? '', { halign: 'left', borders: false })
   }
-
-  ws['A1'] = c(tr('title', lang), { bold: true, sz: 11, borders: false })
 
   infoRow(3, tr('student', lang), exchange.studentName)
   infoRow(4, tr('jmbag', lang), exchange.studentJmbag)
@@ -175,27 +171,43 @@ function buildRecognitionSheet(
   let row = 17
   const categoryTotals = new Map<string, { name: string; color: string; ects: number }>()
 
-  for (const [, entries] of groups) {
-    const isRejected = entries.some(e => e.isRecognized === false)
-    const partnerBg = isRejected ? RED_ROW_BG : 'FFFFFF'
-    const gradeBg = isRejected ? RED_ROW_BG : 'DDD9C3'
-    const groupStart = row
-    const groupEnd = row + entries.length - 1
+  function buildDisplayRows(entries: ExportEntry[]): ExportEntry[][] {
+    const rows: ExportEntry[][] = []
+    const groupRowIndex = new Map<number, number>()
+    for (const entry of entries) {
+      if (entry.homeSlotCourseIsvuCode == null && entry.homeSlotCourseGroupIsvuCode != null) {
+        const existing = groupRowIndex.get(entry.homeSlotCourseGroupIsvuCode)
+        if (existing !== undefined) {
+          rows[existing]!.push(entry)
+          continue
+        }
+        groupRowIndex.set(entry.homeSlotCourseGroupIsvuCode, rows.length)
+      }
+      rows.push([entry])
+    }
+    return rows
+  }
 
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i]
+  for (const [, entries] of groups) {
+    const isNotPassed = entries.some(e => e.enrollmentStatus === 'NotPassed')
+    const partnerBg = isNotPassed ? RED_ROW_BG : 'FFFFFF'
+    const gradeBg = isNotPassed ? RED_ROW_BG : 'DDD9C3'
+    const displayRows = buildDisplayRows(entries)
+    const groupStart = row
+    const groupEnd = row + displayRows.length - 1
+
+    for (let i = 0; i < displayRows.length; i++) {
+      const merged = displayRows[i]
+      if (!merged) continue
+      const entry = merged[0]
       if (!entry) continue
-      const slotBg = isRejected ? RED_ROW_BG : entry.homeSlotColor.replace('#', '')
+      const mergedEcts = Math.round(merged.reduce((s, e) => s + e.awardedEcts, 0) * 10) / 10
+      const slotBg = isNotPassed ? RED_ROW_BG : entry.homeSlotColor.replace('#', '')
+      const plainBg = isNotPassed ? RED_ROW_BG : undefined
 
       if (i === 0) {
-        const codeUrl = (entry as any).partnerCourseUrl ?? ''
-        ws[`A${row}`] = codeUrl
-          ? link(entry.partnerCourseCode, codeUrl, partnerBg)
-          : c(entry.partnerCourseCode, { bg: partnerBg, bold: true, halign: 'center' })
-
-        ws[`B${row}`] = codeUrl
-          ? link(entry.partnerCourseName, codeUrl, partnerBg)
-          : c(entry.partnerCourseName, { bg: partnerBg, wrap: true })
+        ws[`A${row}`] = c(entry.partnerCourseCode, { bg: partnerBg, bold: true, halign: 'center' })
+        ws[`B${row}`] = c(entry.partnerCourseName, { bg: partnerBg, wrap: true })
 
         const statusKey = entry.enrollmentStatus === 'Passed' ? 'statusPassed'
           : entry.enrollmentStatus === 'NotPassed' ? 'statusNotPassed' : null
@@ -207,40 +219,44 @@ function buildRecognitionSheet(
         for (const col of ['A', 'B', 'C', 'D', 'E', 'F']) ws[`${col}${row}`] = empty(partnerBg)
       }
 
-      ws[`G${row}`] = c(i + 1, { halign: 'center' })
-      ws[`H${row}`] = c(entry.homeSlotCourseIsvuCode, { halign: 'center' })
-      ws[`I${row}`] = c(entry.homeSlotCourseName, { wrap: true })
-      ws[`J${row}`] = c(entry.homeSlotCourseGroupIsvuCode, { halign: 'center' })
-      ws[`K${row}`] = c(entry.homeSlotCourseGroupName, { bg: slotBg, wrap: true })
-      ws[`L${row}`] = c(entry.homeSlotSemester, { halign: 'center' })
-      ws[`M${row}`] = c(entry.awardedEcts, { bg: slotBg, halign: 'center', bold: true })
+      ws[`G${row}`] = c(i + 1, { bg: plainBg, halign: 'center' })
+      ws[`H${row}`] = c(entry.homeSlotCourseIsvuCode, { bg: plainBg, halign: 'center' })
+      ws[`I${row}`] = c(entry.homeSlotCourseName, { bg: plainBg, wrap: true })
+      ws[`J${row}`] = c(entry.homeSlotCourseGroupIsvuCode, { bg: plainBg, halign: 'center' })
+      ws[`K${row}`] = c(entry.homeSlotCourseGroupName || tr('mandatoryCourse', lang), { bg: slotBg, wrap: true })
+      ws[`L${row}`] = c(entry.homeSlotSemester, { bg: plainBg, halign: 'center' })
+      ws[`M${row}`] = c(mergedEcts, { bg: slotBg, halign: 'center', bold: true })
 
       if (i === 0) {
-        ws[`N${row}`] = c(entry.originalGrade, { bg: gradeBg })
+        ws[`N${row}`] = c(entry.originalGrade, { bg: gradeBg, halign: 'center' })
         ws[`O${row}`] = c(entry.ectsGrade, { bg: gradeBg, halign: 'center' })
         ws[`P${row}`] = c(entry.hrGrade, { bg: gradeBg, halign: 'center' })
-        ws[`Q${row}`] = c(entry.examDate ?? '', { bg: gradeBg })
+        ws[`Q${row}`] = c(formatDdMmYyyy(entry.examDate), { bg: gradeBg })
       } else {
         for (const col of ['N', 'O', 'P', 'Q']) ws[`${col}${row}`] = empty(gradeBg)
       }
 
-      const catKey = entry.homeSlotCourseGroupName
-      if (!categoryTotals.has(catKey)) {
-        categoryTotals.set(catKey, { name: catKey, color: entry.homeSlotColor.replace('#', ''), ects: 0 })
+      if (!isNotPassed) {
+        const catKey = entry.homeSlotCourseGroupName || tr('mandatoryCourse', lang)
+        if (!categoryTotals.has(catKey)) {
+          categoryTotals.set(catKey, { name: catKey, color: entry.homeSlotColor.replace('#', ''), ects: 0 })
+        }
+        categoryTotals.get(catKey)!.ects = Math.round((categoryTotals.get(catKey)!.ects + mergedEcts) * 10) / 10
       }
-      categoryTotals.get(catKey)!.ects = Math.round((categoryTotals.get(catKey)!.ects + entry.awardedEcts) * 10) / 10
 
       row++
     }
 
-    if (entries.length > 1) {
+    if (displayRows.length > 1) {
       for (const ci of [0, 1, 2, 3, 4, 5, 13, 14, 15, 16]) {
         merges.push({ s: { r: groupStart - 1, c: ci }, e: { r: groupEnd - 1, c: ci } })
       }
     }
   }
 
-  const totalEcts = Math.round(entries.reduce((s, e) => s + e.awardedEcts, 0) * 10) / 10
+  const totalEcts = Math.round(
+    entries.filter(e => e.enrollmentStatus !== 'NotPassed').reduce((s, e) => s + e.awardedEcts, 0) * 10,
+  ) / 10
   ws[`A${row}`] = c(tr('ukupno', lang), { bold: true, bg: HEADER_BG, halign: 'right' })
   for (let ci = 1; ci <= 11; ci++) ws[`${colLetter(ci)}${row}`] = empty(HEADER_BG)
   merges.push({ s: { r: row - 1, c: 0 }, e: { r: row - 1, c: 11 } })
@@ -314,10 +330,33 @@ function buildRecognitionSheet(
 
 // Sheet 2: Learning Agreement
 
-const MODE_TEXT_COLOR: Record<string, string> = {
+const MODE_OUTLINE_COLOR: Record<string, string> = {
   AtHome: '4472C4',
-  AtExchange: 'FF0000',
-  AfterExchange: '000000',
+}
+
+interface LaEntryLine {
+  code: string
+  name: string
+  nameHr: string | null
+  ects: number
+  deleted: boolean
+}
+
+const CHARS_PER_COL = 6.5
+const LINE_HEIGHT_PT = 11.5
+const DEFAULT_ENTRY_ROW_PT = 34
+
+function wrappedLineCount(text: string, colWidthChars: number): number {
+  if (!text) return 1
+  return Math.max(1, Math.ceil(text.length / colWidthChars))
+}
+
+function entryRowHeightPt(entry: LaEntryLine, slotEcts: number): number {
+  const colWidthChars = Math.max(1, slotEcts) * CHARS_PER_COL
+  let lines = wrappedLineCount(entry.name, colWidthChars)
+  if (entry.nameHr) lines += wrappedLineCount(entry.nameHr, colWidthChars)
+  lines += 2
+  return Math.max(DEFAULT_ENTRY_ROW_PT, lines * LINE_HEIGHT_PT)
 }
 
 function buildLASheet(
@@ -329,7 +368,7 @@ function buildLASheet(
   const ws: XLSX.WorkSheet = {}
   const merges: XLSX.Range[] = []
 
-  type SlotState = { mode: string; entries: { partnerCourseCode: string | null; partnerCourseName: string | null; partnerCourseNameHr: string | null; awardedEcts: number | null }[] }
+  type SlotState = { mode: string; entries: { partnerCourseCode: string | null; partnerCourseName: string | null; partnerCourseNameHr: string | null; awardedEcts: number | null; enrollmentStatus?: string | null }[] }
   const stateMap = new Map<string, SlotState>()
 
   if (mappingEntries.length > 0) {
@@ -351,6 +390,21 @@ function buildLASheet(
     }
   }
 
+  const deletedBySlot = new Map<string, LaEntryLine[]>()
+  if (mappingEntries.length === 0) {
+    for (const e of la.entries) {
+      if (!e.isDeleted || !e.partnerCourseId) continue
+      if (!deletedBySlot.has(e.homeSlotId)) deletedBySlot.set(e.homeSlotId, [])
+      deletedBySlot.get(e.homeSlotId)!.push({
+        code: e.partnerCourseCode ?? '',
+        name: e.partnerCourseName ?? '',
+        nameHr: e.partnerCourseNameHr,
+        ects: e.awardedEcts ?? 0,
+        deleted: true,
+      })
+    }
+  }
+
   const TOTAL_COLS = 30
 
   ws['A1'] = c(exchange.homeProfile.name, { bold: true, sz: 11, borders: false })
@@ -364,80 +418,153 @@ function buildLASheet(
     ws[`${colLetter(pos)}3`] = c(pos, { bold: true, bg: HEADER_BG, halign: 'center', sz: 8 })
   }
 
+  const rowHeights: number[] = [20, 6, 20]
+  let cursor = 4
+
   for (let sem = 1; sem <= 4; sem++) {
-    const rowNum = sem + 3
-
-    ws[`A${rowNum}`] = c(sem, { bold: true, bg: HEADER_BG, halign: 'center', valign: 'middle' })
-
-    for (let pos = 1; pos <= TOTAL_COLS; pos++) {
-      ws[`${colLetter(pos)}${rowNum}`] = empty(undefined, true)
-    }
-
     const semSlots = la.slots.filter(s => s.semester === sem)
-    for (const slot of semSlots) {
-      const state = stateMap.get(slot.id)
-      const slotBg = slot.color.replace('#', '')
 
+    const slotData = semSlots.map(slot => {
+      const state = stateMap.get(slot.id)
       const isvuCode = slot.courseIsvuCode ?? slot.courseGroupIsvuCode
       const name = slot.courseName ?? slot.courseGroupName ?? ''
+      const liveEntries: LaEntryLine[] = (state?.entries ?? []).map(m => ({
+        code: m.partnerCourseCode ?? '',
+        name: m.partnerCourseName ?? '',
+        nameHr: m.partnerCourseNameHr,
+        ects: m.awardedEcts ?? 0,
+        deleted: m.enrollmentStatus === 'NotPassed',
+      }))
+      const rows = [...(deletedBySlot.get(slot.id) ?? []), ...liveEntries]
+      return { slot, state, isvuCode, name, rows }
+    })
 
-      const lines: string[] = []
-      if (isvuCode) lines.push(String(isvuCode))
-      lines.push(name)
-      for (const m of state?.entries ?? []) {
-        lines.push(m.partnerCourseCode ?? '')
-        if (m.partnerCourseName) lines.push(`  ${m.partnerCourseName}`)
-        if (m.partnerCourseNameHr) lines.push(`  ${m.partnerCourseNameHr}`)
-        lines.push(`  ${m.awardedEcts} ECTS`)
-      }
-      const text = lines.join('\n')
+    const maxEntryRows = slotData.reduce((max, sd) => Math.max(max, sd.rows.length), 0)
+    const headerCodeRow = cursor
+    const headerNameRow = cursor + 1
+    const totalSemRows = 2 + maxEntryRows * 2
 
+    ws[`A${headerCodeRow}`] = c(sem, { bold: true, bg: HEADER_BG, halign: 'center', valign: 'middle' })
+    for (let r = headerCodeRow + 1; r < headerCodeRow + totalSemRows; r++) {
+      ws[`A${r}`] = c('', { bg: HEADER_BG })
+    }
+    if (totalSemRows > 1) merges.push({ s: { r: headerCodeRow - 1, c: 0 }, e: { r: headerCodeRow - 1 + totalSemRows - 1, c: 0 } })
+
+    for (let r = headerCodeRow; r < headerCodeRow + totalSemRows; r++) {
+      for (let pos = 1; pos <= TOTAL_COLS; pos++) ws[`${colLetter(pos)}${r}`] = empty(undefined, true)
+    }
+
+    for (const sd of slotData) {
+      const { slot, state, isvuCode, name, rows } = sd
+      const slotBg = slot.color.replace('#', '')
       const startCol = slot.slotPosition
       const endCol = slot.slotPosition + slot.ects - 1
+      const colWidthChars = Math.max(1, slot.ects) * CHARS_PER_COL
 
-      const textColor = state?.mode ? (MODE_TEXT_COLOR[state.mode] ?? '000000') : '000000'
-      const slotBorder = { style: 'thin' as const, color: { rgb: 'BFBFBF' } }
-      const slotBorderAll = { top: slotBorder, bottom: slotBorder, left: slotBorder, right: slotBorder }
-      const cellStyle = {
-        font: { name: FONT, sz: 11, bold: false, color: { rgb: textColor } },
-        fill: { fgColor: { rgb: slotBg } },
-        alignment: { wrapText: true, horizontal: 'center' as const, vertical: 'middle' as const },
-        border: slotBorderAll,
-      }
+      const outlineColor = state?.mode ? MODE_OUTLINE_COLOR[state.mode] : undefined
+      const outlineBorder = outlineColor
+        ? { style: 'medium' as const, color: { rgb: outlineColor } }
+        : { style: 'thin' as const, color: { rgb: 'BFBFBF' } }
+      const thinBorder = { style: 'thin' as const, color: { rgb: 'BFBFBF' } }
+      const noBorder = { style: 'none' as const }
+      const headerNameBottomBorder = maxEntryRows === 0 ? outlineBorder : noBorder
 
-      ws[`${colLetter(startCol)}${rowNum}`] = { v: text, t: 's', s: cellStyle }
-
-      for (let pos = startCol + 1; pos <= endCol; pos++) {
-        ws[`${colLetter(pos)}${rowNum}`] = {
-          v: '', t: 's',
-          s: { fill: { fgColor: { rgb: slotBg } }, border: slotBorderAll, alignment: { vertical: 'middle' as const } },
+      function writeRow(row: number, text: string, opts: { bold?: boolean; strike?: boolean; color?: string; top: typeof outlineBorder | typeof noBorder; bottom: typeof outlineBorder | typeof noBorder }) {
+        const style = {
+          font: { name: FONT, sz: 9, bold: !!opts.bold, strike: !!opts.strike, color: { rgb: opts.color ?? '000000' } },
+          fill: { fgColor: { rgb: slotBg } },
+          alignment: { wrapText: true, horizontal: 'left' as const, vertical: 'top' as const },
+          border: { top: opts.top, bottom: opts.bottom, left: outlineBorder, right: outlineBorder },
         }
+        ws[`${colLetter(startCol)}${row}`] = { v: text, t: 's', s: style }
+        for (let pos = startCol + 1; pos <= endCol; pos++) {
+          ws[`${colLetter(pos)}${row}`] = {
+            v: '', t: 's',
+            s: {
+              fill: { fgColor: { rgb: slotBg } },
+              border: { top: opts.top, bottom: opts.bottom, right: pos === endCol ? outlineBorder : undefined },
+              alignment: { vertical: 'top' as const },
+            },
+          }
+        }
+        if (endCol > startCol) merges.push({ s: { r: row - 1, c: startCol }, e: { r: row - 1, c: endCol } })
       }
 
-      if (endCol > startCol) {
-        merges.push({ s: { r: rowNum - 1, c: startCol }, e: { r: rowNum - 1, c: endCol } })
+      if (isvuCode) {
+        writeRow(headerCodeRow, String(isvuCode), { bold: true, top: outlineBorder, bottom: noBorder })
+        writeRow(headerNameRow, name, { top: noBorder, bottom: headerNameBottomBorder })
+      } else {
+        writeRow(headerCodeRow, name, { top: outlineBorder, bottom: noBorder })
+        writeRow(headerNameRow, '', { top: noBorder, bottom: headerNameBottomBorder })
+      }
+
+      for (let i = 0; i < maxEntryRows; i++) {
+        const codeRow = headerNameRow + 1 + i * 2
+        const detailsRow = codeRow + 1
+        const entry = rows[i]
+        const isLastEntry = i === maxEntryRows - 1
+        const detailsBottom = isLastEntry ? outlineBorder : thinBorder
+
+        if (!entry) {
+          writeRow(codeRow, '', { top: noBorder, bottom: noBorder })
+          writeRow(detailsRow, '', { top: noBorder, bottom: detailsBottom })
+          continue
+        }
+
+        const detailsLines = [entry.name]
+        if (entry.nameHr) detailsLines.push(entry.nameHr)
+        detailsLines.push(`${entry.ects} ECTS`, '')
+
+        writeRow(codeRow, entry.code, { bold: true, strike: entry.deleted, color: entry.deleted ? 'CC0000' : '000000', top: noBorder, bottom: noBorder })
+        writeRow(detailsRow, detailsLines.join('\n'), { strike: entry.deleted, color: entry.deleted ? 'CC0000' : '000000', top: noBorder, bottom: detailsBottom })
       }
     }
+
+    const headerCodeRowLines = slotData.reduce((max, sd) => {
+      const cw = Math.max(1, sd.slot.ects) * CHARS_PER_COL
+      return Math.max(max, sd.isvuCode ? 1 : wrappedLineCount(sd.name, cw))
+    }, 1)
+    const headerNameRowLines = slotData.reduce((max, sd) => {
+      const cw = Math.max(1, sd.slot.ects) * CHARS_PER_COL
+      return Math.max(max, sd.isvuCode ? wrappedLineCount(sd.name, cw) : 1)
+    }, 1)
+    rowHeights.push(Math.max(14, headerCodeRowLines * LINE_HEIGHT_PT))
+    rowHeights.push(Math.max(16, headerNameRowLines * LINE_HEIGHT_PT))
+    for (let i = 0; i < maxEntryRows; i++) {
+      let detailsPt = DEFAULT_ENTRY_ROW_PT
+      for (const sd of slotData) {
+        const entry = sd.rows[i]
+        if (entry) detailsPt = Math.max(detailsPt, entryRowHeightPt(entry, sd.slot.ects))
+      }
+      rowHeights.push(14)
+      rowHeights.push(detailsPt)
+    }
+    cursor += totalSemRows
   }
 
+  const spacerRow = cursor
+  cursor += 1
+
   const LEGEND_ENTRIES = [
-    { label: tr('laAtHome', lang),        swatchBg: '4472C4', textColor: '4472C4' },
-    { label: tr('laAtExchange', lang),    swatchBg: 'FF0000', textColor: 'FF0000' },
-    { label: tr('laAfterExchange', lang), swatchBg: '000000', textColor: '000000' },
+    { label: tr('laAtHome', lang), swatchBg: '4472C4' },
   ]
 
-  for (let ci = 0; ci <= TOTAL_COLS; ci++) ws[`${colLetter(ci)}8`] = empty(undefined, false)
+  for (let ci = 0; ci <= TOTAL_COLS; ci++) ws[`${colLetter(ci)}${spacerRow}`] = empty(undefined, false)
+  rowHeights.push(6)
 
-  LEGEND_ENTRIES.forEach(({ label, swatchBg, textColor }, i) => {
-    const r = 9 + i
+  LEGEND_ENTRIES.forEach(({ label, swatchBg }, i) => {
+    const r = cursor + i
     ws[`A${r}`] = empty(undefined, false)
     ws[`B${r}`] = c('  ', { bg: swatchBg, borders: true })
-    ws[`C${r}`] = c(label, { borders: false, sz: 9, color: textColor })
+    ws[`C${r}`] = c(label, { borders: false, sz: 9 })
     for (let ci = 3; ci <= 6; ci++) ws[`${colLetter(ci)}${r}`] = empty(undefined, false)
     merges.push({ s: { r: r - 1, c: 2 }, e: { r: r - 1, c: 6 } })
+    rowHeights.push(14)
   })
 
-  ws['!ref'] = `A1:${colLetter(TOTAL_COLS)}11`
+  const lastRow = cursor + LEGEND_ENTRIES.length - 1
+
+  ws['!ref'] = `A1:${colLetter(TOTAL_COLS)}${lastRow}`
   ws['!merges'] = merges
 
   ws['!cols'] = [
@@ -445,19 +572,7 @@ function buildLASheet(
     ...Array(30).fill({ wch: 5.5 }),
   ]
 
-  ws['!rows'] = [
-    { hpt: 20 },
-    { hpt: 6 },
-    { hpt: 20 },
-    { hpt: 100 },
-    { hpt: 100 },
-    { hpt: 100 },
-    { hpt: 100 },
-    { hpt: 6 },
-    { hpt: 14 },
-    { hpt: 14 },
-    { hpt: 14 },
-  ]
+  ws['!rows'] = rowHeights.map(hpt => ({ hpt }))
 
   return ws
 }
@@ -474,8 +589,11 @@ export function exportExchangeExcel(
   const lang: Lang = locale === 'en' ? 'en' : 'hr'
   const wb = XLSX.utils.book_new()
 
-  const bottomEntries: ExportEntry[] =
+  const bottomEntries: ExportEntry[] = (
     mappingScheme.entries.length > 0 ? mappingScheme.entries : recognition.entries
+  )
+    .slice()
+    .sort((a, b) => a.partnerCourseName.localeCompare(b.partnerCourseName))
 
   const wsRecognition = buildRecognitionSheet(bottomEntries, exchange, lang)
   XLSX.utils.book_append_sheet(wb, wsRecognition, tr('sheetRecognition', lang))

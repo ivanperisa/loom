@@ -4,6 +4,12 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useNotification } from '@/composables/useNotification'
 import { extractApiError } from '@/utils/apiError'
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    suppressErrorToast?: boolean
+  }
+}
+
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true,
@@ -20,9 +26,11 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    const { notifyError } = useNotification()
-    const { title, message } = extractApiError(error)
-    notifyError(title, message)
+    if (!error.config?.suppressErrorToast) {
+      const { notifyError } = useNotification()
+      const { title, message } = extractApiError(error)
+      notifyError(title, message)
+    }
 
     return Promise.reject(error)
   },

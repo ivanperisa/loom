@@ -1,14 +1,11 @@
 import { api } from './api'
+import { exchangeBasePath as basePath } from './exchangeBasePath'
 import type {
   RecognitionResponse,
   SaveRecognitionRequest,
   UpdateRecognitionStatusRequest,
   RecognitionSnapshotSummary,
 } from '@/types/recognition.types'
-
-function basePath(exchangeId: string, guest: boolean) {
-  return guest ? `/api/exchanges/access/${exchangeId}` : `/api/exchanges/${exchangeId}`
-}
 
 export const recognitionService = {
   getOrCreate: (exchangeId: string, guest = false) =>

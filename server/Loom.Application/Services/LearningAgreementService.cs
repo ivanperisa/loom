@@ -20,7 +20,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
         var (exchange, _) = accessCheck.Value;
 
@@ -111,7 +111,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, true, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
         var (exchange, _) = accessCheck.Value;
 
@@ -142,6 +142,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (upsertResult.IsError) return upsertResult.Errors;
 
         laEntity.LastModifiedById = requesterId;
+        laEntity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         return await GetLearningAgreementAsync(exchangeGuid, requesterId, ct);
     }
@@ -234,7 +235,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
 
         await db.SaveChangesAsync(ct);
 
-        var saved = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
+        var saved = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
             ?? throw new InvalidOperationException();
         return saved.ToResponse();
     }
@@ -245,7 +246,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
 
         var la = await db.LearningAgreements.FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
@@ -265,7 +266,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
         var (exchange, requester) = accessCheck.Value;
 
@@ -322,7 +323,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
         var (exchange, _) = accessCheck.Value;
 
@@ -408,6 +409,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
             }
 
             laEntity.LastModifiedById = requesterId;
+            laEntity.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
         }
 
@@ -426,7 +428,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
 
         var snapshots = await db.ExchangeSnapshots
@@ -459,7 +461,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
 
         var snapshots = await db.ExchangeSnapshots
@@ -482,7 +484,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var accessCheck = await CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, false, ct);
         if (accessCheck.IsError) return accessCheck.Errors;
 
         var snapshot = await db.ExchangeSnapshots
@@ -530,32 +532,6 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
 
 
     #region Private Methods
-
-    private IQueryable<Exchange> ExchangeWithIncludes() => db.Exchanges
-        .AsNoTracking()
-        .Include(e => e.Student)
-        .Include(e => e.Coordinator)
-        .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
-        .Include(e => e.PartnerInstitution)
-        .Include(e => e.LearningAgreement);
-
-    private async Task<ErrorOr<(Exchange exchange, User requester)>> CheckExchangeAccessAsync(
-        int exchangeId, int requesterId, bool requireStudentInclude = false, CancellationToken ct = default)
-    {
-        var query = db.Exchanges.AsQueryable();
-        if (requireStudentInclude) query = query.Include(e => e.Student);
-
-        var exchange = await query.FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
-
-        return (exchange, requester);
-    }
 
     private async Task<LearningAgreement> GetOrCreateLearningAgreementAsync(int exchangeId, CancellationToken ct)
     {

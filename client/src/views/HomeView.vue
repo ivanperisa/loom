@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { onBeforeRouteUpdate, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
+import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { userService } from '@/services/user.service'
@@ -28,6 +29,11 @@ const academicYears = computed(() => {
   const years = new Set(exchangeStore.summaries.map((ex) => ex.academicYear))
   return Array.from(years).sort().reverse()
 })
+
+const academicYearFilterOptions = computed(() => [
+  { value: null, label: t('home.allYears') },
+  ...academicYears.value.map((year) => ({ value: year, label: year })),
+])
 
 const filteredSummaries = computed(() => {
   if (!selectedAcademicYear.value) return exchangeStore.summaries
@@ -112,14 +118,13 @@ async function reRequestCoordinatorRole() {
         <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-xl font-semibold text-light">{{ t('home.myExchanges') }}</h2>
           <div class="flex items-center gap-3">
-            <select
-              v-if="academicYears.length >= 1"
-              v-model="selectedAcademicYear"
-              class="rounded-lg border border-primary/30 bg-dark-2 px-3 py-2 text-sm text-light focus:border-primary focus:outline-none"
-            >
-              <option :value="null">{{ t('home.allYears') }}</option>
-              <option v-for="year in academicYears" :key="year" :value="year">{{ year }}</option>
-            </select>
+            <div v-if="academicYears.length >= 1" class="w-40">
+              <SearchableSelect
+                v-model="selectedAcademicYear"
+                :searchable="false"
+                :options="academicYearFilterOptions"
+              />
+            </div>
             <button
               type="button"
               class="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
@@ -171,13 +176,6 @@ async function reRequestCoordinatorRole() {
                 >
                   {{ t('exchange.tabs.learningAgreement') }}:
                   {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
-                </span>
-                <span
-                  class="rounded-full border px-2 py-0.5 text-xs font-semibold"
-                  :class="statusColorClass[ex.recognitionStatus]"
-                >
-                  {{ t('exchange.tabs.recognition') }}:
-                  {{ t(`recognitionStatus.${ex.recognitionStatus}`) }}
                 </span>
               </div>
 

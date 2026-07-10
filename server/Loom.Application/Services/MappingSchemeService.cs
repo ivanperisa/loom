@@ -25,14 +25,8 @@ public class MappingSchemeService(IAppDbContext db) : IMappingSchemeService
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await db.Exchanges.FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, ct: ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
 
         return exchangeId;
     }

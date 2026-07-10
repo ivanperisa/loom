@@ -73,7 +73,7 @@ const homeProgramOptions = computed(() =>
 
 const countryOptions = computed(() => [
   { value: null, label: t('createExchange.allCountries') },
-  ...availableCountries.value.map((c) => ({ value: c, label: c })),
+  ...availableCountries.value.map((c) => ({ value: c, label: t(`countries.${c}`) })),
 ])
 
 const availableCountries = computed(() => {
@@ -129,6 +129,9 @@ const academicYearOptions = computed(() => {
   const start = currentAcademicYearStart()
   return [`${start}/${start + 1}`, `${start + 1}/${start + 2}`]
 })
+const academicYearSelectOptions = computed(() =>
+  academicYearOptions.value.map((year) => ({ value: year, label: year })),
+)
 
 const academicYear = ref(academicYearOptions.value[0] ?? '')
 const semesterType = ref<ExchangeSemester>(exchangeSemester.Winter)
@@ -460,7 +463,7 @@ const stepKeys = [
                     <p v-if="pi.erasmusCode" class="mt-0.5 truncate text-xs text-slate-400">{{ pi.erasmusCode }}</p>
                   </div>
                   <div class="flex flex-shrink-0 flex-col items-end gap-1">
-                    <span v-if="pi.country" class="text-xs text-slate-500">{{ pi.country }}</span>
+                    <span v-if="pi.country" class="text-xs text-slate-500">{{ t(`countries.${pi.country}`) }}</span>
                     <span v-if="pi.city" class="text-xs text-slate-600">{{ pi.city }}</span>
                   </div>
                 </div>
@@ -476,12 +479,11 @@ const stepKeys = [
             <label class="mb-2 block text-sm font-semibold text-primary-light">{{
               t('exchange.academicYear')
             }}</label>
-            <select
+            <SearchableSelect
               v-model="academicYear"
-              class="w-full rounded-xl border border-white/10 bg-dark px-4 py-2.5 text-sm text-light transition focus:border-primary focus:outline-none"
-            >
-              <option v-for="year in academicYearOptions" :key="year" :value="year">{{ year }}</option>
-            </select>
+              :searchable="false"
+              :options="academicYearSelectOptions"
+            />
           </div>
 
           <!-- Semester type -->
@@ -613,7 +615,7 @@ const stepKeys = [
               <p v-if="selectedPartnerInstitution" class="mt-0.5 text-xs text-slate-500">
                 <template v-if="selectedPartnerInstitution.city">{{ selectedPartnerInstitution.city }}</template>
                 <template v-if="selectedPartnerInstitution.city && selectedPartnerInstitution.country"> · </template>
-                <template v-if="selectedPartnerInstitution.country">{{ selectedPartnerInstitution.country }}</template>
+                <template v-if="selectedPartnerInstitution.country">{{ t(`countries.${selectedPartnerInstitution.country}`) }}</template>
               </p>
             </div>
             <div class="rounded-xl border border-white/10 bg-dark px-4 py-3">

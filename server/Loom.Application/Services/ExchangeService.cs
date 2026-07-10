@@ -18,7 +18,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        var exchange = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
         var requester = await db.Users.FindAsync([requesterId], ct);
@@ -36,7 +36,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
+        var exchange = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
         if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
 
         if (!string.IsNullOrEmpty(exchange.Student.Email))
@@ -133,7 +133,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         db.LearningAgreements.Add(new LearningAgreement { ExchangeId = exchange.Id, Status = DocumentStatus.Draft });
         await db.SaveChangesAsync(ct);
 
-        var saved = await ExchangeWithIncludes()
+        var saved = await db.ExchangeWithFullIncludes()
             .FirstOrDefaultAsync(e => e.Id == exchange.Id, ct)
             ?? throw new InvalidOperationException();
         return saved.ToResponse();
@@ -145,15 +145,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await db.Exchanges
-            .Include(e => e.Student)
-            .FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        if (exchange.StudentId != requesterId &&
-            exchange.Student.CoordinatorId != requesterId)
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, ct: ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
+        var exchange = accessCheck.Value.Exchange;
 
         var la = await db.LearningAgreements
             .Include(l => l.Entries)
@@ -186,6 +180,52 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return Result.Deleted;
     }
 
+    public async Task<ErrorOr<ExchangeResponse>> UpdateExchangeAsync(Guid exchangeGuid, int requesterId, UpdateExchangeRequest request, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.AcademicYear))
+            return Error.Validation("INVALID_ACADEMIC_YEAR", "Academic year is required.");
+        if (!Enum.TryParse<ExchangeSemester>(request.SemesterType, out var semesterType))
+            return Error.Validation("INVALID_SEMESTER_TYPE", "Invalid semester type.");
+        if (request.StudySemesters is not { Count: > 0 } || request.StudySemesters.Any(s => s < 1 || s > 10))
+            return Error.Validation("INVALID_STUDY_SEMESTER", "Study semesters must be between 1 and 10.");
+
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+        var exchangeId = idResult.Value;
+
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, ct: ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
+        var exchange = accessCheck.Value.Exchange;
+
+        if (exchange.SemesterType != semesterType)
+        {
+            var laHasEntries = await db.LearningAgreementEntries
+                .AnyAsync(e => e.LearningAgreement.ExchangeId == exchangeId, ct);
+            if (laHasEntries)
+                return Error.Conflict("LEARNING_AGREEMENT_HAS_ENTRIES", "Cannot change semester while the learning agreement has courses. Delete the exchange instead.");
+        }
+
+        var student = await db.Users.FindAsync([exchange.StudentId], ct);
+        if (student is null) return Error.NotFound("USER_NOT_FOUND", "Student not found.");
+
+        if (request.CoordinatorId.HasValue && student.CoordinatorId != request.CoordinatorId)
+            student.CoordinatorId = request.CoordinatorId.Value;
+
+        student.Mentor = string.IsNullOrWhiteSpace(request.Mentor) ? null : request.Mentor.Trim();
+
+        exchange.AcademicYear = request.AcademicYear;
+        exchange.SemesterType = semesterType;
+        exchange.StudySemesters = request.StudySemesters;
+        exchange.CoordinatorId = request.CoordinatorId ?? student.CoordinatorId;
+        exchange.EwpLink = string.IsNullOrWhiteSpace(request.EwpLink) ? null : request.EwpLink.Trim();
+        exchange.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        var saved = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
+            ?? throw new InvalidOperationException();
+        return saved.ToResponse();
+    }
+
     public async Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeGuid, int requesterId, string? message, CancellationToken ct = default)
     {
         var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
@@ -205,43 +245,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         exchange.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        var saved = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
+        var saved = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
             ?? throw new InvalidOperationException();
         return saved.ToResponse();
     }
 
-    public async Task<ErrorOr<ExchangeResponse>> UpdateEwpLinkAsync(Guid exchangeGuid, int requesterId, string? ewpLink, CancellationToken ct = default)
-    {
-        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
-        if (idResult.IsError) return idResult.Errors;
-        var exchangeId = idResult.Value;
-
-        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
-
-        exchange.EwpLink = string.IsNullOrWhiteSpace(ewpLink) ? null : ewpLink.Trim();
-        exchange.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
-
-        var saved = await ExchangeWithIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
-            ?? throw new InvalidOperationException();
-        return saved.ToResponse();
-    }
-
-    #region Private Methods
-
-    private IQueryable<Exchange> ExchangeWithIncludes() => db.Exchanges
-        .AsNoTracking()
-        .Include(e => e.Student)
-        .Include(e => e.Coordinator)
-        .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
-        .Include(e => e.PartnerInstitution)
-        .Include(e => e.LearningAgreement);
-
-    #endregion
 }

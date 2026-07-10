@@ -165,15 +165,28 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
 
     public async Task<ErrorOr<User>> SyncUserAsync(string externalId, string email, string name, CancellationToken ct = default)
     {
-        var user = await db.Users
-            .AsNoTracking()
+        var existing = await db.Users
             .FirstOrDefaultAsync(u => u.ExternalId == externalId, ct);
-        if (user is not null) return user;
+
+        if (existing is not null)
+        {
+            if (!existing.IsOnboarded && existing.Role == UserRole.Student)
+            {
+                var isWhitelistedNow = await db.CoordinatorWhitelist
+                    .AnyAsync(e => e.Email == email.ToLowerInvariant(), ct);
+                if (isWhitelistedNow)
+                {
+                    existing.Role = UserRole.Coordinator;
+                    await db.SaveChangesAsync(ct);
+                }
+            }
+            return existing;
+        }
 
         var isWhitelisted = await db.CoordinatorWhitelist
             .AnyAsync(e => e.Email == email.ToLowerInvariant(), ct);
 
-        user = new User
+        var user = new User
         {
             ExternalId = externalId,
             Email = email,

@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-// Shared display shape — satisfied by both RecognitionEntryResponse and MappingSchemeEntryResponse.
 interface RecognitionRow {
   id: string
   partnerCourseCode: string
@@ -17,7 +16,10 @@ interface RecognitionRow {
   homeSlotColor: string
   homeSlotSemester: number
   awardedEcts: number
+  enrollmentStatus: string | null
 }
+
+const NOT_PASSED_BG = '#ffcccc'
 
 interface GradeData {
   enrollmentStatus: string
@@ -33,7 +35,8 @@ interface CourseGroup {
   partnerCourseNameHr: string | null
   partnerCourseEcts: number
   partnerCourseHours: string | null
-  entries: RecognitionRow[]
+  rows: RecognitionRow[][]
+  isNotPassed: boolean
 }
 
 const props = defineProps<{
@@ -43,6 +46,15 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+
+function rowAwardedEcts(row: RecognitionRow[]): number {
+  return Math.round(row.reduce((sum, e) => sum + e.awardedEcts, 0) * 10) / 10
+}
+
+function formatExamDateDisplay(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  return y && m && d ? `${d}/${m}/${y}` : ''
+}
 
 const courseGroups = computed<CourseGroup[]>(() => {
   const map = new Map<string, CourseGroup>()
@@ -55,10 +67,30 @@ const courseGroups = computed<CourseGroup[]>(() => {
         partnerCourseNameHr: entry.partnerCourseNameHr,
         partnerCourseEcts: entry.partnerCourseEcts,
         partnerCourseHours: entry.partnerCourseHours,
-        entries: [],
+        rows: [],
+        isNotPassed: false,
       })
     }
-    map.get(code)!.entries.push(entry)
+    const group = map.get(code)!
+    if (entry.homeSlotCourseIsvuCode == null && entry.homeSlotCourseGroupIsvuCode != null) {
+      const existingRow = group.rows.find(
+        (row) =>
+          row[0]!.homeSlotCourseIsvuCode == null &&
+          row[0]!.homeSlotCourseGroupIsvuCode === entry.homeSlotCourseGroupIsvuCode,
+      )
+      if (existingRow) {
+        existingRow.push(entry)
+        continue
+      }
+    }
+    group.rows.push([entry])
+  }
+  for (const group of map.values()) {
+    if (props.readonly) continue
+    const liveStatus = props.editableGrades?.[group.partnerCourseCode]?.enrollmentStatus
+    group.isNotPassed = liveStatus !== undefined
+      ? liveStatus === 'NotPassed'
+      : group.rows.flat().some((r) => r.enrollmentStatus === 'NotPassed')
   }
   return Array.from(map.values())
 })
@@ -110,16 +142,16 @@ const courseGroups = computed<CourseGroup[]>(() => {
 
       <tbody>
         <template v-for="group in courseGroups" :key="group.partnerCourseCode">
-          <tr v-for="(entry, idx) in group.entries" :key="entry.id">
-            <td v-if="idx === 0" :rowspan="group.entries.length" class="rec-td rec-td--center rec-td--bold" style="background: #fff">
+          <tr v-for="(row, idx) in group.rows" :key="row[0]!.id">
+            <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td rec-td--center rec-td--bold" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
               {{ group.partnerCourseCode }}
             </td>
-            <td v-if="idx === 0" :rowspan="group.entries.length" class="rec-td" style="background: #fff">
+            <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
               {{ group.partnerCourseName }}
             </td>
 
             <!-- Enrollment status: dropdown when editable, blank when read-only -->
-            <td v-if="idx === 0" :rowspan="group.entries.length" class="rec-td-grade" style="background: #fff">
+            <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
               <select
                 v-if="!readonly && editableGrades?.[group.partnerCourseCode]"
                 v-model="editableGrades[group.partnerCourseCode]!.enrollmentStatus"
@@ -131,27 +163,27 @@ const courseGroups = computed<CourseGroup[]>(() => {
               </select>
             </td>
 
-            <td v-if="idx === 0" :rowspan="group.entries.length" class="rec-td rec-td--center" style="background: #fff">
-              {{ group.partnerCourseHours ?? '—' }}
+            <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td rec-td--center" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
+              {{ group.partnerCourseHours }}
             </td>
-            <td v-if="idx === 0" :rowspan="group.entries.length" class="rec-td rec-td--center rec-td--bold" style="background: #fff">
+            <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td rec-td--center rec-td--bold" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
               {{ group.partnerCourseEcts }}
             </td>
 
-            <td class="rec-td rec-td--center" style="background: #fff">{{ idx + 1 }}</td>
-            <td class="rec-td rec-td--center" style="background: #fff">{{ entry.homeSlotCourseIsvuCode }}</td>
-            <td class="rec-td" style="background: #fff">{{ entry.homeSlotCourseName }}</td>
-            <td class="rec-td rec-td--center" style="background: #fff">{{ entry.homeSlotCourseGroupIsvuCode ?? '—' }}</td>
-            <td class="rec-td rec-td--center" :style="{ background: entry.homeSlotColor }">
-              {{ entry.homeSlotCourseGroupName || t('recognition.col.mandatoryCourse') }}
+            <td class="rec-td rec-td--center" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">{{ idx + 1 }}</td>
+            <td class="rec-td rec-td--center" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">{{ row[0]!.homeSlotCourseIsvuCode }}</td>
+            <td class="rec-td" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">{{ row[0]!.homeSlotCourseName }}</td>
+            <td class="rec-td rec-td--center" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">{{ row[0]!.homeSlotCourseGroupIsvuCode }}</td>
+            <td class="rec-td rec-td--center" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : row[0]!.homeSlotColor }">
+              {{ row[0]!.homeSlotCourseGroupName || t('recognition.col.mandatoryCourse') }}
             </td>
-            <td class="rec-td rec-td--center" style="background: #fff">{{ entry.homeSlotSemester }}</td>
-            <td class="rec-td rec-td--center rec-td--bold" :style="{ background: entry.homeSlotColor }">
-              {{ entry.awardedEcts }}
+            <td class="rec-td rec-td--center" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">{{ row[0]!.homeSlotSemester }}</td>
+            <td class="rec-td rec-td--center rec-td--bold" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : row[0]!.homeSlotColor }">
+              {{ rowAwardedEcts(row) }}
             </td>
 
             <!-- Grade columns: inputs when editable, blank when read-only -->
-            <td v-if="idx === 0" :rowspan="group.entries.length" class="rec-td-grade" style="background: #ddd9c3">
+            <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#ddd9c3' }">
               <input
                 v-if="!readonly && editableGrades?.[group.partnerCourseCode]"
                 v-model="editableGrades[group.partnerCourseCode]!.originalGrade"
@@ -160,7 +192,7 @@ const courseGroups = computed<CourseGroup[]>(() => {
                 placeholder="—"
               />
             </td>
-            <td v-if="idx === 0" :rowspan="group.entries.length" class="rec-td-grade" style="background: #ddd9c3">
+            <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#ddd9c3' }">
               <input
                 v-if="!readonly && editableGrades?.[group.partnerCourseCode]"
                 v-model="editableGrades[group.partnerCourseCode]!.ectsGrade"
@@ -169,7 +201,7 @@ const courseGroups = computed<CourseGroup[]>(() => {
                 placeholder="—"
               />
             </td>
-            <td v-if="idx === 0" :rowspan="group.entries.length" class="rec-td-grade" style="background: #ddd9c3">
+            <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#ddd9c3' }">
               <input
                 v-if="!readonly && editableGrades?.[group.partnerCourseCode]"
                 v-model="editableGrades[group.partnerCourseCode]!.hrGrade"
@@ -178,13 +210,15 @@ const courseGroups = computed<CourseGroup[]>(() => {
                 placeholder="—"
               />
             </td>
-            <td v-if="idx === 0" :rowspan="group.entries.length" class="rec-td-grade" style="background: #ddd9c3">
-              <input
-                v-if="!readonly && editableGrades?.[group.partnerCourseCode]"
-                v-model="editableGrades[group.partnerCourseCode]!.examDate"
-                type="date"
-                class="rec-input rec-input--date"
-              />
+            <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#ddd9c3' }">
+              <div v-if="!readonly && editableGrades?.[group.partnerCourseCode]" class="rec-date-wrap">
+                <input
+                  v-model="editableGrades[group.partnerCourseCode]!.examDate"
+                  type="date"
+                  class="rec-input rec-input--date"
+                />
+                <span class="rec-date-overlay">{{ formatExamDateDisplay(editableGrades[group.partnerCourseCode]!.examDate) }}</span>
+              </div>
             </td>
           </tr>
         </template>
@@ -232,5 +266,19 @@ const courseGroups = computed<CourseGroup[]>(() => {
 }
 .rec-input--date {
   text-align: left;
+  color: transparent;
+}
+.rec-date-wrap {
+  position: relative;
+}
+.rec-date-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  font-family: Calibri, Arial, sans-serif;
+  font-size: 11px;
+  color: #000;
 }
 </style>

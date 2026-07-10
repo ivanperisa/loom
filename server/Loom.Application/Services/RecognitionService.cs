@@ -40,14 +40,8 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        var canAccess = exchange.StudentId == requesterId || requester.IsCoordinatorFor(exchange.CoordinatorId);
-        if (!canAccess) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, ct: ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
 
         var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
@@ -104,7 +98,6 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
                     EctsGrade = ms.EctsGrade,
                     HrGrade = ms.HrGrade,
                     ExamDate = ms.ExamDate,
-                    IsRecognized = ms.IsRecognized,
                 }
                 : e
         ).ToList();
@@ -139,13 +132,9 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([studentId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-        var canEdit = exchange.StudentId == studentId || requester.IsCoordinatorFor(exchange.CoordinatorId);
-        if (!canEdit) return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, studentId, ct: ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
+        var requester = accessCheck.Value.Requester;
 
         var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
@@ -157,6 +146,7 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
 
         recognition.UpdatedAt = DateTime.UtcNow;
         recognition.LastModifiedById = studentId;
+        recognition.LastModifiedByUser = requester;
 
         var mappingExists = await db.MappingSchemeEntries.AnyAsync(e => e.ExchangeId == exchangeId, ct);
 
@@ -262,16 +252,19 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         recognition.Status = newStatus;
         recognition.UpdatedAt = DateTime.UtcNow;
         recognition.LastModifiedById = requesterId;
+        recognition.LastModifiedByUser = requester;
 
         if (newStatus == DocumentStatus.Approved)
         {
             recognition.SignedAt = DateTime.UtcNow;
             recognition.SignedById = requesterId;
+            recognition.SignedByUser = requester;
         }
         else if (newStatus == DocumentStatus.Draft)
         {
             recognition.SignedAt = null;
             recognition.SignedById = null;
+            recognition.SignedByUser = null;
         }
 
         if (newStatus == DocumentStatus.Approved)
@@ -316,49 +309,15 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         return recognition.ToResponse();
     }
 
-    public async Task<ErrorOr<RecognitionResponse>> SetEntryRecognizedAsync(Guid exchangeGuid, int entryId, int coordinatorId, SetEntryRecognizedRequest request, CancellationToken ct = default)
-    {
-        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
-        if (idResult.IsError) return idResult.Errors;
-        var exchangeId = idResult.Value;
-
-        var exchange = await db.Exchanges.FindAsync([exchangeId], ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([coordinatorId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        if (!requester.IsCoordinatorFor(exchange.CoordinatorId))
-            return Error.Forbidden("ACCESS_DENIED", "Only coordinators can mark entries.");
-
-        var recognition = await db.Recognitions
-            .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
-        if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
-
-        var entry = await db.RecognitionEntries.FindAsync([entryId], ct);
-        if (entry is null || entry.RecognitionId != recognition.Id)
-            return Error.NotFound("ENTRY_NOT_FOUND", "Recognition entry not found.");
-
-        entry.IsRecognized = request.IsRecognized;
-        await db.SaveChangesAsync(ct);
-
-        return await GetOrCreateRecognitionAsync(exchangeGuid, coordinatorId, ct);
-    }
-
     public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionMessageAsync(Guid exchangeGuid, int requesterId, string? message, CancellationToken ct = default)
     {
         var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, ct: ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
+        var requester = accessCheck.Value.Requester;
 
         var recognition = await db.Recognitions.FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
@@ -366,6 +325,7 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         recognition.Message = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
         recognition.UpdatedAt = DateTime.UtcNow;
         recognition.LastModifiedById = requesterId;
+        recognition.LastModifiedByUser = requester;
         await db.SaveChangesAsync(ct);
 
         return await GetOrCreateRecognitionAsync(exchangeGuid, requesterId, ct);
@@ -377,14 +337,8 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
-
-        var requester = await db.Users.FindAsync([requesterId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        if (exchange.StudentId != requesterId && !requester.IsCoordinatorFor(exchange.CoordinatorId))
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        var accessCheck = await db.CheckExchangeAccessAsync(exchangeId, requesterId, ct: ct);
+        if (accessCheck.IsError) return accessCheck.Errors;
 
         var snapshots = await db.ExchangeSnapshots
             .AsNoTracking()
