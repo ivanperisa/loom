@@ -114,6 +114,7 @@ const moveEcts = ref<number>(0)
 const editingMapping = ref<{ homeSlotId: string; localId: string } | null>(null)
 const editingEcts = ref(0)
 const ectsInputRef = ref<HTMLInputElement | null>(null)
+const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(null)
 
 function lineFor(homeSlotId: string) {
   return exchangeStore.localSlotStates.find((s) => s.homeSlotId === homeSlotId)
@@ -131,13 +132,6 @@ const totalAwardedEcts = computed(() => {
     for (const m of state.mappings) sum += m.awardedEcts
   }
   return Math.round(sum * 10) / 10
-})
-
-const totalAvailableEcts = computed(() => {
-  const studySemesters = exchangeStore.exchange?.studySemesters ?? []
-  return exchangeStore.slots
-    .filter((slot) => studySemesters.includes(slot.semester))
-    .reduce((sum, slot) => sum + slot.ects, 0)
 })
 
 const amendmentBadge = computed<number | null>(() => {
@@ -334,7 +328,9 @@ async function cycleMode(slot: HomeSlotResponse) {
 }
 
 function removeMapping(homeSlotId: string, localId: string) {
+  const partnerCourseId = lineFor(homeSlotId)?.mappings.find((m) => m.localId === localId)?.partnerCourseId
   exchangeStore.localRemoveSlotMapping(homeSlotId, localId)
+  if (partnerCourseId) exchangeStore.unstagePartnerCourse(partnerCourseId)
   const state = lineFor(homeSlotId)
   if (state && state.mode === slotMode.AtExchange && state.mappings.length === 0) {
     exchangeStore.localRemoveSlotState(homeSlotId)
@@ -642,9 +638,10 @@ function cancelEditEcts() {
       <div class="min-w-0 basis-[35%] rounded-xl border border-primary/20 bg-dark-2 p-4">
         <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-green-400">
           <span>{{ t('partnerCourses.mappedCourses') }}</span>
-          <span class="text-xs font-normal text-light/60">{{ totalAwardedEcts }} / {{ totalAvailableEcts }} ECTS</span>
+          <span class="text-xs font-normal text-light/60">{{ totalAwardedEcts }} / {{ mappedCoursesPanel?.mappedCoursesTotalEcts ?? 0 }} ECTS</span>
         </h3>
         <PartnerCoursePanel
+          ref="mappedCoursesPanel"
           :partner-institution-id="exchangeStore.exchange.partnerInstitutionId"
           :exchange-id="exchangeId"
           variant="mapped"

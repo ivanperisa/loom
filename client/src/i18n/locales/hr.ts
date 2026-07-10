@@ -70,6 +70,11 @@ export default {
     jmbagLabel: 'Unesite JMBAG',
     jmbagPlaceholder: '0036XXXXXX',
     jmbagHint: 'JMBAG mora imati točno 10 znamenki.',
+    steps: {
+      role: 'Uloga',
+      institution: 'Institucija',
+      jmbag: 'JMBAG',
+    },
     submit: 'Završi postavljanje',
     next: 'Sljedeći',
     back: 'Natrag',

@@ -105,6 +105,12 @@ const availableCourses = computed(() =>
   visibleCourses.value.filter((c) => mappedEcts(c.id) === 0 && !exchangeStore.stagedPartnerCourseIds.has(c.id))
 )
 
+const mappedCoursesTotalEcts = computed(() =>
+  mappedCourses.value.reduce((sum, c) => sum + c.ects, 0)
+)
+
+defineExpose({ mappedCoursesTotalEcts })
+
 const searchResults = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return availableCourses.value

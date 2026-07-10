@@ -74,7 +74,13 @@ function entriesForSlot(slotId: string): MappingSchemeEntryResponse[] {
 }
 
 function mappedEcts(slot: HomeSlotResponse): number {
-  return Math.round(entriesForSlot(slot.id).reduce((sum, e) => sum + e.awardedEcts, 0) * 10) / 10
+  return (
+    Math.round(
+      entriesForSlot(slot.id)
+        .filter((e) => e.enrollmentStatus !== 'NotPassed')
+        .reduce((sum, e) => sum + e.awardedEcts, 0) * 10,
+    ) / 10
+  )
 }
 
 function ectsLabel(slot: HomeSlotResponse): string {

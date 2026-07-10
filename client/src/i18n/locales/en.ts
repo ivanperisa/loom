@@ -70,6 +70,11 @@ export default {
     jmbagLabel: 'Enter your JMBAG',
     jmbagPlaceholder: '0036XXXXXX',
     jmbagHint: 'JMBAG must be exactly 10 digits.',
+    steps: {
+      role: 'Role',
+      institution: 'Institution',
+      jmbag: 'JMBAG',
+    },
     submit: 'Complete setup',
     next: 'Next',
     back: 'Back',
