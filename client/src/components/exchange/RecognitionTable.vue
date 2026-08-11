@@ -148,6 +148,7 @@ const courseGroups = computed<CourseGroup[]>(() => {
             </td>
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
               {{ group.partnerCourseName }}
+              <div v-if="group.partnerCourseNameHr" class="rec-name-hr">{{ group.partnerCourseNameHr }}</div>
             </td>
 
             <!-- Enrollment status: dropdown when editable, blank when read-only -->
@@ -249,6 +250,10 @@ const courseGroups = computed<CourseGroup[]>(() => {
 }
 .rec-td--bold {
   font-weight: bold;
+}
+.rec-name-hr {
+  font-size: 10px;
+  color: #666;
 }
 .rec-td-grade {
   border: 1px solid #aaa;
