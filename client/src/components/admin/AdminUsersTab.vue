@@ -50,7 +50,7 @@ const allStudents = computed(() => users.value.filter(u => u.role === userRole.S
 
 const studentSearch = ref('')
 const studentPage = ref(1)
-const STUDENTS_PER_PAGE = 20
+const STUDENTS_PER_PAGE = 10
 
 const filteredStudents = computed(() => {
   const q = studentSearch.value.trim().toLowerCase()
@@ -303,19 +303,29 @@ function formatDate(iso: string) {
                 >⋯</button>
                 <div
                   v-if="openMenuId === u.id"
-                  class="absolute right-0 top-full z-50 mt-1 min-w-[11rem] overflow-hidden rounded-xl border border-primary/20 bg-dark-2 px-1 py-1 shadow-2xl shadow-black/50"
+                  class="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-primary/20 bg-dark-2 px-1 py-1 shadow-2xl shadow-black/50"
                 >
                   <button
                     type="button"
                     class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20"
                     @click.stop="openEditDialog(u)"
-                  >{{ t('admin.users.editUser') }}</button>
+                  >
+                    <svg class="h-3.5 w-3.5 text-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    {{ t('admin.users.editUser') }}
+                  </button>
                   <button
                     type="button"
                     class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
                     :disabled="userActionId === u.id"
                     @click.stop="removeCoordinatorFromList(u.id); openMenuId = null"
-                  >{{ t('admin.users.demoteToStudent') }}</button>
+                  >
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-6-6m6 6l6-6" />
+                    </svg>
+                    {{ t('admin.users.demoteToStudent') }}
+                  </button>
                 </div>
               </div>
             </div>
@@ -363,19 +373,29 @@ function formatDate(iso: string) {
                 >⋯</button>
                 <div
                   v-if="openMenuId === u.id"
-                  class="absolute right-0 top-full z-50 mt-1 min-w-[11rem] overflow-hidden rounded-xl border border-primary/20 bg-dark-2 px-1 py-1 shadow-2xl shadow-black/50"
+                  class="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-primary/20 bg-dark-2 px-1 py-1 shadow-2xl shadow-black/50"
                 >
                   <button
                     type="button"
                     class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20"
                     @click.stop="openEditDialog(u)"
-                  >{{ t('admin.users.editUser') }}</button>
+                  >
+                    <svg class="h-3.5 w-3.5 text-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    {{ t('admin.users.editUser') }}
+                  </button>
                   <button
                     type="button"
                     class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20 disabled:opacity-50"
                     :disabled="userActionId === u.id"
                     @click.stop="makeCoordinatorFromList(u.id); openMenuId = null"
-                  >{{ t('admin.users.makeCoordinator') }}</button>
+                  >
+                    <svg class="h-3.5 w-3.5 text-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20V4m0 0l-6 6m6-6l6 6" />
+                    </svg>
+                    {{ t('admin.users.makeCoordinator') }}
+                  </button>
                 </div>
               </div>
               </div>
@@ -383,7 +403,7 @@ function formatDate(iso: string) {
           </div>
 
           <div v-if="totalStudentPages > 1" class="mt-3 flex items-center justify-between text-xs text-light/40">
-            <span>{{ (studentPage - 1) * 20 + 1 }}–{{ Math.min(studentPage * 20, filteredStudents.length) }} / {{ filteredStudents.length }}</span>
+            <span>{{ (studentPage - 1) * STUDENTS_PER_PAGE + 1 }}–{{ Math.min(studentPage * STUDENTS_PER_PAGE, filteredStudents.length) }} / {{ filteredStudents.length }}</span>
             <div class="flex gap-1">
               <button
                 type="button"
@@ -445,10 +465,15 @@ function formatDate(iso: string) {
           </div>
           <button
             type="button"
-            class="rounded-lg border border-red-400/40 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+            class="flex h-7 w-7 items-center justify-center rounded-lg border border-red-400/20 text-red-400/60 transition hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
             :disabled="whitelistActionEmail === entry.email"
+            :title="t('admin.whitelist.remove')"
             @click="removeEmail(entry.email)"
-          >{{ t('admin.whitelist.remove') }}</button>
+          >
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </div>
     </section>
