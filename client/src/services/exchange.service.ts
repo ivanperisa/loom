@@ -12,8 +12,8 @@ export const exchangeService = {
     api.post<ExchangeResponse>('/api/exchanges', request),
   update: (exchangeId: string, request: UpdateExchangeRequest, guest: boolean) =>
     guest
-      ? api.put<ExchangeResponse>(`/api/exchanges/access/${exchangeId}`, request)
-      : api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}`, request),
+      ? api.put<ExchangeResponse>(`/api/exchanges/access/${exchangeId}`, request, { suppressErrorToast: true })
+      : api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}`, request, { suppressErrorToast: true }),
   getById: (exchangeId: string) =>
     api.get<ExchangeResponse>(`/api/exchanges/${exchangeId}`),
   getPublic: (exchangeGuid: string) =>

@@ -27,9 +27,13 @@ export const learningAgreementService = {
   getSnapshots: (exchangeId: string, guest = false) =>
     api.get<SnapshotListItem[]>(`${basePath(exchangeId, guest)}/learning-agreement/snapshots`),
   restoreSnapshot: (exchangeId: string, snapshotId: number, guest = false) =>
-    api.post<void>(`${basePath(exchangeId, guest)}/learning-agreement/snapshots/${snapshotId}/restore`),
+    api.post<void>(`${basePath(exchangeId, guest)}/learning-agreement/snapshots/${snapshotId}/restore`, undefined, {
+      suppressErrorToast: true,
+    }),
   exportMappings: (exchangeId: string, guest = false) =>
     api.get<Blob>(`${basePath(exchangeId, guest)}/learning-agreement/export`, { responseType: 'blob' }),
   importMappings: (exchangeId: string, dto: MappingExportDto, guest = false) =>
-    api.post<MappingImportResult>(`${basePath(exchangeId, guest)}/learning-agreement/import`, dto),
+    api.post<MappingImportResult>(`${basePath(exchangeId, guest)}/learning-agreement/import`, dto, {
+      suppressErrorToast: true,
+    }),
 }
