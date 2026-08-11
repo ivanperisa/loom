@@ -5,5 +5,7 @@ public record CoordinatorStudentResponse(
     string Name,
     string? Jmbag,
     string? InstitutionName,
-    bool IsPlaceholder
+    bool IsPlaceholder,
+    int? InstitutionId,
+    bool IsMyStudent
 );

@@ -4,6 +4,8 @@ export interface CoordinatorStudentResponse {
   jmbag: string | null
   institutionName: string | null
   isPlaceholder: boolean
+  institutionId: string | null
+  isMyStudent: boolean
 }
 
 export interface CreatePlaceholderStudentRequest {
@@ -11,3 +13,5 @@ export interface CreatePlaceholderStudentRequest {
   jmbag: string
   institutionId: string
 }
+
+export type UpdateStudentRequest = CreatePlaceholderStudentRequest

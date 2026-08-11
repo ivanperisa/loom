@@ -32,14 +32,17 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
         var students = await db.Users
             .AsNoTracking()
             .Include(u => u.Institution)
-            .Where(u => u.CoordinatorId == coordinatorId && u.Role == UserRole.Student)
+            .Where(u => u.Role == UserRole.Student &&
+                (u.CoordinatorId == coordinatorId ||
+                 u.StudentExchanges.Any(e => e.CoordinatorId == coordinatorId)))
             .OrderBy(u => u.Name)
             .ToListAsync(ct);
 
         return students
             .Select(u => new CoordinatorStudentResponse(
                 u.Id, u.Name, u.Jmbag, u.Institution?.Name,
-                u.ExternalId == u.Jmbag))
+                u.ExternalId == u.Jmbag, u.InstitutionId,
+                u.CoordinatorId == coordinatorId))
             .ToList();
     }
 
@@ -77,7 +80,67 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
         db.Users.Add(placeholder);
         await db.SaveChangesAsync(ct);
 
-        return new CoordinatorStudentResponse(placeholder.Id, placeholder.Name, placeholder.Jmbag, institution.Name, true);
+        return new CoordinatorStudentResponse(placeholder.Id, placeholder.Name, placeholder.Jmbag, institution.Name, true, institution.Id, true);
+    }
+
+    public async Task<ErrorOr<CoordinatorStudentResponse>> UpdateStudentAsync(int coordinatorId, int studentId, UpdateStudentRequest request, CancellationToken ct = default)
+    {
+        var coordinator = await db.Users.FindAsync([coordinatorId], ct);
+        if (coordinator is null || !coordinator.CanActAsCoordinator())
+            return Error.Forbidden("FORBIDDEN", "Only coordinators can edit students.");
+
+        var student = await db.Users.Include(u => u.Institution).FirstOrDefaultAsync(u => u.Id == studentId, ct);
+        if (student is null || student.Role != UserRole.Student)
+            return Error.NotFound("STUDENT_NOT_FOUND", "Student not found.");
+        if (student.CoordinatorId != coordinatorId)
+            return Error.Forbidden("FORBIDDEN", "You can only edit your own students.");
+        if (student.ExternalId != student.Jmbag)
+            return Error.Validation("NOT_A_PLACEHOLDER", "Only placeholder students can be edited here.");
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return Error.Validation("INVALID_NAME", "Name is required.");
+
+        if (string.IsNullOrWhiteSpace(request.Jmbag) || !System.Text.RegularExpressions.Regex.IsMatch(request.Jmbag, @"^\d{10}$"))
+            return Error.Validation("INVALID_JMBAG", "JMBAG must be exactly 10 digits.");
+
+        var jmbagTaken = await db.Users.AnyAsync(u => u.Jmbag == request.Jmbag && u.Id != studentId, ct);
+        if (jmbagTaken) return Error.Conflict("JMBAG_TAKEN", "A student with this JMBAG already exists.");
+
+        var institution = await db.Institutions.FindAsync([request.InstitutionId], ct);
+        if (institution is null) return Error.NotFound("INSTITUTION_NOT_FOUND", "Institution not found.");
+        if (institution.Type != InstitutionType.Home)
+            return Error.Validation("INVALID_INSTITUTION", "Must select a home institution.");
+
+        student.Name = request.Name.Trim();
+        student.Jmbag = request.Jmbag;
+        student.ExternalId = request.Jmbag;
+        student.InstitutionId = request.InstitutionId;
+        await db.SaveChangesAsync(ct);
+
+        return new CoordinatorStudentResponse(student.Id, student.Name, student.Jmbag, institution.Name, true, institution.Id, true);
+    }
+
+    public async Task<ErrorOr<Deleted>> DeleteStudentAsync(int coordinatorId, int studentId, CancellationToken ct = default)
+    {
+        var coordinator = await db.Users.FindAsync([coordinatorId], ct);
+        if (coordinator is null || !coordinator.CanActAsCoordinator())
+            return Error.Forbidden("FORBIDDEN", "Only coordinators can delete students.");
+
+        var student = await db.Users.FirstOrDefaultAsync(u => u.Id == studentId, ct);
+        if (student is null || student.Role != UserRole.Student)
+            return Error.NotFound("STUDENT_NOT_FOUND", "Student not found.");
+        if (student.CoordinatorId != coordinatorId)
+            return Error.Forbidden("FORBIDDEN", "You can only delete your own students.");
+        if (student.ExternalId != student.Jmbag)
+            return Error.Validation("NOT_A_PLACEHOLDER", "Only placeholder students can be deleted here.");
+
+        var hasExchanges = await db.Exchanges.AnyAsync(e => e.StudentId == studentId, ct);
+        if (hasExchanges)
+            return Error.Conflict("HAS_EXCHANGES", "This student has exchanges. Delete them first.");
+
+        db.Users.Remove(student);
+        await db.SaveChangesAsync(ct);
+        return Result.Deleted;
     }
 
     public async Task<ErrorOr<List<ExchangeSummaryResponse>>> GetMyStudentsExchangesAsync(int requesterId, CancellationToken ct = default)
@@ -93,8 +156,12 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
             .Include(e => e.LearningAgreement)
             .Include(e => e.Recognition);
 
+        // Keyed off the exchange's own coordinator, not the student's, so this matches
+        // exactly what CheckExchangeAccessAsync will let the requester open. An approved
+        // exchange stays listed for the coordinator who approved it even after the
+        // student has been reassigned to someone else.
         var exchanges = await query
-            .Where(e => e.Student.CoordinatorId == requesterId)
+            .Where(e => e.CoordinatorId == requesterId)
             .OrderByDescending(e => e.CreatedAt)
             .ToListAsync(ct);
         return exchanges.Select(e => e.ToSummaryResponse()).ToList();

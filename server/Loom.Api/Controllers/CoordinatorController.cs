@@ -30,6 +30,20 @@ public class CoordinatorController(ICoordinatorService coordinatorService) : Api
         return Match(result, value => CreatedAtAction(nameof(GetMyStudents), value));
     }
 
+    [HttpPut("students/{studentId:int}")]
+    public async Task<IActionResult> UpdateStudent(int studentId, [FromBody] UpdateStudentRequest request, CancellationToken ct)
+    {
+        var result = await coordinatorService.UpdateStudentAsync(GetCurrentUserId(), studentId, request, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpDelete("students/{studentId:int}")]
+    public async Task<IActionResult> DeleteStudent(int studentId, CancellationToken ct)
+    {
+        var result = await coordinatorService.DeleteStudentAsync(GetCurrentUserId(), studentId, ct);
+        return Match(result, _ => NoContent());
+    }
+
     [HttpGet("students/exchanges")]
     public async Task<IActionResult> GetMyStudentsExchanges(CancellationToken ct)
     {
