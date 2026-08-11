@@ -180,6 +180,7 @@ function doExport() {
 
       <!-- Audit info -->
       <AuditInfo
+        v-if="topEntries.length > 0"
         :last-modified-at="exchangeStore.serverRecognition?.lastModifiedAt"
         :last-modified-by-name="exchangeStore.serverRecognition?.lastModifiedByName"
         :signed-at="exchangeStore.serverRecognition?.signedAt"
