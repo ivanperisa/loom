@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import LearningAgreementPanel from '@/components/exchange/LearningAgreementPanel.vue'
@@ -45,6 +45,44 @@ async function copyAccessLink() {
   notifySuccess(t('exchangeAccess.linkCopied'))
 }
 
+const showEwpModal = ref(false)
+const ewpLinkInput = ref('')
+const isSavingEwpLink = ref(false)
+
+function openEwpModal() {
+  ewpLinkInput.value = exchangeStore.exchange?.ewpLink ?? ''
+  showEwpModal.value = true
+}
+
+async function saveEwpLink() {
+  const ex = exchangeStore.exchange
+  if (!ex) return
+  isSavingEwpLink.value = true
+  try {
+    await exchangeStore.updateExchange(props.exchangeId, {
+      academicYear: ex.academicYear,
+      semesterType: ex.semesterType,
+      studySemesters: ex.studySemesters,
+      coordinatorId: ex.coordinatorId,
+      mentor: ex.mentor,
+      ewpLink: ewpLinkInput.value.trim() || null,
+    })
+    showEwpModal.value = false
+  } finally {
+    isSavingEwpLink.value = false
+  }
+}
+
+const showActionsMenu = ref(false)
+function closeActionsMenu() {
+  showActionsMenu.value = false
+}
+function handleActionsMenuOutsideClick(e: MouseEvent) {
+  if (!(e.target as HTMLElement).closest('[data-menu-anchor]')) closeActionsMenu()
+}
+onMounted(() => document.addEventListener('click', handleActionsMenuOutsideClick))
+onUnmounted(() => document.removeEventListener('click', handleActionsMenuOutsideClick))
+
 const canDelete = computed(
   () =>
     props.allowDelete &&
@@ -66,7 +104,19 @@ async function confirmDelete() {
 }
 
 const showEdit = ref(false)
-const laHasEntries = computed(() => (exchangeStore.serverLearningAgreement?.entries?.length ?? 0) > 0)
+
+const laMappedSemesters = computed(() => {
+  const la = exchangeStore.serverLearningAgreement
+  if (!la) return []
+  const slotSemester = new Map(la.slots.map((s) => [s.id, s.semester]))
+  const semesters = new Set<number>()
+  for (const entry of la.entries) {
+    if (entry.isDeleted || entry.partnerCourseId === null) continue
+    const sem = slotSemester.get(entry.homeSlotId)
+    if (sem !== undefined) semesters.add(sem)
+  }
+  return Array.from(semesters)
+})
 
 async function onExchangeSaved() {
   showEdit.value = false
@@ -125,107 +175,127 @@ onMounted(async () => {
   <!-- Exchange loaded -->
   <template v-else-if="exchangeStore.exchange">
     <!-- Exchange header -->
-    <div class="rounded-xl border border-primary/20 bg-dark-2 px-5 py-4">
-      <div class="flex items-center justify-between gap-2">
-        <div>
-          <p
-            v-if="isCoordinator && exchangeStore.exchange.studentName"
-            class="text-xs font-medium text-light/50"
-          >
-            {{ exchangeStore.exchange.studentName }}
-          </p>
-          <p class="text-base font-semibold text-light">
-            {{ exchangeStore.exchange.partnerInstitutionName }}
-          </p>
+    <div class="rounded-xl border border-primary/20 bg-dark-2">
+      <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div v-if="isCoordinator && exchangeStore.exchange.studentName">
+            <p class="text-lg font-bold text-light">
+              {{ exchangeStore.exchange.studentName }}
+              <span v-if="exchangeStore.exchange.studentJmbag" class="ml-1.5 text-xs font-normal text-light/40">{{ exchangeStore.exchange.studentJmbag }}</span>
+            </p>
+            <p class="mt-0.5 text-base font-semibold text-primary-light">
+              {{ exchangeStore.exchange.partnerInstitutionName }}
+            </p>
+          </div>
+          <div v-else>
+            <p class="text-lg font-bold text-light">
+              {{ exchangeStore.exchange.partnerInstitutionName }}
+            </p>
+          </div>
+
+          <div class="hidden h-9 w-px bg-primary/20 sm:block"></div>
+
+          <div class="flex flex-wrap gap-x-6 gap-y-1">
+            <div class="text-sm text-light/50">
+              {{ t('exchange.academicYear') }}: <span class="font-semibold text-light">{{ exchangeStore.exchange.academicYear }}</span>
+            </div>
+            <div class="text-sm text-light/50">
+              {{ t('exchange.semester') }}:
+              <span class="font-semibold text-light"
+                >{{ t(`exchangeSemester.${exchangeStore.exchange.semesterType}`) }} ({{
+                  exchangeStore.exchange.studySemesters.slice().sort((a: number, b: number) => a - b).join(', ')
+                }})</span
+              >
+            </div>
+            <div class="text-sm text-light/50">
+              {{ t('exchange.coordinatorLabel') }}: <span class="font-semibold text-light">{{ exchangeStore.exchange.coordinatorName ?? t('exchange.noCoordinator') }}</span>
+            </div>
+            <div class="text-sm text-light/50">
+              {{ t('exchange.mentor') }}: <span class="font-semibold text-light">{{ exchangeStore.exchange.mentor ?? '-' }}</span>
+            </div>
+          </div>
         </div>
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            class="rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-medium text-primary-light transition hover:bg-primary/10"
-            @click="showEdit = true"
+
+        <div class="flex shrink-0 items-center gap-2">
+          <a
+            v-if="exchangeStore.exchange.ewpLink"
+            :href="exchangeStore.exchange.ewpLink"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
           >
-            {{ t('common.edit') }}
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+              <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+            </svg>
+            {{ t('exchange.ewpLink') }}
+          </a>
+          <button
+            v-else
+            type="button"
+            class="rounded-lg border border-dashed border-primary/20 px-3 py-1.5 text-sm font-medium text-light/30 transition hover:border-primary/40 hover:text-primary-light"
+            @click="openEwpModal"
+          >
+            + {{ t('exchange.ewpLink') }}
           </button>
           <button
-            v-if="canDelete"
+            v-if="exchangeStore.exchange.studentIsPlaceholder"
             type="button"
-            class="rounded-lg border border-red-400/50 px-3 py-1.5 text-sm font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
-            :disabled="deleting"
-            @click="confirmDelete"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+            @click="copyAccessLink"
           >
-            {{ deleting ? t('common.loading') : t('home.deleteExchange') }}
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
+              <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
+            </svg>
+            {{ t('exchangeAccess.copyLink') }}
           </button>
+
+          <div class="relative" data-menu-anchor>
+            <button
+              type="button"
+              class="flex h-8 w-8 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-white/10 hover:text-light"
+              :aria-expanded="showActionsMenu"
+              aria-haspopup="true"
+              @click.stop="showActionsMenu = !showActionsMenu"
+            >
+              &#8942;
+            </button>
+            <div
+              v-if="showActionsMenu"
+              class="absolute right-0 top-full z-10 mt-1 w-52 space-y-0.5 rounded-xl border border-primary/20 bg-dark-2 p-1.5 shadow-2xl shadow-black/50"
+            >
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-light transition hover:bg-white/5"
+                @click="closeActionsMenu(); showEdit = true"
+              >
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                {{ t('common.edit') }}
+              </button>
+              <button
+                v-if="canDelete"
+                type="button"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
+                :disabled="deleting"
+                @click="closeActionsMenu(); confirmDelete()"
+              >
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                {{ deleting ? t('common.loading') : t('home.deleteExchange') }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="my-3 border-t border-primary/15"></div>
-
-      <div class="flex flex-wrap gap-x-6 gap-y-1.5 text-sm">
-        <span class="text-light/50"
-          >{{ t('exchange.academicYear') }}:
-          <span class="font-medium text-light">{{
-            exchangeStore.exchange.academicYear
-          }}</span></span
-        >
-        <span class="text-light/50"
-          >{{ t('exchange.semester') }}:
-          <span class="font-medium text-light">{{
-            t(`exchangeSemester.${exchangeStore.exchange.semesterType}`)
-          }}</span></span
-        >
-        <span class="text-light/50"
-          >{{ t('exchange.studySemester') }}:
-          <span class="font-medium text-light">{{
-            exchangeStore.exchange.studySemesters.slice().sort((a: number, b: number) => a - b).join(', ')
-          }}</span></span
-        >
-      </div>
-
-      <div class="mt-1.5 flex flex-wrap gap-x-6 gap-y-1 text-sm text-light/40">
-        <span
-          >{{ t('exchange.coordinatorLabel') }}:
-          <span class="font-semibold text-light/60">{{
-            exchangeStore.exchange.coordinatorName ?? t('exchange.noCoordinator')
-          }}</span></span
-        >
-        <span
-          >{{ t('exchange.mentor') }}:
-          <span class="font-semibold text-light/60">{{ exchangeStore.exchange.mentor ?? '-' }}</span></span
-        >
-      </div>
-
-      <!-- EWP link -->
-      <div v-if="exchangeStore.exchange.ewpLink || exchangeStore.exchange.studentIsPlaceholder" class="mt-2 flex items-center gap-2 text-sm">
-        <a
-          v-if="exchangeStore.exchange.ewpLink"
-          :href="exchangeStore.exchange.ewpLink"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-            <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-          </svg>
-          {{ t('exchange.ewpLink') }}
-        </a>
-        <button
-          v-if="exchangeStore.exchange.studentIsPlaceholder"
-          type="button"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
-          @click="copyAccessLink"
-        >
-          <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
-            <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
-          </svg>
-          {{ t('exchangeAccess.copyLink') }}
-        </button>
-      </div>
     </div>
 
     <!-- Tabs -->
-    <div class="mt-6 flex items-center justify-between border-b border-primary/20">
+    <div class="mt-4 flex items-center justify-between border-b border-primary/20">
       <div class="flex">
         <button
           type="button"
@@ -279,7 +349,7 @@ onMounted(async () => {
     </div>
 
     <!-- Tab content -->
-    <div class="mt-6">
+    <div class="mt-4">
       <template v-if="activeTab === 'la'">
         <LearningAgreementPanel
           :exchange-id="exchangeId"
@@ -323,8 +393,54 @@ onMounted(async () => {
   <EditExchangeModal
     v-if="showEdit && exchangeStore.exchange"
     :exchange="exchangeStore.exchange"
-    :la-has-entries="laHasEntries"
+    :la-mapped-semesters="laMappedSemesters"
     @saved="onExchangeSaved"
     @close="showEdit = false"
   />
+
+  <!-- EWP link modal -->
+  <Teleport to="body">
+    <div
+      v-if="showEwpModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+      @mousedown.self="showEwpModal = false"
+    >
+      <div class="w-full max-w-md rounded-xl border border-primary/30 bg-dark p-6 shadow-xl">
+        <div class="mb-5 flex items-center justify-between">
+          <h2 class="text-base font-semibold text-light">{{ t('exchange.ewpLink') }}</h2>
+          <button type="button" class="text-light/40 transition hover:text-light" @click="showEwpModal = false">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="2" y1="2" x2="14" y2="14" /><line x1="14" y1="2" x2="2" y2="14" />
+            </svg>
+          </button>
+        </div>
+
+        <input
+          v-model="ewpLinkInput"
+          type="url"
+          class="w-full rounded-lg border border-primary/20 bg-dark-2 px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
+          :placeholder="t('exchange.ewpLinkPlaceholder')"
+          @keyup.enter="saveEwpLink"
+        />
+
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            class="rounded-lg border border-primary/20 px-4 py-1.5 text-sm text-light/70 transition hover:bg-white/5 hover:text-light"
+            @click="showEwpModal = false"
+          >
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            type="button"
+            class="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
+            :disabled="isSavingEwpLink"
+            @click="saveEwpLink"
+          >
+            {{ isSavingEwpLink ? t('common.loading') : t('common.save') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
