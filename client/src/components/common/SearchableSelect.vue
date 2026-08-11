@@ -48,12 +48,18 @@ const filtered = computed(() => {
   )
 })
 
+const ESTIMATED_DROPDOWN_HEIGHT = 260
+
 function updateDropdownPosition() {
   if (!root.value) return
   const rect = root.value.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  const openUpward = spaceBelow < ESTIMATED_DROPDOWN_HEIGHT && rect.top > spaceBelow
   dropdownStyle.value = {
     position: 'fixed',
-    top: `${rect.bottom + 4}px`,
+    ...(openUpward
+      ? { bottom: `${window.innerHeight - rect.top + 4}px` }
+      : { top: `${rect.bottom + 4}px` }),
     left: `${rect.left}px`,
     width: `${rect.width}px`,
     zIndex: '9999',
