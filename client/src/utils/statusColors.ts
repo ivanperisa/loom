@@ -4,3 +4,10 @@ export const statusColorClass: Record<string, string> = {
   Approved: 'bg-green-500/15 text-green-300 border-green-400/40',
   Rejected: 'bg-red-500/15 text-red-300 border-red-400/40',
 }
+
+export const statusDotClass: Record<string, string> = {
+  Draft: 'bg-zinc-400',
+  Submitted: 'bg-yellow-400',
+  Approved: 'bg-green-400',
+  Rejected: 'bg-red-400',
+}
