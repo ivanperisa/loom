@@ -5,6 +5,7 @@ import { institutionService } from '@/services/institution.service'
 import type {
   PartnerInstitutionAdminResponse,
   PartnerCourseResponse,
+  PartnerCourseUsage,
 } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
 import PartnerCourseFormModal from '@/components/common/PartnerCourseFormModal.vue'
@@ -17,7 +18,7 @@ const { t, locale } = useI18n()
 const { confirm } = useConfirm()
 
 const INST_PER_PAGE = 10
-const COURSE_PER_PAGE = 20
+const COURSE_PER_PAGE = 10
 
 const institutions = ref<PartnerInstitutionAdminResponse[]>([])
 const loading = ref(true)
@@ -133,6 +134,26 @@ function openMergeModalFromSelection(institutionId: string) {
 
 const deletingInstitution = ref<string | null>(null)
 const deletingCourse = ref<string | null>(null)
+
+const expandedCourses = ref<Set<string>>(new Set())
+const courseUsage = ref<Record<string, PartnerCourseUsage>>({})
+const loadingCourseUsage = ref<Set<string>>(new Set())
+
+async function toggleCourseUsage(courseId: string) {
+  if (expandedCourses.value.has(courseId)) {
+    expandedCourses.value.delete(courseId)
+    return
+  }
+  expandedCourses.value.add(courseId)
+  if (courseUsage.value[courseId]) return
+  loadingCourseUsage.value.add(courseId)
+  try {
+    const res = await institutionService.getPartnerCourseUsage(courseId)
+    courseUsage.value[courseId] = res.data
+  } finally {
+    loadingCourseUsage.value.delete(courseId)
+  }
+}
 
 const countryOptions = computed<SelectOption[]>(() =>
   ISO_COUNTRIES.map(c => ({ value: c, label: t(`countries.${c}`) })),
@@ -536,84 +557,149 @@ function semesterLabel(semester: string) {
             </p>
             <div v-else>
               <div class="divide-y divide-white/5">
-                <div
-                  v-for="course in pagedCourses(inst.id)"
-                  :key="course.id"
-                  class="flex items-center justify-between py-1.5"
-                  :class="course.isDeleted ? 'opacity-60' : ''"
-                >
-                  <div class="flex min-w-0 items-center gap-3">
-                    <input
-                      v-if="mergeSelectInstitutionId === inst.id"
-                      type="checkbox"
-                      class="shrink-0 accent-primary"
-                      :checked="selectedForMerge.has(course.id)"
-                      @change="toggleCourseForMerge(course.id)"
-                    />
-                    <div class="flex min-w-0 items-baseline gap-3">
-                      <span class="w-16 flex-shrink-0 font-mono text-xs text-light/50">{{ course.code }}</span>
-                      <div class="min-w-0">
-                        <span class="text-xs text-light">{{ course.name }}</span>
-                        <span v-if="course.nameHr" class="ml-2 text-xs text-light/40">/ {{ course.nameHr }}</span>
-                        <span v-if="course.isDeleted" class="ml-2 rounded border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">{{ t('admin.institutions.deleted') }}</span>
+                <div v-for="course in pagedCourses(inst.id)" :key="course.id">
+                  <div
+                    class="flex items-center justify-between py-1.5"
+                    :class="course.isDeleted ? 'opacity-60' : ''"
+                  >
+                    <div class="flex min-w-0 items-center gap-2">
+                      <button
+                        type="button"
+                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-light/30 transition hover:bg-white/10 hover:text-light"
+                        :title="t('admin.institutions.usage.toggle')"
+                        @click="toggleCourseUsage(course.id)"
+                      >
+                        <svg class="h-3 w-3 transition-transform" :class="expandedCourses.has(course.id) ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                      <input
+                        v-if="mergeSelectInstitutionId === inst.id"
+                        type="checkbox"
+                        class="shrink-0 accent-primary"
+                        :checked="selectedForMerge.has(course.id)"
+                        @change="toggleCourseForMerge(course.id)"
+                      />
+                      <div class="flex min-w-0 items-baseline gap-3">
+                        <span class="w-16 flex-shrink-0 font-mono text-xs text-light/50">{{ course.code }}</span>
+                        <div class="min-w-0">
+                          <span class="text-xs text-light">{{ course.name }}</span>
+                          <span v-if="course.nameHr" class="ml-2 text-xs text-light/40">/ {{ course.nameHr }}</span>
+                          <span v-if="course.isDeleted" class="ml-2 rounded border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">{{ t('admin.institutions.deleted') }}</span>
+                        </div>
+                        <a
+                          v-if="course.url"
+                          :href="course.url"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          :title="t('admin.institutions.courseUrl')"
+                          class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+                            <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+                          </svg>
+                        </a>
                       </div>
                     </div>
-                  </div>
-                  <div class="flex flex-shrink-0 items-center gap-3 text-xs text-light/40">
-                    <span class="w-28 flex-shrink-0 truncate rounded bg-white/5 px-2 py-0.5 text-left text-xs text-light/40">{{ semesterLabel(course.semester) }}</span>
-                    <span class="w-28 flex-shrink-0 truncate rounded bg-white/5 px-2 py-0.5 text-left text-xs text-light/40">{{ levelLabel(course.level) }}</span>
-                    <span class="font-medium text-light/60">{{ course.ects }} ECTS</span>
-                    <button
-                      v-if="course.isDeleted"
-                      type="button"
-                      class="rounded border border-green-400/30 px-2 py-0.5 text-xs font-medium text-green-300 transition hover:bg-green-500/10 disabled:opacity-40"
-                      :disabled="deletingCourse === course.id"
-                      @click="restoreCourse(inst.id, course.id)"
-                    >
-                      {{ t('admin.institutions.restore') }}
-                    </button>
-                    <template v-else>
+                    <div class="flex flex-shrink-0 items-center gap-3 text-xs text-light/40">
+                      <span class="w-28 flex-shrink-0 truncate rounded bg-white/5 px-2 py-0.5 text-left text-xs text-light/40">{{ semesterLabel(course.semester) }}</span>
+                      <span class="w-28 flex-shrink-0 truncate rounded bg-white/5 px-2 py-0.5 text-left text-xs text-light/40">{{ levelLabel(course.level) }}</span>
+                      <span class="font-medium text-light/60">{{ course.ects }} ECTS</span>
                       <button
+                        v-if="course.isDeleted"
                         type="button"
-                        class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light disabled:opacity-40"
-                        :title="t('admin.institutions.editCourse')"
-                        @click="openEditCourseModal(inst, course)"
-                      >
-                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        class="flex h-6 w-6 items-center justify-center rounded text-red-400/50 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
+                        class="rounded border border-green-400/30 px-2 py-0.5 text-xs font-medium text-green-300 transition hover:bg-green-500/10 disabled:opacity-40"
                         :disabled="deletingCourse === course.id"
-                        :title="t('admin.institutions.deleteCourse')"
-                        @click="deleteCourse(inst.id, course.id)"
+                        @click="restoreCourse(inst.id, course.id)"
                       >
-                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        {{ t('admin.institutions.restore') }}
                       </button>
+                      <template v-else>
+                        <button
+                          type="button"
+                          class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light disabled:opacity-40"
+                          :title="t('admin.institutions.editCourse')"
+                          @click="openEditCourseModal(inst, course)"
+                        >
+                          <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          class="flex h-6 w-6 items-center justify-center rounded text-red-400/50 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
+                          :disabled="deletingCourse === course.id"
+                          :title="t('admin.institutions.deleteCourse')"
+                          @click="deleteCourse(inst.id, course.id)"
+                        >
+                          <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+
+                  <!-- Course usage detail -->
+                  <div v-if="expandedCourses.has(course.id)" class="py-1.5 pb-2.5 pl-7 pr-2 text-xs">
+                    <div v-if="loadingCourseUsage.has(course.id)" class="h-4 w-32 animate-pulse rounded bg-white/5"></div>
+                    <template v-else-if="courseUsage[course.id]">
+                      <p v-if="courseUsage[course.id]!.exchangeCount === 0" class="text-light/30">
+                        {{ t('admin.institutions.usage.empty') }}
+                      </p>
+                      <template v-else>
+                        <p class="mb-1.5 font-medium text-light/50">
+                          {{ t('admin.institutions.usage.usedIn') }}
+                          {{ nWord(courseUsage[course.id]!.exchangeCount, locale, { en: ['exchange', 'exchanges'], hr: ['razmjeni', 'razmjene', 'razmjena'] }) }}
+                        </p>
+                        <div class="space-y-1">
+                          <div
+                            v-for="(group, gi) in courseUsage[course.id]!.groups"
+                            :key="gi"
+                            class="flex flex-wrap items-center justify-between gap-2 rounded bg-white/5 px-2 py-1"
+                          >
+                            <div class="min-w-0 text-light/70">
+                              <span>{{ group.programName }} &middot; {{ group.profileName }}</span>
+                              <span class="mx-1 text-light/30">&rarr;</span>
+                              <span class="text-light">
+                                <template v-if="group.recognizedAsIsvuCode">[{{ group.recognizedAsIsvuCode }}] </template>{{ group.recognizedAsName }}
+                              </span>
+                            </div>
+                            <div class="flex shrink-0 flex-wrap items-center gap-1.5">
+                              <span class="rounded bg-white/10 px-1.5 py-0.5 text-light/50">{{ group.exchangeCount }}&times;</span>
+                              <span v-for="year in group.academicYears" :key="year" class="rounded bg-primary/10 px-1.5 py-0.5 text-primary-light">{{ year }}</span>
+                              <span class="font-medium text-light/60">{{ group.totalAwardedEcts }} ECTS</span>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
                     </template>
                   </div>
                 </div>
               </div>
 
               <!-- Course pagination -->
-              <div v-if="totalCoursePages(inst.id) > 1" class="mt-2 flex items-center justify-end gap-2 text-xs text-light/40">
-                <button
-                  type="button"
-                  class="rounded px-2 py-0.5 transition hover:text-light disabled:opacity-30"
-                  :disabled="(coursePage[inst.id] ?? 1) <= 1"
-                  @click="coursePage[inst.id] = (coursePage[inst.id] ?? 1) - 1"
-                >Prev</button>
-                <span>{{ coursePage[inst.id] ?? 1 }} / {{ totalCoursePages(inst.id) }}</span>
-                <button
-                  type="button"
-                  class="rounded px-2 py-0.5 transition hover:text-light disabled:opacity-30"
-                  :disabled="(coursePage[inst.id] ?? 1) >= totalCoursePages(inst.id)"
-                  @click="coursePage[inst.id] = (coursePage[inst.id] ?? 1) + 1"
-                >Next</button>
+              <div v-if="totalCoursePages(inst.id) > 1" class="mt-2 flex items-center justify-between text-xs text-light/40">
+                <span>
+                  {{ ((coursePage[inst.id] ?? 1) - 1) * COURSE_PER_PAGE + 1 }}–{{ Math.min((coursePage[inst.id] ?? 1) * COURSE_PER_PAGE, filteredCourses(inst.id).length) }}
+                  / {{ filteredCourses(inst.id).length }}
+                </span>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="rounded px-2 py-0.5 transition hover:text-light disabled:opacity-30"
+                    :disabled="(coursePage[inst.id] ?? 1) <= 1"
+                    @click="coursePage[inst.id] = (coursePage[inst.id] ?? 1) - 1"
+                  >{{ t('common.previous') }}</button>
+                  <span>{{ coursePage[inst.id] ?? 1 }} / {{ totalCoursePages(inst.id) }}</span>
+                  <button
+                    type="button"
+                    class="rounded px-2 py-0.5 transition hover:text-light disabled:opacity-30"
+                    :disabled="(coursePage[inst.id] ?? 1) >= totalCoursePages(inst.id)"
+                    @click="coursePage[inst.id] = (coursePage[inst.id] ?? 1) + 1"
+                  >{{ t('common.next') }}</button>
+                </div>
               </div>
             </div>
           </template>
@@ -627,14 +713,14 @@ function semesterLabel(semester: string) {
         class="rounded-lg border border-white/10 px-3 py-1.5 transition hover:text-light disabled:opacity-30"
         :disabled="institutionPage <= 1"
         @click="institutionPage--"
-      >â†</button>
+      >←</button>
       <span>{{ institutionPage }} / {{ totalInstPages }}</span>
       <button
         type="button"
         class="rounded-lg border border-white/10 px-3 py-1.5 transition hover:text-light disabled:opacity-30"
         :disabled="institutionPage >= totalInstPages"
         @click="institutionPage++"
-      >â†’</button>
+      >→</button>
     </div>
   </div>
   </div>

@@ -19,4 +19,5 @@ public interface IInstitutionService
     Task<ErrorOr<Deleted>> DeletePartnerCourseAsync(int courseId, CancellationToken ct = default);
     Task<ErrorOr<Updated>> RestorePartnerCourseAsync(int courseId, CancellationToken ct = default);
     Task<ErrorOr<PartnerCourseResponse>> MergePartnerCoursesAsync(MergePartnerCoursesRequest request, CancellationToken ct = default);
+    Task<ErrorOr<PartnerCourseUsageResponse>> GetPartnerCourseUsageAsync(int courseId, CancellationToken ct = default);
 }

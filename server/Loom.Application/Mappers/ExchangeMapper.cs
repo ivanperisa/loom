@@ -83,6 +83,7 @@ public static class ExchangeMapper
         course.Code,
         course.Name,
         course.NameHr,
+        course.Url,
         course.Ects,
         course.LecturesH,
         course.AuditoryH,

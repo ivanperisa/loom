@@ -9,5 +9,6 @@ public record CreatePartnerCourseRequest(
     string Level,
     int? LecturesH = null,
     int? AuditoryH = null,
-    int? LabH = null
+    int? LabH = null,
+    string? Url = null
 );

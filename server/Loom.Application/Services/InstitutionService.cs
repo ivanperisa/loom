@@ -168,6 +168,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
             Code = request.Code.Trim(),
             Name = request.Name.Trim(),
             NameHr = string.IsNullOrWhiteSpace(request.NameHr) ? null : request.NameHr.Trim(),
+            Url = string.IsNullOrWhiteSpace(request.Url) ? null : request.Url.Trim(),
             Ects = request.Ects,
             LecturesH = request.LecturesH,
             AuditoryH = request.AuditoryH,
@@ -201,6 +202,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         course.Code = code;
         course.Name = request.Name.Trim();
         course.NameHr = string.IsNullOrWhiteSpace(request.NameHr) ? null : request.NameHr.Trim();
+        course.Url = string.IsNullOrWhiteSpace(request.Url) ? null : request.Url.Trim();
         course.Ects = request.Ects;
         course.LecturesH = request.LecturesH;
         course.AuditoryH = request.AuditoryH;
@@ -267,6 +269,46 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         db.PartnerCourses.RemoveRange(duplicates);
         await db.SaveChangesAsync(ct);
         return primary.ToResponse();
+    }
+
+    public async Task<ErrorOr<PartnerCourseUsageResponse>> GetPartnerCourseUsageAsync(int courseId, CancellationToken ct = default)
+    {
+        var course = await db.PartnerCourses.FindAsync([courseId], ct);
+        if (course is null) return Error.NotFound("COURSE_NOT_FOUND", "Course not found.");
+
+        var entries = await db.LearningAgreementEntries
+            .AsNoTracking()
+            .Where(e => e.PartnerCourseId == courseId && !e.IsDeleted)
+            .Include(e => e.LearningAgreement).ThenInclude(la => la.Exchange).ThenInclude(ex => ex.HomeProfile).ThenInclude(hp => hp.Program)
+            .Include(e => e.HomeSlot).ThenInclude(s => s.Course)
+            .Include(e => e.HomeSlot).ThenInclude(s => s.CourseGroup)
+            .ToListAsync(ct);
+
+        var exchangeCount = entries.Select(e => e.LearningAgreement.ExchangeId).Distinct().Count();
+
+        var groups = entries
+            .GroupBy(e => new
+            {
+                ProgramName = e.LearningAgreement.Exchange.HomeProfile.Program.Name,
+                ProfileName = e.LearningAgreement.Exchange.HomeProfile.Name,
+                RecognizedAsIsvuCode = e.HomeSlot.Course?.IsvuCode ?? e.HomeSlot.CourseGroup?.IsvuCode,
+                RecognizedAsName = e.HomeSlot.Course?.Name ?? e.HomeSlot.CourseGroup?.Name ?? string.Empty,
+                IsCourseGroup = e.HomeSlot.Course is null,
+            })
+            .Select(g => new PartnerCourseUsageGroup(
+                g.Key.ProgramName,
+                g.Key.ProfileName,
+                g.Key.RecognizedAsIsvuCode,
+                g.Key.RecognizedAsName,
+                g.Key.IsCourseGroup,
+                g.Select(e => e.LearningAgreement.ExchangeId).Distinct().Count(),
+                g.Sum(e => e.AwardedEcts ?? 0),
+                g.Select(e => e.LearningAgreement.Exchange.AcademicYear).Distinct().OrderDescending().ToList()
+            ))
+            .OrderBy(g => g.ProgramName).ThenBy(g => g.ProfileName)
+            .ToList();
+
+        return new PartnerCourseUsageResponse(exchangeCount, groups);
     }
 
     #endregion

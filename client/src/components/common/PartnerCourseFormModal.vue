@@ -21,6 +21,7 @@ const emit = defineEmits<{
     code: string
     name: string
     nameHr?: string
+    url?: string
     ects: number
     semester: string
     level: string
@@ -37,11 +38,12 @@ const semesters = ['Winter', 'Summer', 'Both']
 const levels = ['Undergraduate', 'Graduate', 'Postgraduate']
 
 function formFromCourse(course: PartnerCourseResponse | null | undefined) {
-  if (!course) return { code: '', name: props.initialName || '', nameHr: '', ects: '', semester: props.defaultSemester, level: 'Graduate', lecturesH: '', auditoryH: '', labH: '' }
+  if (!course) return { code: '', name: props.initialName || '', nameHr: '', url: '', ects: '', semester: props.defaultSemester, level: 'Graduate', lecturesH: '', auditoryH: '', labH: '' }
   return {
     code: course.code,
     name: course.name,
     nameHr: course.nameHr ?? '',
+    url: course.url ?? '',
     ects: String(course.ects),
     semester: course.semester,
     level: course.level,
@@ -73,6 +75,7 @@ function submit() {
     code: f.code.trim(),
     name: f.name.trim(),
     nameHr: f.nameHr.trim() || undefined,
+    url: f.url.trim() || undefined,
     ects: parseFloat(f.ects),
     semester: f.semester,
     level: f.level,
@@ -151,6 +154,14 @@ function submit() {
           <div>
             <label class="mb-1.5 block text-sm text-light/70">{{ t('admin.institutions.courseNameHr') }}</label>
             <input v-model="courseForm.nameHr" type="text" class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none" />
+          </div>
+          <!-- URL -->
+          <div>
+            <label class="mb-1.5 block text-sm text-light/70">
+              {{ t('admin.institutions.courseUrl') }}
+              <span class="text-light/30">({{ t('admin.institutions.optional') }})</span>
+            </label>
+            <input v-model="courseForm.url" type="url" class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none" placeholder="https://..." />
           </div>
           <!-- Hours -->
           <div>

@@ -10,6 +10,7 @@ public class PartnerCourse : EntityBase
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string? NameHr { get; set; }
+    public string? Url { get; set; }
     public decimal Ects { get; set; }
     public int? LecturesH { get; set; }
     public int? AuditoryH { get; set; }

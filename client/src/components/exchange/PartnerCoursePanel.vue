@@ -201,6 +201,20 @@ function semesterLabel(semester: string) {
               <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
             </div>
             <div class="shrink-0 flex items-center gap-2">
+              <a
+                v-if="course.url"
+                :href="course.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                :title="t('admin.institutions.courseUrl')"
+                class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                @click.stop
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+                  <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+                </svg>
+              </a>
               <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
               <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span
@@ -216,8 +230,8 @@ function semesterLabel(semester: string) {
                 class="flex items-center justify-center w-6 h-6 rounded text-light/40 hover:text-primary hover:bg-primary/10 transition"
                 @click.stop="exchangeStore.stagePartnerCourse(course.id)"
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                  <line x1="6" y1="1" x2="6" y2="11" /><line x1="1" y1="6" x2="11" y2="6" />
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="1" y1="6" x2="10" y2="6" /><polyline points="6,2 10,6 6,10" />
                 </svg>
               </button>
               <span v-else :title="t('partnerCourses.stageAdded')" class="flex items-center justify-center w-6 h-6 rounded text-green-400">
@@ -231,7 +245,7 @@ function semesterLabel(semester: string) {
       </template>
 
       <template v-if="variant === 'mapped' || variant === 'all'">
-        <div class="max-h-[400px] space-y-1.5 overflow-y-auto pr-1" :class="variant === 'all' ? 'mt-4' : ''">
+        <div class="space-y-1.5" :class="variant === 'all' ? 'mt-4' : ''">
           <div
             v-for="course in mappedCourses"
             :key="course.id"
@@ -256,6 +270,20 @@ function semesterLabel(semester: string) {
               <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
             </div>
             <div class="shrink-0 flex items-center gap-2">
+              <a
+                v-if="course.url"
+                :href="course.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                :title="t('admin.institutions.courseUrl')"
+                class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                @click.stop
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+                  <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+                </svg>
+              </a>
               <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
               <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span

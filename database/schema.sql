@@ -153,6 +153,7 @@ CREATE TABLE partner.course (
     code           VARCHAR(50) NOT NULL,
     name           VARCHAR(255) NOT NULL,
     name_hr        VARCHAR(255),
+    url            VARCHAR(500),
     ects           NUMERIC(4, 1) NOT NULL,
     lectures_h     INT,
     auditory_h     INT,

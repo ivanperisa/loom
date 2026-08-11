@@ -121,5 +121,13 @@ public class InstitutionController(IInstitutionService institutionService) : Api
         return Match(result, Ok);
     }
 
+    [HttpGet("partner/courses/{courseId:int}/usage")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> GetPartnerCourseUsage(int courseId, CancellationToken ct)
+    {
+        var result = await institutionService.GetPartnerCourseUsageAsync(courseId, ct);
+        return Match(result, Ok);
+    }
+
     #endregion
 }
