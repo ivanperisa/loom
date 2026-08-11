@@ -197,19 +197,21 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         if (accessCheck.IsError) return accessCheck.Errors;
         var exchange = accessCheck.Value.Exchange;
 
-        if (exchange.SemesterType != semesterType)
+        if (exchange.SemesterType != semesterType && semesterType != ExchangeSemester.Both)
         {
-            var laHasEntries = await db.LearningAgreementEntries
-                .AnyAsync(e => e.LearningAgreement.ExchangeId == exchangeId, ct);
-            if (laHasEntries)
-                return Error.Conflict("LEARNING_AGREEMENT_HAS_ENTRIES", "Cannot change semester while the learning agreement has courses. Delete the exchange instead.");
+            var mappedSemesters = await db.LearningAgreementEntries
+                .Where(e => e.LearningAgreement.ExchangeId == exchangeId && !e.IsDeleted && e.PartnerCourseId != null)
+                .Select(e => e.HomeSlot.Semester)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var targetParity = semesterType == ExchangeSemester.Winter ? 1 : 0;
+            if (mappedSemesters.Any(s => s % 2 != targetParity))
+                return Error.Conflict("LEARNING_AGREEMENT_HAS_ENTRIES", "Cannot change the semester: the learning agreement has courses mapped in a semester the new type does not cover. Remove those courses first.");
         }
 
         var student = await db.Users.FindAsync([exchange.StudentId], ct);
         if (student is null) return Error.NotFound("USER_NOT_FOUND", "Student not found.");
-
-        if (request.CoordinatorId.HasValue && student.CoordinatorId != request.CoordinatorId)
-            student.CoordinatorId = request.CoordinatorId.Value;
 
         student.Mentor = string.IsNullOrWhiteSpace(request.Mentor) ? null : request.Mentor.Trim();
 

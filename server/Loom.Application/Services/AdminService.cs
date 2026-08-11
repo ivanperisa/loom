@@ -1,7 +1,7 @@
 using ErrorOr;
 using Loom.Application.DTOs.Admin;
 using Loom.Application.DTOs.Auth;
-using Loom.Application.DTOs.User;
+using Loom.Application.Helpers;
 using Loom.Application.Interfaces;
 using Loom.Application.Interfaces.Services;
 using Loom.Application.Mappers;
@@ -13,34 +13,6 @@ namespace Loom.Application.Services;
 
 public class AdminService(IAppDbContext db) : IAdminService
 {
-    private IQueryable<User> UsersWithIncludes() => db.Users
-        .Include(u => u.Institution)
-        .Include(u => u.Coordinator);
-
-    private async Task<ErrorOr<Success>> EnsureAdminAsync(int adminId, string action, CancellationToken ct)
-    {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", $"Only admins can {action}.");
-        return Result.Success;
-    }
-
-    private static List<UserListResponse> ToUserListResponses(IEnumerable<User> users) =>
-        users.Select(u => new UserListResponse(
-            u.Id,
-            u.Name,
-            u.Email,
-            u.Role.ToString(),
-            u.Institution != null ? u.Institution.Name : null,
-            u.InstitutionId,
-            u.CoordinatorRequestStatus,
-            u.IsOnboarded,
-            u.Jmbag,
-            u.Mentor,
-            u.CoordinatorId,
-            u.Coordinator != null ? u.Coordinator.Name : null))
-            .ToList();
-
     #region Users
 
     public async Task<ErrorOr<List<UserListResponse>>> GetAllUsersAsync(int adminId, CancellationToken ct = default)
@@ -69,7 +41,10 @@ public class AdminService(IAppDbContext db) : IAdminService
         target.Mentor = request.Mentor;
         target.InstitutionId = request.InstitutionId;
         if (target.Role != UserRole.Coordinator)
+        {
             target.CoordinatorId = request.CoordinatorId;
+            await db.ReassignUnapprovedExchangesAsync(target.Id, request.CoordinatorId, ct);
+        }
         await db.SaveChangesAsync(ct);
 
         var saved = await UsersWithIncludes()
@@ -208,6 +183,38 @@ public class AdminService(IAppDbContext db) : IAdminService
 
         return Result.Deleted;
     }
+
+    #endregion
+
+    #region Private methods
+
+    private IQueryable<User> UsersWithIncludes() => db.Users
+        .Include(u => u.Institution)
+        .Include(u => u.Coordinator);
+
+    private async Task<ErrorOr<Success>> EnsureAdminAsync(int adminId, string action, CancellationToken ct)
+    {
+        var admin = await db.Users.FindAsync([adminId], ct);
+        if (admin is null || admin.Role != UserRole.Admin)
+            return Error.Forbidden("FORBIDDEN", $"Only admins can {action}.");
+        return Result.Success;
+    }
+
+    private static List<UserListResponse> ToUserListResponses(IEnumerable<User> users) =>
+        users.Select(u => new UserListResponse(
+            u.Id,
+            u.Name,
+            u.Email,
+            u.Role.ToString(),
+            u.Institution != null ? u.Institution.Name : null,
+            u.InstitutionId,
+            u.CoordinatorRequestStatus,
+            u.IsOnboarded,
+            u.Jmbag,
+            u.Mentor,
+            u.CoordinatorId,
+            u.Coordinator != null ? u.Coordinator.Name : null))
+            .ToList();
 
     #endregion
 }
