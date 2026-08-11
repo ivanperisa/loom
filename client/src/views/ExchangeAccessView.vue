@@ -37,7 +37,7 @@ onUnmounted(() => exchangeStore.setGuestMode(false))
       </div>
     </header>
 
-    <section class="page-container">
+    <section class="page-container page-container--wide">
       <p class="mb-4 text-center text-xs text-light/40">{{ t('exchangeAccess.readOnlyNotice') }}</p>
       <ExchangeDetailPanel :exchange-id="guid" :allow-delete="false" />
     </section>

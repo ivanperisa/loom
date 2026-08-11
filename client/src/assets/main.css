@@ -90,3 +90,8 @@
   margin: 0 auto;
   padding: 2rem 0;
 }
+
+.page-container--wide {
+  width: 96%;
+  max-width: 1900px;
+}
