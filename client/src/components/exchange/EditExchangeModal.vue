@@ -12,7 +12,7 @@ import SearchableSelect from '@/components/common/SearchableSelect.vue'
 
 const props = defineProps<{
   exchange: ExchangeResponse
-  laHasEntries: boolean
+  laMappedSemesters: number[]
 }>()
 
 const emit = defineEmits<{
@@ -82,10 +82,25 @@ function toggleStudySemester(s: number) {
   }
 }
 
+function canSelectSemesterType(sem: ExchangeSemester): boolean {
+  if (sem === exchangeSemester.Both) return true
+  const allowed = sem === exchangeSemester.Winter ? [1, 3] : [2, 4]
+  return props.laMappedSemesters.every((s) => allowed.includes(s))
+}
+
+const hasBlockedSemesterType = computed(() =>
+  [exchangeSemester.Winter, exchangeSemester.Summer, exchangeSemester.Both].some(
+    (sem) => !canSelectSemesterType(sem),
+  ),
+)
+
 function setSemesterType(sem: ExchangeSemester) {
-  if (props.laHasEntries) return
+  if (!canSelectSemesterType(sem)) return
   semesterType.value = sem
-  studySemesters.value = []
+  if (sem !== exchangeSemester.Both) {
+    const allowed = sem === exchangeSemester.Winter ? [1, 3] : [2, 4]
+    studySemesters.value = studySemesters.value.filter((s) => allowed.includes(s))
+  }
 }
 
 const coordinators = ref<AuthMeResponse[]>([])
@@ -226,7 +241,7 @@ async function submit() {
                 v-for="sem in [exchangeSemester.Winter, exchangeSemester.Summer, exchangeSemester.Both]"
                 :key="sem"
                 type="button"
-                :disabled="laHasEntries"
+                :disabled="!canSelectSemesterType(sem)"
                 class="rounded-xl border py-2.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                 :class="
                   semesterType === sem
@@ -240,7 +255,7 @@ async function submit() {
             </div>
 
             <div
-              v-if="laHasEntries"
+              v-if="hasBlockedSemesterType"
               class="mt-3 flex items-start gap-2 rounded-xl border border-amber-400/40 bg-amber-500/15 px-3 py-2.5"
             >
               <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-400" viewBox="0 0 16 16" fill="none">
@@ -248,7 +263,8 @@ async function submit() {
                 <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               </svg>
               <p class="text-xs text-amber-300">
-                {{ t('exchange.editLockedByLa') }}<br />{{ t('exchange.editLockedByLaHint') }}
+                {{ t('exchange.editLockedByLa') }}<br />
+                {{ t('exchange.editLockedByLaHint') }}
               </p>
             </div>
           </div>
