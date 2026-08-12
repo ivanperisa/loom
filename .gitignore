@@ -55,6 +55,7 @@ project.assets.json
 .claude
 .dual-graph
 .omc
+docs/
 
 db/
 
