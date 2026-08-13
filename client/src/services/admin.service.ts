@@ -36,6 +36,11 @@ export interface CoordinatorWhitelistEntryResponse {
   createdAt: string
 }
 
+export interface SqlExecutionResult {
+  rowsAffected: number
+  rows: Record<string, unknown>[] | null
+}
+
 export const adminService = {
   getAllUsers: () =>
     api.get<UserListResponse[]>('/api/admin/users'),
@@ -61,4 +66,7 @@ export const adminService = {
 
   updateUser: (userId: string, data: AdminUpdateUserRequest) =>
     api.put<UserListResponse>(`/api/admin/users/${userId}`, data),
+
+  executeSql: (sql: string) =>
+    api.post<SqlExecutionResult>('/api/admin/execute-sql', { sql }),
 }

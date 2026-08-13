@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import AdminUsersTab from '@/components/admin/AdminUsersTab.vue'
 import AdminInstitutionsTab from '@/components/admin/AdminInstitutionsTab.vue'
+import SqlConsoleModal from '@/components/admin/SqlConsoleModal.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -23,12 +24,26 @@ const activeTab = ref<Tab>(
 watch(activeTab, (tab) => {
   router.replace({ query: { ...route.query, tab } })
 })
+
+const titleClickCount = ref(0)
+let titleClickTimeout: ReturnType<typeof setTimeout> | undefined
+const showSqlConsole = ref(false)
+
+function onTitleClick() {
+  titleClickCount.value++
+  clearTimeout(titleClickTimeout)
+  titleClickTimeout = setTimeout(() => (titleClickCount.value = 0), 1500)
+  if (titleClickCount.value >= 7) {
+    titleClickCount.value = 0
+    showSqlConsole.value = true
+  }
+}
 </script>
 
 <template>
   <main class="min-h-screen bg-dark">
     <section class="page-container space-y-8">
-      <h1 class="text-3xl font-bold text-light">{{ t('admin.title') }}</h1>
+      <h1 class="select-none text-3xl font-bold text-light" @click="onTitleClick">{{ t('admin.title') }}</h1>
 
       <div class="flex gap-1 rounded-xl border border-primary/20 bg-dark-2 p-1">
         <button
@@ -46,5 +61,7 @@ watch(activeTab, (tab) => {
       <AdminUsersTab v-if="activeTab === 'users'" />
       <AdminInstitutionsTab v-if="activeTab === 'institutions'" />
     </section>
+
+    <SqlConsoleModal v-if="showSqlConsole" @close="showSqlConsole = false" />
   </main>
 </template>
