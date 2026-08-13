@@ -1,4 +1,3 @@
-using Loom.Application.DTOs.Admin;
 using Loom.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +24,4 @@ public interface IAppDbContext
     DbSet<CoordinatorWhitelist> CoordinatorWhitelist { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-
-    Task<SqlExecutionResult> ExecuteSqlAsync(string sql, CancellationToken cancellationToken = default);
 }

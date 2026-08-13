@@ -20,7 +20,4 @@ public interface IAdminService
     Task<ErrorOr<List<CoordinatorWhitelistEntryResponse>>> GetCoordinatorWhitelistAsync(int adminId, CancellationToken ct = default);
     Task<ErrorOr<CoordinatorWhitelistEntryResponse>> AddToCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default);
     Task<ErrorOr<Deleted>> RemoveFromCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default);
-
-    // Raw SQL
-    Task<ErrorOr<SqlExecutionResult>> ExecuteSqlAsync(int adminId, string sql, CancellationToken ct = default);
 }

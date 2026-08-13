@@ -80,15 +80,4 @@ public class AdminController(IAdminService adminService) : ApiController
     }
 
     #endregion
-
-    #region Raw SQL
-
-    [HttpPost("execute-sql")]
-    public async Task<IActionResult> ExecuteSql([FromBody] ExecuteSqlRequest request, CancellationToken ct)
-    {
-        var result = await adminService.ExecuteSqlAsync(GetCurrentUserId(), request.Sql, ct);
-        return Match(result, Ok);
-    }
-
-    #endregion
 }

@@ -186,28 +186,6 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     #endregion
 
-    #region Raw SQL
-
-    public async Task<ErrorOr<SqlExecutionResult>> ExecuteSqlAsync(int adminId, string sql, CancellationToken ct = default)
-    {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "execute raw SQL", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
-        if (string.IsNullOrWhiteSpace(sql))
-            return Error.Validation("INVALID_SQL", "SQL is required.");
-
-        try
-        {
-            return await db.ExecuteSqlAsync(sql, ct);
-        }
-        catch (Exception ex)
-        {
-            return Error.Failure("SQL_ERROR", ex.Message);
-        }
-    }
-
-    #endregion
-
     #region Private methods
 
     private IQueryable<User> UsersWithIncludes() => db.Users
