@@ -68,5 +68,5 @@ export const adminService = {
     api.put<UserListResponse>(`/api/admin/users/${userId}`, data),
 
   executeSql: (sql: string) =>
-    api.post<SqlExecutionResult>('/api/admin/execute-sql', { sql }),
+    api.post<SqlExecutionResult>('/api/admin/execute-sql', { sql }, { suppressErrorToast: true }),
 }

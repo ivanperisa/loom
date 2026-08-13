@@ -196,7 +196,14 @@ public class AdminService(IAppDbContext db) : IAdminService
         if (string.IsNullOrWhiteSpace(sql))
             return Error.Validation("INVALID_SQL", "SQL is required.");
 
-        return await db.ExecuteSqlAsync(sql, ct);
+        try
+        {
+            return await db.ExecuteSqlAsync(sql, ct);
+        }
+        catch (Exception ex)
+        {
+            return Error.Failure("SQL_ERROR", ex.Message);
+        }
     }
 
     #endregion

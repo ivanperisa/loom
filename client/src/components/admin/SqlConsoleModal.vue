@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { adminService, type SqlExecutionResult } from '@/services/admin.service'
+import { extractApiError } from '@/utils/apiError'
 
 const emit = defineEmits<{
   close: []
@@ -25,7 +26,8 @@ async function run() {
     const res = await adminService.executeSql(sql.value)
     result.value = res.data
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Query failed.'
+    const { title, message } = extractApiError(e)
+    error.value = message ?? title
   } finally {
     running.value = false
   }
