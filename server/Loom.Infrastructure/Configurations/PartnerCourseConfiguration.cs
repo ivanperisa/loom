@@ -15,7 +15,8 @@ public class PartnerCourseConfiguration : IEntityTypeConfiguration<PartnerCourse
         builder.Property(x => x.Code).HasColumnName("code").IsRequired();
         builder.Property(x => x.Name).HasColumnName("name").IsRequired();
         builder.Property(x => x.NameHr).HasColumnName("name_hr");
-        builder.Property(x => x.Url).HasColumnName("url");
+        builder.Ignore(x => x.Url); //TODO: delete ignore once db is updated
+        //builder.Property(x => x.Url).HasColumnName("url");
         builder.Property(x => x.Ects).HasColumnName("ects").HasPrecision(4, 1);
         builder.Property(x => x.LecturesH).HasColumnName("lectures_h");
         builder.Property(x => x.AuditoryH).HasColumnName("auditory_h");
