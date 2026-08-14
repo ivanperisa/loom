@@ -160,7 +160,7 @@ async function logout() {
         <div class="flex items-center gap-3">
           <button
             type="button"
-            class="flex h-9 w-9 items-center justify-center rounded-lg text-light/70 transition hover:bg-fill-soft hover:text-white"
+            class="flex h-9 w-9 items-center justify-center rounded-lg text-light/70 transition hover:bg-fill-soft hover:text-light"
             @click="toggleTheme"
           >
             <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -96,7 +96,7 @@ function submit() {
           <h3 id="partner-course-form-title" class="font-semibold text-light">{{ mode === 'edit' ? t('admin.institutions.editCourse') : t('admin.institutions.addCourse') }}</h3>
             <p v-if="institutionName" class="mt-0.5 text-xs text-light/40">{{ institutionName }}</p>
           </div>
-          <button type="button" class="text-light/40 transition hover:text-white" @click="emit('close')">
+          <button type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
             <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
@@ -124,7 +124,7 @@ function submit() {
                   :key="sem"
                   type="button"
                   class="flex-1 rounded-lg border py-2 text-xs font-medium transition"
-                  :class="courseForm.semester === sem ? 'border-primary bg-primary/10 text-white' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-white'"
+                  :class="courseForm.semester === sem ? 'border-primary bg-primary/10 text-white' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-light'"
                   @click="courseForm.semester = sem"
                 >{{ semesterLabel(sem) }}</button>
               </div>
@@ -137,7 +137,7 @@ function submit() {
                   :key="lvl"
                   type="button"
                   class="flex-1 rounded-lg border py-2 text-xs font-medium transition"
-                  :class="courseForm.level === lvl ? 'border-primary bg-primary/10 text-white' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-white'"
+                  :class="courseForm.level === lvl ? 'border-primary bg-primary/10 text-white' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-light'"
                   @click="courseForm.level = lvl"
                 >{{ levelLabel(lvl) }}</button>
               </div>

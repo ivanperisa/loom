@@ -287,7 +287,7 @@ const stepKeys = [
         <h2 id="create-exchange-title" class="text-xl font-semibold text-light">{{ t('createExchange.title') }}</h2>
         <button
           type="button"
-          class="text-light/50 transition hover:text-white"
+          class="text-light/50 transition hover:text-light"
           @click="emit('close')"
         >
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -377,7 +377,7 @@ const stepKeys = [
                 :class="
                   selectedProfileId === prof.id
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-hairline bg-dark text-light/70 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/70 hover:border-primary/50 hover:text-light'
                 "
                 @click="selectedProfileId = prof.id"
               >
@@ -502,7 +502,7 @@ const stepKeys = [
                 :class="
                   semesterType === sem
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="semesterType = sem"
               >
@@ -527,7 +527,7 @@ const stepKeys = [
                 :class="
                   studySemesters.includes(s)
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="toggleStudySemester(s)"
               >
@@ -545,7 +545,7 @@ const stepKeys = [
                 :class="
                   isPairSelected(pair)
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="selectPair(pair)"
               >
