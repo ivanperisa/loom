@@ -31,7 +31,7 @@ const isDirty = computed(() =>
 
 async function tryClose() {
   if (isDirty.value) {
-    const ok = await confirm({ title: t('exchange.notesDiscardConfirm') })
+    const ok = await confirm({ title: t('exchange.notesDiscardConfirm'), variant: 'neutral' })
     if (!ok) return
   }
   emit('close')

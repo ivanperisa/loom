@@ -5,6 +5,7 @@ interface ConfirmOptions {
   message?: string
   confirmLabel?: string
   cancelLabel?: string
+  variant?: 'danger' | 'neutral'
 }
 
 interface ConfirmState extends ConfirmOptions {

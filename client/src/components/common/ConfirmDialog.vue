@@ -30,7 +30,12 @@ const { t } = useI18n()
         </button>
         <button
           type="button"
-          class="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-red-500"
+          class="rounded-lg px-4 py-1.5 text-sm font-medium text-white transition"
+          :class="
+            state.variant === 'neutral'
+              ? 'bg-primary hover:bg-primary-light hover:text-dark'
+              : 'bg-red-600 hover:bg-red-500'
+          "
           @click="respond(true)"
         >
           {{ state.confirmLabel ?? t('common.confirm') }}
