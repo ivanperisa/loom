@@ -4,8 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerInstitutionAdminResponse } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
+import Pagination from '@/components/common/Pagination.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { usePagination } from '@/composables/usePagination'
 import PartnerInstitutionRow from '@/components/admin/PartnerInstitutionRow.vue'
 import PartnerInstitutionFormPanel from '@/components/admin/PartnerInstitutionFormPanel.vue'
 
@@ -20,7 +22,6 @@ const error = ref<string | null>(null)
 
 const institutionSearch = ref('')
 const debouncedInstitutionSearch = useDebouncedRef(institutionSearch)
-const institutionPage = ref(1)
 const showDeleted = ref(false)
 
 const showAddInstitution = ref(false)
@@ -44,12 +45,11 @@ const filteredInstitutions = computed(() => {
   )
 })
 
-const totalInstPages = computed(() => Math.max(1, Math.ceil(filteredInstitutions.value.length / INST_PER_PAGE)))
-
-const pagedInstitutions = computed(() => {
-  const p = Math.min(institutionPage.value, totalInstPages.value)
-  return filteredInstitutions.value.slice((p - 1) * INST_PER_PAGE, p * INST_PER_PAGE)
-})
+const {
+  page: institutionPage,
+  totalPages: totalInstPages,
+  paged: pagedInstitutions,
+} = usePagination(filteredInstitutions, INST_PER_PAGE)
 
 function onInstSearch() { institutionPage.value = 1 }
 
@@ -203,20 +203,12 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
     </div>
 
     <!-- Institution pagination -->
-    <div v-if="totalInstPages > 1" class="flex items-center justify-center gap-3 text-sm text-light/50">
-      <button
-        type="button"
-        class="rounded-lg border border-hairline px-3 py-1.5 transition hover:text-light disabled:opacity-30"
-        :disabled="institutionPage <= 1"
-        @click="institutionPage--"
-      >←</button>
-      <span>{{ institutionPage }} / {{ totalInstPages }}</span>
-      <button
-        type="button"
-        class="rounded-lg border border-hairline px-3 py-1.5 transition hover:text-light disabled:opacity-30"
-        :disabled="institutionPage >= totalInstPages"
-        @click="institutionPage++"
-      >→</button>
-    </div>
+    <Pagination
+      :page="institutionPage"
+      :total-pages="totalInstPages"
+      :total="filteredInstitutions.length"
+      :per-page="INST_PER_PAGE"
+      @update:page="institutionPage = $event"
+    />
   </div>
 </template>

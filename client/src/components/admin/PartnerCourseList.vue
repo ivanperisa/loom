@@ -4,11 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import PartnerCourseFormModal from '@/components/common/PartnerCourseFormModal.vue'
+import Pagination from '@/components/common/Pagination.vue'
 import PartnerCourseRow from '@/components/admin/PartnerCourseRow.vue'
 import PartnerCourseToolbar from '@/components/admin/PartnerCourseToolbar.vue'
 import MergeCoursesModal from '@/components/admin/MergeCoursesModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { usePagination } from '@/composables/usePagination'
 
 const COURSE_PER_PAGE = 10
 
@@ -24,7 +26,6 @@ const courses = ref<PartnerCourseResponse[]>([])
 
 const courseSearch = ref('')
 const debouncedCourseSearch = useDebouncedRef(courseSearch)
-const coursePage = ref(1)
 const showDeletedCourses = ref(false)
 
 const courseModal = ref<{ mode: 'create' | 'edit'; course?: PartnerCourseResponse; initialName?: string } | null>(null)
@@ -53,12 +54,11 @@ const filteredCourses = computed(() => {
   return [...list].sort((a, b) => a.name.localeCompare(b.name))
 })
 
-const totalCoursePages = computed(() => Math.max(1, Math.ceil(filteredCourses.value.length / COURSE_PER_PAGE)))
-
-const pagedCourses = computed(() => {
-  const page = coursePage.value
-  return filteredCourses.value.slice((page - 1) * COURSE_PER_PAGE, page * COURSE_PER_PAGE)
-})
+const {
+  page: coursePage,
+  totalPages: totalCoursePages,
+  paged: pagedCourses,
+} = usePagination(filteredCourses, COURSE_PER_PAGE)
 
 function onCourseSearch() { coursePage.value = 1 }
 
@@ -227,27 +227,13 @@ async function submitMerge(primaryId: string) {
         </div>
 
         <!-- Course pagination -->
-        <div v-if="totalCoursePages > 1" class="mt-2 flex items-center justify-between text-xs text-light/40">
-          <span>
-            {{ (coursePage - 1) * COURSE_PER_PAGE + 1 }}–{{ Math.min(coursePage * COURSE_PER_PAGE, filteredCourses.length) }}
-            / {{ filteredCourses.length }}
-          </span>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="rounded px-2 py-0.5 transition hover:text-light disabled:opacity-30"
-              :disabled="coursePage <= 1"
-              @click="coursePage--"
-            >{{ t('common.previous') }}</button>
-            <span>{{ coursePage }} / {{ totalCoursePages }}</span>
-            <button
-              type="button"
-              class="rounded px-2 py-0.5 transition hover:text-light disabled:opacity-30"
-              :disabled="coursePage >= totalCoursePages"
-              @click="coursePage++"
-            >{{ t('common.next') }}</button>
-          </div>
-        </div>
+        <Pagination
+          :page="coursePage"
+          :total-pages="totalCoursePages"
+          :total="filteredCourses.length"
+          :per-page="COURSE_PER_PAGE"
+          @update:page="coursePage = $event"
+        />
       </div>
     </template>
 
