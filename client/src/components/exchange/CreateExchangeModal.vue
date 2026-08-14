@@ -10,7 +10,7 @@ import type {
   HomeProfileResponse,
   PartnerInstitutionAdminResponse,
 } from '@/types/institution.types'
-import type { AuthMeResponse } from '@/types/auth.types'
+import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import { nWord } from '@/utils/plural'
@@ -102,7 +102,7 @@ const selectedPartnerInstitution = computed(
 )
 
 // Step 3: Coordinator + Mentor
-const coordinators = ref<AuthMeResponse[]>([])
+const coordinators = ref<CoordinatorOption[]>([])
 const selectedCoordinatorId = ref<string | null>(
   props.targetStudentId ? (authStore.user?.id ?? null) : (authStore.user?.coordinatorId ?? null),
 )

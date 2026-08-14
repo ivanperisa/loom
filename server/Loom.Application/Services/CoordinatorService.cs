@@ -1,5 +1,4 @@
 using ErrorOr;
-using Loom.Application.DTOs.Auth;
 using Loom.Application.DTOs.Coordinator;
 using Loom.Application.DTOs.Exchange;
 using Loom.Application.Interfaces;
@@ -13,14 +12,15 @@ namespace Loom.Application.Services;
 
 public class CoordinatorService(IAppDbContext db) : ICoordinatorService
 {
-    public async Task<ErrorOr<List<AuthMeResponse>>> GetCoordinatorsAsync(CancellationToken ct = default)
+    public async Task<ErrorOr<List<CoordinatorOptionResponse>>> GetCoordinatorsAsync(CancellationToken ct = default)
     {
         var coordinators = await db.Users
             .AsNoTracking()
             .Where(u => u.Role == UserRole.Coordinator || u.Role == UserRole.Admin)
             .OrderBy(u => u.Name)
+            .Select(u => new CoordinatorOptionResponse(u.Id, u.Name))
             .ToListAsync(ct);
-        return coordinators.Select(u => u.ToAuthMeResponse()).ToList();
+        return coordinators;
     }
 
     public async Task<ErrorOr<List<CoordinatorStudentResponse>>> GetMyStudentsAsync(int coordinatorId, CancellationToken ct = default)

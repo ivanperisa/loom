@@ -15,3 +15,8 @@ export interface CreatePlaceholderStudentRequest {
 }
 
 export type UpdateStudentRequest = CreatePlaceholderStudentRequest
+
+export interface CoordinatorOption {
+  id: string
+  name: string
+}

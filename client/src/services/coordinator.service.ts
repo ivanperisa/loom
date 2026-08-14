@@ -1,11 +1,10 @@
 import { api } from './api'
-import type { CoordinatorStudentResponse, CreatePlaceholderStudentRequest, UpdateStudentRequest } from '@/types/coordinator.types'
+import type { CoordinatorOption, CoordinatorStudentResponse, CreatePlaceholderStudentRequest, UpdateStudentRequest } from '@/types/coordinator.types'
 import type { ExchangeSummaryResponse } from '@/types/exchange.types'
-import type { AuthMeResponse } from '@/types/auth.types'
 
 export const coordinatorService = {
   getCoordinators: () =>
-    api.get<AuthMeResponse[]>('/api/coordinators'),
+    api.get<CoordinatorOption[]>('/api/coordinators'),
   getStudents: () =>
     api.get<CoordinatorStudentResponse[]>('/api/coordinator/students'),
   createPlaceholderStudent: (request: CreatePlaceholderStudentRequest) =>

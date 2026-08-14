@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { institutionService } from '@/services/institution.service'
 import { coordinatorService } from '@/services/coordinator.service'
 import type { InstitutionResponse } from '@/types/institution.types'
-import type { AuthMeResponse } from '@/types/auth.types'
+import type { CoordinatorOption } from '@/types/coordinator.types'
 import { userRole } from '../utils/userRole'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 
@@ -14,7 +14,7 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 
 const institutions = ref<InstitutionResponse[]>([])
-const coordinators = ref<AuthMeResponse[]>([])
+const coordinators = ref<CoordinatorOption[]>([])
 
 const institutionOptions = computed(() =>
   institutions.value.map((i) => ({

@@ -6,7 +6,7 @@ import { useExchangeStore } from '@/stores/exchange.store'
 import { exchangeSemester } from '@/utils/exchangeSemester'
 import { extractApiError } from '@/utils/apiError'
 import { useNotification } from '@/composables/useNotification'
-import type { AuthMeResponse } from '@/types/auth.types'
+import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { ExchangeResponse, ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 
@@ -103,7 +103,7 @@ function setSemesterType(sem: ExchangeSemester) {
   }
 }
 
-const coordinators = ref<AuthMeResponse[]>([])
+const coordinators = ref<CoordinatorOption[]>([])
 const coordinatorOptions = computed(() => [
   { value: null, label: t('exchange.noCoordinator') },
   ...coordinators.value.map((c) => ({ value: c.id, label: c.name })),

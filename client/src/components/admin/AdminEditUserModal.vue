@@ -4,12 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { adminService, type UserListResponse, type AdminUpdateUserRequest } from '@/services/admin.service'
 import { userRole } from '@/utils/userRole'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
-import type { AuthMeResponse } from '@/types/auth.types'
+import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 
 const props = defineProps<{
   user: UserListResponse
-  coordinators: AuthMeResponse[]
+  coordinators: CoordinatorOption[]
   institutions: InstitutionResponse[]
 }>()
 

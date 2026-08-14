@@ -8,7 +8,7 @@ import { userRole } from '@/utils/userRole'
 import SearchInput from '@/components/common/SearchInput.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import AdminEditUserModal from '@/components/admin/AdminEditUserModal.vue'
-import type { AuthMeResponse } from '@/types/auth.types'
+import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 
 const { t } = useI18n()
@@ -18,7 +18,7 @@ const requests = ref<CoordinatorRequestResponse[]>([])
 const whitelist = ref<CoordinatorWhitelistEntryResponse[]>([])
 const users = ref<UserListResponse[]>([])
 const newEmail = ref('')
-const coordinatorsList = ref<AuthMeResponse[]>([])
+const coordinatorsList = ref<CoordinatorOption[]>([])
 const institutionsList = ref<InstitutionResponse[]>([])
 
 const loadingRequests = ref(true)
