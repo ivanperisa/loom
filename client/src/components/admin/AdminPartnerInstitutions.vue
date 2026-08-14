@@ -5,6 +5,7 @@ import { institutionService } from '@/services/institution.service'
 import type { PartnerInstitutionAdminResponse } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
 import { useConfirm } from '@/composables/useConfirm'
+import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import PartnerInstitutionRow from '@/components/admin/PartnerInstitutionRow.vue'
 import PartnerInstitutionFormPanel from '@/components/admin/PartnerInstitutionFormPanel.vue'
 
@@ -18,6 +19,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const institutionSearch = ref('')
+const debouncedInstitutionSearch = useDebouncedRef(institutionSearch)
 const institutionPage = ref(1)
 const showDeleted = ref(false)
 
@@ -29,7 +31,7 @@ const deletingInstitution = ref<string | null>(null)
 const hasDeletedInstitutions = computed(() => institutions.value.some(i => i.isDeleted))
 
 const filteredInstitutions = computed(() => {
-  const q = institutionSearch.value.trim().toLowerCase()
+  const q = debouncedInstitutionSearch.value.trim().toLowerCase()
   let list = institutions.value
   if (!showDeleted.value) list = list.filter(i => !i.isDeleted)
   if (!q) return list

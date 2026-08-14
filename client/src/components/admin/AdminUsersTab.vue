@@ -7,6 +7,7 @@ import { institutionService } from '@/services/institution.service'
 import { userRole } from '@/utils/userRole'
 import SearchInput from '@/components/common/SearchInput.vue'
 import { useConfirm } from '@/composables/useConfirm'
+import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import AdminEditUserModal from '@/components/admin/AdminEditUserModal.vue'
 import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
@@ -49,11 +50,12 @@ const coordinators = computed(() => users.value.filter(u => u.role === userRole.
 const allStudents = computed(() => users.value.filter(u => u.role === userRole.Student))
 
 const studentSearch = ref('')
+const debouncedStudentSearch = useDebouncedRef(studentSearch)
 const studentPage = ref(1)
 const STUDENTS_PER_PAGE = 10
 
 const filteredStudents = computed(() => {
-  const q = studentSearch.value.trim().toLowerCase()
+  const q = debouncedStudentSearch.value.trim().toLowerCase()
   if (!q) return allStudents.value
   return allStudents.value.filter(u =>
     u.name.toLowerCase().includes(q) ||

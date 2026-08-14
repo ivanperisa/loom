@@ -6,6 +6,7 @@ import { useExchangeStore } from '@/stores/exchange.store'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
 import PartnerCourseFormModal from '@/components/common/PartnerCourseFormModal.vue'
+import { useDebouncedRef } from '@/composables/useDebouncedRef'
 
 const props = withDefaults(
   defineProps<{
@@ -22,6 +23,7 @@ const exchangeStore = useExchangeStore()
 const courses = ref<PartnerCourseResponse[]>([])
 const loading = ref(true)
 const searchQuery = ref('')
+const debouncedSearchQuery = useDebouncedRef(searchQuery)
 
 const showAddForm = ref(false)
 const addingCourse = ref(false)
@@ -112,7 +114,7 @@ const mappedCoursesTotalEcts = computed(() =>
 defineExpose({ mappedCoursesTotalEcts })
 
 const searchResults = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
+  const q = debouncedSearchQuery.value.trim().toLowerCase()
   if (!q) return availableCourses.value
   return availableCourses.value.filter(
     (c) =>

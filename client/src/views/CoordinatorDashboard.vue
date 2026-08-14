@@ -15,6 +15,7 @@ import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import { useNotification } from '@/composables/useNotification'
 import { useConfirm } from '@/composables/useConfirm'
+import { useDebouncedRef } from '@/composables/useDebouncedRef'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -47,6 +48,7 @@ const createExchangeTargetStudentId = ref<string | null>(null)
 const selectedAcademicYear = ref<string | null>(null)
 const selectedPartnerInstitution = ref<string | null>(null)
 const studentSearch = ref('')
+const debouncedStudentSearch = useDebouncedRef(studentSearch)
 
 const academicYears = computed(() => {
   const years = new Set(exchanges.value.map((ex) => ex.academicYear))
@@ -122,7 +124,7 @@ const filteredStudents = computed(() => {
   if (selectedAcademicYear.value || selectedPartnerInstitution.value) {
     list = list.filter((s) => exchangesByStudent.value.has(s.id))
   }
-  const q = studentSearch.value.trim().toLowerCase()
+  const q = debouncedStudentSearch.value.trim().toLowerCase()
   if (q) {
     list = list.filter(
       (s) =>
@@ -203,7 +205,7 @@ function handleOutsideClick(e: MouseEvent) {
 onMounted(() => document.addEventListener('click', handleOutsideClick))
 onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
 
-watch([studentSearch, selectedAcademicYear, selectedPartnerInstitution], () => {
+watch([debouncedStudentSearch, selectedAcademicYear, selectedPartnerInstitution], () => {
   closeMenu()
   closeActionsMenu()
 })

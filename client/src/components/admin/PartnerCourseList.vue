@@ -8,6 +8,7 @@ import PartnerCourseRow from '@/components/admin/PartnerCourseRow.vue'
 import PartnerCourseToolbar from '@/components/admin/PartnerCourseToolbar.vue'
 import MergeCoursesModal from '@/components/admin/MergeCoursesModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
+import { useDebouncedRef } from '@/composables/useDebouncedRef'
 
 const COURSE_PER_PAGE = 10
 
@@ -22,6 +23,7 @@ const error = ref<string | null>(null)
 const courses = ref<PartnerCourseResponse[]>([])
 
 const courseSearch = ref('')
+const debouncedCourseSearch = useDebouncedRef(courseSearch)
 const coursePage = ref(1)
 const showDeletedCourses = ref(false)
 
@@ -40,7 +42,7 @@ const hasDeletedCourses = computed(() => courses.value.some(c => c.isDeleted))
 const filteredCourses = computed(() => {
   let list = courses.value
   if (!showDeletedCourses.value) list = list.filter(c => !c.isDeleted)
-  const q = courseSearch.value.trim().toLowerCase()
+  const q = debouncedCourseSearch.value.trim().toLowerCase()
   if (q) {
     list = list.filter(c =>
       c.code.toLowerCase().includes(q) ||
