@@ -14,6 +14,7 @@ import StudentFormModal from '@/components/coordinator/StudentFormModal.vue'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import SortableHeader from '@/components/common/SortableHeader.vue'
+import Pagination from '@/components/common/Pagination.vue'
 import { useNotification } from '@/composables/useNotification'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
@@ -25,6 +26,10 @@ const { notifySuccess, notifyError } = useNotification()
 const { confirm } = useConfirm()
 
 const students = ref<CoordinatorStudentResponse[]>([])
+const studentPage = ref(1)
+const studentsTotalCount = ref(0)
+const STUDENTS_PER_PAGE = 25
+const totalStudentPages = computed(() => Math.ceil(studentsTotalCount.value / STUDENTS_PER_PAGE))
 const exchanges = ref<ExchangeSummaryResponse[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -114,23 +119,12 @@ function lastName(name: string): string {
   return name.trim().split(/\s+/).pop() ?? name
 }
 
+// Text search (name/jmbag) is server-side and already reflected in `students` (the current page).
+// The academic-year/institution filters are local: the server doesn't know about exchanges,
+// so they narrow the current page further using the (unpaged) exchange data.
 const filteredStudents = computed(() => {
-  let list = students.value
-  if (selectedAcademicYear.value || selectedPartnerInstitution.value) {
-    list = list.filter((s) => exchangesByStudent.value.has(s.id))
-  }
-  const q = debouncedStudentSearch.value.trim().toLowerCase()
-  if (q) {
-    list = list.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        (s.jmbag?.toLowerCase().includes(q) ?? false) ||
-        (exchangesByStudent.value.get(s.id) ?? []).some((ex) =>
-          ex.partnerInstitutionName.toLowerCase().includes(q),
-        ),
-    )
-  }
-  return list
+  if (!selectedAcademicYear.value && !selectedPartnerInstitution.value) return students.value
+  return students.value.filter((s) => exchangesByStudent.value.has(s.id))
 })
 
 const { sortKey, sortDir, toggleSort, sorted: sortedStudents } = useSortable(
@@ -152,11 +146,14 @@ async function fetchData() {
   error.value = null
   try {
     const [studentsRes, exchangesRes, institutionsRes] = await Promise.allSettled([
-      coordinatorService.getStudents(),
+      coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value }),
       coordinatorService.getStudentsExchanges(),
       institutionService.getHomeInstitutions(),
     ])
-    if (studentsRes.status === 'fulfilled') students.value = studentsRes.value.data
+    if (studentsRes.status === 'fulfilled') {
+      students.value = studentsRes.value.data.items
+      studentsTotalCount.value = studentsRes.value.data.totalCount
+    }
     if (exchangesRes.status === 'fulfilled') exchanges.value = exchangesRes.value.data
     if (institutionsRes.status === 'fulfilled') institutions.value = institutionsRes.value.data
   } catch {
@@ -166,8 +163,27 @@ async function fetchData() {
   }
 }
 
+async function fetchStudents() {
+  closeMenu()
+  try {
+    const res = await coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value })
+    students.value = res.data.items
+    studentsTotalCount.value = res.data.totalCount
+  } catch {
+    error.value = t('common.error')
+  }
+}
+
 onMounted(fetchData)
 onBeforeRouteUpdate(fetchData)
+
+watch([studentPage, debouncedStudentSearch], ([newPage, newSearch], [, oldSearch]) => {
+  if (newSearch !== oldSearch && newPage !== 1) {
+    studentPage.value = 1
+    return
+  }
+  fetchStudents()
+})
 
 function closeMenu() {
   openMenuId.value = null
@@ -246,12 +262,12 @@ function openEditStudent(student: CoordinatorStudentResponse) {
   showStudentModal.value = true
 }
 
-function onStudentSaved(student: CoordinatorStudentResponse) {
+async function onStudentSaved(student: CoordinatorStudentResponse) {
   if (studentModalMode.value === 'edit') {
     const idx = students.value.findIndex((s) => s.id === student.id)
     if (idx !== -1) students.value[idx] = student
   } else {
-    students.value.push(student)
+    await fetchStudents()
   }
   showStudentModal.value = false
 }
@@ -262,7 +278,7 @@ async function deleteStudent(student: CoordinatorStudentResponse) {
   deletingStudentId.value = student.id
   try {
     await coordinatorService.deleteStudent(student.id)
-    students.value = students.value.filter((s) => s.id !== student.id)
+    await fetchStudents()
     notifySuccess(t('coordinator.deleteStudent'))
   } catch (e: unknown) {
     const err = e as { response?: { status?: number } }
@@ -474,6 +490,15 @@ function onExchangeCreated(exchangeGuid: string) {
           </div>
         </div>
       </div>
+
+      <!-- Student pagination -->
+      <Pagination
+        :page="studentPage"
+        :total-pages="totalStudentPages"
+        :total="studentsTotalCount"
+        :per-page="STUDENTS_PER_PAGE"
+        @update:page="studentPage = $event"
+      />
 
       <!-- Exchange switcher menu -->
       <Teleport to="body">

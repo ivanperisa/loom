@@ -1,3 +1,4 @@
+using Loom.Application.DTOs.Common;
 using Loom.Application.DTOs.Institution;
 using Loom.Application.Interfaces.Services;
 using Loom.Domain.Constants;
@@ -27,17 +28,17 @@ public class InstitutionController(IInstitutionService institutionService) : Api
     }
 
     [HttpGet("partner")]
-    public async Task<IActionResult> GetPartnerInstitutions([FromQuery] bool includeDeleted, CancellationToken ct)
+    public async Task<IActionResult> GetPartnerInstitutions([FromQuery] bool includeDeleted, [FromQuery] PagedRequest paging, CancellationToken ct)
     {
-        var result = await institutionService.GetPartnerInstitutionsAsync(includeDeleted, ct);
+        var result = await institutionService.GetPartnerInstitutionsAsync(includeDeleted, paging, ct);
         return Match(result, Ok);
     }
 
     [AllowAnonymous]
     [HttpGet("partner/{institutionId:int}/courses")]
-    public async Task<IActionResult> GetPartnerCoursesByInstitution(int institutionId, [FromQuery] bool includeDeleted, CancellationToken ct)
+    public async Task<IActionResult> GetPartnerCoursesByInstitution(int institutionId, [FromQuery] bool includeDeleted, [FromQuery] PagedRequest paging, CancellationToken ct)
     {
-        var result = await institutionService.GetPartnerCoursesByInstitutionAsync(institutionId, includeDeleted, ct);
+        var result = await institutionService.GetPartnerCoursesByInstitutionAsync(institutionId, includeDeleted, paging, ct);
         return Match(result, Ok);
     }
 

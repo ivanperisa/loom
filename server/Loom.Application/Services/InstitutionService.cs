@@ -1,4 +1,5 @@
 using ErrorOr;
+using Loom.Application.DTOs.Common;
 using Loom.Application.DTOs.Institution;
 using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.Interfaces;
@@ -34,26 +35,61 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         return programs.Select(p => p.ToResponse()).ToList();
     }
 
-    public async Task<ErrorOr<List<PartnerInstitutionAdminResponse>>> GetPartnerInstitutionsAsync(bool includeDeleted = false, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<PartnerInstitutionAdminResponse>>> GetPartnerInstitutionsAsync(bool includeDeleted, PagedRequest paging, CancellationToken ct = default)
     {
-        var institutions = await db.Institutions
+        var query = db.Institutions
             .AsNoTracking()
-            .Where(i => i.Type == InstitutionType.Partner && (includeDeleted || !i.IsDeleted))
+            .Where(i => i.Type == InstitutionType.Partner && (includeDeleted || !i.IsDeleted));
+
+        if (!string.IsNullOrWhiteSpace(paging.Search))
+        {
+            var term = $"%{paging.Search.Trim()}%";
+            query = query.Where(i =>
+                EF.Functions.ILike(i.Name, term) ||
+                (i.NameHr != null && EF.Functions.ILike(i.NameHr, term)) ||
+                (i.City != null && EF.Functions.ILike(i.City, term)) ||
+                (i.ErasmusCode != null && EF.Functions.ILike(i.ErasmusCode, term)));
+        }
+
+        var totalCount = await query.CountAsync(ct);
+
+        var institutions = await query
             .Include(i => i.PartnerCourses)
             .OrderBy(i => i.Country)
             .ThenBy(i => i.Name)
+            .Skip(paging.Skip)
+            .Take(paging.SafePageSize)
             .ToListAsync(ct);
-        return institutions.Select(i => i.ToAdminResponse()).ToList();
+
+        return new PagedResponse<PartnerInstitutionAdminResponse>(
+            institutions.Select(i => i.ToAdminResponse()).ToList(), paging.SafePage, paging.SafePageSize, totalCount);
     }
 
-    public async Task<ErrorOr<List<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, bool includeDeleted = false, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, bool includeDeleted, PagedRequest paging, CancellationToken ct = default)
     {
-        var courses = await db.PartnerCourses
+        var query = db.PartnerCourses
             .AsNoTracking()
-            .Where(c => c.InstitutionId == institutionId && (includeDeleted || !c.IsDeleted))
+            .Where(c => c.InstitutionId == institutionId && (includeDeleted || !c.IsDeleted));
+
+        if (!string.IsNullOrWhiteSpace(paging.Search))
+        {
+            var term = $"%{paging.Search.Trim()}%";
+            query = query.Where(c =>
+                EF.Functions.ILike(c.Code, term) ||
+                EF.Functions.ILike(c.Name, term) ||
+                (c.NameHr != null && EF.Functions.ILike(c.NameHr, term)));
+        }
+
+        var totalCount = await query.CountAsync(ct);
+
+        var courses = await query
             .OrderBy(c => c.Code)
+            .Skip(paging.Skip)
+            .Take(paging.SafePageSize)
             .ToListAsync(ct);
-        return courses.Select(c => c.ToResponse()).ToList();
+
+        return new PagedResponse<PartnerCourseResponse>(
+            courses.Select(c => c.ToResponse()).ToList(), paging.SafePage, paging.SafePageSize, totalCount);
     }
 
     #endregion

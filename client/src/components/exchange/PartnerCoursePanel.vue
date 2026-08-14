@@ -44,8 +44,8 @@ async function submitAddCourse(payload: {
   addError.value = null
   try {
     await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
-    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId)
-    courses.value = res.data
+    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId, false, { pageSize: 200 })
+    courses.value = res.data.items
     showAddForm.value = false
   } catch {
     addError.value = t('partnerCourses.saveError')
@@ -56,8 +56,8 @@ async function submitAddCourse(payload: {
 
 onMounted(async () => {
   try {
-    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId)
-    courses.value = res.data
+    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId, false, { pageSize: 200 })
+    courses.value = res.data.items
   } catch {
     // keep empty
   } finally {

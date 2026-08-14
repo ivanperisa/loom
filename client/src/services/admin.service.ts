@@ -1,4 +1,5 @@
 import { api } from './api'
+import type { PagedParams, PagedResponse } from '@/types/paged.types'
 
 export interface UserListResponse {
   id: string
@@ -37,8 +38,8 @@ export interface CoordinatorWhitelistEntryResponse {
 }
 
 export const adminService = {
-  getAllUsers: () =>
-    api.get<UserListResponse[]>('/api/admin/users'),
+  getAllUsers: (params: PagedParams = {}) =>
+    api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params }),
 
   getCoordinatorRequests: () =>
     api.get<CoordinatorRequestResponse[]>('/api/admin/coordinator-requests'),

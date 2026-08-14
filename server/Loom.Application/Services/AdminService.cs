@@ -1,6 +1,7 @@
 using ErrorOr;
 using Loom.Application.DTOs.Admin;
 using Loom.Application.DTOs.Auth;
+using Loom.Application.DTOs.Common;
 using Loom.Application.Helpers;
 using Loom.Application.Interfaces;
 using Loom.Application.Interfaces.Services;
@@ -8,6 +9,7 @@ using Loom.Application.Mappers;
 using Loom.Domain.Entities;
 using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 namespace Loom.Application.Services;
 
@@ -15,17 +17,31 @@ public class AdminService(IAppDbContext db) : IAdminService
 {
     #region Users
 
-    public async Task<ErrorOr<List<UserListResponse>>> GetAllUsersAsync(int adminId, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<UserListResponse>>> GetAllUsersAsync(int adminId, PagedRequest paging, CancellationToken ct = default)
     {
         var ensureAdmin = await EnsureAdminAsync(adminId, "list users", ct);
         if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
-        var users = await UsersWithIncludes()
-            .AsNoTracking()
+        var query = UsersWithIncludes().AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(paging.Search))
+        {
+            var term = $"%{paging.Search.Trim()}%";
+            query = query.Where(u =>
+                EF.Functions.ILike(u.Name, term) ||
+                EF.Functions.ILike(u.Email, term) ||
+                (u.Jmbag != null && EF.Functions.ILike(u.Jmbag, term)));
+        }
+
+        var totalCount = await query.CountAsync(ct);
+
+        var users = await query
             .OrderBy(u => u.Name)
+            .Skip(paging.Skip)
+            .Take(paging.SafePageSize)
             .ToListAsync(ct);
 
-        return ToUserListResponses(users);
+        return new PagedResponse<UserListResponse>(ToUserListResponses(users), paging.SafePage, paging.SafePageSize, totalCount);
     }
 
     public async Task<ErrorOr<UserListResponse>> UpdateUserAsync(int adminId, int targetUserId, AdminUpdateUserRequest request, CancellationToken ct = default)

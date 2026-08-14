@@ -1,4 +1,5 @@
 using ErrorOr;
+using Loom.Application.DTOs.Common;
 using Loom.Application.DTOs.Coordinator;
 using Loom.Application.DTOs.Exchange;
 using Loom.Application.Interfaces;
@@ -23,27 +24,43 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
         return coordinators;
     }
 
-    public async Task<ErrorOr<List<CoordinatorStudentResponse>>> GetMyStudentsAsync(int coordinatorId, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<CoordinatorStudentResponse>>> GetMyStudentsAsync(int coordinatorId, PagedRequest paging, CancellationToken ct = default)
     {
         var coordinator = await db.Users.FindAsync([coordinatorId], ct);
         if (coordinator is null || !coordinator.CanActAsCoordinator())
             return Error.Forbidden("FORBIDDEN", "Only coordinators can view students.");
 
-        var students = await db.Users
+        var query = db.Users
             .AsNoTracking()
             .Include(u => u.Institution)
             .Where(u => u.Role == UserRole.Student &&
                 (u.CoordinatorId == coordinatorId ||
-                 u.StudentExchanges.Any(e => e.CoordinatorId == coordinatorId)))
+                 u.StudentExchanges.Any(e => e.CoordinatorId == coordinatorId)));
+
+        if (!string.IsNullOrWhiteSpace(paging.Search))
+        {
+            var term = $"%{paging.Search.Trim()}%";
+            query = query.Where(u =>
+                EF.Functions.ILike(u.Name, term) ||
+                (u.Jmbag != null && EF.Functions.ILike(u.Jmbag, term)));
+        }
+
+        var totalCount = await query.CountAsync(ct);
+
+        var students = await query
             .OrderBy(u => u.Name)
+            .Skip(paging.Skip)
+            .Take(paging.SafePageSize)
             .ToListAsync(ct);
 
-        return students
+        var items = students
             .Select(u => new CoordinatorStudentResponse(
                 u.Id, u.Name, u.Jmbag, u.Institution?.Name,
                 u.ExternalId == u.Jmbag, u.InstitutionId,
                 u.CoordinatorId == coordinatorId))
             .ToList();
+
+        return new PagedResponse<CoordinatorStudentResponse>(items, paging.SafePage, paging.SafePageSize, totalCount);
     }
 
     public async Task<ErrorOr<CoordinatorStudentResponse>> CreatePlaceholderStudentAsync(int coordinatorId, CreatePlaceholderStudentRequest request, CancellationToken ct = default)

@@ -6,16 +6,17 @@ import type {
   PartnerInstitutionAdminResponse,
   PartnerCourseUsage,
 } from '@/types/institution.types'
+import type { PagedParams, PagedResponse } from '@/types/paged.types'
 
 export const institutionService = {
   getHomeInstitutions: () =>
     api.get<InstitutionResponse[]>('/api/institutions/home'),
   getHomePrograms: () =>
     api.get<HomeProgramResponse[]>('/api/institutions/home-programs'),
-  getPartnerInstitutions: (includeDeleted = false) =>
-    api.get<PartnerInstitutionAdminResponse[]>('/api/institutions/partner', { params: { includeDeleted } }),
-  getPartnerCoursesByInstitution: (institutionId: string, includeDeleted = false) =>
-    api.get<PartnerCourseResponse[]>(`/api/institutions/partner/${institutionId}/courses`, { params: { includeDeleted } }),
+  getPartnerInstitutions: (includeDeleted = false, params: PagedParams = {}) =>
+    api.get<PagedResponse<PartnerInstitutionAdminResponse>>('/api/institutions/partner', { params: { includeDeleted, ...params } }),
+  getPartnerCoursesByInstitution: (institutionId: string, includeDeleted = false, params: PagedParams = {}) =>
+    api.get<PagedResponse<PartnerCourseResponse>>(`/api/institutions/partner/${institutionId}/courses`, { params: { includeDeleted, ...params } }),
 
   createPartnerInstitution: (data: { name: string; nameHr: string; country: string; city?: string; erasmusCode?: string }) =>
     api.post<PartnerInstitutionAdminResponse>('/api/institutions/partner', data),

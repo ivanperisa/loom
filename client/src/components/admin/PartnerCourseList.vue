@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerCourseResponse } from '@/types/institution.types'
@@ -10,9 +10,8 @@ import PartnerCourseToolbar from '@/components/admin/PartnerCourseToolbar.vue'
 import MergeCoursesModal from '@/components/admin/MergeCoursesModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { usePagination } from '@/composables/usePagination'
 
-const COURSE_PER_PAGE = 10
+const COURSE_PER_PAGE = 25
 
 const props = defineProps<{ institutionId: string; institutionName: string }>()
 const emit = defineEmits<{ 'count-changed': [delta: number] }>()
@@ -23,6 +22,9 @@ const { confirm } = useConfirm()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const courses = ref<PartnerCourseResponse[]>([])
+const totalCount = ref(0)
+const coursePage = ref(1)
+const totalCoursePages = ref(1)
 
 const courseSearch = ref('')
 const debouncedCourseSearch = useDebouncedRef(courseSearch)
@@ -38,41 +40,31 @@ const selectedForMerge = ref<Set<string>>(new Set())
 const mergeModal = ref<{ courses: PartnerCourseResponse[] } | null>(null)
 const merging = ref(false)
 
-const hasDeletedCourses = computed(() => courses.value.some(c => c.isDeleted))
-
-const filteredCourses = computed(() => {
-  let list = courses.value
-  if (!showDeletedCourses.value) list = list.filter(c => !c.isDeleted)
-  const q = debouncedCourseSearch.value.trim().toLowerCase()
-  if (q) {
-    list = list.filter(c =>
-      c.code.toLowerCase().includes(q) ||
-      c.name.toLowerCase().includes(q) ||
-      c.nameHr?.toLowerCase().includes(q)
-    )
-  }
-  return [...list].sort((a, b) => a.name.localeCompare(b.name))
-})
-
-const {
-  page: coursePage,
-  totalPages: totalCoursePages,
-  paged: pagedCourses,
-} = usePagination(filteredCourses, COURSE_PER_PAGE)
-
-function onCourseSearch() { coursePage.value = 1 }
-
 async function loadCourses() {
   loading.value = true
   try {
-    const res = await institutionService.getPartnerCoursesByInstitution(props.institutionId, true)
-    courses.value = res.data
+    const res = await institutionService.getPartnerCoursesByInstitution(props.institutionId, showDeletedCourses.value, {
+      page: coursePage.value,
+      pageSize: COURSE_PER_PAGE,
+      search: debouncedCourseSearch.value,
+    })
+    courses.value = res.data.items
+    totalCount.value = res.data.totalCount
+    totalCoursePages.value = Math.ceil(res.data.totalCount / COURSE_PER_PAGE)
   } finally {
     loading.value = false
   }
 }
 
 onMounted(loadCourses)
+
+watch([coursePage, debouncedCourseSearch, showDeletedCourses], ([newPage, newSearch, newShowDeleted], [, oldSearch, oldShowDeleted]) => {
+  if ((newSearch !== oldSearch || newShowDeleted !== oldShowDeleted) && newPage !== 1) {
+    coursePage.value = 1
+    return
+  }
+  loadCourses()
+})
 
 function openCreate() {
   courseError.value = null
@@ -96,14 +88,12 @@ async function submitCourse(payload: {
   try {
     if (courseModal.value.mode === 'edit' && courseModal.value.course) {
       const courseId = courseModal.value.course.id
-      const res = await institutionService.updatePartnerCourse(courseId, payload)
-      const idx = courses.value.findIndex(c => c.id === courseId)
-      if (idx !== -1) courses.value[idx] = res.data
+      await institutionService.updatePartnerCourse(courseId, payload)
     } else {
-      const res = await institutionService.createPartnerCourseByInstitution(props.institutionId, payload)
-      courses.value.push(res.data)
+      await institutionService.createPartnerCourseByInstitution(props.institutionId, payload)
       emit('count-changed', 1)
     }
+    await loadCourses()
     courseModal.value = null
   } catch (e: unknown) {
     const err = e as { response?: { status?: number } }
@@ -172,7 +162,7 @@ async function submitMerge(primaryId: string) {
   error.value = null
   try {
     await institutionService.mergePartnerCourses(primaryId, duplicateIds)
-    courses.value = courses.value.filter(c => c.id === primaryId || !duplicateIds.includes(c.id))
+    await loadCourses()
     emit('count-changed', -duplicateIds.length)
     mergeModal.value = null
   } catch {
@@ -196,24 +186,24 @@ async function submitMerge(primaryId: string) {
       <PartnerCourseToolbar
         :search="courseSearch"
         :show-deleted="showDeletedCourses"
-        :has-deleted="hasDeletedCourses"
+        :has-deleted="true"
         :merge-selecting="mergeSelecting"
-        :can-merge="filteredCourses.length > 1"
+        :can-merge="courses.length > 1"
         :selected-count="selectedForMerge.size"
-        @update:search="courseSearch = $event; onCourseSearch()"
+        @update:search="courseSearch = $event"
         @update:show-deleted="showDeletedCourses = $event"
         @start-merge="startMergeSelection"
         @confirm-merge="openMergeModalFromSelection"
         @cancel-merge="cancelMergeSelection"
       />
 
-      <p v-if="filteredCourses.length === 0" class="text-xs text-light/30">
+      <p v-if="courses.length === 0" class="text-xs text-light/30">
         {{ courseSearch ? t('admin.institutions.noResults') : t('admin.institutions.noCourses') }}
       </p>
       <div v-else>
         <div class="divide-y divide-hairline-soft">
           <PartnerCourseRow
-            v-for="course in pagedCourses"
+            v-for="course in courses"
             :key="course.id"
             :course="course"
             :selectable="mergeSelecting"
@@ -230,7 +220,7 @@ async function submitMerge(primaryId: string) {
         <Pagination
           :page="coursePage"
           :total-pages="totalCoursePages"
-          :total="filteredCourses.length"
+          :total="totalCount"
           :per-page="COURSE_PER_PAGE"
           @update:page="coursePage = $event"
         />

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminService, type CoordinatorRequestResponse, type CoordinatorWhitelistEntryResponse, type UserListResponse } from '@/services/admin.service'
 import { coordinatorService } from '@/services/coordinator.service'
 import { institutionService } from '@/services/institution.service'
 import { userRole } from '@/utils/userRole'
 import SearchInput from '@/components/common/SearchInput.vue'
+import Pagination from '@/components/common/Pagination.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import AdminEditUserModal from '@/components/admin/AdminEditUserModal.vue'
@@ -17,7 +18,7 @@ const { confirm } = useConfirm()
 
 const requests = ref<CoordinatorRequestResponse[]>([])
 const whitelist = ref<CoordinatorWhitelistEntryResponse[]>([])
-const users = ref<UserListResponse[]>([])
+const staffUsers = ref<UserListResponse[]>([])
 const newEmail = ref('')
 const coordinatorsList = ref<CoordinatorOption[]>([])
 const institutionsList = ref<InstitutionResponse[]>([])
@@ -40,38 +41,23 @@ function openEditDialog(user: UserListResponse) {
 }
 
 function onUserSaved(updated: UserListResponse) {
-  const idx = users.value.findIndex(u => u.id === updated.id)
-  if (idx !== -1) users.value[idx] = updated
+  const staffIdx = staffUsers.value.findIndex(u => u.id === updated.id)
+  if (staffIdx !== -1) staffUsers.value[staffIdx] = updated
+  const studentIdx = students.value.findIndex(u => u.id === updated.id)
+  if (studentIdx !== -1) students.value[studentIdx] = updated
   editingUser.value = null
 }
 
-const admins = computed(() => users.value.filter(u => u.role === userRole.Admin))
-const coordinators = computed(() => users.value.filter(u => u.role === userRole.Coordinator))
-const allStudents = computed(() => users.value.filter(u => u.role === userRole.Student))
+const admins = computed(() => staffUsers.value.filter(u => u.role === userRole.Admin))
+const coordinators = computed(() => staffUsers.value.filter(u => u.role === userRole.Coordinator))
 
 const studentSearch = ref('')
 const debouncedStudentSearch = useDebouncedRef(studentSearch)
 const studentPage = ref(1)
-const STUDENTS_PER_PAGE = 10
-
-const filteredStudents = computed(() => {
-  const q = debouncedStudentSearch.value.trim().toLowerCase()
-  if (!q) return allStudents.value
-  return allStudents.value.filter(u =>
-    u.name.toLowerCase().includes(q) ||
-    u.email.toLowerCase().includes(q) ||
-    (u.jmbag && u.jmbag.includes(q))
-  )
-})
-
-const totalStudentPages = computed(() => Math.max(1, Math.ceil(filteredStudents.value.length / STUDENTS_PER_PAGE)))
-
-const students = computed(() => {
-  const start = (studentPage.value - 1) * STUDENTS_PER_PAGE
-  return filteredStudents.value.slice(start, start + STUDENTS_PER_PAGE)
-})
-
-function onStudentSearch() { studentPage.value = 1 }
+const STUDENTS_PER_PAGE = 25
+const students = ref<UserListResponse[]>([])
+const studentsTotalCount = ref(0)
+const totalStudentPages = computed(() => Math.ceil(studentsTotalCount.value / STUDENTS_PER_PAGE))
 
 function toggleMenu(userId: string) {
   openMenuId.value = openMenuId.value === userId ? null : userId
@@ -83,7 +69,7 @@ function handleOutsideClick(e: MouseEvent) {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchRequests(), fetchWhitelist(), fetchUsers(), fetchCoordinators(), fetchInstitutions()])
+  await Promise.all([fetchRequests(), fetchWhitelist(), fetchStaffUsers(), fetchStudents(), fetchCoordinators(), fetchInstitutions()])
   document.addEventListener('click', handleOutsideClick)
 })
 
@@ -91,11 +77,25 @@ onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
 })
 
-async function fetchUsers() {
+watch([studentPage, debouncedStudentSearch], ([newPage, newSearch], [, oldSearch]) => {
+  if (newSearch !== oldSearch && newPage !== 1) {
+    studentPage.value = 1
+    return
+  }
+  fetchStudents()
+})
+
+async function fetchStaffUsers() {
+  const res = await adminService.getAllUsers({ pageSize: 200 })
+  staffUsers.value = res.data.items
+}
+
+async function fetchStudents() {
   loadingUsers.value = true
   try {
-    const res = await adminService.getAllUsers()
-    users.value = res.data
+    const res = await adminService.getAllUsers({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value })
+    students.value = res.data.items.filter(u => u.role === userRole.Student)
+    studentsTotalCount.value = res.data.totalCount
   } finally {
     loadingUsers.value = false
   }
@@ -119,8 +119,7 @@ async function makeCoordinatorFromList(userId: string) {
   userActionId.value = userId
   try {
     await adminService.makeCoordinator(userId)
-    const u = users.value.find((x: { id: string }) => x.id === userId)
-    if (u) { u.role = userRole.Coordinator; u.coordinatorRequestStatus = null }
+    await Promise.all([fetchStaffUsers(), fetchStudents()])
   } finally {
     userActionId.value = null
   }
@@ -131,8 +130,7 @@ async function removeCoordinatorFromList(userId: string) {
   userActionId.value = userId
   try {
     await adminService.removeCoordinator(userId)
-    const u = users.value.find(x => x.id === userId)
-    if (u) { u.role = userRole.Student; u.coordinatorRequestStatus = null }
+    await Promise.all([fetchStaffUsers(), fetchStudents()])
   } finally {
     userActionId.value = null
   }
@@ -339,16 +337,15 @@ function formatDate(iso: string) {
           <div class="mb-3 flex items-center justify-between">
             <p class="text-xs font-semibold uppercase tracking-wider text-light/40">
               {{ t('admin.users.role.Student') }}
-              <span class="ml-1 font-normal normal-case tracking-normal text-light/30">({{ allStudents.length }})</span>
+              <span class="ml-1 font-normal normal-case tracking-normal text-light/30">({{ studentsTotalCount }})</span>
             </p>
           </div>
           <SearchInput
             v-model="studentSearch"
             :placeholder="t('admin.users.searchPlaceholder')"
             class="mb-3"
-            @update:model-value="onStudentSearch"
           />
-          <p v-if="filteredStudents.length === 0" class="text-sm text-light/40">{{ t('admin.users.empty') }}</p>
+          <p v-if="students.length === 0" class="text-sm text-light/40">{{ t('admin.users.empty') }}</p>
           <div v-else class="divide-y divide-hairline-soft rounded-xl bg-dark">
             <div v-for="u in students" :key="u.id" class="flex items-center justify-between px-4 py-3">
               <div class="min-w-0">
@@ -404,24 +401,13 @@ function formatDate(iso: string) {
             </div>
           </div>
 
-          <div v-if="totalStudentPages > 1" class="mt-3 flex items-center justify-between text-xs text-light/40">
-            <span>{{ (studentPage - 1) * STUDENTS_PER_PAGE + 1 }}–{{ Math.min(studentPage * STUDENTS_PER_PAGE, filteredStudents.length) }} / {{ filteredStudents.length }}</span>
-            <div class="flex gap-1">
-              <button
-                type="button"
-                class="rounded-lg border border-hairline px-3 py-1.5 transition hover:bg-fill-soft disabled:opacity-30"
-                :disabled="studentPage === 1"
-                @click="studentPage--"
-              >←</button>
-              <span class="flex items-center px-2">{{ studentPage }} / {{ totalStudentPages }}</span>
-              <button
-                type="button"
-                class="rounded-lg border border-hairline px-3 py-1.5 transition hover:bg-fill-soft disabled:opacity-30"
-                :disabled="studentPage === totalStudentPages"
-                @click="studentPage++"
-              >→</button>
-            </div>
-          </div>
+          <Pagination
+            :page="studentPage"
+            :total-pages="totalStudentPages"
+            :total="studentsTotalCount"
+            :per-page="STUDENTS_PER_PAGE"
+            @update:page="studentPage = $event"
+          />
         </div>
 
       </div>

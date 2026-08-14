@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerInstitutionAdminResponse } from '@/types/institution.types'
@@ -7,16 +7,18 @@ import SearchInput from '@/components/common/SearchInput.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { usePagination } from '@/composables/usePagination'
 import PartnerInstitutionRow from '@/components/admin/PartnerInstitutionRow.vue'
 import PartnerInstitutionFormPanel from '@/components/admin/PartnerInstitutionFormPanel.vue'
 
 const { t } = useI18n()
 const { confirm } = useConfirm()
 
-const INST_PER_PAGE = 10
+const INST_PER_PAGE = 25
 
 const institutions = ref<PartnerInstitutionAdminResponse[]>([])
+const totalCount = ref(0)
+const institutionPage = ref(1)
+const totalInstPages = computed(() => Math.ceil(totalCount.value / INST_PER_PAGE))
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -29,42 +31,31 @@ const addingInstitution = ref(false)
 const editingInstitutionId = ref<string | null>(null)
 const deletingInstitution = ref<string | null>(null)
 
-const hasDeletedInstitutions = computed(() => institutions.value.some(i => i.isDeleted))
-
-const filteredInstitutions = computed(() => {
-  const q = debouncedInstitutionSearch.value.trim().toLowerCase()
-  let list = institutions.value
-  if (!showDeleted.value) list = list.filter(i => !i.isDeleted)
-  if (!q) return list
-  return list.filter(i =>
-    i.name.toLowerCase().includes(q) ||
-    i.nameHr?.toLowerCase().includes(q) ||
-    i.country.toLowerCase().includes(q) ||
-    i.city?.toLowerCase().includes(q) ||
-    i.erasmusCode?.toLowerCase().includes(q)
-  )
-})
-
-const {
-  page: institutionPage,
-  totalPages: totalInstPages,
-  paged: pagedInstitutions,
-} = usePagination(filteredInstitutions, INST_PER_PAGE)
-
-function onInstSearch() { institutionPage.value = 1 }
-
 const editingInstitution = computed(() =>
   editingInstitutionId.value ? institutions.value.find(i => i.id === editingInstitutionId.value) : undefined,
 )
 
 onMounted(loadInstitutions)
 
+watch([institutionPage, debouncedInstitutionSearch, showDeleted], ([newPage, newSearch, newShowDeleted], [, oldSearch, oldShowDeleted]) => {
+  if ((newSearch !== oldSearch || newShowDeleted !== oldShowDeleted) && newPage !== 1) {
+    institutionPage.value = 1
+    return
+  }
+  loadInstitutions()
+})
+
 async function loadInstitutions() {
   loading.value = true
   error.value = null
   try {
-    const res = await institutionService.getPartnerInstitutions(true)
-    institutions.value = res.data
+    const res = await institutionService.getPartnerInstitutions(showDeleted.value, {
+      page: institutionPage.value,
+      pageSize: INST_PER_PAGE,
+      search: debouncedInstitutionSearch.value,
+    })
+    institutions.value = res.data.items
+    totalCount.value = res.data.totalCount
   } catch {
     error.value = t('admin.institutions.saveError')
   } finally {
@@ -92,14 +83,11 @@ async function submitInstitutionForm(payload: { name: string; nameHr: string; co
   error.value = null
   try {
     if (editingInstitutionId.value) {
-      const res = await institutionService.updatePartnerInstitution(editingInstitutionId.value, payload)
-      const idx = institutions.value.findIndex(i => i.id === editingInstitutionId.value)
-      if (idx !== -1) institutions.value[idx] = res.data
+      await institutionService.updatePartnerInstitution(editingInstitutionId.value, payload)
     } else {
-      const res = await institutionService.createPartnerInstitution(payload)
-      institutions.value.push(res.data)
+      await institutionService.createPartnerInstitution(payload)
     }
-    institutions.value.sort((a, b) => a.country.localeCompare(b.country) || a.name.localeCompare(b.name))
+    await loadInstitutions()
     closeInstitutionForm()
   } catch {
     error.value = t('admin.institutions.saveError')
@@ -172,9 +160,8 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
         v-model="institutionSearch"
         :placeholder="t('admin.institutions.searchInstitutions')"
         class="flex-1"
-        @update:model-value="onInstSearch"
       />
-      <label v-if="hasDeletedInstitutions" class="flex shrink-0 items-center gap-2 text-xs text-light/60">
+      <label class="flex shrink-0 items-center gap-2 text-xs text-light/60">
         <input v-model="showDeleted" type="checkbox" class="accent-primary" />
         {{ t('admin.institutions.showDeleted') }}
       </label>
@@ -184,14 +171,14 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
       <div v-for="i in 4" :key="i" class="h-16 animate-pulse rounded-xl bg-dark-2"></div>
     </div>
 
-    <div v-else-if="filteredInstitutions.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-6 text-center text-light/60">
+    <div v-else-if="institutions.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-6 text-center text-light/60">
       {{ institutionSearch ? t('admin.institutions.noResults') : t('admin.institutions.empty') }}
     </div>
 
     <!-- Institutions list -->
     <div v-else class="space-y-3">
       <PartnerInstitutionRow
-        v-for="inst in pagedInstitutions"
+        v-for="inst in institutions"
         :key="inst.id"
         :institution="inst"
         :busy="deletingInstitution === inst.id"
@@ -206,7 +193,7 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
     <Pagination
       :page="institutionPage"
       :total-pages="totalInstPages"
-      :total="filteredInstitutions.length"
+      :total="totalCount"
       :per-page="INST_PER_PAGE"
       @update:page="institutionPage = $event"
     />

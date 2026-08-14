@@ -1,4 +1,5 @@
 using Loom.Application.DTOs.Admin;
+using Loom.Application.DTOs.Common;
 using Loom.Application.Interfaces.Services;
 using Loom.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -13,9 +14,9 @@ public class AdminController(IAdminService adminService) : ApiController
     #region Users
 
     [HttpGet("users")]
-    public async Task<IActionResult> GetAllUsers(CancellationToken ct)
+    public async Task<IActionResult> GetAllUsers([FromQuery] PagedRequest paging, CancellationToken ct)
     {
-        var result = await adminService.GetAllUsersAsync(GetCurrentUserId(), ct);
+        var result = await adminService.GetAllUsersAsync(GetCurrentUserId(), paging, ct);
         return Match(result, Ok);
     }
 

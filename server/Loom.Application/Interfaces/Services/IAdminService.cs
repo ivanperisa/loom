@@ -1,13 +1,14 @@
 using ErrorOr;
 using Loom.Application.DTOs.Admin;
 using Loom.Application.DTOs.Auth;
+using Loom.Application.DTOs.Common;
 
 namespace Loom.Application.Interfaces.Services;
 
 public interface IAdminService
 {
     // Users
-    Task<ErrorOr<List<UserListResponse>>> GetAllUsersAsync(int adminId, CancellationToken ct = default);
+    Task<ErrorOr<PagedResponse<UserListResponse>>> GetAllUsersAsync(int adminId, PagedRequest paging, CancellationToken ct = default);
     Task<ErrorOr<UserListResponse>> UpdateUserAsync(int adminId, int targetUserId, AdminUpdateUserRequest request, CancellationToken ct = default);
 
     // Coordinator role management

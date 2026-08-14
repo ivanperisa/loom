@@ -184,14 +184,14 @@ watch(selectedProgramId, () => {
 onMounted(async () => {
   const [programsRes, partnerRes, coordRes] = await Promise.allSettled([
     institutionService.getHomePrograms(),
-    institutionService.getPartnerInstitutions(),
+    institutionService.getPartnerInstitutions(false, { pageSize: 200 }),
     coordinatorService.getCoordinators(),
   ])
 
   if (programsRes.status === 'fulfilled') homePrograms.value = programsRes.value.data
   loadingPrograms.value = false
 
-  if (partnerRes.status === 'fulfilled') partnerInstitutions.value = partnerRes.value.data
+  if (partnerRes.status === 'fulfilled') partnerInstitutions.value = partnerRes.value.data.items
   loadingPartnerInstitutions.value = false
 
   if (coordRes.status === 'fulfilled') coordinators.value = coordRes.value.data
