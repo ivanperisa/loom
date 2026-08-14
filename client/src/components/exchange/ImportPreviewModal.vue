@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useNotification } from '@/composables/useNotification'
 import ActionButton from '@/components/common/ActionButton.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import type { MappingExportDto, MappingImportResult } from '@/types/learningAgreement.types'
 
 const props = defineProps<{
@@ -77,16 +78,12 @@ async function apply() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      class="import-overlay"
-      @mousedown.self="emit('close')"
-    >
-      <div class="import-dialog">
-        <div class="import-header">
-          <h2 class="import-title">{{ t('la.import.title') }}</h2>
-          <button type="button" class="import-close" @click="emit('close')">&times;</button>
-        </div>
+  <BaseModal max-width="max-w-2xl" z-class="z-[60]" labelled-by="import-preview-title" @close="emit('close')">
+    <div class="import-dialog">
+      <div class="import-header">
+        <h2 id="import-preview-title" class="import-title">{{ t('la.import.title') }}</h2>
+        <button type="button" class="import-close" @click="emit('close')">&times;</button>
+      </div>
 
         <div class="import-context">
           <div class="import-context__row">
@@ -165,23 +162,12 @@ async function apply() {
           >
             {{ t('la.import.apply') }}
           </ActionButton>
-        </div>
       </div>
     </div>
-  </Teleport>
+  </BaseModal>
 </template>
 
 <style scoped>
-.import-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 60;
-}
-
 .import-dialog {
   background: var(--color-dark-2);
   border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);

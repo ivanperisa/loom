@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { adminService, type UserListResponse, type AdminUpdateUserRequest } from '@/services/admin.service'
 import { userRole } from '@/utils/userRole'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 
@@ -70,16 +71,12 @@ async function save() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-      @mousedown.self="emit('close')"
-    >
-      <div class="w-full max-w-lg rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
-        <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
-          <div>
-            <div class="flex items-center gap-2">
-              <h3 class="font-semibold text-light">{{ t('admin.users.editUser') }}</h3>
+  <BaseModal max-width="max-w-lg" labelled-by="admin-edit-user-title" @close="emit('close')">
+    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 id="admin-edit-user-title" class="font-semibold text-light">{{ t('admin.users.editUser') }}</h3>
               <span class="rounded-full border border-white/10 px-1.5 py-0.5 text-[10px] text-light/30">{{ t(`admin.users.role.${user.role}`) }}</span>
             </div>
             <p class="mt-0.5 text-xs text-light/40">{{ user.email }}</p>
@@ -162,6 +159,5 @@ async function save() {
           >{{ saving ? t('common.loading') : t('admin.users.editUserSave') }}</button>
         </div>
       </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { coordinatorService } from '@/services/coordinator.service'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { localizedName } from '@/utils/i18n.utils'
@@ -67,16 +68,12 @@ async function submit() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-      @mousedown.self="emit('close')"
-    >
-      <div class="w-full max-w-lg rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
-        <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
-          <h3 class="font-semibold text-light">
-            {{ mode === 'edit' ? t('coordinator.editStudentModal.title') : t('coordinator.addStudentModal.title') }}
-          </h3>
+  <BaseModal max-width="max-w-lg" labelled-by="student-form-title" @close="emit('close')">
+    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
+        <h3 id="student-form-title" class="font-semibold text-light">
+          {{ mode === 'edit' ? t('coordinator.editStudentModal.title') : t('coordinator.addStudentModal.title') }}
+        </h3>
           <button type="button" class="text-light/40 transition hover:text-white" @click="emit('close')">
             <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -136,6 +133,5 @@ async function submit() {
           >{{ submitting ? t('common.loading') : t('coordinator.addStudentModal.submit') }}</button>
         </div>
       </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

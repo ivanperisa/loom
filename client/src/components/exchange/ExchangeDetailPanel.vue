@@ -7,6 +7,7 @@ import RecognitionPanel from '@/components/exchange/RecognitionPanel.vue'
 import MappingSchemePanel from '@/components/exchange/MappingSchemePanel.vue'
 import NotesModal from '@/components/exchange/NotesModal.vue'
 import EditExchangeModal from '@/components/exchange/EditExchangeModal.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import { useAuthStore } from '@/stores/auth.store'
@@ -399,48 +400,42 @@ onMounted(async () => {
   />
 
   <!-- EWP link modal -->
-  <Teleport to="body">
-    <div
-      v-if="showEwpModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
-      @mousedown.self="showEwpModal = false"
-    >
-      <div class="w-full max-w-md rounded-xl border border-primary/30 bg-dark p-6 shadow-xl">
-        <div class="mb-5 flex items-center justify-between">
-          <h2 class="text-base font-semibold text-light">{{ t('exchange.ewpLink') }}</h2>
-          <button type="button" class="text-light/40 transition hover:text-light" @click="showEwpModal = false">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <line x1="2" y1="2" x2="14" y2="14" /><line x1="14" y1="2" x2="2" y2="14" />
-            </svg>
-          </button>
-        </div>
+  <BaseModal v-if="showEwpModal" max-width="max-w-md" labelled-by="ewp-link-title" @close="showEwpModal = false">
+    <div class="p-6">
+      <div class="mb-5 flex items-center justify-between">
+        <h2 id="ewp-link-title" class="text-base font-semibold text-light">{{ t('exchange.ewpLink') }}</h2>
+        <button type="button" class="text-light/40 transition hover:text-light" @click="showEwpModal = false">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="2" y1="2" x2="14" y2="14" /><line x1="14" y1="2" x2="2" y2="14" />
+          </svg>
+        </button>
+      </div>
 
-        <input
-          v-model="ewpLinkInput"
-          type="url"
-          class="w-full rounded-lg border border-primary/20 bg-dark-2 px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
-          :placeholder="t('exchange.ewpLinkPlaceholder')"
-          @keyup.enter="saveEwpLink"
-        />
+      <input
+        v-model="ewpLinkInput"
+        type="url"
+        class="w-full rounded-lg border border-primary/20 bg-dark-2 px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
+        :placeholder="t('exchange.ewpLinkPlaceholder')"
+        @keyup.enter="saveEwpLink"
+      />
 
-        <div class="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            class="rounded-lg border border-primary/20 px-4 py-1.5 text-sm text-light/70 transition hover:bg-white/5 hover:text-light"
-            @click="showEwpModal = false"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            type="button"
-            class="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
-            :disabled="isSavingEwpLink"
-            @click="saveEwpLink"
-          >
-            {{ isSavingEwpLink ? t('common.loading') : t('common.save') }}
-          </button>
-        </div>
+      <div class="mt-5 flex justify-end gap-2">
+        <button
+          type="button"
+          class="rounded-lg border border-primary/20 px-4 py-1.5 text-sm text-light/70 transition hover:bg-white/5 hover:text-light"
+          @click="showEwpModal = false"
+        >
+          {{ t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          class="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
+          :disabled="isSavingEwpLink"
+          @click="saveEwpLink"
+        >
+          {{ isSavingEwpLink ? t('common.loading') : t('common.save') }}
+        </button>
       </div>
     </div>
-  </Teleport>
+  </BaseModal>
 </template>

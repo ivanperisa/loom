@@ -9,6 +9,7 @@ import { useNotification } from '@/composables/useNotification'
 import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { ExchangeResponse, ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps<{
   exchange: ExchangeResponse
@@ -151,17 +152,14 @@ async function submit() {
 </script>
 
 <template>
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-    @mousedown.self="emit('close')"
-  >
+  <BaseModal max-width="max-w-2xl" labelled-by="edit-exchange-title" @close="emit('close')">
     <div
-      class="flex w-full max-w-2xl flex-col rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl"
+      class="flex w-full flex-col rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl"
       style="max-height: 90vh"
     >
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-primary/20 px-8 py-5">
-        <h2 class="text-xl font-semibold text-light">{{ t('exchange.editExchange') }}</h2>
+        <h2 id="edit-exchange-title" class="text-xl font-semibold text-light">{{ t('exchange.editExchange') }}</h2>
         <button type="button" class="text-light/50 transition hover:text-white" @click="emit('close')">
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -334,5 +332,5 @@ async function submit() {
         </button>
       </div>
     </div>
-  </div>
+  </BaseModal>
 </template>

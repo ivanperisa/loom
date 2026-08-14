@@ -5,6 +5,7 @@ import { useExchangeStore } from '@/stores/exchange.store'
 import { useConfirm } from '@/composables/useConfirm'
 import { useNotification } from '@/composables/useNotification'
 import ActionButton from '@/components/common/ActionButton.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import type { LaSnapshotSummary, SnapshotListItem } from '@/types/learningAgreement.types'
 
 const props = defineProps<{
@@ -78,14 +79,12 @@ async function restore(snapshotId: number) {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div class="drawer-backdrop" @mousedown.self="emit('close')">
-      <div class="drawer-backdrop-bg" @click="emit('close')" />
-      <div class="drawer">
-        <div class="drawer-header">
-          <h2 class="drawer-title">{{ t('la.history.title') }}</h2>
-          <button type="button" class="drawer-close" @click="emit('close')">&times;</button>
-        </div>
+  <BaseModal max-width="max-w-2xl" labelled-by="la-history-drawer-title" @close="emit('close')">
+    <div class="drawer">
+      <div class="drawer-header">
+        <h2 id="la-history-drawer-title" class="drawer-title">{{ t('la.history.title') }}</h2>
+        <button type="button" class="drawer-close" @click="emit('close')">&times;</button>
+      </div>
 
         <div class="drawer-tabs">
           <button
@@ -186,23 +185,10 @@ async function restore(snapshotId: number) {
           </template>
         </div>
       </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>
 
 <style scoped>
-.drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 55;
-}
-
-.drawer-backdrop-bg {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.3);
-}
-
 .drawer {
   position: absolute;
   top: 0;

@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 
+import BaseModal from '@/components/common/BaseModal.vue'
+
 const props = withDefaults(
   defineProps<{
     mode: 'create' | 'edit'
@@ -87,15 +89,11 @@ function submit() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-      @mousedown.self="emit('close')"
-    >
-      <div class="w-full max-w-2xl rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
-        <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
-          <div>
-            <h3 class="font-semibold text-light">{{ mode === 'edit' ? t('admin.institutions.editCourse') : t('admin.institutions.addCourse') }}</h3>
+  <BaseModal max-width="max-w-2xl" labelled-by="partner-course-form-title" @close="emit('close')">
+    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
+        <div>
+          <h3 id="partner-course-form-title" class="font-semibold text-light">{{ mode === 'edit' ? t('admin.institutions.editCourse') : t('admin.institutions.addCourse') }}</h3>
             <p v-if="institutionName" class="mt-0.5 text-xs text-light/40">{{ institutionName }}</p>
           </div>
           <button type="button" class="text-light/40 transition hover:text-white" @click="emit('close')">
@@ -198,6 +196,5 @@ function submit() {
           </button>
         </div>
       </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

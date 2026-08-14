@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { PartnerCourseResponse } from '@/types/institution.types'
+import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps<{ courses: PartnerCourseResponse[]; saving: boolean }>()
 const emit = defineEmits<{ submit: [primaryId: string]; close: [] }>()
@@ -12,15 +13,11 @@ const primaryId = ref(props.courses[0]!.id)
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-      @mousedown.self="emit('close')"
-    >
-      <div class="w-full max-w-md rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
-        <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
-          <div>
-            <h3 class="font-semibold text-light">{{ t('admin.institutions.mergeCourses') }}</h3>
+  <BaseModal max-width="max-w-md" labelled-by="merge-courses-title" @close="emit('close')">
+    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
+        <div>
+          <h3 id="merge-courses-title" class="font-semibold text-light">{{ t('admin.institutions.mergeCourses') }}</h3>
             <p class="mt-0.5 text-xs text-light/40">{{ t('admin.institutions.mergeDescription') }}</p>
           </div>
           <button type="button" class="text-light/40 transition hover:text-white" @click="emit('close')">
@@ -61,6 +58,5 @@ const primaryId = ref(props.courses[0]!.id)
           </button>
         </div>
       </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>
