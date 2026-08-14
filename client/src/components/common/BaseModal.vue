@@ -1,3 +1,12 @@
+<script lang="ts">
+// Module scope (shared by every BaseModal instance, not per-instance): with
+// several modals stacked (e.g. a confirm dialog on top of another modal),
+// only the topmost one should react to Escape/Tab. All instances' listeners
+// sit on the same `document` node, so stopPropagation() alone can't stop an
+// older sibling listener that already fired — see onKeydown below.
+const modalStack: symbol[] = []
+</script>
+
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, nextTick, ref } from 'vue'
 
@@ -16,6 +25,8 @@ const emit = defineEmits<{ close: [] }>()
 const panel = ref<HTMLElement | null>(null)
 let previouslyFocused: HTMLElement | null = null
 
+const id = Symbol('modal')
+
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
 
@@ -24,8 +35,10 @@ function focusables(): HTMLElement[] {
 }
 
 function onKeydown(event: KeyboardEvent) {
+  if (modalStack[modalStack.length - 1] !== id) return // not topmost — let it own the event
+
   if (event.key === 'Escape') {
-    event.stopPropagation()
+    event.stopImmediatePropagation()
     emit('close')
     return
   }
@@ -52,6 +65,7 @@ function onKeydown(event: KeyboardEvent) {
 
 onMounted(async () => {
   previouslyFocused = document.activeElement as HTMLElement | null
+  modalStack.push(id)
   // Capture phase: a nested dialog closes before its parent sees the Escape.
   document.addEventListener('keydown', onKeydown, true)
   await nextTick()
@@ -60,6 +74,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown, true)
+  modalStack.splice(modalStack.indexOf(id), 1)
   previouslyFocused?.focus()
 })
 </script>
