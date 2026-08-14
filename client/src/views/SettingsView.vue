@@ -195,7 +195,7 @@ async function save() {
         </div>
 
         <!-- Success -->
-        <p v-if="success" class="mt-3 text-sm text-green-400">{{ t('settings.saveSuccess') }}</p>
+        <p v-if="success" class="mt-3 text-sm text-success">{{ t('settings.saveSuccess') }}</p>
         <!-- Error -->
         <p v-if="errorMsg" class="mt-3 text-sm text-red-400">{{ errorMsg }}</p>
       </div>

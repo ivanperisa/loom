@@ -91,9 +91,9 @@ async function reRequestCoordinatorRole() {
       <!-- Rejected coordinator request banner -->
       <div
         v-if="coordinatorRequestStatus === documentStatus.Rejected"
-        class="mt-6 flex items-center justify-between rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3"
+        class="mt-6 flex items-center justify-between rounded-lg border border-danger/40 bg-danger/10 px-4 py-3"
       >
-        <span class="text-sm text-red-300">{{ t('home.coordinatorRequestRejected') }}</span>
+        <span class="text-sm text-danger">{{ t('home.coordinatorRequestRejected') }}</span>
         <button
           type="button"
           class="ml-4 rounded-lg border border-primary/50 px-4 py-1.5 text-xs font-semibold text-primary-light transition hover:bg-primary/20 disabled:opacity-50"

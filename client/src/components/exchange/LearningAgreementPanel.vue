@@ -422,7 +422,7 @@ function cancelEditEcts() {
           <button
             v-else-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Approved"
             type="button"
-            class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
+            class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-muted transition hover:bg-slate-700/40"
             @click="backToDraft"
           >
             {{ t('exchange.actions.backToDraft') }}
@@ -612,7 +612,7 @@ function cancelEditEcts() {
         />
       </div>
       <div class="min-w-0 basis-[40%] rounded-xl border border-primary/20 bg-dark-2 p-4">
-        <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-green-400">
+        <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-success">
           <span>{{ t('partnerCourses.mappedCourses') }}</span>
           <span class="text-xs font-normal text-light/60">{{ totalAwardedEcts }} / {{ mappedCoursesPanel?.mappedCoursesTotalEcts ?? 0 }} ECTS</span>
         </h3>

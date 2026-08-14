@@ -202,7 +202,7 @@ async function submit() {
                   :class="
                     studySemesters.includes(s)
                       ? 'border-primary bg-primary/10 text-white'
-                      : 'border-white/10 bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                      : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-white'
                   "
                   @click="toggleStudySemester(s)"
                 >
@@ -219,7 +219,7 @@ async function submit() {
                   :class="
                     isPairSelected(pair)
                       ? 'border-primary bg-primary/10 text-white'
-                      : 'border-white/10 bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                      : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-white'
                   "
                   @click="selectPair(pair)"
                 >
@@ -244,7 +244,7 @@ async function submit() {
                 :class="
                   semesterType === sem
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-white/10 bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-white'
                 "
                 @click="setSemesterType(sem)"
               >
@@ -260,7 +260,7 @@ async function submit() {
                 <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
                 <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               </svg>
-              <p class="text-xs text-amber-300">
+              <p class="text-xs text-info">
                 {{ t('exchange.editLockedByLa') }}<br />
                 {{ t('exchange.editLockedByLaHint') }}
               </p>
@@ -310,7 +310,7 @@ async function submit() {
           />
         </div>
 
-        <p v-if="errorMessage" class="text-sm text-red-300">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="text-sm text-danger">{{ errorMessage }}</p>
       </div>
 
       <!-- Footer -->

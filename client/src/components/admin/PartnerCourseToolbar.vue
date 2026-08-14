@@ -57,7 +57,7 @@ const { t } = useI18n()
       </button>
       <button
         type="button"
-        class="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-light/60 transition hover:text-light"
+        class="shrink-0 rounded-lg border border-hairline px-3 py-1.5 text-xs text-light/60 transition hover:text-light"
         @click="emit('cancel-merge')"
       >
         {{ t('admin.institutions.cancel') }}

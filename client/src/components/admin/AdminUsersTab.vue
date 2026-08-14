@@ -242,7 +242,7 @@ function formatDate(iso: string) {
             >{{ t('admin.requests.approve') }}</button>
             <button
               type="button"
-              class="rounded-lg border border-red-400/40 px-4 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+              class="rounded-lg border border-danger/40 px-4 py-1.5 text-xs font-medium text-danger transition hover:bg-danger/20 disabled:opacity-50"
               :disabled="actionLoadingId === req.id"
               @click="reject(req.id)"
             >{{ t('admin.requests.reject') }}</button>
@@ -268,13 +268,13 @@ function formatDate(iso: string) {
             <span class="ml-1 font-normal normal-case tracking-normal text-light/30">({{ admins.length }})</span>
           </p>
           <p v-if="admins.length === 0" class="text-sm text-light/40">{{ t('admin.users.empty') }}</p>
-          <div v-else class="divide-y divide-white/5 rounded-xl bg-dark">
+          <div v-else class="divide-y divide-hairline-soft rounded-xl bg-dark">
             <div v-for="u in admins" :key="u.id" class="flex items-center justify-between px-4 py-3">
               <div>
                 <span class="text-sm font-medium text-light">{{ u.name }}</span>
                 <span class="ml-2 text-xs text-light/50">{{ u.email }}</span>
               </div>
-              <span class="rounded-full border border-purple-400/40 bg-purple-500/10 px-2.5 py-0.5 text-xs font-semibold text-purple-300">
+              <span class="rounded-full border border-violet/40 bg-violet/10 px-2.5 py-0.5 text-xs font-semibold text-violet">
                 {{ t('admin.users.role.Admin') }}
               </span>
             </div>
@@ -288,7 +288,7 @@ function formatDate(iso: string) {
             <span class="ml-1 font-normal normal-case tracking-normal text-light/30">({{ coordinators.length }})</span>
           </p>
           <p v-if="coordinators.length === 0" class="text-sm text-light/40">{{ t('admin.users.empty') }}</p>
-          <div v-else class="divide-y divide-white/5 rounded-xl bg-dark">
+          <div v-else class="divide-y divide-hairline-soft rounded-xl bg-dark">
             <div v-for="u in coordinators" :key="u.id" class="flex items-center justify-between px-4 py-3">
               <div>
                 <span class="text-sm font-medium text-light">{{ u.name }}</span>
@@ -297,7 +297,7 @@ function formatDate(iso: string) {
               <div class="relative" data-menu-anchor>
                 <button
                   type="button"
-                  class="flex h-7 w-7 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-white/10 hover:text-light"
+                  class="flex h-7 w-7 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-fill hover:text-light"
                   :aria-expanded="openMenuId === u.id"
                   @click.stop="toggleMenu(u.id)"
                 >⋯</button>
@@ -317,7 +317,7 @@ function formatDate(iso: string) {
                   </button>
                   <button
                     type="button"
-                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-danger transition hover:bg-danger/20 disabled:opacity-50"
                     :disabled="userActionId === u.id"
                     @click.stop="removeCoordinatorFromList(u.id); openMenuId = null"
                   >
@@ -347,7 +347,7 @@ function formatDate(iso: string) {
             @update:model-value="onStudentSearch"
           />
           <p v-if="filteredStudents.length === 0" class="text-sm text-light/40">{{ t('admin.users.empty') }}</p>
-          <div v-else class="divide-y divide-white/5 rounded-xl bg-dark">
+          <div v-else class="divide-y divide-hairline-soft rounded-xl bg-dark">
             <div v-for="u in students" :key="u.id" class="flex items-center justify-between px-4 py-3">
               <div class="min-w-0">
                 <div class="flex items-baseline gap-2">
@@ -362,12 +362,12 @@ function formatDate(iso: string) {
                 >{{ t('admin.users.coordinatorRequest') }}</span>
                 <span
                   v-else-if="!u.email"
-                  class="whitespace-nowrap rounded-full border border-yellow-400/30 bg-yellow-500/10 px-2.5 py-0.5 text-[11px] font-medium text-yellow-300"
+                  class="whitespace-nowrap rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-[11px] font-medium text-warning"
                 >{{ t('admin.users.notOnboarded') }}</span>
               <div class="relative" data-menu-anchor>
                 <button
                   type="button"
-                  class="flex h-7 w-7 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-white/10 hover:text-light"
+                  class="flex h-7 w-7 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-fill hover:text-light"
                   :aria-expanded="openMenuId === u.id"
                   @click.stop="toggleMenu(u.id)"
                 >⋯</button>
@@ -407,14 +407,14 @@ function formatDate(iso: string) {
             <div class="flex gap-1">
               <button
                 type="button"
-                class="rounded-lg border border-white/10 px-3 py-1.5 transition hover:bg-white/5 disabled:opacity-30"
+                class="rounded-lg border border-hairline px-3 py-1.5 transition hover:bg-fill-soft disabled:opacity-30"
                 :disabled="studentPage === 1"
                 @click="studentPage--"
               >←</button>
               <span class="flex items-center px-2">{{ studentPage }} / {{ totalStudentPages }}</span>
               <button
                 type="button"
-                class="rounded-lg border border-white/10 px-3 py-1.5 transition hover:bg-white/5 disabled:opacity-30"
+                class="rounded-lg border border-hairline px-3 py-1.5 transition hover:bg-fill-soft disabled:opacity-30"
                 :disabled="studentPage === totalStudentPages"
                 @click="studentPage++"
               >→</button>
@@ -446,7 +446,7 @@ function formatDate(iso: string) {
         >{{ addingEmail ? t('common.loading') : t('admin.whitelist.add') }}</button>
       </div>
 
-      <p v-if="errorMessage" class="mb-4 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+      <p v-if="errorMessage" class="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
         {{ errorMessage }}
       </p>
 
@@ -454,7 +454,7 @@ function formatDate(iso: string) {
         <div v-for="i in 3" :key="i" class="h-12 animate-pulse rounded-xl bg-dark"></div>
       </div>
       <p v-else-if="whitelist.length === 0" class="text-sm text-light/50">{{ t('admin.whitelist.empty') }}</p>
-      <div v-else class="divide-y divide-white/5 rounded-xl bg-dark">
+      <div v-else class="divide-y divide-hairline-soft rounded-xl bg-dark">
         <div
           v-for="entry in whitelist"
           :key="entry.id"
@@ -465,7 +465,7 @@ function formatDate(iso: string) {
           </div>
           <button
             type="button"
-            class="flex h-7 w-7 items-center justify-center rounded-lg border border-red-400/20 text-red-400/60 transition hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
+            class="flex h-7 w-7 items-center justify-center rounded-lg border border-danger/20 text-red-400/60 transition hover:border-danger/50 hover:bg-danger/10 hover:text-danger disabled:opacity-40"
             :disabled="whitelistActionEmail === entry.email"
             :title="t('admin.whitelist.remove')"
             @click="removeEmail(entry.email)"

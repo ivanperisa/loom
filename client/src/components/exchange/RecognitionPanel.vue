@@ -169,7 +169,7 @@ function doExport() {
             <button
               v-if="exchangeStore.serverRecognition!.status === documentStatus.Approved"
               type="button"
-              class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
+              class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-muted transition hover:bg-slate-700/40"
               @click="backToRecognitionDraft"
             >
               {{ t('recognition.actions.backToDraft') }}

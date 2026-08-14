@@ -152,7 +152,7 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
       </button>
     </div>
 
-    <p v-if="error" class="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+    <p v-if="error" class="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
       {{ error }}
     </p>
 
@@ -204,14 +204,14 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
     <div v-if="totalInstPages > 1" class="flex items-center justify-center gap-3 text-sm text-light/50">
       <button
         type="button"
-        class="rounded-lg border border-white/10 px-3 py-1.5 transition hover:text-light disabled:opacity-30"
+        class="rounded-lg border border-hairline px-3 py-1.5 transition hover:text-light disabled:opacity-30"
         :disabled="institutionPage <= 1"
         @click="institutionPage--"
       >←</button>
       <span>{{ institutionPage }} / {{ totalInstPages }}</span>
       <button
         type="button"
-        class="rounded-lg border border-white/10 px-3 py-1.5 transition hover:text-light disabled:opacity-30"
+        class="rounded-lg border border-hairline px-3 py-1.5 transition hover:text-light disabled:opacity-30"
         :disabled="institutionPage >= totalInstPages"
         @click="institutionPage++"
       >→</button>

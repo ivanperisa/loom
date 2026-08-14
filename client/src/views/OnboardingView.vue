@@ -160,7 +160,7 @@ async function logout() {
         <div class="flex items-center gap-3">
           <button
             type="button"
-            class="flex h-9 w-9 items-center justify-center rounded-lg text-light/70 transition hover:bg-white/5 hover:text-white"
+            class="flex h-9 w-9 items-center justify-center rounded-lg text-light/70 transition hover:bg-fill-soft hover:text-white"
             @click="toggleTheme"
           >
             <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,7 +175,7 @@ async function logout() {
           <LocaleSwitcher variant="compact" />
           <button
             type="button"
-            class="text-sm font-semibold text-light transition hover:text-red-300"
+            class="text-sm font-semibold text-light transition hover:text-danger"
             @click="logout"
           >
             {{ t('common.signOut') }}
@@ -204,7 +204,7 @@ async function logout() {
               </template>
               <template v-else>{{ index + 1 }}</template>
             </div>
-            <span class="text-sm" :class="index + 1 <= currentStep ? 'text-light' : 'text-slate-400'">
+            <span class="text-sm" :class="index + 1 <= currentStep ? 'text-light' : 'text-faint'">
               {{ t(step.key) }}
             </span>
             <div v-if="index < steps.length - 1" class="h-px w-10 bg-slate-600"></div>
@@ -227,7 +227,7 @@ async function logout() {
 
           <p
             v-if="errorMessage"
-            class="mt-4 rounded-lg border border-red-400/50 bg-red-500/10 px-4 py-2 text-sm text-red-200"
+            class="mt-4 rounded-lg border border-danger/50 bg-danger/10 px-4 py-2 text-sm text-red-200"
           >
             {{ errorMessage }}
           </p>
@@ -269,14 +269,14 @@ async function logout() {
 
             <!-- Search -->
             <div class="relative">
-              <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
                 v-model="institutionSearch"
                 type="text"
                 :placeholder="t('onboarding.searchInstitution')"
-                class="w-full rounded-xl border border-primary/20 bg-dark py-2.5 pl-9 pr-4 text-sm text-light placeholder-slate-500 focus:border-primary focus:outline-none"
+                class="w-full rounded-xl border border-primary/20 bg-dark py-2.5 pl-9 pr-4 text-sm text-light placeholder-faint focus:border-primary focus:outline-none"
               />
             </div>
 
@@ -288,7 +288,7 @@ async function logout() {
             </template>
             <template v-else>
               <div class="space-y-2 overflow-y-auto" style="max-height: 280px">
-                <p v-if="filteredInstitutions.length === 0" class="py-6 text-center text-sm text-slate-500">
+                <p v-if="filteredInstitutions.length === 0" class="py-6 text-center text-sm text-faint">
                   {{ t('onboarding.noInstitutions') }}
                 </p>
                 <button
@@ -306,13 +306,13 @@ async function logout() {
                   <div class="flex items-center justify-between gap-3">
                     <div class="min-w-0">
                       <p class="truncate text-sm font-medium">{{ localizedName(inst) }}</p>
-                      <p v-if="inst.city || inst.erasmusCode" class="mt-0.5 truncate text-xs text-slate-400">
+                      <p v-if="inst.city || inst.erasmusCode" class="mt-0.5 truncate text-xs text-faint">
                         <template v-if="inst.city">{{ inst.city }}</template>
                         <template v-if="inst.city && inst.erasmusCode"> · </template>
                         <template v-if="inst.erasmusCode">{{ inst.erasmusCode }}</template>
                       </p>
                     </div>
-                    <span v-if="inst.country" class="flex-shrink-0 text-xs text-slate-500">{{ inst.country }}</span>
+                    <span v-if="inst.country" class="flex-shrink-0 text-xs text-faint">{{ inst.country }}</span>
                   </div>
                 </button>
               </div>
@@ -339,7 +339,7 @@ async function logout() {
           <div class="mt-8 flex items-center justify-between">
             <button
               type="button"
-              class="rounded-lg border border-slate-500 px-4 py-2 text-sm text-slate-200 transition hover:bg-slate-700/40 disabled:opacity-40"
+              class="rounded-lg border border-slate-500 px-4 py-2 text-sm text-muted transition hover:bg-slate-700/40 disabled:opacity-40"
               :disabled="currentStep === 1 || isSubmitting"
               @click="goBack"
             >

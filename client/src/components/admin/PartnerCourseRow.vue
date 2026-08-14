@@ -60,7 +60,7 @@ function semesterLabel(semester: string) {
       <div class="flex min-w-0 items-center gap-2">
         <button
           type="button"
-          class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-light/30 transition hover:bg-white/10 hover:text-light"
+          class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-light/30 transition hover:bg-fill hover:text-light"
           :title="t('admin.institutions.usage.toggle')"
           @click="toggleUsage"
         >
@@ -80,7 +80,7 @@ function semesterLabel(semester: string) {
           <div class="min-w-0">
             <span class="text-xs text-light">{{ course.name }}</span>
             <span v-if="course.nameHr" class="ml-2 text-xs text-light/40">/ {{ course.nameHr }}</span>
-            <span v-if="course.isDeleted" class="ml-2 rounded border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">{{ t('admin.institutions.deleted') }}</span>
+            <span v-if="course.isDeleted" class="ml-2 rounded border border-red-400/30 bg-danger/10 px-1.5 py-0.5 text-[10px] text-danger">{{ t('admin.institutions.deleted') }}</span>
           </div>
           <a
             v-if="course.url"
@@ -98,13 +98,13 @@ function semesterLabel(semester: string) {
         </div>
       </div>
       <div class="flex flex-shrink-0 items-center gap-3 text-xs text-light/40">
-        <span class="w-28 flex-shrink-0 truncate rounded bg-white/5 px-2 py-0.5 text-left text-xs text-light/40">{{ semesterLabel(course.semester) }}</span>
-        <span class="w-28 flex-shrink-0 truncate rounded bg-white/5 px-2 py-0.5 text-left text-xs text-light/40">{{ levelLabel(course.level) }}</span>
+        <span class="w-28 flex-shrink-0 truncate rounded bg-fill-soft px-2 py-0.5 text-left text-xs text-light/40">{{ semesterLabel(course.semester) }}</span>
+        <span class="w-28 flex-shrink-0 truncate rounded bg-fill-soft px-2 py-0.5 text-left text-xs text-light/40">{{ levelLabel(course.level) }}</span>
         <span class="font-medium text-light/60">{{ course.ects }} ECTS</span>
         <button
           v-if="course.isDeleted"
           type="button"
-          class="rounded border border-green-400/30 px-2 py-0.5 text-xs font-medium text-green-300 transition hover:bg-green-500/10 disabled:opacity-40"
+          class="rounded border border-green-400/30 px-2 py-0.5 text-xs font-medium text-success transition hover:bg-green-500/10 disabled:opacity-40"
           :disabled="busy"
           @click="emit('restore', course.id)"
         >
@@ -123,7 +123,7 @@ function semesterLabel(semester: string) {
           </button>
           <button
             type="button"
-            class="flex h-6 w-6 items-center justify-center rounded text-red-400/50 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
+            class="flex h-6 w-6 items-center justify-center rounded text-red-400/50 transition hover:bg-danger/10 hover:text-danger disabled:opacity-40"
             :disabled="busy"
             :title="t('admin.institutions.deleteCourse')"
             @click="emit('delete', course.id)"
@@ -138,7 +138,7 @@ function semesterLabel(semester: string) {
 
     <!-- Course usage detail -->
     <div v-if="expanded" class="py-1.5 pb-2.5 pl-7 pr-2 text-xs">
-      <div v-if="loadingUsage" class="h-4 w-32 animate-pulse rounded bg-white/5"></div>
+      <div v-if="loadingUsage" class="h-4 w-32 animate-pulse rounded bg-fill-soft"></div>
       <template v-else-if="usage">
         <p v-if="usage.exchangeCount === 0" class="text-light/30">
           {{ t('admin.institutions.usage.empty') }}
@@ -152,7 +152,7 @@ function semesterLabel(semester: string) {
             <div
               v-for="(group, gi) in usage.groups"
               :key="gi"
-              class="flex flex-wrap items-center justify-between gap-2 rounded bg-white/5 px-2 py-1"
+              class="flex flex-wrap items-center justify-between gap-2 rounded bg-fill-soft px-2 py-1"
             >
               <div class="min-w-0 text-light/70">
                 <span>{{ group.programName }} &middot; {{ group.profileName }}</span>
@@ -162,7 +162,7 @@ function semesterLabel(semester: string) {
                 </span>
               </div>
               <div class="flex shrink-0 flex-wrap items-center gap-1.5">
-                <span class="rounded bg-white/10 px-1.5 py-0.5 text-light/50">{{ group.exchangeCount }}&times;</span>
+                <span class="rounded bg-fill px-1.5 py-0.5 text-light/50">{{ group.exchangeCount }}&times;</span>
                 <span v-for="year in group.academicYears" :key="year" class="rounded bg-primary/10 px-1.5 py-0.5 text-primary-light">{{ year }}</span>
                 <span class="font-medium text-light/60">{{ group.totalAwardedEcts }} ECTS</span>
               </div>

@@ -77,7 +77,7 @@ async function save() {
         <div>
           <div class="flex items-center gap-2">
             <h3 id="admin-edit-user-title" class="font-semibold text-light">{{ t('admin.users.editUser') }}</h3>
-              <span class="rounded-full border border-white/10 px-1.5 py-0.5 text-[10px] text-light/30">{{ t(`admin.users.role.${user.role}`) }}</span>
+              <span class="rounded-full border border-hairline px-1.5 py-0.5 text-[10px] text-light/30">{{ t(`admin.users.role.${user.role}`) }}</span>
             </div>
             <p class="mt-0.5 text-xs text-light/40">{{ user.email }}</p>
           </div>
@@ -148,7 +148,7 @@ async function save() {
         <div class="flex justify-end gap-2 border-t border-primary/20 px-6 py-4">
           <button
             type="button"
-            class="rounded-lg border border-white/10 px-4 py-2 text-sm text-light/60 transition hover:text-light"
+            class="rounded-lg border border-hairline px-4 py-2 text-sm text-light/60 transition hover:text-light"
             @click="emit('close')"
           >{{ t('admin.users.editUserCancel') }}</button>
           <button

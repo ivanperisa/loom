@@ -322,7 +322,7 @@ function onExchangeCreated(exchangeGuid: string) {
       </div>
 
       <div v-else-if="error" class="rounded-xl border border-red-400/30 bg-red-900/20 p-8 text-center">
-        <p class="text-red-300">{{ error }}</p>
+        <p class="text-danger">{{ error }}</p>
       </div>
 
       <div v-else-if="filteredStudents.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
@@ -373,7 +373,7 @@ function onExchangeCreated(exchangeGuid: string) {
                     <span v-if="student.jmbag" class="truncate font-mono text-light/40">{{ student.jmbag }}</span>
                     <span
                       v-if="student.isPlaceholder"
-                      class="shrink-0 rounded-full border border-yellow-400/30 bg-yellow-500/10 px-2 py-0.5 text-[11px] font-medium text-yellow-300"
+                      class="shrink-0 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning"
                     >
                       {{ t('coordinator.placeholder') }}
                     </span>
@@ -387,7 +387,7 @@ function onExchangeCreated(exchangeGuid: string) {
                       <button
                         v-if="extraExchangeCount(student.id) > 0"
                         type="button"
-                        class="pointer-events-auto shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-light/60 transition hover:bg-primary hover:text-white"
+                        class="pointer-events-auto shrink-0 rounded-full bg-fill px-2 py-0.5 text-[11px] font-medium text-light/60 transition hover:bg-primary hover:text-white"
                         @click.stop="toggleMenu(student.id, $event)"
                       >
                         {{ t('coordinator.table.moreExchanges', { n: extraExchangeCount(student.id) }) }}
@@ -454,7 +454,7 @@ function onExchangeCreated(exchangeGuid: string) {
 
                 <button
                   type="button"
-                  class="pointer-events-auto flex h-7 w-7 items-center justify-center justify-self-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-white/10 hover:text-light"
+                  class="pointer-events-auto flex h-7 w-7 items-center justify-center justify-self-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-fill hover:text-light"
                   :aria-expanded="actionsMenuId === student.id"
                   aria-haspopup="true"
                   :aria-label="`${t('coordinator.table.actions')} — ${student.name}`"
@@ -485,7 +485,7 @@ function onExchangeCreated(exchangeGuid: string) {
             <div
               v-for="ex in openMenuExchanges"
               :key="ex.id"
-              class="flex cursor-pointer items-start justify-between gap-2 rounded-lg px-2 py-1.5 transition hover:bg-white/5"
+              class="flex cursor-pointer items-start justify-between gap-2 rounded-lg px-2 py-1.5 transition hover:bg-fill-soft"
               @click="viewExchange(ex.guid)"
             >
               <div class="flex min-w-0 items-start gap-2">
@@ -562,7 +562,7 @@ function onExchangeCreated(exchangeGuid: string) {
           <button
             v-if="actionsMenuStudent?.isPlaceholder && actionsMenuStudent?.isMyStudent"
             type="button"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-light transition hover:bg-white/5"
+            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-light transition hover:bg-fill-soft"
             @click="openEditStudent(actionsMenuStudent!)"
           >
             <svg class="h-3.5 w-3.5 text-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -584,7 +584,7 @@ function onExchangeCreated(exchangeGuid: string) {
           <button
             v-if="actionsMenuStudent?.isPlaceholder && actionsMenuStudent?.isMyStudent"
             type="button"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
+            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-danger transition hover:bg-danger/10 disabled:opacity-50"
             :disabled="deletingStudentId === actionsMenuStudent.id"
             @click="deleteStudent(actionsMenuStudent)"
           >

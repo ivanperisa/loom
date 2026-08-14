@@ -182,12 +182,12 @@ async function submitMerge(primaryId: string) {
 </script>
 
 <template>
-  <div class="border-t border-white/5 px-5 pb-4 pt-3">
+  <div class="border-t border-hairline-soft px-5 pb-4 pt-3">
     <div v-if="loading" class="space-y-1.5">
-      <div v-for="i in 3" :key="i" class="h-7 animate-pulse rounded bg-white/5"></div>
+      <div v-for="i in 3" :key="i" class="h-7 animate-pulse rounded bg-fill-soft"></div>
     </div>
     <template v-else>
-      <p v-if="error" class="mb-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+      <p v-if="error" class="mb-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
         {{ error }}
       </p>
 
@@ -209,7 +209,7 @@ async function submitMerge(primaryId: string) {
         {{ courseSearch ? t('admin.institutions.noResults') : t('admin.institutions.noCourses') }}
       </p>
       <div v-else>
-        <div class="divide-y divide-white/5">
+        <div class="divide-y divide-hairline-soft">
           <PartnerCourseRow
             v-for="course in pagedCourses"
             :key="course.id"

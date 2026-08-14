@@ -95,7 +95,7 @@ function logout() {
             <p class="font-semibold text-light">{{ displayName }}</p>
             <p class="truncate text-xs text-primary-light">{{ displayEmail }}</p>
 
-            <div class="my-2 border-t border-white/10"></div>
+            <div class="my-2 border-t border-hairline"></div>
 
             <!-- Language -->
             <LocaleSwitcher variant="list" />
@@ -103,7 +103,7 @@ function logout() {
             <!-- Theme toggle -->
             <button
               type="button"
-              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-white/5 hover:text-white"
+              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-fill-soft hover:text-white"
               @click="toggleTheme"
             >
               <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,7 +120,7 @@ function logout() {
             <button
               v-if="authStore.isAdmin"
               type="button"
-              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-white/5 hover:text-white"
+              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-fill-soft hover:text-white"
               @click="goAdmin"
             >
               <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +133,7 @@ function logout() {
 
             <button
               type="button"
-              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-red-300 transition hover:bg-red-500/10"
+              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-danger transition hover:bg-danger/10"
               @click="logout"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -14,12 +14,12 @@ defineEmits<{ save: []; discard: [] }>()
         <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
         <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span class="text-sm font-medium text-amber-300">{{ t('la.unsavedChanges') }}</span>
+      <span class="text-sm font-medium text-info">{{ t('la.unsavedChanges') }}</span>
     </div>
     <div class="flex gap-2">
       <button
         type="button"
-        class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700/40"
+        class="rounded-lg border border-slate-500 px-3 py-1.5 text-xs text-muted transition hover:bg-slate-700/40"
         :disabled="saving"
         @click="$emit('discard')"
       >

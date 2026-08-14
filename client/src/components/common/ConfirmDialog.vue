@@ -23,7 +23,7 @@ const { t } = useI18n()
       <div class="mt-5 flex justify-end gap-2">
         <button
           type="button"
-          class="rounded-lg border border-primary/20 px-4 py-1.5 text-sm text-light/70 transition hover:bg-white/5 hover:text-light"
+          class="rounded-lg border border-primary/20 px-4 py-1.5 text-sm text-light/70 transition hover:bg-fill-soft hover:text-light"
           @click="respond(false)"
         >
           {{ state.cancelLabel ?? t('common.cancel') }}

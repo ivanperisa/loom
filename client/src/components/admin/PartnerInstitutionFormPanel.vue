@@ -92,7 +92,7 @@ function submit() {
       >
         {{ saving ? t('common.loading') : (institution ? t('admin.institutions.saveEdit') : t('admin.institutions.save')) }}
       </button>
-      <button type="button" class="rounded-lg border border-white/10 px-4 py-2 text-sm text-light/60 transition hover:text-light" @click="emit('cancel')">
+      <button type="button" class="rounded-lg border border-hairline px-4 py-2 text-sm text-light/60 transition hover:text-light" @click="emit('cancel')">
         {{ t('admin.institutions.cancel') }}
       </button>
     </div>

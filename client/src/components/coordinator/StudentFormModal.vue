@@ -122,7 +122,7 @@ async function submit() {
         <div class="flex justify-end gap-2 border-t border-primary/20 px-6 py-4">
           <button
             type="button"
-            class="rounded-lg border border-white/10 px-4 py-2 text-sm text-light/60 transition hover:text-light"
+            class="rounded-lg border border-hairline px-4 py-2 text-sm text-light/60 transition hover:text-light"
             @click="emit('close')"
           >{{ t('coordinator.addStudentModal.cancel') }}</button>
           <button

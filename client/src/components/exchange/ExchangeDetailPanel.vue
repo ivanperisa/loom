@@ -255,7 +255,7 @@ onMounted(async () => {
           <div class="relative" data-menu-anchor>
             <button
               type="button"
-              class="flex h-8 w-8 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-white/10 hover:text-light"
+              class="flex h-8 w-8 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-fill hover:text-light"
               :aria-expanded="showActionsMenu"
               aria-haspopup="true"
               @click.stop="showActionsMenu = !showActionsMenu"
@@ -268,7 +268,7 @@ onMounted(async () => {
             >
               <button
                 type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-light transition hover:bg-white/5"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-light transition hover:bg-fill-soft"
                 @click="closeActionsMenu(); showEdit = true"
               >
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,7 +279,7 @@ onMounted(async () => {
               <button
                 v-if="canDelete"
                 type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-danger transition hover:bg-danger/10 disabled:opacity-50"
                 :disabled="deleting"
                 @click="closeActionsMenu(); confirmDelete()"
               >
@@ -379,7 +379,7 @@ onMounted(async () => {
     v-else-if="exchangeStore.error"
     class="rounded-xl border border-red-400/30 bg-red-900/20 p-6 text-center"
   >
-    <p class="text-red-300">{{ exchangeStore.error }}</p>
+    <p class="text-danger">{{ exchangeStore.error }}</p>
   </div>
 
   <NotesModal
@@ -422,7 +422,7 @@ onMounted(async () => {
       <div class="mt-5 flex justify-end gap-2">
         <button
           type="button"
-          class="rounded-lg border border-primary/20 px-4 py-1.5 text-sm text-light/70 transition hover:bg-white/5 hover:text-light"
+          class="rounded-lg border border-primary/20 px-4 py-1.5 text-sm text-light/70 transition hover:bg-fill-soft hover:text-light"
           @click="showEwpModal = false"
         >
           {{ t('common.cancel') }}

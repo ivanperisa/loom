@@ -30,7 +30,7 @@ const primaryId = ref(props.courses[0]!.id)
           <label
             v-for="course in courses"
             :key="course.id"
-            class="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-dark px-3 py-2.5 transition hover:border-primary/30"
+            class="flex cursor-pointer items-center gap-3 rounded-lg border border-hairline bg-dark px-3 py-2.5 transition hover:border-primary/30"
             :class="primaryId === course.id ? 'border-primary bg-primary/10' : ''"
           >
             <input type="radio" :value="course.id" v-model="primaryId" class="accent-primary" />
@@ -41,13 +41,13 @@ const primaryId = ref(props.courses[0]!.id)
             </div>
             <span
               class="shrink-0 rounded px-2 py-0.5 text-[11px] font-semibold"
-              :class="primaryId === course.id ? 'bg-primary/20 text-primary-light' : 'bg-red-500/10 text-red-300/70'"
+              :class="primaryId === course.id ? 'bg-primary/20 text-primary-light' : 'bg-danger/10 text-danger/70'"
             >{{ primaryId === course.id ? t('admin.institutions.mergeKeeps') : t('admin.institutions.mergeDeletes') }}</span>
           </label>
           <p class="pt-1 text-xs text-light/40">{{ t('admin.institutions.mergeHint') }}</p>
         </div>
         <div class="flex justify-end gap-2 border-t border-primary/20 px-6 py-4">
-          <button type="button" class="rounded-lg border border-white/10 px-4 py-2 text-sm text-light/60 transition hover:text-light" @click="emit('close')">{{ t('admin.institutions.cancel') }}</button>
+          <button type="button" class="rounded-lg border border-hairline px-4 py-2 text-sm text-light/60 transition hover:text-light" @click="emit('close')">{{ t('admin.institutions.cancel') }}</button>
           <button
             type="button"
             class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"

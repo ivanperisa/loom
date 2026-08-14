@@ -50,7 +50,7 @@ async function addCourse() {
           <div class="flex flex-wrap items-baseline gap-x-2">
             <p class="font-semibold text-light">{{ institution.name }}</p>
             <span v-if="institution.erasmusCode" class="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-xs text-primary-light">{{ institution.erasmusCode }}</span>
-            <span v-if="institution.isDeleted" class="rounded border border-red-400/30 bg-red-500/10 px-1.5 py-0.5 text-xs text-red-300">{{ t('admin.institutions.deleted') }}</span>
+            <span v-if="institution.isDeleted" class="rounded border border-red-400/30 bg-danger/10 px-1.5 py-0.5 text-xs text-danger">{{ t('admin.institutions.deleted') }}</span>
           </div>
           <p v-if="institution.nameHr && institution.nameHr !== institution.name" class="text-xs text-light/40">{{ institution.nameHr }}</p>
           <p class="mt-0.5 flex items-center gap-1 text-xs text-light/40">
@@ -74,13 +74,13 @@ async function addCourse() {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </button>
-          <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-red-400/20 text-red-400/60 transition hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40" :disabled="busy" :title="t('admin.institutions.deleteInstitution')" @click="emit('delete', institution.id)">
+          <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-danger/20 text-red-400/60 transition hover:border-danger/50 hover:bg-danger/10 hover:text-danger disabled:opacity-40" :disabled="busy" :title="t('admin.institutions.deleteInstitution')" @click="emit('delete', institution.id)">
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </template>
-        <button v-else type="button" class="rounded-lg border border-green-400/30 px-3 py-1.5 text-xs font-medium text-green-300 transition hover:bg-green-500/10 disabled:opacity-40" :disabled="busy" @click="emit('restore', institution.id)">
+        <button v-else type="button" class="rounded-lg border border-green-400/30 px-3 py-1.5 text-xs font-medium text-success transition hover:bg-green-500/10 disabled:opacity-40" :disabled="busy" @click="emit('restore', institution.id)">
           {{ t('admin.institutions.restore') }}
         </button>
       </div>

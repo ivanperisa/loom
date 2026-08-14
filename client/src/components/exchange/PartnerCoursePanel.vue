@@ -215,11 +215,11 @@ function semesterLabel(semester: string) {
                   <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
                 </svg>
               </a>
-              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
-              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
+              <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+              <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span
                 v-if="mappedEcts(course.id) > 0"
-                class="rounded px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300"
+                class="rounded px-2 py-0.5 text-xs font-semibold bg-info/20 text-info"
               >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
               <span v-else class="rounded bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary-light">
                 {{ course.ects }} ECTS
@@ -234,7 +234,7 @@ function semesterLabel(semester: string) {
                   <line x1="1" y1="6" x2="10" y2="6" /><polyline points="6,2 10,6 6,10" />
                 </svg>
               </button>
-              <span v-else :title="t('partnerCourses.stageAdded')" class="flex items-center justify-center w-6 h-6 rounded text-green-400">
+              <span v-else :title="t('partnerCourses.stageAdded')" class="flex items-center justify-center w-6 h-6 rounded text-success">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="2,6 5,9 10,3" />
                 </svg>
@@ -254,7 +254,7 @@ function semesterLabel(semester: string) {
             :class="
               mappedEcts(course.id) === 0
                 ? 'border border-dashed border-light/20 bg-dark-2'
-                : 'border border-green-500/30 bg-green-900/10'
+                : 'border border-success/30 bg-success/10'
             "
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
@@ -284,16 +284,16 @@ function semesterLabel(semester: string) {
                   <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
                 </svg>
               </a>
-              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
-              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
+              <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+              <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span
                 class="rounded px-2 py-0.5 text-xs font-semibold"
                 :class="
                   mappedEcts(course.id) === 0
                     ? 'bg-light/10 text-light/40'
                     : mappedEcts(course.id) >= course.ects
-                      ? 'bg-green-500/20 text-green-300'
-                      : 'bg-amber-500/20 text-amber-300'
+                      ? 'bg-success/20 text-success'
+                      : 'bg-info/20 text-info'
                 "
               >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
               <button
