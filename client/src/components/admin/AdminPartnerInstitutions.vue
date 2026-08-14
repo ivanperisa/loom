@@ -158,6 +158,7 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
 
     <PartnerInstitutionFormPanel
       v-if="showAddInstitution"
+      :key="editingInstitutionId ?? ''"
       :institution="editingInstitution"
       :saving="addingInstitution"
       @submit="submitInstitutionForm"
