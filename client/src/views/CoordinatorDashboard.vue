@@ -13,9 +13,11 @@ import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import StudentFormModal from '@/components/coordinator/StudentFormModal.vue'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
+import SortableHeader from '@/components/common/SortableHeader.vue'
 import { useNotification } from '@/composables/useNotification'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { useSortable } from '@/composables/useSortable'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -112,13 +114,6 @@ function lastName(name: string): string {
   return name.trim().split(/\s+/).pop() ?? name
 }
 
-function studentNameComparator(a: CoordinatorStudentResponse, b: CoordinatorStudentResponse): number {
-  return (
-    lastName(a.name).localeCompare(lastName(b.name), locale.value) ||
-    a.name.localeCompare(b.name, locale.value)
-  )
-}
-
 const filteredStudents = computed(() => {
   let list = students.value
   if (selectedAcademicYear.value || selectedPartnerInstitution.value) {
@@ -135,8 +130,21 @@ const filteredStudents = computed(() => {
         ),
     )
   }
-  return list.slice().sort(studentNameComparator)
+  return list
 })
+
+const { sortKey, sortDir, toggleSort, sorted: sortedStudents } = useSortable(
+  filteredStudents,
+  {
+    student: (s) => lastName(s.name),
+    exchange: (s) => primaryExchangeByStudent.value.get(s.id)?.partnerInstitutionName ?? null,
+    period: (s) => primaryExchangeByStudent.value.get(s.id)?.academicYear ?? null,
+    status: (s) => primaryExchangeByStudent.value.get(s.id)?.learningAgreementStatus ?? null,
+  },
+  'student',
+  'asc',
+  locale,
+)
 
 async function fetchData() {
   closeMenu()
@@ -245,7 +253,6 @@ function onStudentSaved(student: CoordinatorStudentResponse) {
   } else {
     students.value.push(student)
   }
-  students.value.sort(studentNameComparator)
   showStudentModal.value = false
 }
 
@@ -340,16 +347,16 @@ function onExchangeCreated(exchangeGuid: string) {
         <div class="min-w-[860px]">
           <!-- Header row -->
           <div class="coord-row-grid gap-4 border-b border-primary/20 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-light/40">
-            <span>{{ t('coordinator.table.student') }}</span>
-            <span>{{ t('coordinator.table.exchange') }}</span>
-            <span class="text-center">{{ t('coordinator.table.period') }}</span>
-            <span class="text-center">{{ t('coordinator.table.learningAgreement') }}</span>
+            <SortableHeader :label="t('coordinator.table.student')" sort-key="student" :active-key="sortKey" :dir="sortDir" @sort="toggleSort" />
+            <SortableHeader :label="t('coordinator.table.exchange')" sort-key="exchange" :active-key="sortKey" :dir="sortDir" @sort="toggleSort" />
+            <SortableHeader class="justify-center" :label="t('coordinator.table.period')" sort-key="period" :active-key="sortKey" :dir="sortDir" @sort="toggleSort" />
+            <SortableHeader class="justify-center" :label="t('coordinator.table.learningAgreement')" sort-key="status" :active-key="sortKey" :dir="sortDir" @sort="toggleSort" />
             <span></span>
             <span></span>
           </div>
 
           <div class="divide-y divide-primary/10">
-            <div v-for="student in filteredStudents" :key="student.id" class="group relative" data-menu-anchor>
+            <div v-for="student in sortedStudents" :key="student.id" class="group relative" data-menu-anchor>
               <!-- Stretched link: click anywhere on the row to open its primary exchange -->
               <RouterLink
                 v-if="primaryExchangeByStudent.get(student.id)"
