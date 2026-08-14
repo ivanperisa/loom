@@ -312,7 +312,7 @@ async function apply() {
 }
 
 .import-table-wrap {
-  overflow-y: auto;
+  overflow: auto;
   flex: 1;
 }
 
