@@ -39,10 +39,10 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
 
         if (!string.IsNullOrWhiteSpace(paging.Search))
         {
-            var term = $"%{paging.Search.Trim()}%";
+            var term = $"%{paging.Search.Trim().ToLower()}%";
             query = query.Where(u =>
-                EF.Functions.ILike(u.Name, term) ||
-                (u.Jmbag != null && EF.Functions.ILike(u.Jmbag, term)));
+                EF.Functions.Like(u.Name.ToLower(), term) ||
+                (u.Jmbag != null && EF.Functions.Like(u.Jmbag.ToLower(), term)));
         }
 
         var totalCount = await query.CountAsync(ct);

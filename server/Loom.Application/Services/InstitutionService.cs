@@ -43,12 +43,12 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
 
         if (!string.IsNullOrWhiteSpace(paging.Search))
         {
-            var term = $"%{paging.Search.Trim()}%";
+            var term = $"%{paging.Search.Trim().ToLower()}%";
             query = query.Where(i =>
-                EF.Functions.ILike(i.Name, term) ||
-                (i.NameHr != null && EF.Functions.ILike(i.NameHr, term)) ||
-                (i.City != null && EF.Functions.ILike(i.City, term)) ||
-                (i.ErasmusCode != null && EF.Functions.ILike(i.ErasmusCode, term)));
+                EF.Functions.Like(i.Name.ToLower(), term) ||
+                (i.NameHr != null && EF.Functions.Like(i.NameHr.ToLower(), term)) ||
+                (i.City != null && EF.Functions.Like(i.City.ToLower(), term)) ||
+                (i.ErasmusCode != null && EF.Functions.Like(i.ErasmusCode.ToLower(), term)));
         }
 
         var totalCount = await query.CountAsync(ct);
@@ -73,11 +73,11 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
 
         if (!string.IsNullOrWhiteSpace(paging.Search))
         {
-            var term = $"%{paging.Search.Trim()}%";
+            var term = $"%{paging.Search.Trim().ToLower()}%";
             query = query.Where(c =>
-                EF.Functions.ILike(c.Code, term) ||
-                EF.Functions.ILike(c.Name, term) ||
-                (c.NameHr != null && EF.Functions.ILike(c.NameHr, term)));
+                EF.Functions.Like(c.Code.ToLower(), term) ||
+                EF.Functions.Like(c.Name.ToLower(), term) ||
+                (c.NameHr != null && EF.Functions.Like(c.NameHr.ToLower(), term)));
         }
 
         var totalCount = await query.CountAsync(ct);
