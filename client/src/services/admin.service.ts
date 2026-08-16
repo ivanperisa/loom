@@ -38,7 +38,7 @@ export interface CoordinatorWhitelistEntryResponse {
 }
 
 export const adminService = {
-  getAllUsers: (params: PagedParams = {}) =>
+  getAllUsers: (params: PagedParams & { role?: string } = {}) =>
     api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params }),
 
   getCoordinatorRequests: () =>

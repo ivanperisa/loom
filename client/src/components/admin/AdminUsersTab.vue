@@ -18,7 +18,8 @@ const { confirm } = useConfirm()
 
 const requests = ref<CoordinatorRequestResponse[]>([])
 const whitelist = ref<CoordinatorWhitelistEntryResponse[]>([])
-const staffUsers = ref<UserListResponse[]>([])
+const admins = ref<UserListResponse[]>([])
+const coordinators = ref<UserListResponse[]>([])
 const newEmail = ref('')
 const coordinatorsList = ref<CoordinatorOption[]>([])
 const institutionsList = ref<InstitutionResponse[]>([])
@@ -41,15 +42,12 @@ function openEditDialog(user: UserListResponse) {
 }
 
 function onUserSaved(updated: UserListResponse) {
-  const staffIdx = staffUsers.value.findIndex(u => u.id === updated.id)
-  if (staffIdx !== -1) staffUsers.value[staffIdx] = updated
-  const studentIdx = students.value.findIndex(u => u.id === updated.id)
-  if (studentIdx !== -1) students.value[studentIdx] = updated
+  for (const list of [admins.value, coordinators.value, students.value]) {
+    const idx = list.findIndex(u => u.id === updated.id)
+    if (idx !== -1) list[idx] = updated
+  }
   editingUser.value = null
 }
-
-const admins = computed(() => staffUsers.value.filter(u => u.role === userRole.Admin))
-const coordinators = computed(() => staffUsers.value.filter(u => u.role === userRole.Coordinator))
 
 const studentSearch = ref('')
 const debouncedStudentSearch = useDebouncedRef(studentSearch)
@@ -69,7 +67,7 @@ function handleOutsideClick(e: MouseEvent) {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchRequests(), fetchWhitelist(), fetchStaffUsers(), fetchStudents(), fetchCoordinators(), fetchInstitutions()])
+  await Promise.all([fetchRequests(), fetchWhitelist(), fetchAdmins(), fetchCoordinators(), fetchStudents(), fetchInstitutions()])
   document.addEventListener('click', handleOutsideClick)
 })
 
@@ -85,27 +83,25 @@ watch([studentPage, debouncedStudentSearch], ([newPage, newSearch], [, oldSearch
   fetchStudents()
 })
 
-async function fetchStaffUsers() {
-  const res = await adminService.getAllUsers({ pageSize: 200 })
-  staffUsers.value = res.data.items
+async function fetchAdmins() {
+  const res = await adminService.getAllUsers({ pageSize: 200, role: userRole.Admin })
+  admins.value = res.data.items
+}
+
+async function fetchCoordinators() {
+  const res = await adminService.getAllUsers({ pageSize: 200, role: userRole.Coordinator })
+  coordinators.value = res.data.items
 }
 
 async function fetchStudents() {
   loadingUsers.value = true
   try {
-    const res = await adminService.getAllUsers({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value })
-    students.value = res.data.items.filter(u => u.role === userRole.Student)
+    const res = await adminService.getAllUsers({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, role: userRole.Student })
+    students.value = res.data.items
     studentsTotalCount.value = res.data.totalCount
   } finally {
     loadingUsers.value = false
   }
-}
-
-async function fetchCoordinators() {
-  try {
-    const res = await coordinatorService.getCoordinators()
-    coordinatorsList.value = res.data
-  } catch { /* non-critical */ }
 }
 
 async function fetchInstitutions() {
@@ -119,7 +115,7 @@ async function makeCoordinatorFromList(userId: string) {
   userActionId.value = userId
   try {
     await adminService.makeCoordinator(userId)
-    await Promise.all([fetchStaffUsers(), fetchStudents()])
+    await Promise.all([fetchCoordinators(), fetchStudents()])
   } finally {
     userActionId.value = null
   }
@@ -130,7 +126,7 @@ async function removeCoordinatorFromList(userId: string) {
   userActionId.value = userId
   try {
     await adminService.removeCoordinator(userId)
-    await Promise.all([fetchStaffUsers(), fetchStudents()])
+    await Promise.all([fetchCoordinators(), fetchStudents()])
   } finally {
     userActionId.value = null
   }

@@ -17,12 +17,15 @@ public class AdminService(IAppDbContext db) : IAdminService
 {
     #region Users
 
-    public async Task<ErrorOr<PagedResponse<UserListResponse>>> GetAllUsersAsync(int adminId, PagedRequest paging, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<UserListResponse>>> GetAllUsersAsync(int adminId, PagedRequest paging, UserRole? role = null, CancellationToken ct = default)
     {
         var ensureAdmin = await EnsureAdminAsync(adminId, "list users", ct);
         if (ensureAdmin.IsError) return ensureAdmin.Errors;
 
         var query = UsersWithIncludes().AsNoTracking();
+
+        if (role is not null)
+            query = query.Where(u => u.Role == role.Value);
 
         if (!string.IsNullOrWhiteSpace(paging.Search))
         {
