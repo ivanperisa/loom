@@ -252,4 +252,33 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return saved.ToResponse();
     }
 
+    public async Task<ErrorOr<Guid>> RegenerateAccessLinkAsync(
+        Guid exchangeGuid, int requesterId, CancellationToken ct = default)
+    {
+        var idResult = await db.ResolveExchangeIdAsync(exchangeGuid, ct);
+        if (idResult.IsError) return idResult.Errors;
+
+        var exchange = await db.Exchanges
+            .Include(e => e.Student)
+            .FirstOrDefaultAsync(e => e.Id == idResult.Value, ct);
+        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+
+        var requester = await db.Users.FindAsync([requesterId], ct);
+        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
+
+        // Only the owning coordinator (or an admin) may revoke a link.
+        if (!requester.IsCoordinatorFor(exchange.CoordinatorId))
+            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+
+        // A claimed student authenticates normally; there is no link to rotate.
+        if (!string.IsNullOrEmpty(exchange.Student.Email))
+            return Error.Validation("STUDENT_REGISTERED", "This student signs in with an account.");
+
+        exchange.Guid = Guid.NewGuid();
+        exchange.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        return exchange.Guid;
+    }
+
 }

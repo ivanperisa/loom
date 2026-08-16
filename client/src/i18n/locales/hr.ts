@@ -256,6 +256,9 @@ export default {
     copyLink: 'Kopiraj poveznicu za pristup',
     linkCopied: 'Poveznica je kopirana u međuspremnik.',
     registerCta: 'Registriraj se',
+    regenerate: 'Obnovi poveznicu',
+    regenerateConfirm: 'Obnoviti ovu pristupnu poveznicu? Trenutna poveznica odmah prestaje raditi.',
+    regenerated: 'Nova pristupna poveznica kopirana u međuspremnik',
   },
   createExchange: {
     title: 'Nova razmjena',

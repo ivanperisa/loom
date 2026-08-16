@@ -24,4 +24,6 @@ export const exchangeService = {
     api.delete(`/api/exchanges/${exchangeId}`),
   updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
     api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
+  regenerateAccessLink: (exchangeGuid: string) =>
+    api.post<{ guid: string }>(`/api/exchanges/${exchangeGuid}/regenerate-access-link`),
 }

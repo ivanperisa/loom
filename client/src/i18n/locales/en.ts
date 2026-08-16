@@ -256,6 +256,9 @@ export default {
     copyLink: 'Copy access link',
     linkCopied: 'Link copied to clipboard.',
     registerCta: 'Sign up',
+    regenerate: 'Regenerate link',
+    regenerateConfirm: 'Regenerate this access link? The current link will stop working immediately.',
+    regenerated: 'New access link copied to clipboard',
   },
   createExchange: {
     title: 'New Exchange',
