@@ -139,14 +139,6 @@ function onDragStart(course: PartnerCourseResponse) {
   exchangeStore.startDrag(course)
 }
 
-function togglePickUp(course: PartnerCourseResponse) {
-  if (exchangeStore.draggingCourse?.id === course.id) {
-    exchangeStore.endDrag()
-  } else {
-    exchangeStore.startDrag(course)
-  }
-}
-
 function levelLabel(level: string) {
   const map: Record<string, string> = {
     Undergraduate: t('admin.institutions.levelUndergraduate'),
@@ -207,10 +199,6 @@ function semesterLabel(semester: string) {
             v-for="course in searchResults"
             :key="course.id"
             draggable="true"
-            tabindex="0"
-            role="button"
-            :aria-label="t('partnerCourses.pickUp')"
-            :aria-pressed="exchangeStore.draggingCourse?.id === course.id"
             class="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
             :class="
               exchangeStore.draggingCourse?.id === course.id
@@ -219,9 +207,6 @@ function semesterLabel(semester: string) {
             "
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
-            @keydown.enter.prevent="togglePickUp(course)"
-            @keydown.space.prevent="togglePickUp(course)"
-            @keydown.esc.prevent="exchangeStore.endDrag()"
           >
             <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
               <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
@@ -283,10 +268,6 @@ function semesterLabel(semester: string) {
             v-for="course in mappedCourses"
             :key="course.id"
             draggable="true"
-            tabindex="0"
-            role="button"
-            :aria-label="t('partnerCourses.pickUp')"
-            :aria-pressed="exchangeStore.draggingCourse?.id === course.id"
             class="flex items-center gap-3 rounded-lg px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
             :class="
               exchangeStore.draggingCourse?.id === course.id
@@ -297,9 +278,6 @@ function semesterLabel(semester: string) {
             "
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
-            @keydown.enter.prevent="togglePickUp(course)"
-            @keydown.space.prevent="togglePickUp(course)"
-            @keydown.esc.prevent="exchangeStore.endDrag()"
           >
             <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
               <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />

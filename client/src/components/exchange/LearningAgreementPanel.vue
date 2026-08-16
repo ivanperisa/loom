@@ -312,21 +312,6 @@ function cancelDrop() {
   pendingDrop.value = null
 }
 
-function onSlotEnter(slot: HomeSlotResponse) {
-  const course = exchangeStore.draggingCourse
-  // No course held: Enter mirrors a click, i.e. cycle the slot's mode.
-  if (!course) {
-    cycleMode(slot)
-    return
-  }
-  if (!isEditable.value || isThesisSlot(slot)) return
-  if (lineFor(slot.id)?.mode !== slotMode.AtExchange) {
-    exchangeStore.localSetSlotMode(slot.id, slotMode.AtExchange)
-  }
-  pendingDrop.value = { slot, course }
-  exchangeStore.endDrag()
-}
-
 async function cycleMode(slot: HomeSlotResponse) {
   if (!isEditable.value || isThesisSlot(slot)) return
   const state = lineFor(slot.id)
@@ -374,12 +359,6 @@ function cancelEditEcts() {
 
 <template>
   <div>
-    <p class="sr-only" aria-live="polite">
-      {{ exchangeStore.draggingCourse
-        ? t('partnerCourses.pickedUp', { name: exchangeStore.draggingCourse.name })
-        : '' }}
-    </p>
-
     <!-- History drawer + Import modal -->
     <LearningAgreementHistoryDrawer
       v-if="showHistory"
@@ -478,17 +457,11 @@ function cancelEditEcts() {
           :colspan="slot.ects"
           :style="cellStyle(slot)"
           class="la-slot-cell"
-          :tabindex="isEditable ? 0 : -1"
-          :aria-label="exchangeStore.draggingCourse
-            ? t('partnerCourses.mapHere', { name: exchangeStore.draggingCourse.name })
-            : slotDisplayName(slot, locale)"
           @click="cycleMode(slot)"
           @dragover="onDragOver($event)"
           @dragenter="onDragEnter(slot)"
           @dragleave="onDragLeave()"
           @drop="onDrop($event, slot)"
-          @keydown.enter.prevent="onSlotEnter(slot)"
-          @keydown.esc.prevent="exchangeStore.endDrag()"
         >
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
             <div style="min-width: 0;">
