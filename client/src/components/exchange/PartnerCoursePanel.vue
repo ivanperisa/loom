@@ -36,6 +36,19 @@ function openAddForm() {
   showAddForm.value = true
 }
 
+async function fetchAllPartnerCourses(): Promise<PartnerCourseResponse[]> {
+  const items: PartnerCourseResponse[] = []
+  let page = 1
+  let totalPages = 1
+  do {
+    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId, false, { page, pageSize: 200 })
+    items.push(...res.data.items)
+    totalPages = Math.ceil(res.data.totalCount / res.data.pageSize) || 1
+    page++
+  } while (page <= totalPages)
+  return items
+}
+
 async function submitAddCourse(payload: {
   code: string; name: string; nameHr?: string; ects: number; semester: string; level: string
   lecturesH?: number; auditoryH?: number; labH?: number
@@ -44,8 +57,7 @@ async function submitAddCourse(payload: {
   addError.value = null
   try {
     await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
-    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId, false, { pageSize: 200 })
-    courses.value = res.data.items
+    courses.value = await fetchAllPartnerCourses()
     showAddForm.value = false
   } catch {
     addError.value = t('partnerCourses.saveError')
@@ -56,8 +68,7 @@ async function submitAddCourse(payload: {
 
 onMounted(async () => {
   try {
-    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId, false, { pageSize: 200 })
-    courses.value = res.data.items
+    courses.value = await fetchAllPartnerCourses()
   } catch {
     // keep empty
   } finally {

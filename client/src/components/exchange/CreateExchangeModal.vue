@@ -181,17 +181,30 @@ watch(selectedProgramId, () => {
   selectedProfileId.value = null
 })
 
+async function fetchAllPartnerInstitutions(): Promise<PartnerInstitutionAdminResponse[]> {
+  const items: PartnerInstitutionAdminResponse[] = []
+  let page = 1
+  let totalPages = 1
+  do {
+    const res = await institutionService.getPartnerInstitutions(false, { page, pageSize: 200 })
+    items.push(...res.data.items)
+    totalPages = Math.ceil(res.data.totalCount / res.data.pageSize) || 1
+    page++
+  } while (page <= totalPages)
+  return items
+}
+
 onMounted(async () => {
   const [programsRes, partnerRes, coordRes] = await Promise.allSettled([
     institutionService.getHomePrograms(),
-    institutionService.getPartnerInstitutions(false, { pageSize: 200 }),
+    fetchAllPartnerInstitutions(),
     coordinatorService.getCoordinators(),
   ])
 
   if (programsRes.status === 'fulfilled') homePrograms.value = programsRes.value.data
   loadingPrograms.value = false
 
-  if (partnerRes.status === 'fulfilled') partnerInstitutions.value = partnerRes.value.data.items
+  if (partnerRes.status === 'fulfilled') partnerInstitutions.value = partnerRes.value
   loadingPartnerInstitutions.value = false
 
   if (coordRes.status === 'fulfilled') coordinators.value = coordRes.value.data
