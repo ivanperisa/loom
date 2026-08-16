@@ -9,6 +9,7 @@ import { useExchangeStore } from '@/stores/exchange.store'
 import { userService } from '@/services/user.service'
 import { statusColorClass } from '@/utils/statusColors'
 import { documentStatus } from '@/utils/documentStatus'
+import { useQuerySync } from '@/composables/useQuerySync'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -24,6 +25,8 @@ const coordinatorRequestStatus = computed(() => authStore.user?.coordinatorReque
 const loading = ref(true)
 
 const selectedAcademicYear = ref<string | null>(null)
+
+useQuerySync({ year: selectedAcademicYear })
 
 const academicYears = computed(() => {
   const years = new Set(exchangeStore.summaries.map((ex) => ex.academicYear))

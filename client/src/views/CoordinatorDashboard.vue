@@ -19,6 +19,7 @@ import { useNotification } from '@/composables/useNotification'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useSortable } from '@/composables/useSortable'
+import { useQuerySync } from '@/composables/useQuerySync'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -54,8 +55,14 @@ const createExchangeTargetStudentId = ref<string | null>(null)
 
 const selectedAcademicYear = ref<string | null>(null)
 const selectedPartnerInstitution = ref<string | null>(null)
-const studentSearch = ref('')
+const studentSearch = ref<string>('')
 const debouncedStudentSearch = useDebouncedRef(studentSearch)
+
+useQuerySync({
+  year: selectedAcademicYear,
+  institution: selectedPartnerInstitution,
+  q: studentSearch,
+})
 
 const academicYears = computed(() => {
   const years = new Set(exchanges.value.map((ex) => ex.academicYear))
