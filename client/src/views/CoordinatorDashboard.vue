@@ -18,17 +18,18 @@ import Pagination from '@/components/common/Pagination.vue'
 import { useNotification } from '@/composables/useNotification'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { useSortable } from '@/composables/useSortable'
+import type { SortDir } from '@/composables/useSortable'
 import { useQuerySync } from '@/composables/useQuerySync'
 
 const router = useRouter()
 const route = useRoute()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const { notifySuccess, notifyError } = useNotification()
 const { confirm } = useConfirm()
 
 const students = ref<CoordinatorStudentResponse[]>([])
 const studentPage = ref(1)
+const studentSortDir = ref<SortDir>('asc')
 const studentsTotalCount = ref(0)
 const STUDENTS_PER_PAGE = 25
 const totalStudentPages = computed(() => Math.ceil(studentsTotalCount.value / STUDENTS_PER_PAGE))
@@ -123,10 +124,6 @@ const actionsMenuStudent = computed(
   () => students.value.find((s) => s.id === actionsMenuId.value) ?? null,
 )
 
-function lastName(name: string): string {
-  return name.trim().split(/\s+/).pop() ?? name
-}
-
 // Text search (name/jmbag) is server-side and already reflected in `students` (the current page).
 // The academic-year/institution filters are local: the server doesn't know about exchanges,
 // so they narrow the current page further using the (unpaged) exchange data.
@@ -135,18 +132,15 @@ const filteredStudents = computed(() => {
   return students.value.filter((s) => exchangesByStudent.value.has(s.id))
 })
 
-const { sortKey, sortDir, toggleSort, sorted: sortedStudents } = useSortable(
-  filteredStudents,
-  {
-    student: (s) => lastName(s.name),
-    exchange: (s) => primaryExchangeByStudent.value.get(s.id)?.partnerInstitutionName ?? null,
-    period: (s) => primaryExchangeByStudent.value.get(s.id)?.academicYear ?? null,
-    status: (s) => primaryExchangeByStudent.value.get(s.id)?.learningAgreementStatus ?? null,
-  },
-  'student',
-  'asc',
-  locale,
-)
+// Only the student column is sortable: the server orders by name so this stays correct
+// across pages. The exchange/period/status columns come from a separate, unpaged exchange
+// list and can't be sorted coherently against a paginated student list, so they're plain
+// headers (see final-review-fix4-report.md for the investigation).
+function toggleStudentSort() {
+  studentSortDir.value = studentSortDir.value === 'asc' ? 'desc' : 'asc'
+  studentPage.value = 1
+  fetchStudents()
+}
 
 async function fetchData() {
   closeMenu()
@@ -154,7 +148,7 @@ async function fetchData() {
   error.value = null
   try {
     const [studentsRes, exchangesRes, institutionsRes] = await Promise.allSettled([
-      coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value }),
+      coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, sortDir: studentSortDir.value }),
       coordinatorService.getStudentsExchanges(),
       institutionService.getHomeInstitutions(),
     ])
@@ -174,7 +168,7 @@ async function fetchData() {
 async function fetchStudents() {
   closeMenu()
   try {
-    const res = await coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value })
+    const res = await coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, sortDir: studentSortDir.value })
     students.value = res.data.items
     studentsTotalCount.value = res.data.totalCount
   } catch {
@@ -375,16 +369,16 @@ function onExchangeCreated(exchangeGuid: string) {
         <div class="min-w-[860px]">
           <!-- Header row -->
           <div class="coord-row-grid gap-4 border-b border-primary/20 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-light/40">
-            <SortableHeader :label="t('coordinator.table.student')" sort-key="student" :active-key="sortKey" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader :label="t('coordinator.table.exchange')" sort-key="exchange" :active-key="sortKey" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader class="justify-center" :label="t('coordinator.table.period')" sort-key="period" :active-key="sortKey" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader class="justify-center" :label="t('coordinator.table.learningAgreement')" sort-key="status" :active-key="sortKey" :dir="sortDir" @sort="toggleSort" />
+            <SortableHeader :label="t('coordinator.table.student')" sort-key="student" active-key="student" :dir="studentSortDir" @sort="toggleStudentSort" />
+            <span>{{ t('coordinator.table.exchange') }}</span>
+            <span class="text-center">{{ t('coordinator.table.period') }}</span>
+            <span class="text-center">{{ t('coordinator.table.learningAgreement') }}</span>
             <span></span>
             <span></span>
           </div>
 
           <div class="divide-y divide-primary/10">
-            <div v-for="student in sortedStudents" :key="student.id" class="group relative" data-menu-anchor>
+            <div v-for="student in filteredStudents" :key="student.id" class="group relative" data-menu-anchor>
               <!-- Stretched link: click anywhere on the row to open its primary exchange -->
               <RouterLink
                 v-if="primaryExchangeByStudent.get(student.id)"

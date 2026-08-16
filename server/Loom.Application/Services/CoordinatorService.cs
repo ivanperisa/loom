@@ -47,8 +47,11 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
 
         var totalCount = await query.CountAsync(ct);
 
+        query = paging.SortDir == "desc"
+            ? query.OrderByDescending(u => u.Name)
+            : query.OrderBy(u => u.Name);
+
         var students = await query
-            .OrderBy(u => u.Name)
             .Skip(paging.Skip)
             .Take(paging.SafePageSize)
             .ToListAsync(ct);

@@ -7,6 +7,7 @@ public record PagedRequest
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 25;
     public string? Search { get; init; }
+    public string? SortDir { get; init; }
 
     public int SafePage => Page < 1 ? 1 : Page;
     public int SafePageSize => PageSize < 1 ? 25 : PageSize > MaxPageSize ? MaxPageSize : PageSize;
