@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { onBeforeRouteUpdate, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
@@ -54,7 +54,6 @@ async function fetchData() {
 }
 
 onMounted(fetchData)
-onBeforeRouteUpdate(fetchData)
 
 function openCreateModal() {
   showCreateModal.value = true

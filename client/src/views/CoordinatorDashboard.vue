@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { onBeforeRouteUpdate, useRouter } from 'vue-router'
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { coordinatorService } from '@/services/coordinator.service'
 import { institutionService } from '@/services/institution.service'
@@ -22,6 +22,7 @@ import { useSortable } from '@/composables/useSortable'
 import { useQuerySync } from '@/composables/useQuerySync'
 
 const router = useRouter()
+const route = useRoute()
 const { t, locale } = useI18n()
 const { notifySuccess, notifyError } = useNotification()
 const { confirm } = useConfirm()
@@ -55,13 +56,13 @@ const createExchangeTargetStudentId = ref<string | null>(null)
 
 const selectedAcademicYear = ref<string | null>(null)
 const selectedPartnerInstitution = ref<string | null>(null)
-const studentSearch = ref<string>('')
+const studentSearch = ref<string>(typeof route.query.q === 'string' ? route.query.q : '')
 const debouncedStudentSearch = useDebouncedRef(studentSearch)
 
 useQuerySync({
   year: selectedAcademicYear,
   institution: selectedPartnerInstitution,
-  q: studentSearch,
+  q: debouncedStudentSearch,
 })
 
 const academicYears = computed(() => {
@@ -182,7 +183,11 @@ async function fetchStudents() {
 }
 
 onMounted(fetchData)
-onBeforeRouteUpdate(fetchData)
+
+onBeforeRouteUpdate((to) => {
+  const q = typeof to.query.q === 'string' ? to.query.q : ''
+  if (q !== studentSearch.value) studentSearch.value = q
+})
 
 watch([studentPage, debouncedStudentSearch], ([newPage, newSearch], [, oldSearch]) => {
   if (newSearch !== oldSearch && newPage !== 1) {
