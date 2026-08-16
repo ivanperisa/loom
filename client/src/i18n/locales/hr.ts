@@ -452,6 +452,10 @@ export default {
     addCourse: 'Dodaj novi predmet',
     addCourseTitle: 'Novi strani predmet',
     saveError: 'Spremanje nije uspjelo. Pokušajte ponovno.',
+    pickUp: 'Pritisnite Enter za odabir predmeta, zatim Enter na polju za mapiranje',
+    pickedUp: '{name} odabran. Idite na polje i pritisnite Enter za mapiranje ili Escape za odustajanje.',
+    cancelled: 'Odabir poništen',
+    mapHere: 'Mapiraj {name} ovdje',
   },
   table: {
     semester: 'Semestar',

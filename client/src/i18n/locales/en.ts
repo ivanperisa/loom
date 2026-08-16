@@ -452,6 +452,10 @@ export default {
     addCourse: 'Add new course',
     addCourseTitle: 'New partner course',
     saveError: 'Save failed. Please try again.',
+    pickUp: 'Press Enter to pick up this course, then Enter on a slot to map it',
+    pickedUp: '{name} picked up. Move to a slot and press Enter to map it, or press Escape to cancel.',
+    cancelled: 'Selection cancelled',
+    mapHere: 'Map {name} here',
   },
   table: {
     semester: 'Semester',
