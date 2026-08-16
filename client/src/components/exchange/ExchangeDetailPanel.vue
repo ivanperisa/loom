@@ -32,7 +32,7 @@ const exchangeStore = useExchangeStore()
 const { isCoordinator } = useExchangePermissions()
 const authStore = useAuthStore()
 const { confirm } = useConfirm()
-const { notifySuccess } = useNotification()
+const { notifySuccess, notifyWarning } = useNotification()
 
 const VALID_TABS = ['la', 'recognition', 'mappingScheme'] as const
 type ExchangeTab = (typeof VALID_TABS)[number]
@@ -57,10 +57,15 @@ async function regenerateAccessLink() {
   regenerating.value = true
   try {
     const res = await exchangeService.regenerateAccessLink(props.exchangeId)
-    await navigator.clipboard.writeText(buildAccessLink(res.data.guid))
     notifySuccess(t('exchangeAccess.regenerated'))
-    // The route is keyed by the old guid; move to the new one.
+    // The route is keyed by the old guid; move to the new one. Do this regardless of
+    // clipboard outcome, since the guid is already rotated server-side.
     router.replace(`/exchange/${res.data.guid}`)
+    try {
+      await navigator.clipboard.writeText(buildAccessLink(res.data.guid))
+    } catch {
+      notifyWarning(t('exchangeAccess.copyFailed'))
+    }
   } finally {
     regenerating.value = false
   }

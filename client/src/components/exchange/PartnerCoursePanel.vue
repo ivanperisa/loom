@@ -209,6 +209,7 @@ function semesterLabel(semester: string) {
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
             @keydown.enter.prevent="togglePickUp(course)"
+            @keydown.space.prevent="togglePickUp(course)"
             @keydown.esc.prevent="exchangeStore.endDrag()"
           >
             <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
@@ -286,6 +287,7 @@ function semesterLabel(semester: string) {
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
             @keydown.enter.prevent="togglePickUp(course)"
+            @keydown.space.prevent="togglePickUp(course)"
             @keydown.esc.prevent="exchangeStore.endDrag()"
           >
             <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">

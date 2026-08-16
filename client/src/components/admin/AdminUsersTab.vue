@@ -67,7 +67,7 @@ function handleOutsideClick(e: MouseEvent) {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchRequests(), fetchWhitelist(), fetchAdmins(), fetchCoordinators(), fetchStudents(), fetchInstitutions()])
+  await Promise.all([fetchRequests(), fetchWhitelist(), fetchAdmins(), fetchCoordinators(), fetchCoordinatorOptions(), fetchStudents(), fetchInstitutions()])
   document.addEventListener('click', handleOutsideClick)
 })
 
@@ -91,6 +91,11 @@ async function fetchAdmins() {
 async function fetchCoordinators() {
   const res = await adminService.getAllUsers({ pageSize: 200, role: userRole.Coordinator })
   coordinators.value = res.data.items
+}
+
+async function fetchCoordinatorOptions() {
+  const res = await coordinatorService.getCoordinators()
+  coordinatorsList.value = res.data
 }
 
 async function fetchStudents() {

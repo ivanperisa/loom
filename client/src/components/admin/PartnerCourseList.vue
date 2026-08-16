@@ -58,11 +58,12 @@ async function loadCourses() {
 
 onMounted(loadCourses)
 
-watch([coursePage, debouncedCourseSearch, showDeletedCourses], ([newPage, newSearch, newShowDeleted], [, oldSearch, oldShowDeleted]) => {
+watch([coursePage, debouncedCourseSearch, showDeletedCourses], ([newPage, newSearch, newShowDeleted], [oldPage, oldSearch, oldShowDeleted]) => {
   if ((newSearch !== oldSearch || newShowDeleted !== oldShowDeleted) && newPage !== 1) {
     coursePage.value = 1
     return
   }
+  if (newPage !== oldPage) selectedForMerge.value = new Set()
   loadCourses()
 })
 

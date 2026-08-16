@@ -258,7 +258,8 @@ export default {
     registerCta: 'Sign up',
     regenerate: 'Regenerate link',
     regenerateConfirm: 'Regenerate this access link? The current link will stop working immediately.',
-    regenerated: 'New access link copied to clipboard',
+    regenerated: 'Access link regenerated and copied to clipboard',
+    copyFailed: 'Access link regenerated, but copying to clipboard failed.',
   },
   createExchange: {
     title: 'New Exchange',
@@ -454,7 +455,6 @@ export default {
     saveError: 'Save failed. Please try again.',
     pickUp: 'Press Enter to pick up this course, then Enter on a slot to map it',
     pickedUp: '{name} picked up. Move to a slot and press Enter to map it, or press Escape to cancel.',
-    cancelled: 'Selection cancelled',
     mapHere: 'Map {name} here',
   },
   table: {

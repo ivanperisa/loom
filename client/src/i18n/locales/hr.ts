@@ -258,7 +258,8 @@ export default {
     registerCta: 'Registriraj se',
     regenerate: 'Obnovi poveznicu',
     regenerateConfirm: 'Obnoviti ovu pristupnu poveznicu? Trenutna poveznica odmah prestaje raditi.',
-    regenerated: 'Nova pristupna poveznica kopirana u međuspremnik',
+    regenerated: 'Pristupna poveznica obnovljena i kopirana u međuspremnik',
+    copyFailed: 'Pristupna poveznica je obnovljena, ali kopiranje u međuspremnik nije uspjelo.',
   },
   createExchange: {
     title: 'Nova razmjena',
@@ -454,7 +455,6 @@ export default {
     saveError: 'Spremanje nije uspjelo. Pokušajte ponovno.',
     pickUp: 'Pritisnite Enter za odabir predmeta, zatim Enter na polju za mapiranje',
     pickedUp: '{name} odabran. Idite na polje i pritisnite Enter za mapiranje ili Escape za odustajanje.',
-    cancelled: 'Odabir poništen',
     mapHere: 'Mapiraj {name} ovdje',
   },
   table: {
