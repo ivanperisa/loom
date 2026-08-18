@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import { useExchangeStore } from '@/stores/exchange.store'
@@ -20,8 +20,8 @@ const props = withDefaults(
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
 
-const courses = ref<PartnerCourseResponse[]>([])
-const loading = ref(true)
+const courses = computed(() => exchangeStore.partnerCourses)
+const loading = computed(() => exchangeStore.partnerCoursesLoading)
 const searchQuery = ref('')
 const debouncedSearchQuery = useDebouncedRef(searchQuery)
 
@@ -36,19 +36,6 @@ function openAddForm() {
   showAddForm.value = true
 }
 
-async function fetchAllPartnerCourses(): Promise<PartnerCourseResponse[]> {
-  const items: PartnerCourseResponse[] = []
-  let page = 1
-  let totalPages = 1
-  do {
-    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId, false, { page, pageSize: 200 })
-    items.push(...res.data.items)
-    totalPages = Math.ceil(res.data.totalCount / res.data.pageSize) || 1
-    page++
-  } while (page <= totalPages)
-  return items
-}
-
 async function submitAddCourse(payload: {
   code: string; name: string; nameHr?: string; ects: number; semester: string; level: string
   lecturesH?: number; auditoryH?: number; labH?: number
@@ -57,7 +44,7 @@ async function submitAddCourse(payload: {
   addError.value = null
   try {
     await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
-    courses.value = await fetchAllPartnerCourses()
+    await exchangeStore.fetchPartnerCourses(props.partnerInstitutionId, true)
     showAddForm.value = false
   } catch {
     addError.value = t('partnerCourses.saveError')
@@ -66,15 +53,11 @@ async function submitAddCourse(payload: {
   }
 }
 
-onMounted(async () => {
-  try {
-    courses.value = await fetchAllPartnerCourses()
-  } catch {
-    // keep empty
-  } finally {
-    loading.value = false
-  }
-})
+watch(
+  () => props.partnerInstitutionId,
+  (id) => { if (id) exchangeStore.fetchPartnerCourses(id) },
+  { immediate: true },
+)
 
 const visibleCourses = computed(() => {
   const semesterType = exchangeStore.exchange?.semesterType
@@ -225,7 +208,7 @@ function semesterLabel(semester: string) {
                 target="_blank"
                 rel="noopener noreferrer"
                 :title="t('admin.institutions.courseUrl')"
-                class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                class="flex h-6 w-6 items-center justify-center rounded text-blue-400 transition hover:bg-blue-400/10 hover:text-blue-300"
                 @click.stop
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -296,7 +279,7 @@ function semesterLabel(semester: string) {
                 target="_blank"
                 rel="noopener noreferrer"
                 :title="t('admin.institutions.courseUrl')"
-                class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                class="flex h-6 w-6 items-center justify-center rounded text-blue-400 transition hover:bg-blue-400/10 hover:text-blue-300"
                 @click.stop
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">

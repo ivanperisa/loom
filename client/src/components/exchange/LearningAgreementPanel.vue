@@ -11,6 +11,7 @@ import ActionButton from '@/components/common/ActionButton.vue'
 import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
 import PanelHeaderBar from '@/components/common/PanelHeaderBar.vue'
 import AuditInfo from '@/components/common/AuditInfo.vue'
+import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import { useNotification } from '@/composables/useNotification'
@@ -302,6 +303,7 @@ function confirmDrop() {
     partnerCourseCode: course.code,
     partnerCourseName: course.name,
     partnerCourseNameHr: course.nameHr ?? null,
+    partnerCourseUrl: course.url ?? null,
     awardedEcts: Math.max(pendingEcts.value, 0.5),
   }
   exchangeStore.localAddSlotMapping(slot.id, mapping)
@@ -497,7 +499,10 @@ function cancelEditEcts() {
               class="la-mapping-amendment"
             >{{ t('la.amendmentLabel', { n: mappingAmendment(removed.isDeleted ? removed.amendmentNumber : null) }) }}</span>
             <span class="la-mapping-text">
-              <span style="font-size: 10px; color: #333">{{ removed.partnerCourseCode }}</span><br />
+              <span style="display: inline-flex; align-items: center; gap: 3px;">
+                <span style="font-size: 10px; color: #333">{{ removed.partnerCourseCode }}</span>
+                <CourseUrlLink v-if="removed.partnerCourseUrl" block :url="removed.partnerCourseUrl" :title="t('admin.institutions.courseUrl')" />
+              </span><br />
               <span style="font-weight: 700; color: #000">{{ removed.partnerCourseName }}</span><br />
               <span style="font-size: 10px; color: #777">{{ removed.partnerCourseNameHr ?? '-' }}</span><br />
               <span style="color: #555; font-size: 10px">{{ removed.awardedEcts }} ECTS</span>
@@ -518,7 +523,10 @@ function cancelEditEcts() {
               class="la-mapping-amendment"
             >{{ t('la.amendmentLabel', { n: mappingAmendment(mapping.amendmentNumber) }) }}</span>
             <span class="la-mapping-text">
-              <span style="font-size: 10px; color: #333">{{ mapping.partnerCourseCode }}</span><br />
+              <span style="display: inline-flex; align-items: center; gap: 3px;">
+                <span style="font-size: 10px; color: #333">{{ mapping.partnerCourseCode }}</span>
+                <CourseUrlLink v-if="mapping.partnerCourseUrl" block :url="mapping.partnerCourseUrl" :title="t('admin.institutions.courseUrl')" />
+              </span><br />
               <span style="font-weight: 700; color: #000">{{ mapping.partnerCourseName }}</span><br />
               <span style="font-size: 10px; color: #777">{{ mapping.partnerCourseNameHr ?? '-' }}</span><br />
               <template v-if="editingMapping?.localId === mapping.localId" :key="`edit-${mapping.localId}`">

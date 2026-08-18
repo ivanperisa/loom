@@ -8,6 +8,7 @@ public record LearningAgreementEntryResponse(
     string? PartnerCourseCode,
     string? PartnerCourseName,
     string? PartnerCourseNameHr,
+    string? PartnerCourseUrl,
     decimal? AwardedEcts,
     bool IsDeleted,
     int? AmendmentNumber

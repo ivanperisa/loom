@@ -6,6 +6,7 @@ import { useTheme } from '@/composables/useTheme'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
 import DocTableGrid from '@/components/exchange/DocTableGrid.vue'
+import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 import type { HomeSlotResponse, SlotMode } from '@/types/learningAgreement.types'
 import type { MappingSchemeEntryResponse } from '@/types/mappingScheme.types'
 import { slotMode } from '@/utils/slotMode'
@@ -321,7 +322,10 @@ onMounted(async () => {
                 <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.85)" stroke-width="1.5" />
               </svg>
               <span class="ms-mapping-text">
-                <span style="font-size: 10px; color: #333">{{ entry.partnerCourseCode }}</span><br />
+                <span style="display: inline-flex; align-items: center; gap: 3px;">
+                  <span style="font-size: 10px; color: #333">{{ entry.partnerCourseCode }}</span>
+                  <CourseUrlLink v-if="entry.partnerCourseUrl" block :url="entry.partnerCourseUrl" :title="t('admin.institutions.courseUrl')" />
+                </span><br />
                 <span style="font-weight: 700; color: #000">{{ entry.partnerCourseName }}</span><br />
                 <span style="font-size: 10px; color: #777">{{ entry.partnerCourseNameHr ?? '-' }}</span><br />
                 <span style="color: #555; font-size: 10px">{{ entry.awardedEcts }} ECTS</span>

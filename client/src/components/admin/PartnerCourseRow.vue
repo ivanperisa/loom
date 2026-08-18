@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
+import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 import type { PartnerCourseResponse, PartnerCourseUsage } from '@/types/institution.types'
 import { nWord } from '@/utils/plural'
 
@@ -82,22 +83,10 @@ function semesterLabel(semester: string) {
             <span v-if="course.nameHr" class="ml-2 text-xs text-light/40">/ {{ course.nameHr }}</span>
             <span v-if="course.isDeleted" class="ml-2 rounded border border-red-400/30 bg-danger/10 px-1.5 py-0.5 text-[10px] text-danger">{{ t('admin.institutions.deleted') }}</span>
           </div>
-          <a
-            v-if="course.url"
-            :href="course.url"
-            target="_blank"
-            rel="noopener noreferrer"
-            :title="t('admin.institutions.courseUrl')"
-            class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
-          >
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-              <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-            </svg>
-          </a>
         </div>
       </div>
       <div class="flex flex-shrink-0 items-center gap-3 text-xs text-light/40">
+        <CourseUrlLink v-if="course.url" block :url="course.url" :title="t('admin.institutions.courseUrl')" />
         <span class="w-28 flex-shrink-0 truncate rounded bg-fill-soft px-2 py-0.5 text-left text-xs text-light/40">{{ semesterLabel(course.semester) }}</span>
         <span class="w-28 flex-shrink-0 truncate rounded bg-fill-soft px-2 py-0.5 text-left text-xs text-light/40">{{ levelLabel(course.level) }}</span>
         <span class="font-medium text-light/60">{{ course.ects }} ECTS</span>

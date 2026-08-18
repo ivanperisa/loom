@@ -9,5 +9,7 @@ public record LaSnapshotEntry(
     int? PartnerCourseId,
     string? PartnerCourseCode,
     string? PartnerCourseName,
-    decimal? AwardedEcts
+    decimal? AwardedEcts,
+    string? PartnerCourseNameHr = null,
+    string? PartnerCourseUrl = null
 );

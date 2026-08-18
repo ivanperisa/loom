@@ -20,6 +20,7 @@ public static class MappingSchemeMapper
             pc?.Code ?? string.Empty,
             pc?.Name ?? string.Empty,
             pc?.NameHr,
+            pc?.Url,
             hours,
             pc?.Ects ?? 0,
             slot.Course?.IsvuCode,
