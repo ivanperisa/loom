@@ -176,10 +176,6 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
             .Include(e => e.LearningAgreement)
             .Include(e => e.Recognition);
 
-        // Keyed off the exchange's own coordinator, not the student's, so this matches
-        // exactly what CheckExchangeAccessAsync will let the requester open. An approved
-        // exchange stays listed for the coordinator who approved it even after the
-        // student has been reassigned to someone else.
         var exchanges = await query
             .Where(e => e.CoordinatorId == requesterId)
             .OrderByDescending(e => e.CreatedAt)

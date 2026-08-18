@@ -266,11 +266,9 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        // Only the owning coordinator (or an admin) may revoke a link.
         if (!requester.IsCoordinatorFor(exchange.CoordinatorId))
             return Error.Forbidden("ACCESS_DENIED", "Access denied.");
 
-        // A claimed student authenticates normally; there is no link to rotate.
         if (!string.IsNullOrEmpty(exchange.Student.Email))
             return Error.Validation("STUDENT_REGISTERED", "This student signs in with an account.");
 
