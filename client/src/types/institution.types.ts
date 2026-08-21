@@ -38,6 +38,7 @@ export interface PartnerCourseResponse {
   code: string
   name: string
   nameHr: string | null
+  url: string | null
   ects: number
   lecturesH: number | null
   auditoryH: number | null
@@ -45,4 +46,20 @@ export interface PartnerCourseResponse {
   semester: string
   level: string
   isDeleted: boolean
+}
+
+export interface PartnerCourseUsageGroup {
+  programName: string
+  profileName: string
+  recognizedAsIsvuCode: number | null
+  recognizedAsName: string
+  isCourseGroup: boolean
+  exchangeCount: number
+  totalAwardedEcts: number
+  academicYears: string[]
+}
+
+export interface PartnerCourseUsage {
+  exchangeCount: number
+  groups: PartnerCourseUsageGroup[]
 }

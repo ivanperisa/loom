@@ -73,6 +73,7 @@ public static class ExchangeMapper
         entry.PartnerCourse?.Code,
         entry.PartnerCourse?.Name,
         entry.PartnerCourse?.NameHr,
+        entry.PartnerCourse?.Url,
         entry.AwardedEcts,
         entry.IsDeleted,
         AmendmentNumber: null
@@ -83,6 +84,7 @@ public static class ExchangeMapper
         course.Code,
         course.Name,
         course.NameHr,
+        course.Url,
         course.Ects,
         course.LecturesH,
         course.AuditoryH,
@@ -126,6 +128,7 @@ public static class ExchangeMapper
             pc.Code,
             pc.Name,
             pc.NameHr,
+            pc.Url,
             hours,
             pc.Ects,
             slotCourseIsvuCode,

@@ -6,6 +6,7 @@ public record RecognitionEntryResponse(
     string PartnerCourseCode,
     string PartnerCourseName,
     string? PartnerCourseNameHr,
+    string? PartnerCourseUrl,
     string? PartnerCourseHours,
     decimal PartnerCourseEcts,
     int? HomeSlotCourseIsvuCode,

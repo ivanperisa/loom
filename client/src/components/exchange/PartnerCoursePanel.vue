@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import { useExchangeStore } from '@/stores/exchange.store'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
 import PartnerCourseFormModal from '@/components/common/PartnerCourseFormModal.vue'
+import { useDebouncedRef } from '@/composables/useDebouncedRef'
 
 const props = withDefaults(
   defineProps<{
@@ -19,9 +20,10 @@ const props = withDefaults(
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
 
-const courses = ref<PartnerCourseResponse[]>([])
-const loading = ref(true)
+const courses = computed(() => exchangeStore.partnerCourses)
+const loading = computed(() => exchangeStore.partnerCoursesLoading)
 const searchQuery = ref('')
+const debouncedSearchQuery = useDebouncedRef(searchQuery)
 
 const showAddForm = ref(false)
 const addingCourse = ref(false)
@@ -42,8 +44,7 @@ async function submitAddCourse(payload: {
   addError.value = null
   try {
     await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
-    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId)
-    courses.value = res.data
+    await exchangeStore.fetchPartnerCourses(props.partnerInstitutionId, true)
     showAddForm.value = false
   } catch {
     addError.value = t('partnerCourses.saveError')
@@ -52,16 +53,11 @@ async function submitAddCourse(payload: {
   }
 }
 
-onMounted(async () => {
-  try {
-    const res = await institutionService.getPartnerCoursesByInstitution(props.partnerInstitutionId)
-    courses.value = res.data
-  } catch {
-    // keep empty
-  } finally {
-    loading.value = false
-  }
-})
+watch(
+  () => props.partnerInstitutionId,
+  (id) => { if (id) exchangeStore.fetchPartnerCourses(id) },
+  { immediate: true },
+)
 
 const visibleCourses = computed(() => {
   const semesterType = exchangeStore.exchange?.semesterType
@@ -112,7 +108,7 @@ const mappedCoursesTotalEcts = computed(() =>
 defineExpose({ mappedCoursesTotalEcts })
 
 const searchResults = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
+  const q = debouncedSearchQuery.value.trim().toLowerCase()
   if (!q) return availableCourses.value
   return availableCourses.value.filter(
     (c) =>
@@ -186,61 +182,11 @@ function semesterLabel(semester: string) {
             v-for="course in searchResults"
             :key="course.id"
             draggable="true"
-            class="flex items-center gap-3 rounded-lg border border-primary/20 bg-dark-2 px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
-            @dragstart="onDragStart(course)"
-            @dragend="exchangeStore.endDrag()"
-          >
-            <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
-              <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
-              <circle cx="3" cy="9" r="1.5" /><circle cx="9" cy="9" r="1.5" />
-              <circle cx="3" cy="15" r="1.5" /><circle cx="9" cy="15" r="1.5" />
-            </svg>
-            <div class="min-w-0 flex-1">
-              <div class="text-xs font-bold text-light">{{ course.code }}</div>
-              <div class="text-sm font-medium text-light">{{ course.name }}</div>
-              <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
-            </div>
-            <div class="shrink-0 flex items-center gap-2">
-              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
-              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
-              <span
-                v-if="mappedEcts(course.id) > 0"
-                class="rounded px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300"
-              >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
-              <span v-else class="rounded bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary-light">
-                {{ course.ects }} ECTS
-              </span>
-              <button
-                v-if="!exchangeStore.stagedPartnerCourseIds.has(course.id)"
-                :title="t('partnerCourses.stageAdd')"
-                class="flex items-center justify-center w-6 h-6 rounded text-light/40 hover:text-primary hover:bg-primary/10 transition"
-                @click.stop="exchangeStore.stagePartnerCourse(course.id)"
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                  <line x1="6" y1="1" x2="6" y2="11" /><line x1="1" y1="6" x2="11" y2="6" />
-                </svg>
-              </button>
-              <span v-else :title="t('partnerCourses.stageAdded')" class="flex items-center justify-center w-6 h-6 rounded text-green-400">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="2,6 5,9 10,3" />
-                </svg>
-              </span>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <template v-if="variant === 'mapped' || variant === 'all'">
-        <div class="max-h-[400px] space-y-1.5 overflow-y-auto pr-1" :class="variant === 'all' ? 'mt-4' : ''">
-          <div
-            v-for="course in mappedCourses"
-            :key="course.id"
-            draggable="true"
-            class="flex items-center gap-3 rounded-lg px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
+            class="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
             :class="
-              mappedEcts(course.id) === 0
-                ? 'border border-dashed border-light/20 bg-dark-2'
-                : 'border border-green-500/30 bg-green-900/10'
+              exchangeStore.draggingCourse?.id === course.id
+                ? 'border-primary bg-primary/10'
+                : 'border-primary/20 bg-dark-2'
             "
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
@@ -256,16 +202,101 @@ function semesterLabel(semester: string) {
               <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
             </div>
             <div class="shrink-0 flex items-center gap-2">
-              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
-              <span class="rounded bg-white/5 px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
+              <a
+                v-if="course.url"
+                :href="course.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                :title="t('admin.institutions.courseUrl')"
+                class="flex h-6 w-6 items-center justify-center rounded text-blue-400 transition hover:bg-blue-400/10 hover:text-blue-300"
+                @click.stop
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+                  <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+                </svg>
+              </a>
+              <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+              <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
+              <span
+                v-if="mappedEcts(course.id) > 0"
+                class="rounded px-2 py-0.5 text-xs font-semibold bg-info/20 text-info"
+              >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
+              <span v-else class="rounded bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary-light">
+                {{ course.ects }} ECTS
+              </span>
+              <button
+                v-if="!exchangeStore.stagedPartnerCourseIds.has(course.id)"
+                :title="t('partnerCourses.stageAdd')"
+                class="flex items-center justify-center w-6 h-6 rounded text-light/40 hover:text-primary hover:bg-primary/10 transition"
+                @click.stop="exchangeStore.stagePartnerCourse(course.id)"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="1" y1="6" x2="10" y2="6" /><polyline points="6,2 10,6 6,10" />
+                </svg>
+              </button>
+              <span v-else :title="t('partnerCourses.stageAdded')" class="flex items-center justify-center w-6 h-6 rounded text-success">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="2,6 5,9 10,3" />
+                </svg>
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <template v-if="variant === 'mapped' || variant === 'all'">
+        <div class="space-y-1.5" :class="variant === 'all' ? 'mt-4' : ''">
+          <div
+            v-for="course in mappedCourses"
+            :key="course.id"
+            draggable="true"
+            class="flex items-center gap-3 rounded-lg px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
+            :class="
+              exchangeStore.draggingCourse?.id === course.id
+                ? 'border border-primary bg-primary/10'
+                : mappedEcts(course.id) === 0
+                  ? 'border border-dashed border-light/20 bg-dark-2'
+                  : 'border border-success/30 bg-success/10'
+            "
+            @dragstart="onDragStart(course)"
+            @dragend="exchangeStore.endDrag()"
+          >
+            <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
+              <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
+              <circle cx="3" cy="9" r="1.5" /><circle cx="9" cy="9" r="1.5" />
+              <circle cx="3" cy="15" r="1.5" /><circle cx="9" cy="15" r="1.5" />
+            </svg>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-bold text-light">{{ course.code }}</div>
+              <div class="text-sm font-medium text-light">{{ course.name }}</div>
+              <div class="text-xs text-light/60">{{ course.nameHr ?? '-' }}</div>
+            </div>
+            <div class="shrink-0 flex items-center gap-2">
+              <a
+                v-if="course.url"
+                :href="course.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                :title="t('admin.institutions.courseUrl')"
+                class="flex h-6 w-6 items-center justify-center rounded text-blue-400 transition hover:bg-blue-400/10 hover:text-blue-300"
+                @click.stop
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+                  <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
+                </svg>
+              </a>
+              <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
+              <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span
                 class="rounded px-2 py-0.5 text-xs font-semibold"
                 :class="
                   mappedEcts(course.id) === 0
                     ? 'bg-light/10 text-light/40'
                     : mappedEcts(course.id) >= course.ects
-                      ? 'bg-green-500/20 text-green-300'
-                      : 'bg-amber-500/20 text-amber-300'
+                      ? 'bg-success/20 text-success'
+                      : 'bg-info/20 text-info'
                 "
               >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
               <button

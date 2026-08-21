@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 
+import BaseModal from '@/components/common/BaseModal.vue'
+
 const props = withDefaults(
   defineProps<{
     mode: 'create' | 'edit'
@@ -21,6 +23,7 @@ const emit = defineEmits<{
     code: string
     name: string
     nameHr?: string
+    url?: string
     ects: number
     semester: string
     level: string
@@ -37,11 +40,12 @@ const semesters = ['Winter', 'Summer', 'Both']
 const levels = ['Undergraduate', 'Graduate', 'Postgraduate']
 
 function formFromCourse(course: PartnerCourseResponse | null | undefined) {
-  if (!course) return { code: '', name: props.initialName || '', nameHr: '', ects: '', semester: props.defaultSemester, level: 'Graduate', lecturesH: '', auditoryH: '', labH: '' }
+  if (!course) return { code: '', name: props.initialName || '', nameHr: '', url: '', ects: '', semester: props.defaultSemester, level: 'Graduate', lecturesH: '', auditoryH: '', labH: '' }
   return {
     code: course.code,
     name: course.name,
     nameHr: course.nameHr ?? '',
+    url: course.url ?? '',
     ects: String(course.ects),
     semester: course.semester,
     level: course.level,
@@ -73,6 +77,7 @@ function submit() {
     code: f.code.trim(),
     name: f.name.trim(),
     nameHr: f.nameHr.trim() || undefined,
+    url: f.url.trim() || undefined,
     ects: parseFloat(f.ects),
     semester: f.semester,
     level: f.level,
@@ -84,18 +89,14 @@ function submit() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-      @mousedown.self="emit('close')"
-    >
-      <div class="w-full max-w-2xl rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
-        <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
-          <div>
-            <h3 class="font-semibold text-light">{{ mode === 'edit' ? t('admin.institutions.editCourse') : t('admin.institutions.addCourse') }}</h3>
+  <BaseModal max-width="max-w-2xl" labelled-by="partner-course-form-title" @close="emit('close')">
+    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
+        <div>
+          <h3 id="partner-course-form-title" class="font-semibold text-light">{{ mode === 'edit' ? t('admin.institutions.editCourse') : t('admin.institutions.addCourse') }}</h3>
             <p v-if="institutionName" class="mt-0.5 text-xs text-light/40">{{ institutionName }}</p>
           </div>
-          <button type="button" class="text-light/40 transition hover:text-white" @click="emit('close')">
+          <button type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
             <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
@@ -123,7 +124,7 @@ function submit() {
                   :key="sem"
                   type="button"
                   class="flex-1 rounded-lg border py-2 text-xs font-medium transition"
-                  :class="courseForm.semester === sem ? 'border-primary bg-primary/10 text-white' : 'border-white/10 bg-dark text-light/60 hover:border-primary/40 hover:text-white'"
+                  :class="courseForm.semester === sem ? 'border-primary bg-primary/10 text-white' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-light'"
                   @click="courseForm.semester = sem"
                 >{{ semesterLabel(sem) }}</button>
               </div>
@@ -136,7 +137,7 @@ function submit() {
                   :key="lvl"
                   type="button"
                   class="flex-1 rounded-lg border py-2 text-xs font-medium transition"
-                  :class="courseForm.level === lvl ? 'border-primary bg-primary/10 text-white' : 'border-white/10 bg-dark text-light/60 hover:border-primary/40 hover:text-white'"
+                  :class="courseForm.level === lvl ? 'border-primary bg-primary/10 text-white' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-light'"
                   @click="courseForm.level = lvl"
                 >{{ levelLabel(lvl) }}</button>
               </div>
@@ -151,6 +152,14 @@ function submit() {
           <div>
             <label class="mb-1.5 block text-sm text-light/70">{{ t('admin.institutions.courseNameHr') }}</label>
             <input v-model="courseForm.nameHr" type="text" class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none" />
+          </div>
+          <!-- URL -->
+          <div>
+            <label class="mb-1.5 block text-sm text-light/70">
+              {{ t('admin.institutions.courseUrl') }}
+              <span class="text-light/30">({{ t('admin.institutions.optional') }})</span>
+            </label>
+            <input v-model="courseForm.url" type="url" class="w-full rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none" placeholder="https://..." />
           </div>
           <!-- Hours -->
           <div>
@@ -176,7 +185,7 @@ function submit() {
           <p v-if="error" class="text-xs text-red-400">{{ error }}</p>
         </div>
         <div class="flex justify-end gap-2 border-t border-primary/20 px-6 py-4">
-          <button type="button" class="rounded-lg border border-white/10 px-4 py-2 text-sm text-light/60 transition hover:text-light" @click="emit('close')">{{ t('admin.institutions.cancel') }}</button>
+          <button type="button" class="rounded-lg border border-hairline px-4 py-2 text-sm text-light/60 transition hover:text-light" @click="emit('close')">{{ t('admin.institutions.cancel') }}</button>
           <button
             type="button"
             class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
@@ -187,6 +196,5 @@ function submit() {
           </button>
         </div>
       </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

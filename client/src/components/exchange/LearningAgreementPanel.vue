@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PartnerCoursePanel from '@/components/exchange/PartnerCoursePanel.vue'
+import DocTableGrid from '@/components/exchange/DocTableGrid.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import LearningAgreementHistoryDrawer from '@/components/exchange/LearningAgreementHistoryDrawer.vue'
@@ -10,6 +11,7 @@ import ActionButton from '@/components/common/ActionButton.vue'
 import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
 import PanelHeaderBar from '@/components/common/PanelHeaderBar.vue'
 import AuditInfo from '@/components/common/AuditInfo.vue'
+import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import { useNotification } from '@/composables/useNotification'
@@ -19,8 +21,10 @@ import { documentStatus } from '@/utils/documentStatus'
 import { slotMode } from '@/utils/slotMode'
 import { useTheme } from '@/composables/useTheme'
 import { useConfirm } from '@/composables/useConfirm'
-import { slotDisplayCode, slotDisplayName, slotSubLabel } from '@/utils/slotDisplay'
+import { slotDisplayName, slotCodeLabel } from '@/utils/slotDisplay'
 import { ectsIndicatorColor } from '@/utils/ectsIndicator'
+import { useDragAutoScroll } from '@/utils/dragAutoScroll'
+import { DOC_TABLE_SEMESTERS, DOC_TABLE_MODE_OUTLINE_COLOR } from '@/utils/docTable'
 
 const props = defineProps<{
   exchangeId: string
@@ -33,6 +37,7 @@ const { isCoordinator, isEditable } = useExchangePermissions()
 const { theme } = useTheme()
 const { confirm } = useConfirm()
 const { notifyError } = useNotification()
+useDragAutoScroll()
 
 const isSavingLa = ref(false)
 const saveError = ref<string | null>(null)
@@ -89,14 +94,9 @@ async function signExchange() {
   await exchangeStore.fetchExchange(props.exchangeId)
 }
 
-const TOTAL_COLS = 30
-const SEMESTERS = [1, 2, 3, 4]
+const SEMESTERS = DOC_TABLE_SEMESTERS
 const modes: SlotMode[] = [slotMode.AtHome]
-
-const modeOutlineColor: Record<string, string> = {
-  AtHome: '#4472C4',
-  AtExchange: '#FF0000',
-}
+const modeOutlineColor = DOC_TABLE_MODE_OUTLINE_COLOR
 
 const isDragging = computed(() => !!exchangeStore.draggingCourse || !!exchangeStore.draggingSlotMapping)
 const dragOverSlotId = ref<string | null>(null)
@@ -303,6 +303,7 @@ function confirmDrop() {
     partnerCourseCode: course.code,
     partnerCourseName: course.name,
     partnerCourseNameHr: course.nameHr ?? null,
+    partnerCourseUrl: course.url ?? null,
     awardedEcts: Math.max(pendingEcts.value, 0.5),
   }
   exchangeStore.localAddSlotMapping(slot.id, mapping)
@@ -423,7 +424,7 @@ function cancelEditEcts() {
           <button
             v-else-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Approved"
             type="button"
-            class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-700/40"
+            class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-muted transition hover:bg-slate-700/40"
             @click="backToDraft"
           >
             {{ t('exchange.actions.backToDraft') }}
@@ -447,145 +448,128 @@ function cancelEditEcts() {
     />
 
     <!-- Table -->
-    <div v-if="exchangeStore.serverLearningAgreement" class="overflow-x-auto doc-table-wrap">
-      <table style="border-collapse: collapse; width: 100%; min-width: 900px; table-layout: fixed">
-        <colgroup>
-          <col style="width: 60px" />
-          <col v-for="c in TOTAL_COLS" :key="c" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th style="border: 1px solid #aaa; background: #d9d9d9; font-size: 10px; padding: 4px 4px; text-align: center; color: #000;">
-              {{ t('table.semester') }}
-            </th>
-            <th
-              v-for="col in TOTAL_COLS"
-              :key="col"
-              style="border: 1px solid #aaa; background: #d9d9d9; font-size: 10px; padding: 4px 0; text-align: center; font-weight: normal; color: #000;"
-            >
-              {{ col }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="sem in SEMESTERS" :key="sem" :style="{ height: sem === 4 ? '50px' : '90px' }">
-            <td style="border: 1px solid #aaa; background: #f2f2f2; text-align: center; font-size: 14px; font-weight: bold; color: #000; padding: 4px 2px; vertical-align: middle;">
-              {{ sem }}
-            </td>
-            <td
-              v-for="slot in slotsForSemester(sem)"
-              :key="slot.id"
-              :colspan="slot.ects"
-              :style="cellStyle(slot)"
-              class="la-slot-cell"
-              @click="cycleMode(slot)"
-              @dragover="onDragOver($event)"
-              @dragenter="onDragEnter(slot)"
-              @dragleave="onDragLeave()"
-              @drop="onDrop($event, slot)"
-            >
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
-                <div style="min-width: 0;">
-                  <div class="la-cell-name">{{ slotDisplayCode(slot) ?? slotDisplayName(slot) }}</div>
-                  <div class="la-cell-sub">{{ slotSubLabel(slot, locale) }}</div>
-                </div>
-                <div style="display: flex; flex-direction: row; align-items: flex-start; gap: 3px; flex-shrink: 0;">
-                  <span
-                    v-if="ectsLabel(slot)"
-                    style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 700; white-space: nowrap;"
-                    :style="{
-                      color: ectsColor(slot),
-                      border: `1px solid ${ectsColor(slot)}`,
-                      background: theme === 'light' ? `${ectsColor(slot)}18` : 'rgba(255,255,255,0.08)',
-                    }"
-                  >
-                    {{ ectsLabel(slot) }}
-                  </span>
-                </div>
-              </div>
-
-              <div
-                v-for="removed in deletedEntriesForSlot(slot.id)"
-                :key="`removed-${removed.id}`"
-                class="la-mapping-item la-mapping-removed"
+    <DocTableGrid v-if="exchangeStore.serverLearningAgreement">
+      <tr v-for="sem in SEMESTERS" :key="sem" :style="{ height: sem === 4 ? '50px' : '90px' }">
+        <td style="border: 1px solid #aaa; background: #f2f2f2; text-align: center; font-size: 14px; font-weight: bold; color: #000; padding: 4px 2px; vertical-align: middle;">
+          {{ sem }}
+        </td>
+        <td
+          v-for="slot in slotsForSemester(sem)"
+          :key="slot.id"
+          :colspan="slot.ects"
+          :style="cellStyle(slot)"
+          class="la-slot-cell"
+          @click="cycleMode(slot)"
+          @dragover="onDragOver($event)"
+          @dragenter="onDragEnter(slot)"
+          @dragleave="onDragLeave()"
+          @drop="onDrop($event, slot)"
+        >
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
+            <div style="min-width: 0;">
+              <div class="la-cell-code">{{ slotCodeLabel(slot) }}</div>
+              <div class="la-cell-name">{{ slotDisplayName(slot, locale) }}</div>
+            </div>
+            <div style="display: flex; flex-direction: row; align-items: flex-start; gap: 3px; flex-shrink: 0;">
+              <span
+                v-if="ectsLabel(slot)"
+                style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 700; white-space: nowrap;"
+                :style="{
+                  color: ectsColor(slot),
+                  border: `1px solid ${ectsColor(slot)}`,
+                  background: theme === 'light' ? `${ectsColor(slot)}18` : 'rgba(255,255,255,0.08)',
+                }"
               >
-                <svg class="la-mapping-x" aria-hidden="true" preserveAspectRatio="none">
-                  <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
-                  <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
-                </svg>
-                <span
-                  v-if="mappingAmendment(removed.isDeleted ? removed.amendmentNumber : null) !== null"
-                  class="la-mapping-amendment"
-                >{{ t('la.amendmentLabel', { n: mappingAmendment(removed.isDeleted ? removed.amendmentNumber : null) }) }}</span>
-                <span class="la-mapping-text">
-                  <span style="font-weight: 700">{{ removed.partnerCourseCode }}</span><br />
-                  <span style="font-size: 10px; color: #000">{{ removed.partnerCourseName }}</span><br />
-                  <span style="font-size: 10px; color: #777">{{ removed.partnerCourseNameHr ?? '-' }}</span><br />
-                  <span style="color: #555; font-size: 10px">{{ removed.awardedEcts }} ECTS</span>
-                </span>
-              </div>
+                {{ ectsLabel(slot) }}
+              </span>
+            </div>
+          </div>
 
-              <div
-                v-for="mapping in sortedMappingsFor(slot.id)"
-                :key="mapping.localId"
-                class="la-mapping-item"
-                :draggable="isEditable"
-                @click.stop
-                @dragstart.stop="isEditable && exchangeStore.startSlotDrag(slot.id, mapping.localId)"
-                @dragend.stop="exchangeStore.endDrag()"
+          <div
+            v-for="removed in deletedEntriesForSlot(slot.id)"
+            :key="`removed-${removed.id}`"
+            class="la-mapping-item la-mapping-removed"
+          >
+            <svg class="la-mapping-x" aria-hidden="true" preserveAspectRatio="none">
+              <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
+              <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
+            </svg>
+            <span
+              v-if="mappingAmendment(removed.isDeleted ? removed.amendmentNumber : null) !== null"
+              class="la-mapping-amendment"
+            >{{ t('la.amendmentLabel', { n: mappingAmendment(removed.isDeleted ? removed.amendmentNumber : null) }) }}</span>
+            <span class="la-mapping-text">
+              <span style="display: inline-flex; align-items: center; gap: 3px;">
+                <span style="font-size: 10px; color: #333">{{ removed.partnerCourseCode }}</span>
+                <CourseUrlLink v-if="removed.partnerCourseUrl" block :url="removed.partnerCourseUrl" :title="t('admin.institutions.courseUrl')" />
+              </span><br />
+              <span style="font-weight: 700; color: #000">{{ removed.partnerCourseName }}</span><br />
+              <span style="font-size: 10px; color: #777">{{ removed.partnerCourseNameHr ?? '-' }}</span><br />
+              <span style="color: #555; font-size: 10px">{{ removed.awardedEcts }} ECTS</span>
+            </span>
+          </div>
+
+          <div
+            v-for="mapping in sortedMappingsFor(slot.id)"
+            :key="mapping.localId"
+            class="la-mapping-item"
+            :draggable="isEditable"
+            @click.stop
+            @dragstart.stop="isEditable && exchangeStore.startSlotDrag(slot.id, mapping.localId)"
+            @dragend.stop="exchangeStore.endDrag()"
+          >
+            <span
+              v-if="mappingAmendment(mapping.amendmentNumber) !== null"
+              class="la-mapping-amendment"
+            >{{ t('la.amendmentLabel', { n: mappingAmendment(mapping.amendmentNumber) }) }}</span>
+            <span class="la-mapping-text">
+              <span style="display: inline-flex; align-items: center; gap: 3px;">
+                <span style="font-size: 10px; color: #333">{{ mapping.partnerCourseCode }}</span>
+                <CourseUrlLink v-if="mapping.partnerCourseUrl" block :url="mapping.partnerCourseUrl" :title="t('admin.institutions.courseUrl')" />
+              </span><br />
+              <span style="font-weight: 700; color: #000">{{ mapping.partnerCourseName }}</span><br />
+              <span style="font-size: 10px; color: #777">{{ mapping.partnerCourseNameHr ?? '-' }}</span><br />
+              <template v-if="editingMapping?.localId === mapping.localId" :key="`edit-${mapping.localId}`">
+                <input
+                  ref="ectsInputRef"
+                  v-model.number="editingEcts"
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  style="width: 52px; font-size: 11px; padding: 1px 3px; background: var(--color-dark); color: var(--color-light); border: 1px solid var(--color-primary); border-radius: 3px;"
+                  @blur="saveEditEcts()"
+                  @keydown.enter.prevent="saveEditEcts()"
+                  @keydown.escape.prevent="cancelEditEcts()"
+                  @click.stop
+                />
+                <span style="color: #555; margin-left: 2px">ECTS</span>
+              </template>
+              <span
+                v-else
+                :key="`show-${mapping.localId}`"
+                :style="{
+                  color: '#555',
+                  cursor: !isEditable ? 'default' : 'pointer',
+                  textDecoration: !isEditable ? 'none' : 'underline dotted',
+                }"
+                :title="isEditable ? t('la.clickToEditEcts') : ''"
+                @click.stop="startEditEcts(slot.id, mapping)"
+                >{{ mapping.awardedEcts }} ECTS</span
               >
-                <span
-                  v-if="mappingAmendment(mapping.amendmentNumber) !== null"
-                  class="la-mapping-amendment"
-                >{{ t('la.amendmentLabel', { n: mappingAmendment(mapping.amendmentNumber) }) }}</span>
-                <span class="la-mapping-text">
-                  <span style="font-weight: 700">{{ mapping.partnerCourseCode }}</span><br />
-                  <span style="font-size: 10px; color: #000">{{ mapping.partnerCourseName }}</span><br />
-                  <span style="font-size: 10px; color: #777">{{ mapping.partnerCourseNameHr ?? '-' }}</span><br />
-                  <template v-if="editingMapping?.localId === mapping.localId" :key="`edit-${mapping.localId}`">
-                    <input
-                      ref="ectsInputRef"
-                      v-model.number="editingEcts"
-                      type="number"
-                      min="0.5"
-                      step="0.5"
-                      style="width: 52px; font-size: 11px; padding: 1px 3px; background: var(--color-dark); color: var(--color-light); border: 1px solid var(--color-primary); border-radius: 3px;"
-                      @blur="saveEditEcts()"
-                      @keydown.enter.prevent="saveEditEcts()"
-                      @keydown.escape.prevent="cancelEditEcts()"
-                      @click.stop
-                    />
-                    <span style="color: #555; margin-left: 2px">ECTS</span>
-                  </template>
-                  <span
-                    v-else
-                    :key="`show-${mapping.localId}`"
-                    :style="{
-                      color: '#555',
-                      cursor: !isEditable ? 'default' : 'pointer',
-                      textDecoration: !isEditable ? 'none' : 'underline dotted',
-                    }"
-                    :title="isEditable ? t('la.clickToEditEcts') : ''"
-                    @click.stop="startEditEcts(slot.id, mapping)"
-                    >{{ mapping.awardedEcts }} ECTS</span
-                  >
-                </span>
-                <button
-                  v-if="isEditable"
-                  type="button"
-                  style="color: #cc0000; font-size: 14px; line-height: 1; background: none; border: none; cursor: pointer; padding: 0; margin-left: 4px;"
-                  @click.stop="removeMapping(slot.id, mapping.localId)"
-                >
-                  &times;
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </span>
+            <button
+              v-if="isEditable"
+              type="button"
+              style="color: #cc0000; font-size: 14px; line-height: 1; background: none; border: none; cursor: pointer; padding: 0; margin-left: 4px;"
+              @click.stop="removeMapping(slot.id, mapping.localId)"
+            >
+              &times;
+            </button>
+          </div>
+        </td>
+      </tr>
 
-      <!-- Legend -->
-      <div class="doc-legend">
+      <template #legend>
         <div v-for="mode in modes" :key="mode" style="display: flex; align-items: center; gap: 6px">
           <span style="display: inline-block; width: 12px; height: 12px" :style="{ background: modeOutlineColor[mode] }" />
           <span style="font-size: 11px; color: var(--color-primary-light)">{{ t(`slotMode.${mode}`) }}</span>
@@ -593,8 +577,8 @@ function cancelEditEcts() {
         <span style="font-size: 11px; color: var(--color-light); opacity: 0.6; margin-left: 8px">
           {{ t('table.clickToChange') }}
         </span>
-      </div>
-    </div>
+      </template>
+    </DocTableGrid>
 
     <!-- ECTS input popup -->
     <EctsAmountDialog
@@ -624,7 +608,7 @@ function cancelEditEcts() {
 
     <!-- Course panels (editable only) -->
     <div v-if="isEditable && exchangeStore.exchange" class="mt-6 flex gap-6 items-start">
-      <div class="min-w-0 basis-[65%] rounded-xl border border-primary/20 bg-dark-2 p-4">
+      <div class="min-w-0 basis-[60%] rounded-xl border border-primary/20 bg-dark-2 p-4">
         <h3 class="mb-2 text-sm font-semibold text-primary-light">
           {{ t('partnerCourses.availableCourses') }}
         </h3>
@@ -635,8 +619,8 @@ function cancelEditEcts() {
           variant="available"
         />
       </div>
-      <div class="min-w-0 basis-[35%] rounded-xl border border-primary/20 bg-dark-2 p-4">
-        <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-green-400">
+      <div class="min-w-0 basis-[40%] rounded-xl border border-primary/20 bg-dark-2 p-4">
+        <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-success">
           <span>{{ t('partnerCourses.mappedCourses') }}</span>
           <span class="text-xs font-normal text-light/60">{{ totalAwardedEcts }} / {{ mappedCoursesPanel?.mappedCoursesTotalEcts ?? 0 }} ECTS</span>
         </h3>
@@ -653,18 +637,6 @@ function cancelEditEcts() {
 </template>
 
 <style scoped>
-.doc-table-wrap {
-  font-family: Calibri, Arial, sans-serif;
-}
-
-.doc-legend {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
 .la-slot-cell {
   border: 1px solid #aaa;
   vertical-align: top;
@@ -672,14 +644,14 @@ function cancelEditEcts() {
 }
 
 .la-cell-name {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   color: #000;
   line-height: 1.3;
 }
 
-.la-cell-sub {
-  font-size: 11px;
+.la-cell-code {
+  font-size: 13px;
   font-weight: 400;
   color: #222;
   line-height: 1.3;

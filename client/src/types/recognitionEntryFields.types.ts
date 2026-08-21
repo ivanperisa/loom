@@ -3,6 +3,7 @@ export interface RecognitionEntryFields {
   partnerCourseCode: string
   partnerCourseName: string
   partnerCourseNameHr: string | null
+  partnerCourseUrl: string | null
   partnerCourseHours: string | null
   partnerCourseEcts: number
   homeSlotCourseIsvuCode: number | null

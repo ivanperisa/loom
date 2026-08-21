@@ -48,12 +48,18 @@ const filtered = computed(() => {
   )
 })
 
+const ESTIMATED_DROPDOWN_HEIGHT = 260
+
 function updateDropdownPosition() {
   if (!root.value) return
   const rect = root.value.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  const openUpward = spaceBelow < ESTIMATED_DROPDOWN_HEIGHT && rect.top > spaceBelow
   dropdownStyle.value = {
     position: 'fixed',
-    top: `${rect.bottom + 4}px`,
+    ...(openUpward
+      ? { bottom: `${window.innerHeight - rect.top + 4}px` }
+      : { top: `${rect.bottom + 4}px` }),
     left: `${rect.left}px`,
     width: `${rect.width}px`,
     zIndex: '9999',
@@ -134,7 +140,7 @@ watch(open, (val) => {
         <div v-if="searchable" class="p-2">
           <div class="relative">
             <svg
-              class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
+              class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -145,7 +151,7 @@ watch(open, (val) => {
               v-model="search"
               type="text"
               :placeholder="searchPlaceholder"
-              class="w-full rounded-md border border-primary/10 bg-dark py-1.5 pl-7 pr-3 text-xs text-light placeholder-slate-500 focus:border-primary focus:outline-none"
+              class="w-full rounded-md border border-primary/10 bg-dark py-1.5 pl-7 pr-3 text-xs text-light placeholder-faint focus:border-primary focus:outline-none"
               @click.stop
             />
           </div>
@@ -153,7 +159,7 @@ watch(open, (val) => {
 
         <!-- Options -->
         <div class="max-h-52 overflow-y-auto pb-1">
-          <p v-if="filtered.length === 0" class="px-3 py-2 text-xs text-slate-500">
+          <p v-if="filtered.length === 0" class="px-3 py-2 text-xs text-faint">
             {{ noResultsLabel }}
           </p>
           <button
@@ -165,7 +171,7 @@ watch(open, (val) => {
             @click="select(opt.value)"
           >
             <span>{{ opt.label }}</span>
-            <span v-if="opt.sublabel" class="ml-1 text-xs text-slate-500">{{ opt.sublabel }}</span>
+            <span v-if="opt.sublabel" class="ml-1 text-xs text-faint">{{ opt.sublabel }}</span>
           </button>
         </div>
       </div>

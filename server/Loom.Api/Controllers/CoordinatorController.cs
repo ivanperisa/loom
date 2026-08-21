@@ -1,3 +1,4 @@
+using Loom.Application.DTOs.Common;
 using Loom.Application.DTOs.Coordinator;
 using Loom.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -17,9 +18,9 @@ public class CoordinatorController(ICoordinatorService coordinatorService) : Api
     }
 
     [HttpGet("students")]
-    public async Task<IActionResult> GetMyStudents(CancellationToken ct)
+    public async Task<IActionResult> GetMyStudents([FromQuery] PagedRequest paging, CancellationToken ct)
     {
-        var result = await coordinatorService.GetMyStudentsAsync(GetCurrentUserId(), ct);
+        var result = await coordinatorService.GetMyStudentsAsync(GetCurrentUserId(), paging, ct);
         return Match(result, Ok);
     }
 
@@ -28,6 +29,20 @@ public class CoordinatorController(ICoordinatorService coordinatorService) : Api
     {
         var result = await coordinatorService.CreatePlaceholderStudentAsync(GetCurrentUserId(), request, ct);
         return Match(result, value => CreatedAtAction(nameof(GetMyStudents), value));
+    }
+
+    [HttpPut("students/{studentId:int}")]
+    public async Task<IActionResult> UpdateStudent(int studentId, [FromBody] UpdateStudentRequest request, CancellationToken ct)
+    {
+        var result = await coordinatorService.UpdateStudentAsync(GetCurrentUserId(), studentId, request, ct);
+        return Match(result, Ok);
+    }
+
+    [HttpDelete("students/{studentId:int}")]
+    public async Task<IActionResult> DeleteStudent(int studentId, CancellationToken ct)
+    {
+        var result = await coordinatorService.DeleteStudentAsync(GetCurrentUserId(), studentId, ct);
+        return Match(result, _ => NoContent());
     }
 
     [HttpGet("students/exchanges")]

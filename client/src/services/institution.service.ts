@@ -4,17 +4,19 @@ import type {
   HomeProgramResponse,
   PartnerCourseResponse,
   PartnerInstitutionAdminResponse,
+  PartnerCourseUsage,
 } from '@/types/institution.types'
+import type { PagedParams, PagedResponse } from '@/types/paged.types'
 
 export const institutionService = {
   getHomeInstitutions: () =>
     api.get<InstitutionResponse[]>('/api/institutions/home'),
   getHomePrograms: () =>
     api.get<HomeProgramResponse[]>('/api/institutions/home-programs'),
-  getPartnerInstitutions: (includeDeleted = false) =>
-    api.get<PartnerInstitutionAdminResponse[]>('/api/institutions/partner', { params: { includeDeleted } }),
-  getPartnerCoursesByInstitution: (institutionId: string, includeDeleted = false) =>
-    api.get<PartnerCourseResponse[]>(`/api/institutions/partner/${institutionId}/courses`, { params: { includeDeleted } }),
+  getPartnerInstitutions: (includeDeleted = false, params: PagedParams = {}) =>
+    api.get<PagedResponse<PartnerInstitutionAdminResponse>>('/api/institutions/partner', { params: { includeDeleted, ...params } }),
+  getPartnerCoursesByInstitution: (institutionId: string, includeDeleted = false, params: PagedParams = {}) =>
+    api.get<PagedResponse<PartnerCourseResponse>>(`/api/institutions/partner/${institutionId}/courses`, { params: { includeDeleted, ...params } }),
 
   createPartnerInstitution: (data: { name: string; nameHr: string; country: string; city?: string; erasmusCode?: string }) =>
     api.post<PartnerInstitutionAdminResponse>('/api/institutions/partner', data),
@@ -28,10 +30,10 @@ export const institutionService = {
   restorePartnerInstitution: (id: string) =>
     api.patch(`/api/institutions/partner/${id}/restore`),
 
-  createPartnerCourseByInstitution: (institutionId: string, data: { code: string; nameHr?: string; name: string; ects: number; semester: string; level: string; lecturesH?: number; auditoryH?: number; labH?: number }) =>
+  createPartnerCourseByInstitution: (institutionId: string, data: { code: string; nameHr?: string; url?: string; name: string; ects: number; semester: string; level: string; lecturesH?: number; auditoryH?: number; labH?: number }) =>
     api.post<PartnerCourseResponse>(`/api/institutions/partner/${institutionId}/courses`, data),
 
-  updatePartnerCourse: (courseId: string, data: { code: string; nameHr?: string; name: string; ects: number; semester: string; level: string; lecturesH?: number; auditoryH?: number; labH?: number }) =>
+  updatePartnerCourse: (courseId: string, data: { code: string; nameHr?: string; url?: string; name: string; ects: number; semester: string; level: string; lecturesH?: number; auditoryH?: number; labH?: number }) =>
     api.put<PartnerCourseResponse>(`/api/institutions/partner/courses/${courseId}`, data),
 
   deletePartnerCourse: (courseId: string) =>
@@ -45,4 +47,7 @@ export const institutionService = {
       primaryCourseId,
       duplicateCourseIds,
     }),
+
+  getPartnerCourseUsage: (courseId: string) =>
+    api.get<PartnerCourseUsage>(`/api/institutions/partner/courses/${courseId}/usage`),
 }

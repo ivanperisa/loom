@@ -71,7 +71,7 @@ function openAccess() {
             {{ t('auth.signInWithGoogle') }}
           </button>
 
-          <form v-if="showAccessForm" class="mt-6 border-t border-white/10 pt-5" @submit.prevent="openAccess">
+          <form v-if="showAccessForm" class="mt-6 border-t border-hairline pt-5" @submit.prevent="openAccess">
             <div class="mb-1.5 flex items-center justify-between">
               <label class="text-xs font-medium text-light/60">{{ t('landing.accessUidLabel') }}</label>
               <button

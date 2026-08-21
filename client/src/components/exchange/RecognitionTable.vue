@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 
 interface RecognitionRow {
   id: string
   partnerCourseCode: string
   partnerCourseName: string
   partnerCourseNameHr: string | null
+  partnerCourseUrl: string | null
   partnerCourseHours: string | null
   partnerCourseEcts: number
   homeSlotCourseIsvuCode: number | null
@@ -33,6 +35,7 @@ interface CourseGroup {
   partnerCourseCode: string
   partnerCourseName: string
   partnerCourseNameHr: string | null
+  partnerCourseUrl: string | null
   partnerCourseEcts: number
   partnerCourseHours: string | null
   rows: RecognitionRow[][]
@@ -65,6 +68,7 @@ const courseGroups = computed<CourseGroup[]>(() => {
         partnerCourseCode: code,
         partnerCourseName: entry.partnerCourseName,
         partnerCourseNameHr: entry.partnerCourseNameHr,
+        partnerCourseUrl: entry.partnerCourseUrl,
         partnerCourseEcts: entry.partnerCourseEcts,
         partnerCourseHours: entry.partnerCourseHours,
         rows: [],
@@ -144,10 +148,14 @@ const courseGroups = computed<CourseGroup[]>(() => {
         <template v-for="group in courseGroups" :key="group.partnerCourseCode">
           <tr v-for="(row, idx) in group.rows" :key="row[0]!.id">
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td rec-td--center rec-td--bold" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
-              {{ group.partnerCourseCode }}
+              <span style="display: inline-flex; align-items: center; justify-content: center; gap: 3px;">
+                <span>{{ group.partnerCourseCode }}</span>
+                <CourseUrlLink v-if="group.partnerCourseUrl" block :url="group.partnerCourseUrl" :title="t('admin.institutions.courseUrl')" />
+              </span>
             </td>
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
               {{ group.partnerCourseName }}
+              <div v-if="group.partnerCourseNameHr" class="rec-name-hr">{{ group.partnerCourseNameHr }}</div>
             </td>
 
             <!-- Enrollment status: dropdown when editable, blank when read-only -->
@@ -249,6 +257,10 @@ const courseGroups = computed<CourseGroup[]>(() => {
 }
 .rec-td--bold {
   font-weight: bold;
+}
+.rec-name-hr {
+  font-size: 10px;
+  color: #666;
 }
 .rec-td-grade {
   border: 1px solid #aaa;

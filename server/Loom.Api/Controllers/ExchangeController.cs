@@ -71,4 +71,11 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         return Match(result, Ok);
     }
 
+    [HttpPost("{exchangeGuid:guid}/regenerate-access-link")]
+    public async Task<IActionResult> RegenerateAccessLink(Guid exchangeGuid, CancellationToken ct)
+    {
+        var result = await exchangeService.RegenerateAccessLinkAsync(exchangeGuid, GetCurrentUserId(), ct);
+        return Match(result, guid => Ok(new { guid }));
+    }
+
 }

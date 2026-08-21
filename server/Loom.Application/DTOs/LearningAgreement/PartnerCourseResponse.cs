@@ -5,6 +5,7 @@ public record PartnerCourseResponse(
     string Code,
     string Name,
     string? NameHr,
+    string? Url,
     decimal Ects,
     int? LecturesH,
     int? AuditoryH,

@@ -6,13 +6,14 @@ import { useExchangeStore } from '@/stores/exchange.store'
 import { exchangeSemester } from '@/utils/exchangeSemester'
 import { extractApiError } from '@/utils/apiError'
 import { useNotification } from '@/composables/useNotification'
-import type { AuthMeResponse } from '@/types/auth.types'
+import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { ExchangeResponse, ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps<{
   exchange: ExchangeResponse
-  laHasEntries: boolean
+  laMappedSemesters: number[]
 }>()
 
 const emit = defineEmits<{
@@ -82,13 +83,28 @@ function toggleStudySemester(s: number) {
   }
 }
 
-function setSemesterType(sem: ExchangeSemester) {
-  if (props.laHasEntries) return
-  semesterType.value = sem
-  studySemesters.value = []
+function canSelectSemesterType(sem: ExchangeSemester): boolean {
+  if (sem === exchangeSemester.Both) return true
+  const allowed = sem === exchangeSemester.Winter ? [1, 3] : [2, 4]
+  return props.laMappedSemesters.every((s) => allowed.includes(s))
 }
 
-const coordinators = ref<AuthMeResponse[]>([])
+const hasBlockedSemesterType = computed(() =>
+  [exchangeSemester.Winter, exchangeSemester.Summer, exchangeSemester.Both].some(
+    (sem) => !canSelectSemesterType(sem),
+  ),
+)
+
+function setSemesterType(sem: ExchangeSemester) {
+  if (!canSelectSemesterType(sem)) return
+  semesterType.value = sem
+  if (sem !== exchangeSemester.Both) {
+    const allowed = sem === exchangeSemester.Winter ? [1, 3] : [2, 4]
+    studySemesters.value = studySemesters.value.filter((s) => allowed.includes(s))
+  }
+}
+
+const coordinators = ref<CoordinatorOption[]>([])
 const coordinatorOptions = computed(() => [
   { value: null, label: t('exchange.noCoordinator') },
   ...coordinators.value.map((c) => ({ value: c.id, label: c.name })),
@@ -136,18 +152,15 @@ async function submit() {
 </script>
 
 <template>
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-    @mousedown.self="emit('close')"
-  >
+  <BaseModal max-width="max-w-2xl" labelled-by="edit-exchange-title" @close="emit('close')">
     <div
-      class="flex w-full max-w-2xl flex-col rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl"
+      class="flex w-full flex-col rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl"
       style="max-height: 90vh"
     >
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-primary/20 px-8 py-5">
-        <h2 class="text-xl font-semibold text-light">{{ t('exchange.editExchange') }}</h2>
-        <button type="button" class="text-light/50 transition hover:text-white" @click="emit('close')">
+        <h2 id="edit-exchange-title" class="text-xl font-semibold text-light">{{ t('exchange.editExchange') }}</h2>
+        <button type="button" class="text-light/50 transition hover:text-light" @click="emit('close')">
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path
               fill-rule="evenodd"
@@ -189,7 +202,7 @@ async function submit() {
                   :class="
                     studySemesters.includes(s)
                       ? 'border-primary bg-primary/10 text-white'
-                      : 'border-white/10 bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                      : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                   "
                   @click="toggleStudySemester(s)"
                 >
@@ -206,7 +219,7 @@ async function submit() {
                   :class="
                     isPairSelected(pair)
                       ? 'border-primary bg-primary/10 text-white'
-                      : 'border-white/10 bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                      : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                   "
                   @click="selectPair(pair)"
                 >
@@ -226,12 +239,12 @@ async function submit() {
                 v-for="sem in [exchangeSemester.Winter, exchangeSemester.Summer, exchangeSemester.Both]"
                 :key="sem"
                 type="button"
-                :disabled="laHasEntries"
+                :disabled="!canSelectSemesterType(sem)"
                 class="rounded-xl border py-2.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                 :class="
                   semesterType === sem
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-white/10 bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="setSemesterType(sem)"
               >
@@ -240,15 +253,16 @@ async function submit() {
             </div>
 
             <div
-              v-if="laHasEntries"
+              v-if="hasBlockedSemesterType"
               class="mt-3 flex items-start gap-2 rounded-xl border border-amber-400/40 bg-amber-500/15 px-3 py-2.5"
             >
               <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-400" viewBox="0 0 16 16" fill="none">
                 <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
                 <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               </svg>
-              <p class="text-xs text-amber-300">
-                {{ t('exchange.editLockedByLa') }}<br />{{ t('exchange.editLockedByLaHint') }}
+              <p class="text-xs text-info">
+                {{ t('exchange.editLockedByLa') }}<br />
+                {{ t('exchange.editLockedByLaHint') }}
               </p>
             </div>
           </div>
@@ -296,7 +310,7 @@ async function submit() {
           />
         </div>
 
-        <p v-if="errorMessage" class="text-sm text-red-300">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="text-sm text-danger">{{ errorMessage }}</p>
       </div>
 
       <!-- Footer -->
@@ -318,5 +332,5 @@ async function submit() {
         </button>
       </div>
     </div>
-  </div>
+  </BaseModal>
 </template>

@@ -1,4 +1,5 @@
 using ErrorOr;
+using Loom.Application.DTOs.Common;
 using Loom.Application.DTOs.Institution;
 using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.Interfaces;
@@ -34,26 +35,61 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         return programs.Select(p => p.ToResponse()).ToList();
     }
 
-    public async Task<ErrorOr<List<PartnerInstitutionAdminResponse>>> GetPartnerInstitutionsAsync(bool includeDeleted = false, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<PartnerInstitutionAdminResponse>>> GetPartnerInstitutionsAsync(bool includeDeleted, PagedRequest paging, CancellationToken ct = default)
     {
-        var institutions = await db.Institutions
+        var query = db.Institutions
             .AsNoTracking()
-            .Where(i => i.Type == InstitutionType.Partner && (includeDeleted || !i.IsDeleted))
+            .Where(i => i.Type == InstitutionType.Partner && (includeDeleted || !i.IsDeleted));
+
+        if (!string.IsNullOrWhiteSpace(paging.Search))
+        {
+            var term = $"%{paging.Search.Trim().ToLower()}%";
+            query = query.Where(i =>
+                EF.Functions.Like(i.Name.ToLower(), term) ||
+                (i.NameHr != null && EF.Functions.Like(i.NameHr.ToLower(), term)) ||
+                (i.City != null && EF.Functions.Like(i.City.ToLower(), term)) ||
+                (i.ErasmusCode != null && EF.Functions.Like(i.ErasmusCode.ToLower(), term)));
+        }
+
+        var totalCount = await query.CountAsync(ct);
+
+        var institutions = await query
             .Include(i => i.PartnerCourses)
             .OrderBy(i => i.Country)
             .ThenBy(i => i.Name)
+            .Skip(paging.Skip)
+            .Take(paging.SafePageSize)
             .ToListAsync(ct);
-        return institutions.Select(i => i.ToAdminResponse()).ToList();
+
+        return new PagedResponse<PartnerInstitutionAdminResponse>(
+            institutions.Select(i => i.ToAdminResponse()).ToList(), paging.SafePage, paging.SafePageSize, totalCount);
     }
 
-    public async Task<ErrorOr<List<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, bool includeDeleted = false, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, bool includeDeleted, PagedRequest paging, CancellationToken ct = default)
     {
-        var courses = await db.PartnerCourses
+        var query = db.PartnerCourses
             .AsNoTracking()
-            .Where(c => c.InstitutionId == institutionId && (includeDeleted || !c.IsDeleted))
+            .Where(c => c.InstitutionId == institutionId && (includeDeleted || !c.IsDeleted));
+
+        if (!string.IsNullOrWhiteSpace(paging.Search))
+        {
+            var term = $"%{paging.Search.Trim().ToLower()}%";
+            query = query.Where(c =>
+                EF.Functions.Like(c.Code.ToLower(), term) ||
+                EF.Functions.Like(c.Name.ToLower(), term) ||
+                (c.NameHr != null && EF.Functions.Like(c.NameHr.ToLower(), term)));
+        }
+
+        var totalCount = await query.CountAsync(ct);
+
+        var courses = await query
             .OrderBy(c => c.Code)
+            .Skip(paging.Skip)
+            .Take(paging.SafePageSize)
             .ToListAsync(ct);
-        return courses.Select(c => c.ToResponse()).ToList();
+
+        return new PagedResponse<PartnerCourseResponse>(
+            courses.Select(c => c.ToResponse()).ToList(), paging.SafePage, paging.SafePageSize, totalCount);
     }
 
     #endregion
@@ -168,6 +204,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
             Code = request.Code.Trim(),
             Name = request.Name.Trim(),
             NameHr = string.IsNullOrWhiteSpace(request.NameHr) ? null : request.NameHr.Trim(),
+            Url = string.IsNullOrWhiteSpace(request.Url) ? null : request.Url.Trim(),
             Ects = request.Ects,
             LecturesH = request.LecturesH,
             AuditoryH = request.AuditoryH,
@@ -201,6 +238,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         course.Code = code;
         course.Name = request.Name.Trim();
         course.NameHr = string.IsNullOrWhiteSpace(request.NameHr) ? null : request.NameHr.Trim();
+        course.Url = string.IsNullOrWhiteSpace(request.Url) ? null : request.Url.Trim();
         course.Ects = request.Ects;
         course.LecturesH = request.LecturesH;
         course.AuditoryH = request.AuditoryH;
@@ -267,6 +305,46 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         db.PartnerCourses.RemoveRange(duplicates);
         await db.SaveChangesAsync(ct);
         return primary.ToResponse();
+    }
+
+    public async Task<ErrorOr<PartnerCourseUsageResponse>> GetPartnerCourseUsageAsync(int courseId, CancellationToken ct = default)
+    {
+        var course = await db.PartnerCourses.FindAsync([courseId], ct);
+        if (course is null) return Error.NotFound("COURSE_NOT_FOUND", "Course not found.");
+
+        var entries = await db.LearningAgreementEntries
+            .AsNoTracking()
+            .Where(e => e.PartnerCourseId == courseId && !e.IsDeleted)
+            .Include(e => e.LearningAgreement).ThenInclude(la => la.Exchange).ThenInclude(ex => ex.HomeProfile).ThenInclude(hp => hp.Program)
+            .Include(e => e.HomeSlot).ThenInclude(s => s.Course)
+            .Include(e => e.HomeSlot).ThenInclude(s => s.CourseGroup)
+            .ToListAsync(ct);
+
+        var exchangeCount = entries.Select(e => e.LearningAgreement.ExchangeId).Distinct().Count();
+
+        var groups = entries
+            .GroupBy(e => new
+            {
+                ProgramName = e.LearningAgreement.Exchange.HomeProfile.Program.Name,
+                ProfileName = e.LearningAgreement.Exchange.HomeProfile.Name,
+                RecognizedAsIsvuCode = e.HomeSlot.Course?.IsvuCode ?? e.HomeSlot.CourseGroup?.IsvuCode,
+                RecognizedAsName = e.HomeSlot.Course?.Name ?? e.HomeSlot.CourseGroup?.Name ?? string.Empty,
+                IsCourseGroup = e.HomeSlot.Course is null,
+            })
+            .Select(g => new PartnerCourseUsageGroup(
+                g.Key.ProgramName,
+                g.Key.ProfileName,
+                g.Key.RecognizedAsIsvuCode,
+                g.Key.RecognizedAsName,
+                g.Key.IsCourseGroup,
+                g.Select(e => e.LearningAgreement.ExchangeId).Distinct().Count(),
+                g.Sum(e => e.AwardedEcts ?? 0),
+                g.Select(e => e.LearningAgreement.Exchange.AcademicYear).Distinct().OrderDescending().ToList()
+            ))
+            .OrderBy(g => g.ProgramName).ThenBy(g => g.ProfileName)
+            .ToList();
+
+        return new PartnerCourseUsageResponse(exchangeCount, groups);
     }
 
     #endregion

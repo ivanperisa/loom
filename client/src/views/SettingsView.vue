@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { institutionService } from '@/services/institution.service'
 import { coordinatorService } from '@/services/coordinator.service'
 import type { InstitutionResponse } from '@/types/institution.types'
-import type { AuthMeResponse } from '@/types/auth.types'
+import type { CoordinatorOption } from '@/types/coordinator.types'
 import { userRole } from '../utils/userRole'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 
@@ -14,7 +14,7 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 
 const institutions = ref<InstitutionResponse[]>([])
-const coordinators = ref<AuthMeResponse[]>([])
+const coordinators = ref<CoordinatorOption[]>([])
 
 const institutionOptions = computed(() =>
   institutions.value.map((i) => ({
@@ -195,7 +195,7 @@ async function save() {
         </div>
 
         <!-- Success -->
-        <p v-if="success" class="mt-3 text-sm text-green-400">{{ t('settings.saveSuccess') }}</p>
+        <p v-if="success" class="mt-3 text-sm text-success">{{ t('settings.saveSuccess') }}</p>
         <!-- Error -->
         <p v-if="errorMsg" class="mt-3 text-sm text-red-400">{{ errorMsg }}</p>
       </div>

@@ -85,7 +85,8 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
                     var (amendmentNumber, entry) = kvp.Value;
                     deletedEntries.Add(new LearningAgreementEntryResponse(
                         0, entry.HomeSlotId, entry.Mode,
-                        entry.PartnerCourseId, entry.PartnerCourseCode, entry.PartnerCourseName, null,
+                        entry.PartnerCourseId, entry.PartnerCourseCode, entry.PartnerCourseName,
+                        entry.PartnerCourseNameHr, entry.PartnerCourseUrl,
                         entry.AwardedEcts, IsDeleted: true, AmendmentNumber: amendmentNumber));
                 }
             }
@@ -220,7 +221,9 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
                     e.PartnerCourseId,
                     e.PartnerCourse?.Code,
                     e.PartnerCourse?.Name,
-                    e.AwardedEcts
+                    e.AwardedEcts,
+                    e.PartnerCourse?.NameHr,
+                    e.PartnerCourse?.Url
                 )).ToList() ?? []);
 
             db.ExchangeSnapshots.Add(new ExchangeSnapshot
@@ -674,7 +677,9 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
                 e.PartnerCourseId,
                 e.PartnerCourse?.Code,
                 e.PartnerCourse?.Name,
-                e.AwardedEcts
+                e.AwardedEcts,
+                e.PartnerCourse?.NameHr,
+                e.PartnerCourse?.Url
             )).ToList());
 
         db.ExchangeSnapshots.Add(new ExchangeSnapshot

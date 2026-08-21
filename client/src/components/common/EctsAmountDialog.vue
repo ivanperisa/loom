@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps<{
   title: string
@@ -27,12 +28,9 @@ function tryConfirm() {
 </script>
 
 <template>
-  <div
-    style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50;"
-    @mousedown.self="emit('cancel')"
-  >
-    <div style="background: var(--color-dark-2); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); border-radius: 8px; padding: 24px; min-width: 320px;">
-      <h3 style="color: var(--color-light); font-size: 14px; font-weight: 600; margin-bottom: 16px">
+  <BaseModal labelled-by="ects-amount-dialog-title" @close="emit('cancel')">
+    <div style="padding: 24px">
+      <h3 id="ects-amount-dialog-title" style="color: var(--color-light); font-size: 14px; font-weight: 600; margin-bottom: 16px">
         {{ title }}
       </h3>
       <div style="color: var(--color-primary-light); font-size: 12px; margin-bottom: 4px">
@@ -77,5 +75,5 @@ function tryConfirm() {
         </button>
       </div>
     </div>
-  </div>
+  </BaseModal>
 </template>

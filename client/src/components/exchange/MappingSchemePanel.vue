@@ -5,11 +5,15 @@ import { useExchangeStore } from '@/stores/exchange.store'
 import { useTheme } from '@/composables/useTheme'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
+import DocTableGrid from '@/components/exchange/DocTableGrid.vue'
+import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 import type { HomeSlotResponse, SlotMode } from '@/types/learningAgreement.types'
 import type { MappingSchemeEntryResponse } from '@/types/mappingScheme.types'
 import { slotMode } from '@/utils/slotMode'
-import { slotDisplayCode, slotDisplayName, slotSubLabel } from '@/utils/slotDisplay'
+import { slotDisplayName, slotCodeLabel } from '@/utils/slotDisplay'
 import { ectsIndicatorColor } from '@/utils/ectsIndicator'
+import { useDragAutoScroll } from '@/utils/dragAutoScroll'
+import { DOC_TABLE_SEMESTERS, DOC_TABLE_MODE_OUTLINE_COLOR } from '@/utils/docTable'
 
 const props = defineProps<{
   exchangeId: string
@@ -19,17 +23,14 @@ const props = defineProps<{
 const { t, locale } = useI18n()
 const exchangeStore = useExchangeStore()
 const { theme } = useTheme()
+useDragAutoScroll()
 
 const loading = ref(true)
 const saving = ref(false)
 
-const TOTAL_COLS = 30
-const SEMESTERS = [1, 2, 3, 4]
+const SEMESTERS = DOC_TABLE_SEMESTERS
 const modes: SlotMode[] = [slotMode.AtHome]
-const modeOutlineColor: Record<string, string> = {
-  AtHome: '#4472C4',
-  AtExchange: '#FF0000',
-}
+const modeOutlineColor = DOC_TABLE_MODE_OUTLINE_COLOR
 
 // Editable working copy (homeSlotId + enrollmentStatus only).
 const localEntries = ref<MappingSchemeEntryResponse[]>([])
@@ -274,93 +275,81 @@ onMounted(async () => {
 
       <UnsavedChangesBar v-if="isDirty" :saving="saving" @save="save" @discard="discard" />
 
-      <div class="overflow-x-auto doc-table-wrap">
-        <table style="border-collapse: collapse; width: 100%; min-width: 900px; table-layout: fixed">
-          <colgroup>
-            <col style="width: 60px" />
-            <col v-for="c in TOTAL_COLS" :key="c" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th class="ms-head">{{ t('table.semester') }}</th>
-              <th v-for="col in TOTAL_COLS" :key="col" class="ms-head ms-head--num">{{ col }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="sem in SEMESTERS" :key="sem" :style="{ height: sem === 4 ? '50px' : '90px' }">
-              <td class="ms-sem">{{ sem }}</td>
-              <td
-                v-for="slot in slotsForSemester(sem)"
-                :key="slot.id"
-                :colspan="slot.ects"
-                class="ms-slot-cell"
-                :style="cellStyle(slot)"
-                @dragover="onDragOver($event)"
-                @dragenter="dragOverSlotId = slot.id"
-                @dragleave="dragOverSlotId = null"
-                @drop="onDrop(slot)"
+      <DocTableGrid>
+        <tr v-for="sem in SEMESTERS" :key="sem" :style="{ height: sem === 4 ? '50px' : '90px' }">
+          <td class="ms-sem">{{ sem }}</td>
+          <td
+            v-for="slot in slotsForSemester(sem)"
+            :key="slot.id"
+            :colspan="slot.ects"
+            class="ms-slot-cell"
+            :style="cellStyle(slot)"
+            @dragover="onDragOver($event)"
+            @dragenter="dragOverSlotId = slot.id"
+            @dragleave="dragOverSlotId = null"
+            @drop="onDrop(slot)"
+          >
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
+              <div style="min-width: 0;">
+                <div class="ms-cell-name">{{ slotDisplayName(slot, locale) }}</div>
+                <div class="ms-cell-code">{{ slotCodeLabel(slot) }}</div>
+              </div>
+              <span
+                v-if="ectsLabel(slot)"
+                style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 700; white-space: nowrap; flex-shrink: 0;"
+                :style="{
+                  color: ectsColor(slot),
+                  border: `1px solid ${ectsColor(slot)}`,
+                  background: theme === 'light' ? `${ectsColor(slot)}18` : 'rgba(255,255,255,0.08)',
+                }"
               >
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
-                  <div style="min-width: 0;">
-                    <div class="ms-cell-name">{{ slotDisplayCode(slot) ?? slotDisplayName(slot) }}</div>
-                    <div class="ms-cell-sub">{{ slotSubLabel(slot, locale) }}</div>
-                  </div>
-                  <span
-                    v-if="ectsLabel(slot)"
-                    style="display: inline-block; font-size: 10px; padding: 1px 4px; border-radius: 2px; font-weight: 700; white-space: nowrap; flex-shrink: 0;"
-                    :style="{
-                      color: ectsColor(slot),
-                      border: `1px solid ${ectsColor(slot)}`,
-                      background: theme === 'light' ? `${ectsColor(slot)}18` : 'rgba(255,255,255,0.08)',
-                    }"
-                  >
-                    {{ ectsLabel(slot) }}
-                  </span>
-                </div>
+                {{ ectsLabel(slot) }}
+              </span>
+            </div>
 
-                <div
-                  v-for="entry in entriesForSlot(slot.id)"
-                  :key="entry.id"
-                  class="ms-mapping-item"
-                  :class="{ 'ms-mapping-notpassed': isNotPassed(entry) }"
-                  draggable="true"
-                  @dragstart="onDragStart(entry)"
-                  @dragend="draggingId = null"
-                  @click.stop="onItemClick(entry)"
-                >
-                  <svg v-if="isNotPassed(entry)" class="ms-mapping-x" aria-hidden="true" preserveAspectRatio="none">
-                    <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(204,0,0,0.85)" stroke-width="1.5" />
-                    <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.85)" stroke-width="1.5" />
-                  </svg>
-                  <span class="ms-mapping-text">
-                    <span style="font-weight: 700">{{ entry.partnerCourseCode }}</span><br />
-                    <span style="font-size: 10px; color: #000">{{ entry.partnerCourseName }}</span><br />
-                    <span style="font-size: 10px; color: #777">{{ entry.partnerCourseNameHr ?? '-' }}</span><br />
-                    <span style="color: #555; font-size: 10px">{{ entry.awardedEcts }} ECTS</span>
-                  </span>
-                  <button
-                    v-if="!isNotPassed(entry)"
-                    type="button"
-                    class="ms-x-btn"
-                    :title="t('mappingScheme.markNotPassed')"
-                    @click.stop="markNotPassed(entry)"
-                  >
-                    &times;
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            <div
+              v-for="entry in entriesForSlot(slot.id)"
+              :key="entry.id"
+              class="ms-mapping-item"
+              :class="{ 'ms-mapping-notpassed': isNotPassed(entry) }"
+              draggable="true"
+              @dragstart="onDragStart(entry)"
+              @dragend="draggingId = null"
+              @click.stop="onItemClick(entry)"
+            >
+              <svg v-if="isNotPassed(entry)" class="ms-mapping-x" aria-hidden="true" preserveAspectRatio="none">
+                <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(204,0,0,0.85)" stroke-width="1.5" />
+                <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.85)" stroke-width="1.5" />
+              </svg>
+              <span class="ms-mapping-text">
+                <span style="display: inline-flex; align-items: center; gap: 3px;">
+                  <span style="font-size: 10px; color: #333">{{ entry.partnerCourseCode }}</span>
+                  <CourseUrlLink v-if="entry.partnerCourseUrl" block :url="entry.partnerCourseUrl" :title="t('admin.institutions.courseUrl')" />
+                </span><br />
+                <span style="font-weight: 700; color: #000">{{ entry.partnerCourseName }}</span><br />
+                <span style="font-size: 10px; color: #777">{{ entry.partnerCourseNameHr ?? '-' }}</span><br />
+                <span style="color: #555; font-size: 10px">{{ entry.awardedEcts }} ECTS</span>
+              </span>
+              <button
+                v-if="!isNotPassed(entry)"
+                type="button"
+                class="ms-x-btn"
+                :title="t('mappingScheme.markNotPassed')"
+                @click.stop="markNotPassed(entry)"
+              >
+                &times;
+              </button>
+            </div>
+          </td>
+        </tr>
 
-        <!-- Legend -->
-        <div class="doc-legend">
+        <template #legend>
           <div v-for="mode in modes" :key="mode" style="display: flex; align-items: center; gap: 6px">
             <span style="display: inline-block; width: 12px; height: 12px" :style="{ background: modeOutlineColor[mode] }" />
             <span style="font-size: 11px; color: var(--color-primary-light)">{{ t(`slotMode.${mode}`) }}</span>
           </div>
-        </div>
-      </div>
+        </template>
+      </DocTableGrid>
     </template>
 
     <!-- ECTS transfer dialog -->
@@ -380,28 +369,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.doc-table-wrap {
-  font-family: Calibri, Arial, sans-serif;
-}
-.doc-legend {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-.ms-head {
-  border: 1px solid #aaa;
-  background: #d9d9d9;
-  font-size: 10px;
-  padding: 4px;
-  text-align: center;
-  color: #000;
-}
-.ms-head--num {
-  font-weight: normal;
-  padding: 4px 0;
-}
 .ms-sem {
   border: 1px solid #aaa;
   background: #f2f2f2;
@@ -422,7 +389,7 @@ onMounted(async () => {
   color: #000;
   line-height: 1.3;
 }
-.ms-cell-sub {
+.ms-cell-code {
   font-size: 11px;
   color: #222;
   line-height: 1.3;

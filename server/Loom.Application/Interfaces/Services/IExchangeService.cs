@@ -13,4 +13,5 @@ public interface IExchangeService
     Task<ErrorOr<ExchangeResponse>> UpdateExchangeAsync(Guid exchangeGuid, int requesterId, UpdateExchangeRequest request, CancellationToken ct = default);
     Task<ErrorOr<Deleted>> DeleteExchangeAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default);
     Task<ErrorOr<ExchangeResponse>> UpdateCoordinatorMessageAsync(Guid exchangeGuid, int requesterId, string? message, CancellationToken ct = default);
+    Task<ErrorOr<Guid>> RegenerateAccessLinkAsync(Guid exchangeGuid, int requesterId, CancellationToken ct = default);
 }

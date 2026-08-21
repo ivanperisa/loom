@@ -10,9 +10,10 @@ import type {
   HomeProfileResponse,
   PartnerInstitutionAdminResponse,
 } from '@/types/institution.types'
-import type { AuthMeResponse } from '@/types/auth.types'
+import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { nWord } from '@/utils/plural'
 import { useAuthStore } from '@/stores/auth.store'
 
@@ -102,7 +103,7 @@ const selectedPartnerInstitution = computed(
 )
 
 // Step 3: Coordinator + Mentor
-const coordinators = ref<AuthMeResponse[]>([])
+const coordinators = ref<CoordinatorOption[]>([])
 const selectedCoordinatorId = ref<string | null>(
   props.targetStudentId ? (authStore.user?.id ?? null) : (authStore.user?.coordinatorId ?? null),
 )
@@ -180,17 +181,30 @@ watch(selectedProgramId, () => {
   selectedProfileId.value = null
 })
 
+async function fetchAllPartnerInstitutions(): Promise<PartnerInstitutionAdminResponse[]> {
+  const items: PartnerInstitutionAdminResponse[] = []
+  let page = 1
+  let totalPages = 1
+  do {
+    const res = await institutionService.getPartnerInstitutions(false, { page, pageSize: 200 })
+    items.push(...res.data.items)
+    totalPages = Math.ceil(res.data.totalCount / res.data.pageSize) || 1
+    page++
+  } while (page <= totalPages)
+  return items
+}
+
 onMounted(async () => {
   const [programsRes, partnerRes, coordRes] = await Promise.allSettled([
     institutionService.getHomePrograms(),
-    institutionService.getPartnerInstitutions(),
+    fetchAllPartnerInstitutions(),
     coordinatorService.getCoordinators(),
   ])
 
   if (programsRes.status === 'fulfilled') homePrograms.value = programsRes.value.data
   loadingPrograms.value = false
 
-  if (partnerRes.status === 'fulfilled') partnerInstitutions.value = partnerRes.value.data
+  if (partnerRes.status === 'fulfilled') partnerInstitutions.value = partnerRes.value
   loadingPartnerInstitutions.value = false
 
   if (coordRes.status === 'fulfilled') coordinators.value = coordRes.value.data
@@ -276,20 +290,17 @@ const stepKeys = [
 </script>
 
 <template>
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-    @mousedown.self="emit('close')"
-  >
+  <BaseModal max-width="max-w-4xl" labelled-by="create-exchange-title" @close="emit('close')">
     <div
-      class="flex w-full max-w-4xl flex-col rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl"
+      class="flex w-full flex-col rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl"
       style="max-height: 90vh"
     >
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-primary/20 px-8 py-5">
-        <h2 class="text-xl font-semibold text-light">{{ t('createExchange.title') }}</h2>
+        <h2 id="create-exchange-title" class="text-xl font-semibold text-light">{{ t('createExchange.title') }}</h2>
         <button
           type="button"
-          class="text-light/50 transition hover:text-white"
+          class="text-light/50 transition hover:text-light"
           @click="emit('close')"
         >
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -312,7 +323,7 @@ const stepKeys = [
                 ? 'bg-primary text-white'
                 : index + 1 === currentStep
                   ? 'bg-primary text-white ring-4 ring-primary/20'
-                  : 'bg-white/5 text-slate-500'
+                  : 'bg-fill-soft text-faint'
             "
           >
             <template v-if="index + 1 < currentStep">
@@ -328,7 +339,7 @@ const stepKeys = [
           </div>
           <span
             class="text-xs font-medium"
-            :class="index + 1 <= currentStep ? 'text-light' : 'text-slate-600'"
+            :class="index + 1 <= currentStep ? 'text-light' : 'text-muted'"
           >
             {{ t(key) }}
           </span>
@@ -339,7 +350,7 @@ const stepKeys = [
       <div class="min-h-0 flex-1 overflow-y-auto px-8 py-6">
         <p
           v-if="errorMessage"
-          class="mb-5 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          class="mb-5 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
         >
           {{ errorMessage }}
         </p>
@@ -350,7 +361,7 @@ const stepKeys = [
             <label class="mb-2 block text-sm font-semibold text-primary-light">{{
               t('createExchange.selectProgram')
             }}</label>
-            <div v-if="loadingPrograms" class="h-11 animate-pulse rounded-xl bg-white/5"></div>
+            <div v-if="loadingPrograms" class="h-11 animate-pulse rounded-xl bg-fill-soft"></div>
             <SearchableSelect
               v-else
               v-model="selectedProgramId"
@@ -366,7 +377,7 @@ const stepKeys = [
             }}</label>
             <div
               v-if="!selectedProgramId"
-              class="rounded-xl border border-white/5 bg-white/3 px-4 py-3 text-sm text-slate-500"
+              class="rounded-xl border border-hairline-soft bg-white/3 px-4 py-3 text-sm text-faint"
             >
               {{ t('createExchange.selectProgramFirst') }}
             </div>
@@ -379,7 +390,7 @@ const stepKeys = [
                 :class="
                   selectedProfileId === prof.id
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-white/10 bg-dark text-light/70 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/70 hover:border-primary/50 hover:text-light'
                 "
                 @click="selectedProfileId = prof.id"
               >
@@ -405,7 +416,7 @@ const stepKeys = [
             />
             <div class="relative flex-1">
               <svg
-                class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -421,27 +432,27 @@ const stepKeys = [
                 v-model="partnerSearch"
                 type="text"
                 :placeholder="t('createExchange.searchPartner')"
-                class="w-full rounded-xl border border-white/10 bg-dark py-2 pl-9 pr-4 text-sm text-light placeholder-slate-500 transition focus:border-primary focus:outline-none"
+                class="w-full rounded-xl border border-hairline bg-dark py-2 pl-9 pr-4 text-sm text-light placeholder-faint transition focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
           <!-- Results count -->
-          <p class="text-xs text-slate-500">
+          <p class="text-xs text-faint">
             {{ nWord(filteredPartnerInstitutions.length, locale, { en: ['result', 'results'], hr: ['rezultat', 'rezultata', 'rezultata'] }) }}
           </p>
 
           <!-- List -->
           <template v-if="loadingPartnerInstitutions">
             <div class="space-y-2">
-              <div v-for="i in 5" :key="i" class="h-16 animate-pulse rounded-xl bg-white/5"></div>
+              <div v-for="i in 5" :key="i" class="h-16 animate-pulse rounded-xl bg-fill-soft"></div>
             </div>
           </template>
           <template v-else>
             <div class="space-y-2 overflow-y-auto pr-1" style="max-height: 340px">
               <p
                 v-if="filteredPartnerInstitutions.length === 0"
-                class="py-8 text-center text-sm text-slate-500"
+                class="py-8 text-center text-sm text-faint"
               >
                 {{ t('createExchange.noResults') }}
               </p>
@@ -453,18 +464,18 @@ const stepKeys = [
                 :class="
                   selectedPartnerInstitutionId === pi.id
                     ? 'border-primary bg-primary/10'
-                    : 'border-white/10 bg-dark hover:border-primary/40 hover:bg-white/3'
+                    : 'border-hairline bg-dark hover:border-primary/40 hover:bg-white/3'
                 "
                 @click="selectedPartnerInstitutionId = pi.id"
               >
                 <div class="flex items-start justify-between gap-4">
                   <div class="min-w-0">
                     <p class="truncate text-sm font-medium text-light">{{ localizedName(pi) }}</p>
-                    <p v-if="pi.erasmusCode" class="mt-0.5 truncate text-xs text-slate-400">{{ pi.erasmusCode }}</p>
+                    <p v-if="pi.erasmusCode" class="mt-0.5 truncate text-xs text-faint">{{ pi.erasmusCode }}</p>
                   </div>
                   <div class="flex flex-shrink-0 flex-col items-end gap-1">
-                    <span v-if="pi.country" class="text-xs text-slate-500">{{ t(`countries.${pi.country}`) }}</span>
-                    <span v-if="pi.city" class="text-xs text-slate-600">{{ pi.city }}</span>
+                    <span v-if="pi.country" class="text-xs text-faint">{{ t(`countries.${pi.country}`) }}</span>
+                    <span v-if="pi.city" class="text-xs text-muted">{{ pi.city }}</span>
                   </div>
                 </div>
               </button>
@@ -504,7 +515,7 @@ const stepKeys = [
                 :class="
                   semesterType === sem
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-white/10 bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="semesterType = sem"
               >
@@ -529,7 +540,7 @@ const stepKeys = [
                 :class="
                   studySemesters.includes(s)
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-white/10 bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="toggleStudySemester(s)"
               >
@@ -547,7 +558,7 @@ const stepKeys = [
                 :class="
                   isPairSelected(pair)
                     ? 'border-primary bg-primary/10 text-white'
-                    : 'border-white/10 bg-dark text-light/60 hover:border-primary/50 hover:text-white'
+                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="selectPair(pair)"
               >
@@ -592,44 +603,44 @@ const stepKeys = [
           </h3>
           <div class="grid grid-cols-2 gap-3">
             <div
-              class="col-span-2 rounded-xl border border-white/10 bg-dark px-4 py-3 sm:col-span-1"
+              class="col-span-2 rounded-xl border border-hairline bg-dark px-4 py-3 sm:col-span-1"
             >
-              <p class="text-xs text-slate-500">{{ t('createExchange.summaryProgram') }}</p>
+              <p class="text-xs text-faint">{{ t('createExchange.summaryProgram') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">
                 {{ selectedProgram ? localizedHomeName(selectedProgram) : '' }}
               </p>
             </div>
             <div
-              class="col-span-2 rounded-xl border border-white/10 bg-dark px-4 py-3 sm:col-span-1"
+              class="col-span-2 rounded-xl border border-hairline bg-dark px-4 py-3 sm:col-span-1"
             >
-              <p class="text-xs text-slate-500">{{ t('createExchange.summaryProfile') }}</p>
+              <p class="text-xs text-faint">{{ t('createExchange.summaryProfile') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">
                 {{ selectedProfile ? localizedHomeName(selectedProfile) : '' }}
               </p>
             </div>
-            <div class="col-span-2 rounded-xl border border-white/10 bg-dark px-4 py-3">
-              <p class="text-xs text-slate-500">{{ t('createExchange.summaryPartnerInstitution') }}</p>
+            <div class="col-span-2 rounded-xl border border-hairline bg-dark px-4 py-3">
+              <p class="text-xs text-faint">{{ t('createExchange.summaryPartnerInstitution') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">
                 {{ selectedPartnerInstitution ? localizedName(selectedPartnerInstitution) : '' }}
               </p>
-              <p v-if="selectedPartnerInstitution" class="mt-0.5 text-xs text-slate-500">
+              <p v-if="selectedPartnerInstitution" class="mt-0.5 text-xs text-faint">
                 <template v-if="selectedPartnerInstitution.city">{{ selectedPartnerInstitution.city }}</template>
                 <template v-if="selectedPartnerInstitution.city && selectedPartnerInstitution.country"> · </template>
                 <template v-if="selectedPartnerInstitution.country">{{ t(`countries.${selectedPartnerInstitution.country}`) }}</template>
               </p>
             </div>
-            <div class="rounded-xl border border-white/10 bg-dark px-4 py-3">
-              <p class="text-xs text-slate-500">{{ t('createExchange.summaryAcademicYear') }}</p>
+            <div class="rounded-xl border border-hairline bg-dark px-4 py-3">
+              <p class="text-xs text-faint">{{ t('createExchange.summaryAcademicYear') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">{{ academicYear }}</p>
             </div>
-            <div class="rounded-xl border border-white/10 bg-dark px-4 py-3">
-              <p class="text-xs text-slate-500">{{ t('createExchange.summarySemesterType') }}</p>
+            <div class="rounded-xl border border-hairline bg-dark px-4 py-3">
+              <p class="text-xs text-faint">{{ t('createExchange.summarySemesterType') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">
                 {{ t(`exchangeSemester.${semesterType}`) }}
               </p>
             </div>
-            <div class="col-span-2 rounded-xl border border-white/10 bg-dark px-4 py-3">
-              <p class="text-xs text-slate-500">{{ t('createExchange.summaryStudySemester') }}</p>
+            <div class="col-span-2 rounded-xl border border-hairline bg-dark px-4 py-3">
+              <p class="text-xs text-faint">{{ t('createExchange.summaryStudySemester') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">
                 {{
                   studySemesters
@@ -639,8 +650,8 @@ const stepKeys = [
                 }}
               </p>
             </div>
-            <div class="col-span-2 rounded-xl border border-white/10 bg-dark px-4 py-3">
-              <p class="text-xs text-slate-500">{{ t('createExchange.summaryCoordinator') }}</p>
+            <div class="col-span-2 rounded-xl border border-hairline bg-dark px-4 py-3">
+              <p class="text-xs text-faint">{{ t('createExchange.summaryCoordinator') }}</p>
               <p class="mt-0.5 text-sm font-medium text-light">
                 {{ selectedCoordinator?.name ?? t('exchange.noCoordinator') }}
               </p>
@@ -653,7 +664,7 @@ const stepKeys = [
       <div class="flex items-center justify-between border-t border-primary/20 px-8 py-5">
         <button
           type="button"
-          class="rounded-xl border border-white/10 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5 disabled:opacity-40"
+          class="rounded-xl border border-hairline px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-fill-soft disabled:opacity-40"
           :disabled="currentStep === 1 || isSubmitting"
           @click="goBack"
         >
@@ -679,5 +690,5 @@ const stepKeys = [
         </button>
       </div>
     </div>
-  </div>
+  </BaseModal>
 </template>

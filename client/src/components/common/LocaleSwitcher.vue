@@ -22,7 +22,7 @@ function setLocale(code: AppLocale) {
     <button
       v-if="variant === 'compact'"
       type="button"
-      class="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-light/60 transition hover:bg-white/10 hover:text-light"
+      class="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-light/60 transition hover:bg-fill hover:text-light"
       @click="setLocale(loc.code)"
     >
       <span :class="loc.flag" aria-hidden="true"></span>
@@ -31,7 +31,7 @@ function setLocale(code: AppLocale) {
     <button
       v-else
       type="button"
-      class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-white/5 hover:text-white"
+      class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-fill-soft hover:text-light"
       @click="setLocale(loc.code)"
     >
       <span :class="[loc.flag, 'text-base']" aria-hidden="true"></span>

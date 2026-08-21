@@ -4,12 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { adminService, type UserListResponse, type AdminUpdateUserRequest } from '@/services/admin.service'
 import { userRole } from '@/utils/userRole'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
-import type { AuthMeResponse } from '@/types/auth.types'
+import BaseModal from '@/components/common/BaseModal.vue'
+import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 
 const props = defineProps<{
   user: UserListResponse
-  coordinators: AuthMeResponse[]
+  coordinators: CoordinatorOption[]
   institutions: InstitutionResponse[]
 }>()
 
@@ -70,21 +71,17 @@ async function save() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-      @mousedown.self="emit('close')"
-    >
-      <div class="w-full max-w-lg rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
-        <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
-          <div>
-            <div class="flex items-center gap-2">
-              <h3 class="font-semibold text-light">{{ t('admin.users.editUser') }}</h3>
-              <span class="rounded-full border border-white/10 px-1.5 py-0.5 text-[10px] text-light/30">{{ t(`admin.users.role.${user.role}`) }}</span>
+  <BaseModal max-width="max-w-lg" labelled-by="admin-edit-user-title" @close="emit('close')">
+    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 id="admin-edit-user-title" class="font-semibold text-light">{{ t('admin.users.editUser') }}</h3>
+              <span class="rounded-full border border-hairline px-1.5 py-0.5 text-[10px] text-light/30">{{ t(`admin.users.role.${user.role}`) }}</span>
             </div>
             <p class="mt-0.5 text-xs text-light/40">{{ user.email }}</p>
           </div>
-          <button type="button" class="text-light/40 transition hover:text-white" @click="emit('close')">
+          <button type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
             <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
@@ -151,7 +148,7 @@ async function save() {
         <div class="flex justify-end gap-2 border-t border-primary/20 px-6 py-4">
           <button
             type="button"
-            class="rounded-lg border border-white/10 px-4 py-2 text-sm text-light/60 transition hover:text-light"
+            class="rounded-lg border border-hairline px-4 py-2 text-sm text-light/60 transition hover:text-light"
             @click="emit('close')"
           >{{ t('admin.users.editUserCancel') }}</button>
           <button
@@ -162,6 +159,5 @@ async function save() {
           >{{ saving ? t('common.loading') : t('admin.users.editUserSave') }}</button>
         </div>
       </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

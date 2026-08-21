@@ -28,6 +28,7 @@ export interface LearningAgreementEntryResponse {
   partnerCourseCode: string | null
   partnerCourseName: string | null
   partnerCourseNameHr: string | null
+  partnerCourseUrl: string | null
   awardedEcts: number | null
   isDeleted: boolean
   amendmentNumber: number | null
@@ -74,6 +75,7 @@ export interface LocalSlotMapping {
   partnerCourseCode: string
   partnerCourseName: string
   partnerCourseNameHr: string | null
+  partnerCourseUrl: string | null
   awardedEcts: number
   amendmentNumber?: number | null
 }
