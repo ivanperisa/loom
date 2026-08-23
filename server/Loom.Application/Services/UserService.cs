@@ -164,6 +164,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
                 if (isWhitelistedNow)
                 {
                     existing.Role = UserRole.Coordinator;
+                    existing.CoordinatorRequestStatus = null;
                     await db.SaveChangesAsync(ct);
                 }
             }
