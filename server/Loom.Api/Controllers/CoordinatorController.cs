@@ -18,9 +18,9 @@ public class CoordinatorController(ICoordinatorService coordinatorService) : Api
     }
 
     [HttpGet("students")]
-    public async Task<IActionResult> GetMyStudents([FromQuery] PagedRequest paging, CancellationToken ct)
+    public async Task<IActionResult> GetMyStudents([FromQuery] PagedRequest paging, [FromQuery] CoordinatorStudentFilterRequest filter, CancellationToken ct)
     {
-        var result = await coordinatorService.GetMyStudentsAsync(GetCurrentUserId(), paging, ct);
+        var result = await coordinatorService.GetMyStudentsAsync(GetCurrentUserId(), paging, filter, ct);
         return Match(result, Ok);
     }
 

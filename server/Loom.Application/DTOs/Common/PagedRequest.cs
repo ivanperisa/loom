@@ -11,5 +11,5 @@ public record PagedRequest
 
     public int SafePage => Page < 1 ? 1 : Page;
     public int SafePageSize => PageSize < 1 ? 25 : PageSize > MaxPageSize ? MaxPageSize : PageSize;
-    public int Skip => (SafePage - 1) * SafePageSize;
+    public int Skip => (int)Math.Min((long)(SafePage - 1) * SafePageSize, int.MaxValue);
 }

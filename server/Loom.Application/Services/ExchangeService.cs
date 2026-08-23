@@ -95,7 +95,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             var targetStudent = await db.Users.FindAsync([actualStudentId], ct);
             if (targetStudent is null) return Error.NotFound("USER_NOT_FOUND", "Target student not found.");
 
-            if (targetStudent.CoordinatorId != requesterId)
+            if (!requester.IsCoordinatorFor(targetStudent.CoordinatorId))
                 return Error.Forbidden("FORBIDDEN", "You are not the coordinator for this student.");
         }
 
@@ -111,8 +111,11 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             .FirstOrDefaultAsync(i => i.Id == request.PartnerInstitutionId && i.Type == InstitutionType.Partner, ct);
         if (partnerInstitution is null) return Error.NotFound("PARTNER_INSTITUTION_NOT_FOUND", "Partner institution not found.");
 
-        if (request.CoordinatorId.HasValue && student.CoordinatorId != request.CoordinatorId)
-            student.CoordinatorId = request.CoordinatorId.Value;
+        if (request.CoordinatorId.HasValue)
+        {
+            var setCoordinator = await db.SetStudentCoordinatorAsync(student, request.CoordinatorId.Value, ct);
+            if (setCoordinator.IsError) return setCoordinator.Errors;
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Mentor))
             student.Mentor = request.Mentor.Trim();
@@ -120,17 +123,15 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         var exchange = new Exchange
         {
             StudentId = studentId,
-            CoordinatorId = request.CoordinatorId ?? student.CoordinatorId,
+            CoordinatorId = student.CoordinatorId,
             HomeProfileId = request.HomeProfileId,
             PartnerInstitutionId = partnerInstitution.Id,
             AcademicYear = request.AcademicYear,
             SemesterType = semesterType,
             StudySemesters = request.StudySemesters,
+            LearningAgreement = new LearningAgreement { Status = DocumentStatus.Draft },
         };
         db.Exchanges.Add(exchange);
-        await db.SaveChangesAsync(ct);
-
-        db.LearningAgreements.Add(new LearningAgreement { ExchangeId = exchange.Id, Status = DocumentStatus.Draft });
         await db.SaveChangesAsync(ct);
 
         var saved = await db.ExchangeWithFullIncludes()
@@ -180,7 +181,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
         return Result.Deleted;
     }
 
-    public async Task<ErrorOr<ExchangeResponse>> UpdateExchangeAsync(Guid exchangeGuid, int requesterId, UpdateExchangeRequest request, CancellationToken ct = default)
+    public async Task<ErrorOr<ExchangeResponse>> UpdateExchangeAsync(Guid exchangeGuid, int requesterId, UpdateExchangeRequest request, bool allowCoordinatorChange = true, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(request.AcademicYear))
             return Error.Validation("INVALID_ACADEMIC_YEAR", "Academic year is required.");
@@ -215,10 +216,15 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         student.Mentor = string.IsNullOrWhiteSpace(request.Mentor) ? null : request.Mentor.Trim();
 
+        if (allowCoordinatorChange)
+        {
+            var setCoordinator = await db.SetStudentCoordinatorAsync(student, request.CoordinatorId, ct);
+            if (setCoordinator.IsError) return setCoordinator.Errors;
+        }
+
         exchange.AcademicYear = request.AcademicYear;
         exchange.SemesterType = semesterType;
         exchange.StudySemesters = request.StudySemesters;
-        exchange.CoordinatorId = request.CoordinatorId ?? student.CoordinatorId;
         exchange.EwpLink = string.IsNullOrWhiteSpace(request.EwpLink) ? null : request.EwpLink.Trim();
         exchange.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);

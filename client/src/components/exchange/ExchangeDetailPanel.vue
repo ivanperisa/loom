@@ -293,7 +293,7 @@ onMounted(async () => {
             >
               <button
                 type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-light transition hover:bg-fill-soft"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-light transition hover:bg-fill-soft"
                 @click="closeActionsMenu(); showEdit = true"
               >
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -304,7 +304,7 @@ onMounted(async () => {
               <button
                 v-if="exchangeStore.exchange.studentIsPlaceholder"
                 type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-danger transition hover:bg-danger/10 disabled:opacity-50"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-light transition hover:bg-primary/10 disabled:opacity-50"
                 :disabled="regenerating"
                 @click="closeActionsMenu(); regenerateAccessLink()"
               >

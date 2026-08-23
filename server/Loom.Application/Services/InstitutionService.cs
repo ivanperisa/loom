@@ -2,6 +2,7 @@ using ErrorOr;
 using Loom.Application.DTOs.Common;
 using Loom.Application.DTOs.Institution;
 using Loom.Application.DTOs.LearningAgreement;
+using Loom.Application.Helpers;
 using Loom.Application.Interfaces;
 using Loom.Application.Interfaces.Services;
 using Loom.Application.Mappers;
@@ -52,17 +53,17 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         }
 
         var totalCount = await query.CountAsync(ct);
+        var hasDeleted = await db.Institutions.AnyAsync(i => i.Type == InstitutionType.Partner && i.IsDeleted, ct);
 
-        var institutions = await query
-            .Include(i => i.PartnerCourses)
-            .OrderBy(i => i.Country)
-            .ThenBy(i => i.Name)
+        var items = await query
+            .OrderBy(i => i.Country).ThenBy(i => i.Name).ThenBy(i => i.Id)
             .Skip(paging.Skip)
             .Take(paging.SafePageSize)
+            .Select(i => new PartnerInstitutionAdminResponse(
+                i.Id, i.Name, i.NameHr, i.Country, i.City, i.ErasmusCode, i.PartnerCourses.Count, i.IsDeleted))
             .ToListAsync(ct);
 
-        return new PagedResponse<PartnerInstitutionAdminResponse>(
-            institutions.Select(i => i.ToAdminResponse()).ToList(), paging.SafePage, paging.SafePageSize, totalCount);
+        return new PagedResponse<PartnerInstitutionAdminResponse>(items, paging.SafePage, paging.SafePageSize, totalCount, hasDeleted);
     }
 
     public async Task<ErrorOr<PagedResponse<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, bool includeDeleted, PagedRequest paging, CancellationToken ct = default)
@@ -80,16 +81,9 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
                 (c.NameHr != null && EF.Functions.Like(c.NameHr.ToLower(), term)));
         }
 
-        var totalCount = await query.CountAsync(ct);
-
-        var courses = await query
-            .OrderBy(c => c.Code)
-            .Skip(paging.Skip)
-            .Take(paging.SafePageSize)
-            .ToListAsync(ct);
-
-        return new PagedResponse<PartnerCourseResponse>(
-            courses.Select(c => c.ToResponse()).ToList(), paging.SafePage, paging.SafePageSize, totalCount);
+        var hasDeleted = await db.PartnerCourses.AnyAsync(c => c.InstitutionId == institutionId && c.IsDeleted, ct);
+        var result = await query.ToPagedResponseAsync(paging, q => q.OrderBy(c => c.Code), c => c.Id, c => c.ToResponse(), ct);
+        return result with { HasDeleted = hasDeleted };
     }
 
     #endregion
@@ -115,12 +109,12 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         db.Institutions.Add(institution);
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.Institutions
+        return await db.Institutions
             .AsNoTracking()
             .Where(i => i.Id == institution.Id)
-            .Include(i => i.PartnerCourses)
+            .Select(i => new PartnerInstitutionAdminResponse(
+                i.Id, i.Name, i.NameHr, i.Country, i.City, i.ErasmusCode, i.PartnerCourses.Count, i.IsDeleted))
             .FirstAsync(ct);
-        return saved.ToAdminResponse();
     }
 
     public async Task<ErrorOr<PartnerInstitutionAdminResponse>> UpdatePartnerInstitutionAsync(int institutionId, UpdateInstitutionRequest request, CancellationToken ct = default)
@@ -141,12 +135,12 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         institution.ErasmusCode = string.IsNullOrWhiteSpace(request.ErasmusCode) ? null : request.ErasmusCode.Trim();
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.Institutions
+        return await db.Institutions
             .AsNoTracking()
             .Where(i => i.Id == institution.Id)
-            .Include(i => i.PartnerCourses)
+            .Select(i => new PartnerInstitutionAdminResponse(
+                i.Id, i.Name, i.NameHr, i.Country, i.City, i.ErasmusCode, i.PartnerCourses.Count, i.IsDeleted))
             .FirstAsync(ct);
-        return saved.ToAdminResponse();
     }
 
     public async Task<ErrorOr<Deleted>> DeletePartnerInstitutionAsync(int institutionId, CancellationToken ct = default)

@@ -235,6 +235,7 @@ export default {
     editExchange: 'Uredi razmjenu',
     editLockedByLa: 'Neki tipovi semestra nisu dostupni jer ugovor o učenju već sadrži preslikane predmete izvan njih.',
     editLockedByLaHint: 'Prvo uklonite te predmete ako ipak trebate promijeniti tip.',
+    coordinatorLockedApproved: 'Koordinator je zaključan nakon što je ugovor o učenju odobren.',
     editDetails: 'Uredi mentora i koordinatora',
     coordinatorView: 'Koordinatorski pregled',
     student: 'Student',

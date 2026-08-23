@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerCourseResponse } from '@/types/institution.types'
@@ -11,7 +11,7 @@ import MergeCoursesModal from '@/components/admin/MergeCoursesModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 
-const COURSE_PER_PAGE = 25
+const COURSE_PER_PAGE = 10
 
 const props = defineProps<{ institutionId: string; institutionName: string }>()
 const emit = defineEmits<{ 'count-changed': [delta: number] }>()
@@ -24,11 +24,12 @@ const error = ref<string | null>(null)
 const courses = ref<PartnerCourseResponse[]>([])
 const totalCount = ref(0)
 const coursePage = ref(1)
-const totalCoursePages = ref(1)
+const totalCoursePages = computed(() => Math.max(1, Math.ceil(totalCount.value / COURSE_PER_PAGE)))
 
 const courseSearch = ref('')
 const debouncedCourseSearch = useDebouncedRef(courseSearch)
 const showDeletedCourses = ref(false)
+const hasDeletedCourses = ref(false)
 
 const courseModal = ref<{ mode: 'create' | 'edit'; course?: PartnerCourseResponse; initialName?: string } | null>(null)
 const savingCourse = ref(false)
@@ -50,7 +51,8 @@ async function loadCourses() {
     })
     courses.value = res.data.items
     totalCount.value = res.data.totalCount
-    totalCoursePages.value = Math.ceil(res.data.totalCount / COURSE_PER_PAGE)
+    hasDeletedCourses.value = res.data.hasDeleted
+    if (coursePage.value > totalCoursePages.value) coursePage.value = totalCoursePages.value
   } finally {
     loading.value = false
   }
@@ -176,7 +178,7 @@ async function submitMerge(primaryId: string) {
 
 <template>
   <div class="border-t border-hairline-soft px-5 pb-4 pt-3">
-    <div v-if="loading" class="space-y-1.5">
+    <div v-if="loading && courses.length === 0" class="space-y-1.5">
       <div v-for="i in 3" :key="i" class="h-7 animate-pulse rounded bg-fill-soft"></div>
     </div>
     <template v-else>
@@ -187,7 +189,7 @@ async function submitMerge(primaryId: string) {
       <PartnerCourseToolbar
         :search="courseSearch"
         :show-deleted="showDeletedCourses"
-        :has-deleted="true"
+        :has-deleted="hasDeletedCourses"
         :merge-selecting="mergeSelecting"
         :can-merge="courses.length > 1"
         :selected-count="selectedForMerge.size"

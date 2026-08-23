@@ -35,15 +35,7 @@ public class AdminService(IAppDbContext db) : IAdminService
                 (u.Jmbag != null && EF.Functions.Like(u.Jmbag.ToLower(), term)));
         }
 
-        var totalCount = await query.CountAsync(ct);
-
-        var users = await query
-            .OrderBy(u => u.Name)
-            .Skip(paging.Skip)
-            .Take(paging.SafePageSize)
-            .ToListAsync(ct);
-
-        return new PagedResponse<UserListResponse>(ToUserListResponses(users), paging.SafePage, paging.SafePageSize, totalCount);
+        return await query.ToPagedResponseAsync(paging, q => q.OrderBy(u => u.Name), u => u.Id, ToUserListResponse, ct);
     }
 
     public async Task<ErrorOr<UserListResponse>> UpdateUserAsync(int adminId, int targetUserId, AdminUpdateUserRequest request, CancellationToken ct = default)
@@ -54,14 +46,21 @@ public class AdminService(IAppDbContext db) : IAdminService
         var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
         if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
+        if (!string.IsNullOrWhiteSpace(request.Jmbag))
+        {
+            var jmbagTaken = await db.Users.AnyAsync(u => u.Jmbag == request.Jmbag && u.Id != targetUserId, ct);
+            if (jmbagTaken) return Error.Conflict("JMBAG_TAKEN", "A student with this JMBAG already exists.");
+        }
+
         target.Name = request.Name;
         target.Jmbag = request.Jmbag;
         target.Mentor = request.Mentor;
         target.InstitutionId = request.InstitutionId;
-        if (target.Role != UserRole.Coordinator)
+
+        if (!target.CanActAsCoordinator())
         {
-            target.CoordinatorId = request.CoordinatorId;
-            await db.ReassignUnapprovedExchangesAsync(target.Id, request.CoordinatorId, ct);
+            var setCoordinator = await db.SetStudentCoordinatorAsync(target, request.CoordinatorId, ct);
+            if (setCoordinator.IsError) return setCoordinator.Errors;
         }
         await db.SaveChangesAsync(ct);
 
@@ -70,7 +69,7 @@ public class AdminService(IAppDbContext db) : IAdminService
             .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
             ?? throw new InvalidOperationException();
 
-        return ToUserListResponses([saved])[0];
+        return ToUserListResponse(saved);
     }
 
     #endregion
@@ -140,6 +139,19 @@ public class AdminService(IAppDbContext db) : IAdminService
         if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
         if (target.Role != UserRole.Coordinator)
             return Error.Validation("NOT_COORDINATOR", "User is not a coordinator.");
+
+        var students = await db.Users.Where(u => u.CoordinatorId == target.Id).ToListAsync(ct);
+        foreach (var s in students)
+            s.CoordinatorId = null;
+
+        var exchanges = await db.Exchanges.Where(e => e.CoordinatorId == target.Id).ToListAsync(ct);
+        foreach (Exchange ex in exchanges)
+            ex.CoordinatorId = null;
+
+        var whitelistEntry = await db.CoordinatorWhitelist
+            .FirstOrDefaultAsync(e => e.Email == target.Email.ToLowerInvariant(), ct);
+        if (whitelistEntry is not null)
+            db.CoordinatorWhitelist.Remove(whitelistEntry);
 
         target.Role = UserRole.Student;
         target.CoordinatorRequestStatus = null;
@@ -218,21 +230,19 @@ public class AdminService(IAppDbContext db) : IAdminService
         return Result.Success;
     }
 
-    private static List<UserListResponse> ToUserListResponses(IEnumerable<User> users) =>
-        users.Select(u => new UserListResponse(
-            u.Id,
-            u.Name,
-            u.Email,
-            u.Role.ToString(),
-            u.Institution != null ? u.Institution.Name : null,
-            u.InstitutionId,
-            u.CoordinatorRequestStatus,
-            u.IsOnboarded,
-            u.Jmbag,
-            u.Mentor,
-            u.CoordinatorId,
-            u.Coordinator != null ? u.Coordinator.Name : null))
-            .ToList();
+    private static UserListResponse ToUserListResponse(User u) => new(
+        u.Id,
+        u.Name,
+        u.Email,
+        u.Role.ToString(),
+        u.Institution != null ? u.Institution.Name : null,
+        u.InstitutionId,
+        u.CoordinatorRequestStatus,
+        u.IsOnboarded,
+        u.Jmbag,
+        u.Mentor,
+        u.CoordinatorId,
+        u.Coordinator != null ? u.Coordinator.Name : null);
 
     #endregion
 }

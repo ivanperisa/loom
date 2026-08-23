@@ -52,10 +52,10 @@ function onUserSaved(updated: UserListResponse) {
 const studentSearch = ref('')
 const debouncedStudentSearch = useDebouncedRef(studentSearch)
 const studentPage = ref(1)
-const STUDENTS_PER_PAGE = 25
+const STUDENTS_PER_PAGE = 10
 const students = ref<UserListResponse[]>([])
 const studentsTotalCount = ref(0)
-const totalStudentPages = computed(() => Math.ceil(studentsTotalCount.value / STUDENTS_PER_PAGE))
+const totalStudentPages = computed(() => Math.max(1, Math.ceil(studentsTotalCount.value / STUDENTS_PER_PAGE)))
 
 function toggleMenu(userId: string) {
   openMenuId.value = openMenuId.value === userId ? null : userId
@@ -83,14 +83,24 @@ watch([studentPage, debouncedStudentSearch], ([newPage, newSearch], [, oldSearch
   fetchStudents()
 })
 
+async function fetchAllByRole(role: string) {
+  const pageSize = 200
+  let page = 1
+  const all: UserListResponse[] = []
+  for (;;) {
+    const res = await adminService.getAllUsers({ page, pageSize, role })
+    all.push(...res.data.items)
+    if (res.data.items.length < pageSize) return all
+    page++
+  }
+}
+
 async function fetchAdmins() {
-  const res = await adminService.getAllUsers({ pageSize: 200, role: userRole.Admin })
-  admins.value = res.data.items
+  admins.value = await fetchAllByRole(userRole.Admin)
 }
 
 async function fetchCoordinators() {
-  const res = await adminService.getAllUsers({ pageSize: 200, role: userRole.Coordinator })
-  coordinators.value = res.data.items
+  coordinators.value = await fetchAllByRole(userRole.Coordinator)
 }
 
 async function fetchCoordinatorOptions() {
@@ -104,6 +114,7 @@ async function fetchStudents() {
     const res = await adminService.getAllUsers({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, role: userRole.Student })
     students.value = res.data.items
     studentsTotalCount.value = res.data.totalCount
+    if (studentPage.value > totalStudentPages.value) studentPage.value = totalStudentPages.value
   } finally {
     loadingUsers.value = false
   }
@@ -256,7 +267,7 @@ function formatDate(iso: string) {
     <section class="rounded-2xl border border-primary/20 bg-dark-2 p-6">
       <h2 class="mb-5 text-base font-semibold text-light">{{ t('admin.users.title') }}</h2>
 
-      <div v-if="loadingUsers" class="space-y-4">
+      <div v-if="loadingUsers && admins.length === 0 && coordinators.length === 0 && students.length === 0" class="space-y-4">
         <div v-for="i in 3" :key="i" class="h-12 animate-pulse rounded-xl bg-dark"></div>
       </div>
 
@@ -318,7 +329,7 @@ function formatDate(iso: string) {
                   </button>
                   <button
                     type="button"
-                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-danger transition hover:bg-danger/20 disabled:opacity-50"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-primary-light transition hover:bg-primary/20 disabled:opacity-50"
                     :disabled="userActionId === u.id"
                     @click.stop="removeCoordinatorFromList(u.id); openMenuId = null"
                   >
@@ -387,11 +398,11 @@ function formatDate(iso: string) {
                   </button>
                   <button
                     type="button"
-                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20 disabled:opacity-50"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-success transition hover:bg-success/20 disabled:opacity-50"
                     :disabled="userActionId === u.id"
                     @click.stop="makeCoordinatorFromList(u.id); openMenuId = null"
                   >
-                    <svg class="h-3.5 w-3.5 text-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20V4m0 0l-6 6m6-6l6 6" />
                     </svg>
                     {{ t('admin.users.makeCoordinator') }}

@@ -3,6 +3,7 @@ export interface PagedResponse<T> {
   page: number
   pageSize: number
   totalCount: number
+  hasDeleted: boolean
 }
 
 export interface PagedParams {
@@ -10,4 +11,6 @@ export interface PagedParams {
   pageSize?: number
   search?: string
   sortDir?: 'asc' | 'desc'
+  academicYear?: string | null
+  partnerInstitution?: string | null
 }

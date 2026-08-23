@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { coordinatorService } from '@/services/coordinator.service'
 import { useExchangeStore } from '@/stores/exchange.store'
+import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import { exchangeSemester } from '@/utils/exchangeSemester'
 import { extractApiError } from '@/utils/apiError'
 import { useNotification } from '@/composables/useNotification'
@@ -24,6 +25,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
 const { notifyError } = useNotification()
+const { isApproved } = useExchangePermissions()
 
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
@@ -276,10 +278,14 @@ async function submit() {
           <SearchableSelect
             v-model="selectedCoordinatorId"
             :options="coordinatorOptions"
+            :disabled="isApproved"
             :placeholder="t('createExchange.selectCoordinatorPlaceholder')"
             :search-placeholder="t('settings.profile.searchCoordinator')"
             :no-results-label="t('settings.profile.noCoordinatorResults')"
           />
+          <p v-if="isApproved" class="mt-1.5 text-xs text-light/40">
+            {{ t('exchange.coordinatorLockedApproved') }}
+          </p>
         </div>
 
         <!-- Mentor -->

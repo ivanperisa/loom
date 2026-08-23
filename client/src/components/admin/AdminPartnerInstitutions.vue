@@ -13,18 +13,19 @@ import PartnerInstitutionFormPanel from '@/components/admin/PartnerInstitutionFo
 const { t } = useI18n()
 const { confirm } = useConfirm()
 
-const INST_PER_PAGE = 25
+const INST_PER_PAGE = 10
 
 const institutions = ref<PartnerInstitutionAdminResponse[]>([])
 const totalCount = ref(0)
 const institutionPage = ref(1)
-const totalInstPages = computed(() => Math.ceil(totalCount.value / INST_PER_PAGE))
+const totalInstPages = computed(() => Math.max(1, Math.ceil(totalCount.value / INST_PER_PAGE)))
 const loading = ref(true)
 const error = ref<string | null>(null)
 
 const institutionSearch = ref('')
 const debouncedInstitutionSearch = useDebouncedRef(institutionSearch)
 const showDeleted = ref(false)
+const hasDeleted = ref(false)
 
 const showAddInstitution = ref(false)
 const addingInstitution = ref(false)
@@ -56,6 +57,8 @@ async function loadInstitutions() {
     })
     institutions.value = res.data.items
     totalCount.value = res.data.totalCount
+    hasDeleted.value = res.data.hasDeleted
+    if (institutionPage.value > totalInstPages.value) institutionPage.value = totalInstPages.value
   } catch {
     error.value = t('admin.institutions.saveError')
   } finally {
@@ -161,13 +164,13 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
         :placeholder="t('admin.institutions.searchInstitutions')"
         class="flex-1"
       />
-      <label class="flex shrink-0 items-center gap-2 text-xs text-light/60">
+      <label v-if="hasDeleted" class="flex shrink-0 items-center gap-2 text-xs text-light/60">
         <input v-model="showDeleted" type="checkbox" class="accent-primary" />
         {{ t('admin.institutions.showDeleted') }}
       </label>
     </div>
 
-    <div v-if="loading" class="space-y-3">
+    <div v-if="loading && institutions.length === 0" class="space-y-3">
       <div v-for="i in 4" :key="i" class="h-16 animate-pulse rounded-xl bg-dark-2"></div>
     </div>
 

@@ -2,6 +2,7 @@ using ErrorOr;
 using Loom.Application.DTOs.Common;
 using Loom.Application.DTOs.Coordinator;
 using Loom.Application.DTOs.Exchange;
+using Loom.Application.Helpers;
 using Loom.Application.Interfaces;
 using Loom.Application.Interfaces.Services;
 using Loom.Application.Mappers;
@@ -24,7 +25,7 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
         return coordinators;
     }
 
-    public async Task<ErrorOr<PagedResponse<CoordinatorStudentResponse>>> GetMyStudentsAsync(int coordinatorId, PagedRequest paging, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<CoordinatorStudentResponse>>> GetMyStudentsAsync(int coordinatorId, PagedRequest paging, CoordinatorStudentFilterRequest? filter = null, CancellationToken ct = default)
     {
         var coordinator = await db.Users.FindAsync([coordinatorId], ct);
         if (coordinator is null || !coordinator.CanActAsCoordinator())
@@ -37,6 +38,17 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
                 (u.CoordinatorId == coordinatorId ||
                  u.StudentExchanges.Any(e => e.CoordinatorId == coordinatorId)));
 
+        if (filter is not null && !filter.IsEmpty)
+        {
+            var matchingExchanges = db.Exchanges.Where(e => e.CoordinatorId == coordinatorId);
+            if (!string.IsNullOrWhiteSpace(filter.AcademicYear))
+                matchingExchanges = matchingExchanges.Where(e => e.AcademicYear == filter.AcademicYear);
+            if (!string.IsNullOrWhiteSpace(filter.PartnerInstitution))
+                matchingExchanges = matchingExchanges.Where(e => e.PartnerInstitution.Name == filter.PartnerInstitution);
+
+            query = query.Where(u => matchingExchanges.Any(e => e.StudentId == u.Id));
+        }
+
         if (!string.IsNullOrWhiteSpace(paging.Search))
         {
             var term = $"%{paging.Search.Trim().ToLower()}%";
@@ -45,25 +57,15 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
                 (u.Jmbag != null && EF.Functions.Like(u.Jmbag.ToLower(), term)));
         }
 
-        var totalCount = await query.CountAsync(ct);
-
-        query = paging.SortDir == "desc"
-            ? query.OrderByDescending(u => u.Name)
-            : query.OrderBy(u => u.Name);
-
-        var students = await query
-            .Skip(paging.Skip)
-            .Take(paging.SafePageSize)
-            .ToListAsync(ct);
-
-        var items = students
-            .Select(u => new CoordinatorStudentResponse(
+        return await query.ToPagedResponseAsync(
+            paging,
+            q => paging.SortDir == "desc" ? q.OrderByDescending(u => u.Name) : q.OrderBy(u => u.Name),
+            u => u.Id,
+            u => new CoordinatorStudentResponse(
                 u.Id, u.Name, u.Jmbag, u.Institution?.Name,
                 u.ExternalId == u.Jmbag, u.InstitutionId,
-                u.CoordinatorId == coordinatorId))
-            .ToList();
-
-        return new PagedResponse<CoordinatorStudentResponse>(items, paging.SafePage, paging.SafePageSize, totalCount);
+                u.CoordinatorId == coordinatorId),
+            ct);
     }
 
     public async Task<ErrorOr<CoordinatorStudentResponse>> CreatePlaceholderStudentAsync(int coordinatorId, CreatePlaceholderStudentRequest request, CancellationToken ct = default)
@@ -112,7 +114,7 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
         var student = await db.Users.Include(u => u.Institution).FirstOrDefaultAsync(u => u.Id == studentId, ct);
         if (student is null || student.Role != UserRole.Student)
             return Error.NotFound("STUDENT_NOT_FOUND", "Student not found.");
-        if (student.CoordinatorId != coordinatorId)
+        if (!coordinator.IsCoordinatorFor(student.CoordinatorId))
             return Error.Forbidden("FORBIDDEN", "You can only edit your own students.");
         if (student.ExternalId != student.Jmbag)
             return Error.Validation("NOT_A_PLACEHOLDER", "Only placeholder students can be edited here.");
@@ -149,7 +151,7 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
         var student = await db.Users.FirstOrDefaultAsync(u => u.Id == studentId, ct);
         if (student is null || student.Role != UserRole.Student)
             return Error.NotFound("STUDENT_NOT_FOUND", "Student not found.");
-        if (student.CoordinatorId != coordinatorId)
+        if (!coordinator.IsCoordinatorFor(student.CoordinatorId))
             return Error.Forbidden("FORBIDDEN", "You can only delete your own students.");
         if (student.ExternalId != student.Jmbag)
             return Error.Validation("NOT_A_PLACEHOLDER", "Only placeholder students can be deleted here.");

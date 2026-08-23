@@ -235,6 +235,7 @@ export default {
     editExchange: 'Edit exchange',
     editLockedByLa: 'Some semester types are unavailable because the learning agreement already has courses mapped outside them.',
     editLockedByLaHint: 'Remove those courses first if you need to switch anyway.',
+    coordinatorLockedApproved: 'The coordinator is locked once the learning agreement is approved.',
     editDetails: 'Edit mentor & coordinator',
     coordinatorView: 'Coordinator view',
     student: 'Student',

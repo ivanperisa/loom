@@ -16,6 +16,7 @@ const props = withDefaults(
     searchPlaceholder?: string
     noResultsLabel?: string
     loading?: boolean
+    disabled?: boolean
   }>(),
   {
     placeholder: '—',
@@ -23,6 +24,7 @@ const props = withDefaults(
     searchPlaceholder: 'Search...',
     noResultsLabel: 'No results.',
     loading: false,
+    disabled: false,
   },
 )
 
@@ -88,6 +90,7 @@ function closeDropdown() {
 }
 
 function toggle() {
+  if (props.disabled) return
   if (open.value) closeDropdown()
   else openDropdown()
 }
@@ -111,7 +114,8 @@ watch(open, (val) => {
   <div ref="root" class="relative">
     <button
       type="button"
-      class="flex w-full items-center justify-between rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light transition focus:border-primary focus:outline-none"
+      :disabled="disabled"
+      class="flex w-full items-center justify-between rounded-lg border border-primary/20 bg-dark px-3 py-2 text-sm text-light transition focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       @click="toggle"
     >
       <span v-if="loading" class="text-light/40">…</span>

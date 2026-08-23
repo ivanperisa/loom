@@ -31,8 +31,8 @@ const students = ref<CoordinatorStudentResponse[]>([])
 const studentPage = ref(1)
 const studentSortDir = ref<SortDir>('asc')
 const studentsTotalCount = ref(0)
-const STUDENTS_PER_PAGE = 25
-const totalStudentPages = computed(() => Math.ceil(studentsTotalCount.value / STUDENTS_PER_PAGE))
+const STUDENTS_PER_PAGE = 10
+const totalStudentPages = computed(() => Math.max(1, Math.ceil(studentsTotalCount.value / STUDENTS_PER_PAGE)))
 const exchanges = ref<ExchangeSummaryResponse[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -124,18 +124,6 @@ const actionsMenuStudent = computed(
   () => students.value.find((s) => s.id === actionsMenuId.value) ?? null,
 )
 
-// Text search (name/jmbag) is server-side and already reflected in `students` (the current page).
-// The academic-year/institution filters are local: the server doesn't know about exchanges,
-// so they narrow the current page further using the (unpaged) exchange data.
-const filteredStudents = computed(() => {
-  if (!selectedAcademicYear.value && !selectedPartnerInstitution.value) return students.value
-  return students.value.filter((s) => exchangesByStudent.value.has(s.id))
-})
-
-// Only the student column is sortable: the server orders by name so this stays correct
-// across pages. The exchange/period/status columns come from a separate, unpaged exchange
-// list and can't be sorted coherently against a paginated student list, so they're plain
-// headers (see final-review-fix4-report.md for the investigation).
 function toggleStudentSort() {
   studentSortDir.value = studentSortDir.value === 'asc' ? 'desc' : 'asc'
   studentPage.value = 1
@@ -148,7 +136,7 @@ async function fetchData() {
   error.value = null
   try {
     const [studentsRes, exchangesRes, institutionsRes] = await Promise.allSettled([
-      coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, sortDir: studentSortDir.value }),
+      coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, sortDir: studentSortDir.value, academicYear: selectedAcademicYear.value, partnerInstitution: selectedPartnerInstitution.value }),
       coordinatorService.getStudentsExchanges(),
       institutionService.getHomeInstitutions(),
     ])
@@ -168,9 +156,10 @@ async function fetchData() {
 async function fetchStudents() {
   closeMenu()
   try {
-    const res = await coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, sortDir: studentSortDir.value })
+    const res = await coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, sortDir: studentSortDir.value, academicYear: selectedAcademicYear.value, partnerInstitution: selectedPartnerInstitution.value })
     students.value = res.data.items
     studentsTotalCount.value = res.data.totalCount
+    if (studentPage.value > totalStudentPages.value) studentPage.value = totalStudentPages.value
   } catch {
     error.value = t('common.error')
   }
@@ -183,13 +172,16 @@ onBeforeRouteUpdate((to) => {
   if (q !== studentSearch.value) studentSearch.value = q
 })
 
-watch([studentPage, debouncedStudentSearch], ([newPage, newSearch], [, oldSearch]) => {
-  if (newSearch !== oldSearch && newPage !== 1) {
-    studentPage.value = 1
-    return
-  }
-  fetchStudents()
-})
+watch(
+  [studentPage, debouncedStudentSearch, selectedAcademicYear, selectedPartnerInstitution],
+  ([newPage, newSearch, newYear, newInstitution], [, oldSearch, oldYear, oldInstitution]) => {
+    if ((newSearch !== oldSearch || newYear !== oldYear || newInstitution !== oldInstitution) && newPage !== 1) {
+      studentPage.value = 1
+      return
+    }
+    fetchStudents()
+  },
+)
 
 function closeMenu() {
   openMenuId.value = null
@@ -345,7 +337,7 @@ function onExchangeCreated(exchangeGuid: string) {
         </div>
       </div>
 
-      <div v-if="loading" class="space-y-4">
+      <div v-if="loading && students.length === 0" class="space-y-4">
         <div v-for="i in 3" :key="i" class="animate-pulse rounded-xl border border-primary/20 bg-dark-2 p-5">
           <div class="h-5 w-48 rounded bg-primary/20"></div>
           <div class="mt-3 h-4 w-72 rounded bg-primary/20"></div>
@@ -356,7 +348,7 @@ function onExchangeCreated(exchangeGuid: string) {
         <p class="text-danger">{{ error }}</p>
       </div>
 
-      <div v-else-if="filteredStudents.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
+      <div v-else-if="students.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
         <svg class="mx-auto h-12 w-12 text-light/60" viewBox="0 0 24 24" fill="none">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
           <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5" />
@@ -378,7 +370,7 @@ function onExchangeCreated(exchangeGuid: string) {
           </div>
 
           <div class="divide-y divide-primary/10">
-            <div v-for="student in filteredStudents" :key="student.id" class="group relative" data-menu-anchor>
+            <div v-for="student in students" :key="student.id" class="group relative" data-menu-anchor>
               <!-- Stretched link: click anywhere on the row to open its primary exchange -->
               <RouterLink
                 v-if="primaryExchangeByStudent.get(student.id)"
