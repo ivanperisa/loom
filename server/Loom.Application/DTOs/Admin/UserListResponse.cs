@@ -6,6 +6,7 @@ public record UserListResponse(
     string Email,
     string Role,
     string? InstitutionName,
+    string? InstitutionCity,
     int? InstitutionId,
     string? CoordinatorRequestStatus,
     bool IsOnboarded,

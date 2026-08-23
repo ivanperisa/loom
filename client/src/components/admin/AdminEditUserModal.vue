@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminService, type UserListResponse, type AdminUpdateUserRequest } from '@/services/admin.service'
 import { userRole } from '@/utils/userRole'
+import { ROLE_CHIP_CLASS } from '@/utils/roleColors'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { CoordinatorOption } from '@/types/coordinator.types'
@@ -22,7 +23,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const isStudent = computed(() => props.user.role === userRole.Student)
-const isCoordinator = computed(() => props.user.role === userRole.Coordinator)
 
 const form = ref({
   name: props.user.name,
@@ -77,7 +77,10 @@ async function save() {
         <div>
           <div class="flex items-center gap-2">
             <h3 id="admin-edit-user-title" class="font-semibold text-light">{{ t('admin.users.editUser') }}</h3>
-              <span class="rounded-full border border-hairline px-1.5 py-0.5 text-[10px] text-light/30">{{ t(`admin.users.role.${user.role}`) }}</span>
+              <span
+                class="rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
+                :class="ROLE_CHIP_CLASS[user.role]"
+              >{{ t(`admin.users.role.${user.role}`) }}</span>
             </div>
             <p class="mt-0.5 text-xs text-light/40">{{ user.email }}</p>
           </div>

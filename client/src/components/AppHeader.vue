@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTheme } from '@/composables/useTheme'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 
 const authStore = useAuthStore()
 const { t } = useI18n()
@@ -24,16 +25,6 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
 const displayName = computed(() => authStore.user?.name?.trim() || t('common.user'))
 const displayEmail = computed(() => authStore.user?.email?.trim() || t('common.na'))
 const homeRoute = computed(() => authStore.canActAsCoordinator ? '/coordinator' : '/home')
-
-const initials = computed(() => {
-  const parts = displayName.value
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((value) => value[0]?.toUpperCase() ?? '')
-    .join('')
-  return parts || 'U'
-})
 
 function toggleDropdown() {
   dropdownOpen.value = !dropdownOpen.value
@@ -81,11 +72,11 @@ function logout() {
         <div ref="avatarRef" class="relative">
           <button
             type="button"
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-white transition hover:bg-primary-light hover:text-dark"
+            class="rounded-full transition hover:ring-2 hover:ring-primary/40"
             :aria-expanded="dropdownOpen"
             @click="toggleDropdown"
           >
-            {{ initials }}
+            <UserAvatar :name="displayName" :role="authStore.role ?? ''" size="md" />
           </button>
 
           <div

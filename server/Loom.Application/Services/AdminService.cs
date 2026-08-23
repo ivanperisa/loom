@@ -16,7 +16,7 @@ public class AdminService(IAppDbContext db) : IAdminService
 {
     #region Users
 
-    public async Task<ErrorOr<PagedResponse<UserListResponse>>> GetAllUsersAsync(int adminId, PagedRequest paging, UserRole? role = null, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<UserListResponse>>> GetAllUsersAsync(int adminId, PagedRequest paging, UserRole? role = null, int? institutionId = null, bool? registered = null, string? sortBy = null, CancellationToken ct = default)
     {
         var ensureAdmin = await EnsureAdminAsync(adminId, "list users", ct);
         if (ensureAdmin.IsError) return ensureAdmin.Errors;
@@ -26,16 +26,38 @@ public class AdminService(IAppDbContext db) : IAdminService
         if (role is not null)
             query = query.Where(u => u.Role == role.Value);
 
+        if (institutionId is not null)
+            query = query.Where(u => u.InstitutionId == institutionId.Value);
+
+        if (registered is not null)
+            query = registered.Value
+                ? query.Where(u => u.Email != "")
+                : query.Where(u => u.Email == "");
+
         if (!string.IsNullOrWhiteSpace(paging.Search))
         {
             var term = $"%{paging.Search.Trim().ToLower()}%";
             query = query.Where(u =>
                 EF.Functions.Like(u.Name.ToLower(), term) ||
                 EF.Functions.Like(u.Email.ToLower(), term) ||
-                (u.Jmbag != null && EF.Functions.Like(u.Jmbag.ToLower(), term)));
+                (u.Jmbag != null && EF.Functions.Like(u.Jmbag.ToLower(), term)) ||
+                (u.Institution != null && EF.Functions.Like(u.Institution.Name.ToLower(), term)));
         }
 
-        return await query.ToPagedResponseAsync(paging, q => q.OrderBy(u => u.Name), u => u.Id, ToUserListResponse, ct);
+        var desc = paging.SortDir == "desc";
+        Func<IQueryable<User>, IOrderedQueryable<User>> orderBy = sortBy switch
+        {
+            "role" => q => desc ? q.OrderByDescending(u => u.Role) : q.OrderBy(u => u.Role),
+            "jmbag" => q => desc ? q.OrderByDescending(u => u.Jmbag) : q.OrderBy(u => u.Jmbag),
+            _ => q => desc ? q.OrderByDescending(u => u.Name) : q.OrderBy(u => u.Name),
+        };
+
+        return await query.ToPagedResponseAsync(
+            paging,
+            orderBy,
+            u => u.Id,
+            ToUserListResponse,
+            ct);
     }
 
     public async Task<ErrorOr<UserListResponse>> UpdateUserAsync(int adminId, int targetUserId, AdminUpdateUserRequest request, CancellationToken ct = default)
@@ -91,23 +113,48 @@ public class AdminService(IAppDbContext db) : IAdminService
         return requests;
     }
 
-    public async Task<ErrorOr<AuthMeResponse>> MakeCoordinatorAsync(int adminId, int targetUserId, CancellationToken ct = default)
+    public async Task<ErrorOr<UserListResponse>> SetUserRoleAsync(int adminId, int targetUserId, UserRole role, CancellationToken ct = default)
     {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "assign coordinator role", ct);
+        var ensureAdmin = await EnsureAdminAsync(adminId, "change user roles", ct);
         if (ensureAdmin.IsError) return ensureAdmin.Errors;
+
+        if (targetUserId == adminId)
+            return Error.Validation("CANNOT_CHANGE_OWN_ROLE", "You cannot change your own role.");
 
         var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
         if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        target.Role = UserRole.Coordinator;
-        target.CoordinatorRequestStatus = null;
-        await db.SaveChangesAsync(ct);
+        if (target.Role != role)
+        {
+            if (role == UserRole.Student && target.CanActAsCoordinator())
+            {
+                var students = await db.Users.Where(u => u.CoordinatorId == target.Id).ToListAsync(ct);
+                foreach (var s in students)
+                    s.CoordinatorId = null;
+
+                var exchanges = await db.Exchanges.Where(e => e.CoordinatorId == target.Id).ToListAsync(ct);
+                foreach (Exchange ex in exchanges)
+                    ex.CoordinatorId = null;
+
+                var whitelistEntry = await db.CoordinatorWhitelist
+                    .FirstOrDefaultAsync(e => e.Email == target.Email.ToLowerInvariant(), ct);
+                if (whitelistEntry is not null)
+                    db.CoordinatorWhitelist.Remove(whitelistEntry);
+            }
+
+            if (role != UserRole.Student)
+                target.CoordinatorId = null;
+
+            target.Role = role;
+            target.CoordinatorRequestStatus = null;
+            await db.SaveChangesAsync(ct);
+        }
 
         var saved = await UsersWithIncludes()
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
             ?? throw new InvalidOperationException();
-        return saved.ToAuthMeResponse();
+        return ToUserListResponse(saved);
     }
 
     public async Task<ErrorOr<AuthMeResponse>> RejectCoordinatorRequestAsync(int adminId, int targetUserId, CancellationToken ct = default)
@@ -121,40 +168,6 @@ public class AdminService(IAppDbContext db) : IAdminService
             return Error.Validation("NO_PENDING_REQUEST", "User does not have a pending coordinator request.");
 
         target.CoordinatorRequestStatus = "Rejected";
-        await db.SaveChangesAsync(ct);
-
-        var saved = await UsersWithIncludes()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
-            ?? throw new InvalidOperationException();
-        return saved.ToAuthMeResponse();
-    }
-
-    public async Task<ErrorOr<AuthMeResponse>> RemoveCoordinatorAsync(int adminId, int targetUserId, CancellationToken ct = default)
-    {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "remove coordinator role", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
-        var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
-        if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-        if (target.Role != UserRole.Coordinator)
-            return Error.Validation("NOT_COORDINATOR", "User is not a coordinator.");
-
-        var students = await db.Users.Where(u => u.CoordinatorId == target.Id).ToListAsync(ct);
-        foreach (var s in students)
-            s.CoordinatorId = null;
-
-        var exchanges = await db.Exchanges.Where(e => e.CoordinatorId == target.Id).ToListAsync(ct);
-        foreach (Exchange ex in exchanges)
-            ex.CoordinatorId = null;
-
-        var whitelistEntry = await db.CoordinatorWhitelist
-            .FirstOrDefaultAsync(e => e.Email == target.Email.ToLowerInvariant(), ct);
-        if (whitelistEntry is not null)
-            db.CoordinatorWhitelist.Remove(whitelistEntry);
-
-        target.Role = UserRole.Student;
-        target.CoordinatorRequestStatus = null;
         await db.SaveChangesAsync(ct);
 
         var saved = await UsersWithIncludes()
@@ -236,6 +249,7 @@ public class AdminService(IAppDbContext db) : IAdminService
         u.Email,
         u.Role.ToString(),
         u.Institution != null ? u.Institution.Name : null,
+        u.Institution != null ? u.Institution.City : null,
         u.InstitutionId,
         u.CoordinatorRequestStatus,
         u.IsOnboarded,

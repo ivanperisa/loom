@@ -19,7 +19,7 @@
   --color-warning: #fde047;
   --color-success: #4ade80;
   --color-info: #fcd34d;
-  --color-violet: #d8b4fe;
+  --color-violet: #c084fc;
 }
 
 [data-theme="light"] {
@@ -38,7 +38,7 @@
   --color-warning: #b45309;
   --color-success: #16a34a;
   --color-info: #d97706;
-  --color-violet: #6d28d9;
+  --color-violet: #9333ea;
 }
 
 ::-webkit-scrollbar {
