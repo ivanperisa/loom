@@ -33,7 +33,7 @@ const { t } = useI18n()
           class="rounded-lg px-4 py-1.5 text-sm font-medium text-white transition"
           :class="
             state.variant === 'neutral'
-              ? 'bg-primary hover:bg-primary-light hover:text-dark'
+              ? 'bg-primary-strong hover:bg-primary-light hover:text-dark'
               : 'bg-red-600 hover:bg-red-500'
           "
           @click="respond(true)"

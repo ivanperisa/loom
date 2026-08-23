@@ -258,6 +258,7 @@ async function apply() {
   font-weight: 700;
   color: #dc2626;
 }
+:global([data-theme='light']) .import-mismatch__title { color: var(--color-danger-text); }
 
 .import-mismatch__item {
   display: flex;
@@ -296,6 +297,7 @@ async function apply() {
   opacity: 1;
   text-decoration: line-through;
 }
+:global([data-theme='light']) .import-mismatch__val--bad { color: var(--color-danger-text); }
 
 .import-table-wrap {
   overflow: auto;

@@ -306,7 +306,7 @@ function onExchangeCreated(exchangeGuid: string) {
         <h1 class="text-2xl font-bold text-light">{{ t('coordinator.title') }}</h1>
         <button
           type="button"
-          class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+          class="flex items-center gap-2 rounded-lg bg-primary-strong px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
           @click="openAddModal"
         >
           <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -345,7 +345,7 @@ function onExchangeCreated(exchangeGuid: string) {
       </div>
 
       <div v-else-if="error" class="rounded-xl border border-red-400/30 bg-red-900/20 p-8 text-center">
-        <p class="text-danger">{{ error }}</p>
+        <p class="text-danger-text">{{ error }}</p>
       </div>
 
       <div v-else-if="students.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
@@ -396,7 +396,7 @@ function onExchangeCreated(exchangeGuid: string) {
                     <span v-if="student.jmbag" class="truncate font-mono text-light/40">{{ student.jmbag }}</span>
                     <span
                       v-if="student.isPlaceholder"
-                      class="shrink-0 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning"
+                      class="shrink-0 rounded-full border border-warning-text/35 bg-warning-fill px-2 py-0.5 text-[11px] font-medium text-warning-text"
                     >
                       {{ t('coordinator.placeholder') }}
                     </span>
@@ -448,7 +448,7 @@ function onExchangeCreated(exchangeGuid: string) {
                     v-if="student.isPlaceholder && primaryExchangeByStudent.get(student.id)"
                     type="button"
                     :title="t('exchangeAccess.copyLink')"
-                    class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                    class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
                     @click.stop="copyAccessLink(primaryExchangeByStudent.get(student.id)!.guid)"
                   >
                     <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -464,7 +464,7 @@ function onExchangeCreated(exchangeGuid: string) {
                     target="_blank"
                     rel="noopener noreferrer"
                     :title="t('exchange.ewpLink')"
-                    class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                    class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
                     @click.stop
                   >
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -521,7 +521,7 @@ function onExchangeCreated(exchangeGuid: string) {
               @click="viewExchange(ex.guid)"
             >
               <div class="flex min-w-0 items-start gap-2">
-                <span class="mt-0.5 w-3 shrink-0 text-center text-xs font-bold text-primary-light">
+                <span class="mt-0.5 w-3 shrink-0 text-center text-xs font-bold text-primary-text">
                   {{ ex.id === primaryExchangeByStudent.get(openMenuId!)?.id ? '✓' : '' }}
                 </span>
                 <div class="min-w-0">
@@ -545,7 +545,7 @@ function onExchangeCreated(exchangeGuid: string) {
                   target="_blank"
                   rel="noopener noreferrer"
                   :title="t('exchange.ewpLink')"
-                  class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                  class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
                   @click.stop="closeMenu"
                 >
                   <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -557,7 +557,7 @@ function onExchangeCreated(exchangeGuid: string) {
                   v-if="openMenuStudent?.isPlaceholder"
                   type="button"
                   :title="t('exchangeAccess.copyLink')"
-                  class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                  class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
                   @click.stop="copyAccessLink(ex.guid)"
                 >
                   <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -572,7 +572,7 @@ function onExchangeCreated(exchangeGuid: string) {
           <div class="my-1.5 border-t border-primary/20"></div>
           <button
             type="button"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-primary-light transition hover:bg-primary/10"
+            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-primary-text transition hover:bg-primary/10"
             @click="openCreateExchange(openMenuId!)"
           >
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -605,7 +605,7 @@ function onExchangeCreated(exchangeGuid: string) {
           <button
             v-if="actionsMenuStudent?.isMyStudent"
             type="button"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-light transition hover:bg-primary/10"
+            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-text transition hover:bg-primary/10"
             @click="openCreateExchange(actionsMenuId!)"
           >
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -616,7 +616,7 @@ function onExchangeCreated(exchangeGuid: string) {
           <button
             v-if="actionsMenuStudent?.isPlaceholder && actionsMenuStudent?.isMyStudent"
             type="button"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-danger transition hover:bg-danger/10 disabled:opacity-50"
+            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-danger-text transition hover:bg-danger-fill disabled:opacity-50"
             :disabled="deletingStudentId === actionsMenuStudent.id"
             @click="deleteStudent(actionsMenuStudent)"
           >

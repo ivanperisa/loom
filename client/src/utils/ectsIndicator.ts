@@ -1,6 +1,6 @@
 export function ectsIndicatorColor(mapped: number, total: number, isLight: boolean): string {
-  if (mapped === 0) return isLight ? '#78716c' : '#94a3b8'
-  if (mapped < total) return isLight ? '#b45309' : '#f59e0b'
-  if (mapped === total) return isLight ? '#16a34a' : '#22c55e'
-  return '#ef4444'
+  if (mapped === 0) return isLight ? '#57534e' : '#94a3b8'
+  if (mapped < total) return isLight ? '#78350F' : '#f59e0b'
+  if (mapped === total) return isLight ? '#14532D' : '#22c55e'
+  return isLight ? '#991B1B' : '#ef4444'
 }

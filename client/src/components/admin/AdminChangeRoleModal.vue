@@ -94,11 +94,11 @@ async function save() {
           </button>
         </div>
 
-        <p v-if="demotingToStudent" class="mt-4 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+        <p v-if="demotingToStudent" class="mt-4 rounded-xl border border-warning-text/35 bg-warning-fill px-3 py-2 text-xs text-warning-text">
           {{ t('admin.users.changeRoleWarning') }}
         </p>
 
-        <p v-if="error" class="mt-3 text-xs text-danger">{{ error }}</p>
+        <p v-if="error" class="mt-3 text-xs text-danger-text">{{ error }}</p>
       </div>
 
       <div class="flex justify-end gap-2 border-t border-primary/20 px-6 py-4">
@@ -109,7 +109,7 @@ async function save() {
         >{{ t('admin.users.editUserCancel') }}</button>
         <button
           type="button"
-          class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+          class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
           :disabled="saving || !changed"
           @click="save"
         >{{ saving ? t('common.loading') : t('admin.users.changeRoleSave') }}</button>

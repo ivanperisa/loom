@@ -209,7 +209,7 @@ onMounted(async () => {
               {{ exchangeStore.exchange.studentName }}
               <span v-if="exchangeStore.exchange.studentJmbag" class="ml-1.5 text-xs font-normal text-light/40">{{ exchangeStore.exchange.studentJmbag }}</span>
             </p>
-            <p class="mt-0.5 text-base font-semibold text-primary-light">
+            <p class="mt-0.5 text-base font-semibold text-primary-text">
               {{ exchangeStore.exchange.partnerInstitutionName }}
             </p>
           </div>
@@ -248,7 +248,7 @@ onMounted(async () => {
             :href="exchangeStore.exchange.ewpLink"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
+            class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-medium text-primary-text transition hover:border-primary hover:bg-primary/10"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
@@ -259,7 +259,7 @@ onMounted(async () => {
           <button
             v-else
             type="button"
-            class="rounded-lg border border-dashed border-primary/20 px-3 py-1.5 text-sm font-medium text-light/30 transition hover:border-primary/40 hover:text-primary-light"
+            class="rounded-lg border border-dashed border-primary/20 px-3 py-1.5 text-sm font-medium text-light/30 transition hover:border-primary/40 hover:text-primary-text"
             @click="openEwpModal"
           >
             + {{ t('exchange.ewpLink') }}
@@ -267,7 +267,7 @@ onMounted(async () => {
           <button
             v-if="exchangeStore.exchange.studentIsPlaceholder"
             type="button"
-            class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-primary-strong px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
             @click="copyAccessLink"
           >
             <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
@@ -304,7 +304,7 @@ onMounted(async () => {
               <button
                 v-if="exchangeStore.exchange.studentIsPlaceholder"
                 type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-light transition hover:bg-primary/10 disabled:opacity-50"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-text transition hover:bg-primary/10 disabled:opacity-50"
                 :disabled="regenerating"
                 @click="closeActionsMenu(); regenerateAccessLink()"
               >
@@ -316,7 +316,7 @@ onMounted(async () => {
               <button
                 v-if="canDelete"
                 type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-danger transition hover:bg-danger/10 disabled:opacity-50"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-danger-text transition hover:bg-danger-fill disabled:opacity-50"
                 :disabled="deleting"
                 @click="closeActionsMenu(); confirmDelete()"
               >
@@ -340,8 +340,8 @@ onMounted(async () => {
           class="px-4 py-2.5 text-sm font-semibold transition"
           :class="
             activeTab === 'la'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-light/60 hover:text-primary-light'
+              ? 'border-b-2 border-primary text-primary-active-text'
+              : 'text-light/60 hover:text-primary-text'
           "
           @click="activeTab = 'la'"
         >
@@ -352,8 +352,8 @@ onMounted(async () => {
           class="px-4 py-2.5 text-sm font-semibold transition"
           :class="
             activeTab === 'recognition'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-light/60 hover:text-primary-light'
+              ? 'border-b-2 border-primary text-primary-active-text'
+              : 'text-light/60 hover:text-primary-text'
           "
           @click="activeTab = 'recognition'"
         >
@@ -364,8 +364,8 @@ onMounted(async () => {
           class="px-4 py-2.5 text-sm font-semibold transition"
           :class="
             activeTab === 'mappingScheme'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-light/60 hover:text-primary-light'
+              ? 'border-b-2 border-primary text-primary-active-text'
+              : 'text-light/60 hover:text-primary-text'
           "
           @click="activeTab = 'mappingScheme'"
         >
@@ -416,7 +416,7 @@ onMounted(async () => {
     v-else-if="exchangeStore.error"
     class="rounded-xl border border-red-400/30 bg-red-900/20 p-6 text-center"
   >
-    <p class="text-danger">{{ exchangeStore.error }}</p>
+    <p class="text-danger-text">{{ exchangeStore.error }}</p>
   </div>
 
   <NotesModal
@@ -466,7 +466,7 @@ onMounted(async () => {
         </button>
         <button
           type="button"
-          class="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
+          class="rounded-lg bg-primary-strong px-4 py-1.5 text-sm font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
           :disabled="isSavingEwpLink"
           @click="saveEwpLink"
         >

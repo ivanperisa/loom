@@ -138,14 +138,14 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
       <h2 class="text-xl font-semibold text-light">{{ t('admin.institutions.title') }}</h2>
       <button
         type="button"
-        class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+        class="rounded-xl bg-primary-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
         @click="toggleAddPanel"
       >
         {{ t('admin.institutions.addButton') }}
       </button>
     </div>
 
-    <p v-if="error" class="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+    <p v-if="error" class="rounded-xl border border-danger-text/35 bg-danger-fill px-4 py-3 text-sm text-danger-text">
       {{ error }}
     </p>
 

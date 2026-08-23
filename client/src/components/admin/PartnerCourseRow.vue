@@ -81,7 +81,7 @@ function semesterLabel(semester: string) {
           <div class="min-w-0">
             <span class="text-xs text-light">{{ course.name }}</span>
             <span v-if="course.nameHr" class="ml-2 text-xs text-light/40">/ {{ course.nameHr }}</span>
-            <span v-if="course.isDeleted" class="ml-2 rounded border border-red-400/30 bg-danger/10 px-1.5 py-0.5 text-[10px] text-danger">{{ t('admin.institutions.deleted') }}</span>
+            <span v-if="course.isDeleted" class="ml-2 rounded border border-danger-text/35 bg-danger-fill px-1.5 py-0.5 text-[10px] text-danger-text">{{ t('admin.institutions.deleted') }}</span>
           </div>
         </div>
       </div>
@@ -93,7 +93,7 @@ function semesterLabel(semester: string) {
         <button
           v-if="course.isDeleted"
           type="button"
-          class="rounded border border-green-400/30 px-2 py-0.5 text-xs font-medium text-success transition hover:bg-green-500/10 disabled:opacity-40"
+          class="rounded border border-success-text/35 px-2 py-0.5 text-xs font-medium text-success-text transition hover:bg-success-fill disabled:opacity-40"
           :disabled="busy"
           @click="emit('restore', course.id)"
         >
@@ -102,7 +102,7 @@ function semesterLabel(semester: string) {
         <template v-else>
           <button
             type="button"
-            class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-light disabled:opacity-40"
+            class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-text disabled:opacity-40"
             :title="t('admin.institutions.editCourse')"
             @click="emit('edit', course)"
           >
@@ -112,7 +112,7 @@ function semesterLabel(semester: string) {
           </button>
           <button
             type="button"
-            class="flex h-6 w-6 items-center justify-center rounded text-red-400/50 transition hover:bg-danger/10 hover:text-danger disabled:opacity-40"
+            class="flex h-6 w-6 items-center justify-center rounded text-danger/50 transition hover:bg-danger-fill hover:text-danger-text disabled:opacity-40"
             :disabled="busy"
             :title="t('admin.institutions.deleteCourse')"
             @click="emit('delete', course.id)"
@@ -152,7 +152,7 @@ function semesterLabel(semester: string) {
               </div>
               <div class="flex shrink-0 flex-wrap items-center gap-1.5">
                 <span class="rounded bg-fill px-1.5 py-0.5 text-light/50">{{ group.exchangeCount }}&times;</span>
-                <span v-for="year in group.academicYears" :key="year" class="rounded bg-primary/10 px-1.5 py-0.5 text-primary-light">{{ year }}</span>
+                <span v-for="year in group.academicYears" :key="year" class="rounded bg-primary/10 px-1.5 py-0.5 text-primary-text">{{ year }}</span>
                 <span class="font-medium text-light/60">{{ group.totalAwardedEcts }} ECTS</span>
               </div>
             </div>

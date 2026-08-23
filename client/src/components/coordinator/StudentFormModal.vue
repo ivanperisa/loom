@@ -127,7 +127,7 @@ async function submit() {
           >{{ t('coordinator.addStudentModal.cancel') }}</button>
           <button
             type="button"
-            class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+            class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
             :disabled="submitting"
             @click="submit"
           >{{ submitting ? t('common.loading') : t('coordinator.addStudentModal.submit') }}</button>

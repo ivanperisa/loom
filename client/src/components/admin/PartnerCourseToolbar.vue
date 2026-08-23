@@ -51,7 +51,7 @@ const { t } = useI18n()
     <button
       v-if="!mergeSelecting && canMerge"
       type="button"
-      class="shrink-0 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-light transition hover:bg-primary/10"
+      class="shrink-0 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-text transition hover:bg-primary/10"
       @click="emit('start-merge')"
     >
       {{ t('admin.institutions.mergeCourses') }}
@@ -59,7 +59,7 @@ const { t } = useI18n()
     <template v-else-if="mergeSelecting">
       <button
         type="button"
-        class="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-40"
+        class="shrink-0 rounded-lg bg-primary-strong px-3 py-1.5 text-xs font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-40"
         :disabled="selectedCount < 2"
         @click="emit('confirm-merge')"
       >

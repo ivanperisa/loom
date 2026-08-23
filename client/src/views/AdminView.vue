@@ -36,7 +36,7 @@ watch(activeTab, (tab) => {
           :key="tab.key"
           type="button"
           class="flex-1 rounded-lg px-4 py-2 text-sm font-medium transition"
-          :class="activeTab === tab.key ? 'bg-primary text-white' : 'text-light/60 hover:text-light'"
+          :class="activeTab === tab.key ? 'bg-primary-strong text-white' : 'text-light/60 hover:text-light'"
           @click="activeTab = tab.key"
         >
           {{ tab.label() }}

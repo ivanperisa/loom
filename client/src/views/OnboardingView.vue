@@ -163,11 +163,11 @@ async function logout() {
             class="flex h-9 w-9 items-center justify-center rounded-lg text-light/70 transition hover:bg-fill-soft hover:text-light"
             @click="toggleTheme"
           >
-            <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
             </svg>
-            <svg v-else class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg v-else class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
             </svg>
@@ -175,7 +175,7 @@ async function logout() {
           <LocaleSwitcher variant="compact" />
           <button
             type="button"
-            class="text-sm font-semibold text-light transition hover:text-danger"
+            class="text-sm font-semibold text-light transition hover:text-danger-text"
             @click="logout"
           >
             {{ t('common.signOut') }}
@@ -193,9 +193,9 @@ async function logout() {
               class="flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold"
               :class="
                 index + 1 < currentStep
-                  ? 'border-primary-light bg-primary-light text-dark'
+                  ? 'border-primary-strong bg-primary-strong text-white'
                   : index + 1 === currentStep
-                    ? 'border-primary bg-primary text-white'
+                    ? 'border-primary bg-primary-strong text-white'
                     : 'border-slate-500 bg-transparent text-slate-300'
               "
             >
@@ -234,7 +234,7 @@ async function logout() {
 
           <!-- Step 1 (students only): Role choice -->
           <div v-if="!isCoordinatorOrAdmin && currentStep === 1" class="mt-6 space-y-3">
-            <p class="text-sm font-medium text-primary-light">{{ t('onboarding.roleQuestion') }}</p>
+            <p class="text-sm font-medium text-primary-text">{{ t('onboarding.roleQuestion') }}</p>
 
             <button
               type="button"
@@ -263,7 +263,7 @@ async function logout() {
 
           <!-- Institution step -->
           <div v-if="currentStep === institutionStep" class="mt-6 space-y-3">
-            <label class="block text-sm font-medium text-primary-light">
+            <label class="block text-sm font-medium text-primary-text">
               {{ t('onboarding.selectInstitution') }}
             </label>
 
@@ -321,7 +321,7 @@ async function logout() {
 
           <!-- JMBAG step -->
           <div v-if="currentStep === jmbagStep" class="mt-6 space-y-4">
-            <label class="block text-sm font-medium text-primary-light">
+            <label class="block text-sm font-medium text-primary-text">
               {{ t('onboarding.jmbagLabel') }}
             </label>
             <input
@@ -349,7 +349,7 @@ async function logout() {
             <button
               v-if="currentStep < totalSteps"
               type="button"
-              class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+              class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
               @click="goNext"
             >
               {{ t('onboarding.next') }}
@@ -358,7 +358,7 @@ async function logout() {
             <button
               v-else
               type="button"
-              class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
+              class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
               :disabled="isSubmitting"
               @click="finishOnboarding"
             >

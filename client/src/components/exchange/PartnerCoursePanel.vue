@@ -154,7 +154,7 @@ function semesterLabel(semester: string) {
             v-if="!showAddForm"
             type="button"
             :title="t('partnerCourses.addCourse')"
-            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 text-light/60 transition hover:border-primary hover:text-primary-light"
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 text-light/60 transition hover:border-primary hover:text-primary-text"
             @click="openAddForm"
           >
             <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -220,22 +220,22 @@ function semesterLabel(semester: string) {
               <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
               <span
                 v-if="mappedEcts(course.id) > 0"
-                class="rounded px-2 py-0.5 text-xs font-semibold bg-info/20 text-info"
+                class="rounded px-2 py-0.5 text-xs font-semibold bg-info-fill text-info-text"
               >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
-              <span v-else class="rounded bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary-light">
+              <span v-else class="rounded bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary-text">
                 {{ course.ects }} ECTS
               </span>
               <button
                 v-if="!exchangeStore.stagedPartnerCourseIds.has(course.id)"
                 :title="t('partnerCourses.stageAdd')"
-                class="flex items-center justify-center w-6 h-6 rounded text-light/40 hover:text-primary hover:bg-primary/10 transition"
+                class="flex items-center justify-center w-6 h-6 rounded text-light/40 hover:text-primary-strong hover:bg-primary/10 transition"
                 @click.stop="exchangeStore.stagePartnerCourse(course.id)"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="1" y1="6" x2="10" y2="6" /><polyline points="6,2 10,6 6,10" />
                 </svg>
               </button>
-              <span v-else :title="t('partnerCourses.stageAdded')" class="flex items-center justify-center w-6 h-6 rounded text-success">
+              <span v-else :title="t('partnerCourses.stageAdded')" class="flex items-center justify-center w-6 h-6 rounded text-success-text">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="2,6 5,9 10,3" />
                 </svg>
@@ -257,7 +257,7 @@ function semesterLabel(semester: string) {
                 ? 'border border-primary bg-primary/10'
                 : mappedEcts(course.id) === 0
                   ? 'border border-dashed border-light/20 bg-dark-2'
-                  : 'border border-success/30 bg-success/10'
+                  : 'border border-success-text/35 bg-success-fill'
             "
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
@@ -295,8 +295,8 @@ function semesterLabel(semester: string) {
                   mappedEcts(course.id) === 0
                     ? 'bg-light/10 text-light/40'
                     : mappedEcts(course.id) >= course.ects
-                      ? 'bg-success/20 text-success'
-                      : 'bg-info/20 text-info'
+                      ? 'bg-success-fill text-success-text'
+                      : 'bg-info-fill text-info-text'
                 "
               >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
               <button

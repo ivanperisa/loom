@@ -54,7 +54,7 @@ function submit() {
 
 <template>
   <div class="rounded-xl border border-primary/20 bg-dark-2 p-5">
-    <h3 class="mb-4 text-sm font-semibold text-primary-light">{{ institution ? t('admin.institutions.editTitle') : t('admin.institutions.addTitle') }}</h3>
+    <h3 class="mb-4 text-sm font-semibold text-primary-text">{{ institution ? t('admin.institutions.editTitle') : t('admin.institutions.addTitle') }}</h3>
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <div>
         <label class="mb-1 block text-xs text-light/60">{{ t('admin.institutions.name') }} *</label>
@@ -86,7 +86,7 @@ function submit() {
     <div class="mt-4 flex gap-2">
       <button
         type="button"
-        class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+        class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
         :disabled="saving || !form.name.trim() || !form.country.trim()"
         @click="submit"
       >

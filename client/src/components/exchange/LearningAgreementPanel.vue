@@ -392,7 +392,7 @@ function cancelEditEcts() {
         />
         <span
           v-if="amendmentBadge !== null"
-          class="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary-light"
+          class="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary-text"
         >{{ t('la.amendmentLabel', { n: amendmentBadge }) }}</span>
         <!-- Export / Import / History -->
         <div style="display: flex; gap: 6px;">
@@ -609,7 +609,7 @@ function cancelEditEcts() {
     <!-- Course panels (editable only) -->
     <div v-if="isEditable && exchangeStore.exchange" class="mt-6 flex gap-6 items-start">
       <div class="min-w-0 basis-[60%] rounded-xl border border-primary/20 bg-dark-2 p-4">
-        <h3 class="mb-2 text-sm font-semibold text-primary-light">
+        <h3 class="mb-2 text-sm font-semibold text-primary-text">
           {{ t('partnerCourses.availableCourses') }}
         </h3>
         <p class="mb-3 text-xs text-light/60">{{ t('partnerCourses.dragHint') }}</p>
@@ -620,7 +620,7 @@ function cancelEditEcts() {
         />
       </div>
       <div class="min-w-0 basis-[40%] rounded-xl border border-primary/20 bg-dark-2 p-4">
-        <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-success">
+        <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-success-text">
           <span>{{ t('partnerCourses.mappedCourses') }}</span>
           <span class="text-xs font-normal text-light/60">{{ totalAwardedEcts }} / {{ mappedCoursesPanel?.mappedCoursesTotalEcts ?? 0 }} ECTS</span>
         </h3>

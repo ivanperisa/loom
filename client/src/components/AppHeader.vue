@@ -45,7 +45,7 @@ function logout() {
   <header class="sticky top-0 z-50 w-full border-b border-primary/40 bg-dark/95 backdrop-blur">
     <div class="page-container flex h-16 items-center justify-between !py-0">
       <div class="flex items-center gap-8">
-        <RouterLink :to="homeRoute" class="text-lg font-bold text-primary">
+        <RouterLink :to="homeRoute" class="text-lg font-bold text-primary-strong">
           {{ t('common.appName') }}
         </RouterLink>
 
@@ -84,7 +84,7 @@ function logout() {
             class="absolute right-0 top-12 w-56 rounded-xl border border-primary/40 bg-dark p-3 text-sm text-light shadow-lg shadow-black/40"
           >
             <p class="font-semibold text-light">{{ displayName }}</p>
-            <p class="truncate text-xs text-primary-light">{{ displayEmail }}</p>
+            <p class="truncate text-xs text-primary-text">{{ displayEmail }}</p>
 
             <div class="my-2 border-t border-hairline"></div>
 
@@ -97,11 +97,11 @@ function logout() {
               class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-fill-soft hover:text-light"
               @click="toggleTheme"
             >
-              <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
               </svg>
-              <svg v-else class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-else class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
               </svg>
@@ -114,7 +114,7 @@ function logout() {
               class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-fill-soft hover:text-light"
               @click="goAdmin"
             >
-              <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -124,7 +124,7 @@ function logout() {
 
             <button
               type="button"
-              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-danger transition hover:bg-danger/10"
+              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-danger-text transition hover:bg-danger-fill"
               @click="logout"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

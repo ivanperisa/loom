@@ -85,7 +85,7 @@ async function reRequestCoordinatorRole() {
       <!-- Pending coordinator request banner -->
       <div
         v-if="coordinatorRequestStatus === 'Pending'"
-        class="mt-6 rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-sm text-primary-light"
+        class="mt-6 rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-sm text-primary-text"
       >
         {{ t('home.coordinatorRequestPending') }}
       </div>
@@ -93,12 +93,12 @@ async function reRequestCoordinatorRole() {
       <!-- Rejected coordinator request banner -->
       <div
         v-if="coordinatorRequestStatus === documentStatus.Rejected"
-        class="mt-6 flex items-center justify-between rounded-lg border border-danger/40 bg-danger/10 px-4 py-3"
+        class="mt-6 flex items-center justify-between rounded-lg border border-danger-text/35 bg-danger-fill px-4 py-3"
       >
-        <span class="text-sm text-danger">{{ t('home.coordinatorRequestRejected') }}</span>
+        <span class="text-sm text-danger-text">{{ t('home.coordinatorRequestRejected') }}</span>
         <button
           type="button"
-          class="ml-4 rounded-lg border border-primary/50 px-4 py-1.5 text-xs font-semibold text-primary-light transition hover:bg-primary/20 disabled:opacity-50"
+          class="ml-4 rounded-lg border border-primary/50 px-4 py-1.5 text-xs font-semibold text-primary-text transition hover:bg-primary/20 disabled:opacity-50"
           :disabled="requestingCoordinator"
           @click="reRequestCoordinatorRole"
         >
@@ -133,7 +133,7 @@ async function reRequestCoordinatorRole() {
             </div>
             <button
               type="button"
-              class="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+              class="rounded-lg bg-primary-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
               @click="openCreateModal"
             >
               + {{ t('home.createNew') }}
@@ -193,7 +193,7 @@ async function reRequestCoordinatorRole() {
                 :href="soleExchange.ewpLink"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="pointer-events-auto inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-medium text-primary-light transition hover:border-primary hover:bg-primary/10"
+                class="pointer-events-auto inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-medium text-primary-text transition hover:border-primary hover:bg-primary/10"
                 @click.stop
               >
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -253,7 +253,7 @@ async function reRequestCoordinatorRole() {
                       target="_blank"
                       rel="noopener noreferrer"
                       :title="t('exchange.ewpLink')"
-                      class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-light"
+                      class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
                       @click.stop
                     >
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">

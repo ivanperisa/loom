@@ -243,13 +243,13 @@ async function removeEmail(email: string) {
           <div class="flex gap-2">
             <button
               type="button"
-              class="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+              class="rounded-lg bg-primary-strong px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
               :disabled="actionLoadingId === req.id"
               @click="approve(req.id)"
             >{{ t('admin.requests.approve') }}</button>
             <button
               type="button"
-              class="rounded-lg border border-danger/40 px-4 py-1.5 text-xs font-medium text-danger transition hover:bg-danger/20 disabled:opacity-50"
+              class="rounded-lg border border-danger-text/35 px-4 py-1.5 text-xs font-medium text-danger-text transition hover:bg-danger-fill disabled:opacity-50"
               :disabled="actionLoadingId === req.id"
               @click="reject(req.id)"
             >{{ t('admin.requests.reject') }}</button>
@@ -375,7 +375,7 @@ async function removeEmail(email: string) {
                   </span>
                   <span
                     v-if="u.coordinatorRequestStatus === 'Pending'"
-                    class="mt-1 inline-block whitespace-nowrap rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary-light"
+                    class="mt-1 inline-block whitespace-nowrap rounded-full border border-warning-text/35 bg-warning-fill px-2 py-0.5 text-[10px] font-medium text-warning-text"
                   >{{ t('admin.users.coordinatorRequest') }}</span>
                 </div>
 
@@ -434,13 +434,13 @@ async function removeEmail(email: string) {
         />
         <button
           type="button"
-          class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+          class="rounded-xl bg-primary-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
           :disabled="addingEmail || !newEmail.trim()"
           @click="addEmail"
         >{{ addingEmail ? t('common.loading') : t('admin.whitelist.add') }}</button>
       </div>
 
-      <p v-if="errorMessage" class="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+      <p v-if="errorMessage" class="mb-4 rounded-xl border border-danger-text/35 bg-danger-fill px-4 py-3 text-sm text-danger-text">
         {{ errorMessage }}
       </p>
 
@@ -459,7 +459,7 @@ async function removeEmail(email: string) {
           </div>
           <button
             type="button"
-            class="flex h-7 w-7 items-center justify-center rounded-lg border border-danger/20 text-red-400/60 transition hover:border-danger/50 hover:bg-danger/10 hover:text-danger disabled:opacity-40"
+            class="flex h-7 w-7 items-center justify-center rounded-lg border border-danger/20 text-danger transition hover:border-danger-text/50 hover:bg-danger-fill hover:text-danger-text disabled:opacity-40"
             :disabled="whitelistActionEmail === entry.email"
             :title="t('admin.whitelist.remove')"
             @click="removeEmail(entry.email)"

@@ -41,7 +41,7 @@ const primaryId = ref(props.courses[0]!.id)
             </div>
             <span
               class="shrink-0 rounded px-2 py-0.5 text-[11px] font-semibold"
-              :class="primaryId === course.id ? 'bg-primary/20 text-primary-light' : 'bg-danger/10 text-danger/70'"
+              :class="primaryId === course.id ? 'bg-primary-fill text-primary-text' : 'bg-danger-fill text-danger-text'"
             >{{ primaryId === course.id ? t('admin.institutions.mergeKeeps') : t('admin.institutions.mergeDeletes') }}</span>
           </label>
           <p class="pt-1 text-xs text-light/40">{{ t('admin.institutions.mergeHint') }}</p>
@@ -50,7 +50,7 @@ const primaryId = ref(props.courses[0]!.id)
           <button type="button" class="rounded-lg border border-hairline px-4 py-2 text-sm text-light/60 transition hover:text-light" @click="emit('close')">{{ t('admin.institutions.cancel') }}</button>
           <button
             type="button"
-            class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+            class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
             :disabled="saving"
             @click="emit('submit', primaryId)"
           >

@@ -33,7 +33,7 @@ function tryConfirm() {
       <h3 id="ects-amount-dialog-title" style="color: var(--color-light); font-size: 14px; font-weight: 600; margin-bottom: 16px">
         {{ title }}
       </h3>
-      <div style="color: var(--color-primary-light); font-size: 12px; margin-bottom: 4px">
+      <div style="color: var(--color-primary-text); font-size: 12px; margin-bottom: 4px">
         {{ courseCode }} — {{ courseName }}
       </div>
       <div style="color: var(--color-light); opacity: 0.6; font-size: 11px; margin-bottom: 16px">
@@ -49,17 +49,17 @@ function tryConfirm() {
         :max="max"
         step="0.5"
         style="width: 100%; background: var(--color-dark); border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); color: var(--color-light); padding: 8px; border-radius: 4px; font-size: 13px;"
-        :style="isOverMax ? { borderColor: '#ef4444' } : {}"
+        :style="isOverMax ? { borderColor: 'var(--color-danger-text)' } : {}"
         @input="emit('update:modelValue', Number(($event.target as HTMLInputElement).value))"
         @keydown.enter.prevent="tryConfirm"
       />
-      <div style="min-height: 16px; margin-top: 4px; margin-bottom: 12px; font-size: 11px; color: #ef4444;">
+      <div style="min-height: 16px; margin-top: 4px; margin-bottom: 12px; font-size: 11px; color: var(--color-danger-text);">
         <template v-if="isOverMax">{{ t('partnerCourses.ectsExceedsMax', { max }) }}</template>
       </div>
       <div style="display: flex; gap: 8px; justify-content: flex-end">
         <button
           type="button"
-          style="padding: 8px 16px; border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); background: transparent; color: var(--color-primary-light); border-radius: 4px; cursor: pointer; font-size: 13px;"
+          style="padding: 8px 16px; border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent); background: transparent; color: var(--color-primary-text); border-radius: 4px; cursor: pointer; font-size: 13px;"
           @click="emit('cancel')"
         >
           {{ t('common.cancel') }}

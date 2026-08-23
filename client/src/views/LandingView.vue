@@ -53,7 +53,7 @@ function openAccess() {
           </button>
 
           <h1 class="text-4xl font-black tracking-tight text-light sm:text-5xl">{{ t('common.appName') }}</h1>
-          <p class="mt-4 text-lg font-semibold text-primary-light">{{ t('landing.tagline') }}</p>
+          <p class="mt-4 text-lg font-semibold text-primary-text">{{ t('landing.tagline') }}</p>
           <p class="mt-5 max-w-md text-sm leading-7 text-light sm:text-base">
             {{ t('landing.description') }}
           </p>
@@ -92,7 +92,7 @@ function openAccess() {
               />
               <button
                 type="submit"
-                class="shrink-0 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+                class="shrink-0 rounded-lg bg-primary-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
               >
                 {{ t('landing.accessUidButton') }}
               </button>

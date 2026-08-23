@@ -4,9 +4,9 @@ import { computed } from 'vue'
 const props = withDefaults(defineProps<{ name: string; role: string; size?: 'sm' | 'md' }>(), { size: 'sm' })
 
 const ROLE_COLOR: Record<string, string> = {
-  Student: 'bg-primary/25 text-primary-light',
-  Coordinator: 'bg-blue-400/25 text-blue-400',
-  Admin: 'bg-violet/25 text-violet',
+  Student: 'bg-primary-fill text-primary-text',
+  Coordinator: 'bg-coord/15 text-coord',
+  Admin: 'bg-violet-fill text-violet-text',
 }
 
 const initials = computed(() => {

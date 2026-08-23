@@ -179,7 +179,7 @@ async function save() {
         <div v-if="isDirty" class="mt-6 flex items-center gap-3">
           <button
             type="button"
-            class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+            class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
             :disabled="saving"
             @click="save"
           >
@@ -195,7 +195,7 @@ async function save() {
         </div>
 
         <!-- Success -->
-        <p v-if="success" class="mt-3 text-sm text-success">{{ t('settings.saveSuccess') }}</p>
+        <p v-if="success" class="mt-3 text-sm text-success-text">{{ t('settings.saveSuccess') }}</p>
         <!-- Error -->
         <p v-if="errorMsg" class="mt-3 text-sm text-red-400">{{ errorMsg }}</p>
       </div>

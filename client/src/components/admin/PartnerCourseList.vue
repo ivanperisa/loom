@@ -182,7 +182,7 @@ async function submitMerge(primaryId: string) {
       <div v-for="i in 3" :key="i" class="h-7 animate-pulse rounded bg-fill-soft"></div>
     </div>
     <template v-else>
-      <p v-if="error" class="mb-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+      <p v-if="error" class="mb-2 rounded-lg border border-danger-text/35 bg-danger-fill px-3 py-2 text-xs text-danger-text">
         {{ error }}
       </p>
 

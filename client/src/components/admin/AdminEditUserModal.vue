@@ -156,7 +156,7 @@ async function save() {
           >{{ t('admin.users.editUserCancel') }}</button>
           <button
             type="button"
-            class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+            class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
             :disabled="saving || !form.name.trim()"
             @click="save"
           >{{ saving ? t('common.loading') : t('admin.users.editUserSave') }}</button>

@@ -320,9 +320,9 @@ const stepKeys = [
             class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
             :class="
               index + 1 < currentStep
-                ? 'bg-primary text-white'
+                ? 'bg-primary-strong text-white'
                 : index + 1 === currentStep
-                  ? 'bg-primary text-white ring-4 ring-primary/20'
+                  ? 'bg-primary-strong text-white ring-4 ring-primary/20'
                   : 'bg-fill-soft text-faint'
             "
           >
@@ -350,7 +350,7 @@ const stepKeys = [
       <div class="min-h-0 flex-1 overflow-y-auto px-8 py-6">
         <p
           v-if="errorMessage"
-          class="mb-5 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
+          class="mb-5 rounded-xl border border-danger-text/35 bg-danger-fill px-4 py-3 text-sm text-danger-text"
         >
           {{ errorMessage }}
         </p>
@@ -358,7 +358,7 @@ const stepKeys = [
         <!-- Step 1: Home program & profile -->
         <div v-if="currentStep === 1" class="space-y-5">
           <div>
-            <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
               t('createExchange.selectProgram')
             }}</label>
             <div v-if="loadingPrograms" class="h-11 animate-pulse rounded-xl bg-fill-soft"></div>
@@ -372,7 +372,7 @@ const stepKeys = [
           </div>
 
           <div>
-            <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
               t('createExchange.selectProfile')
             }}</label>
             <div
@@ -389,7 +389,7 @@ const stepKeys = [
                 class="rounded-xl border px-4 py-3 text-left text-sm transition"
                 :class="
                   selectedProfileId === prof.id
-                    ? 'border-primary bg-primary/10 text-white'
+                    ? 'border-primary bg-primary/10 text-primary-on-tint'
                     : 'border-hairline bg-dark text-light/70 hover:border-primary/50 hover:text-light'
                 "
                 @click="selectedProfileId = prof.id"
@@ -402,7 +402,7 @@ const stepKeys = [
 
         <!-- Step 2: Partner institution -->
         <div v-if="currentStep === 2" class="flex flex-col gap-4">
-          <label class="text-sm font-semibold text-primary-light">{{
+          <label class="text-sm font-semibold text-primary-text">{{
             t('createExchange.selectPartnerInstitution')
           }}</label>
 
@@ -487,7 +487,7 @@ const stepKeys = [
         <div v-if="currentStep === 3" class="grid grid-cols-2 gap-6">
           <!-- Academic year -->
           <div class="col-span-2 sm:col-span-1">
-            <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
               t('exchange.academicYear')
             }}</label>
             <SearchableSelect
@@ -499,7 +499,7 @@ const stepKeys = [
 
           <!-- Semester type -->
           <div class="col-span-2 sm:col-span-1">
-            <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
               t('exchange.semester')
             }}</label>
             <div class="grid grid-cols-3 gap-2">
@@ -514,7 +514,7 @@ const stepKeys = [
                 class="rounded-xl border py-2.5 text-xs font-medium transition"
                 :class="
                   semesterType === sem
-                    ? 'border-primary bg-primary/10 text-white'
+                    ? 'border-primary bg-primary/10 text-primary-on-tint'
                     : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="semesterType = sem"
@@ -526,7 +526,7 @@ const stepKeys = [
 
           <!-- Study semesters -->
           <div class="col-span-2">
-            <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
               t('exchange.studySemester')
             }}</label>
 
@@ -539,7 +539,7 @@ const stepKeys = [
                 class="h-10 w-10 rounded-xl border text-sm font-semibold transition"
                 :class="
                   studySemesters.includes(s)
-                    ? 'border-primary bg-primary/10 text-white'
+                    ? 'border-primary bg-primary/10 text-primary-on-tint'
                     : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="toggleStudySemester(s)"
@@ -557,7 +557,7 @@ const stepKeys = [
                 class="rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
                 :class="
                   isPairSelected(pair)
-                    ? 'border-primary bg-primary/10 text-white'
+                    ? 'border-primary bg-primary/10 text-primary-on-tint'
                     : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="selectPair(pair)"
@@ -569,7 +569,7 @@ const stepKeys = [
 
           <!-- Coordinator -->
           <div class="col-span-2">
-            <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
               t('createExchange.selectCoordinator')
             }}</label>
             <SearchableSelect
@@ -583,7 +583,7 @@ const stepKeys = [
 
           <!-- Mentor -->
           <div class="col-span-2">
-            <label class="mb-2 block text-sm font-semibold text-primary-light">
+            <label class="mb-2 block text-sm font-semibold text-primary-text">
               {{ t('exchange.mentor') }}
               <span class="ml-1 text-xs font-normal text-light/40">({{ t('common.optional') }})</span>
             </label>
@@ -598,7 +598,7 @@ const stepKeys = [
 
         <!-- Step 4: Confirm -->
         <div v-if="currentStep === 4">
-          <h3 class="mb-4 text-sm font-semibold text-primary-light">
+          <h3 class="mb-4 text-sm font-semibold text-primary-text">
             {{ t('createExchange.summary') }}
           </h3>
           <div class="grid grid-cols-2 gap-3">
@@ -674,7 +674,7 @@ const stepKeys = [
         <button
           v-if="currentStep < TOTAL_STEPS"
           type="button"
-          class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+          class="rounded-xl bg-primary-strong px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
           @click="goNext"
         >
           {{ t('onboarding.next') }}
@@ -682,7 +682,7 @@ const stepKeys = [
         <button
           v-else
           type="button"
-          class="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
+          class="rounded-xl bg-primary-strong px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
           :disabled="isSubmitting"
           @click="submitExchange"
         >

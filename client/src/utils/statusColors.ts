@@ -1,8 +1,8 @@
 export const statusColorClass: Record<string, string> = {
-  Draft: 'bg-muted/15 text-muted border-muted/40',
-  Submitted: 'bg-yellow-500/15 text-warning border-warning/40',
-  Approved: 'bg-success/15 text-success border-success/40',
-  Rejected: 'bg-red-500/15 text-danger border-danger/40',
+  Draft: 'bg-fill text-muted border-muted/40',
+  Submitted: 'bg-warning-fill text-warning-text border-warning-text/35',
+  Approved: 'bg-success-fill text-success-text border-success-text/35',
+  Rejected: 'bg-danger-fill text-danger-text border-danger-text/35',
 }
 
 export const statusDotClass: Record<string, string> = {

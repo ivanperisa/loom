@@ -171,7 +171,7 @@ watch(open, (val) => {
             :key="String(opt.value)"
             type="button"
             class="w-full px-3 py-2 text-left text-sm transition hover:bg-primary/10"
-            :class="modelValue === opt.value ? 'font-medium text-primary-light' : 'text-light'"
+            :class="modelValue === opt.value ? 'font-medium text-primary-text' : 'text-light'"
             @click="select(opt.value)"
           >
             <span>{{ opt.label }}</span>

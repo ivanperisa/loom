@@ -327,6 +327,9 @@ async function restore(snapshotId: number) {
 .diff-badge--added   { background: color-mix(in srgb, #16a34a 15%, transparent); color: #16a34a; }
 .diff-badge--removed { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; }
 .diff-badge--modified{ background: color-mix(in srgb, #d97706 15%, transparent); color: #d97706; }
+:global([data-theme='light']) .diff-badge--added    { background: var(--color-success-fill); color: var(--color-success-text); }
+:global([data-theme='light']) .diff-badge--removed  { background: var(--color-danger-fill); color: var(--color-danger-text); }
+:global([data-theme='light']) .diff-badge--modified { background: var(--color-warning-fill); color: var(--color-warning-text); }
 
 .snapshot-card__toggle {
   display: inline-block;
@@ -355,6 +358,9 @@ async function restore(snapshotId: number) {
 .diff-row--added   { background: color-mix(in srgb, #16a34a 8%, transparent); color: #16a34a; }
 .diff-row--removed { background: color-mix(in srgb, #dc2626 8%, transparent); color: #dc2626; }
 .diff-row--modified{ background: color-mix(in srgb, #d97706 8%, transparent); color: #d97706; }
+:global([data-theme='light']) .diff-row--added    { color: var(--color-success-text); }
+:global([data-theme='light']) .diff-row--removed  { color: var(--color-danger-text); }
+:global([data-theme='light']) .diff-row--modified { color: var(--color-warning-text); }
 
 .snapshot-badge {
   font-size: 10px;
@@ -373,4 +379,5 @@ async function restore(snapshotId: number) {
   background: color-mix(in srgb, #d97706 15%, transparent);
   color: #d97706;
 }
+:global([data-theme='light']) .snapshot-badge--backup { background: var(--color-warning-fill); color: var(--color-warning-text); }
 </style>
