@@ -66,8 +66,11 @@ async function addCourse() {
       </button>
       <div class="flex flex-shrink-0 items-center gap-2">
         <template v-if="!institution.isDeleted">
-          <button type="button" class="rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-text transition hover:bg-primary/10 disabled:opacity-40" :disabled="busy" @click="addCourse">
-            + {{ t('admin.institutions.addCourse') }}
+          <button type="button" class="flex items-center gap-1 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-text transition hover:bg-primary/10 disabled:opacity-40" :disabled="busy" @click="addCourse">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+            </svg>
+            {{ t('admin.institutions.addCourse') }}
           </button>
           <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-primary/20 text-light/60 transition hover:border-primary/50 hover:bg-primary/10 hover:text-primary-text disabled:opacity-40" :disabled="busy" :title="t('admin.institutions.editInstitution')" @click="emit('edit', institution)">
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
