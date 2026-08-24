@@ -39,7 +39,7 @@ const hasDeletedCourses = ref(false)
 const sortBy = ref('name')
 const sortDir = ref<'asc' | 'desc'>('asc')
 
-const codeColumnWidth = computed(() => `${Math.max(3, ...courses.value.map(c => c.code.length)) + 2}ch`)
+const codeColumnWidth = computed(() => `${(Math.max(3, ...courses.value.map(c => c.code.length)) + 2) * 7.2}px`)
 
 function toggleSort(key: string) {
   if (sortBy.value === key) {
