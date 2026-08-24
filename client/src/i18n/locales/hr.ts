@@ -437,7 +437,9 @@ export default {
     rejected: 'odbijeno',
   },
   partnerCourses: {
-    dragHint: 'Povuci predmet u tablicu ugovora o učenju.',
+    dragHint: 'Povuci predmet u tablicu ugovora o učenju, ili ga klikni pa klikni ćeliju za smještanje.',
+    armedHint: 'klikni ćeliju u tablici za preslikavanje',
+    armedCancel: 'Odustani',
     addMapping: 'Dodaj preslikavanje',
     moveMapping: 'Premjesti preslikavanje',
     availableEcts: 'Dostupno ECTS',

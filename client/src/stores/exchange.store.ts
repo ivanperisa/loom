@@ -82,6 +82,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   const error = ref<string | null>(null)
   const draggingCourse = ref<PartnerCourseResponse | null>(null)
   const draggingSlotMapping = ref<{ fromSlotId: string; localId: string } | null>(null)
+  const armedCourse = ref<PartnerCourseResponse | null>(null)
   const stagedPartnerCourseIds = ref<Set<string>>(new Set())
   const guestMode = ref(false)
 
@@ -98,6 +99,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   function startDrag(course: PartnerCourseResponse) {
     draggingCourse.value = course
     draggingSlotMapping.value = null
+    armedCourse.value = null
   }
 
   function endDrag() {
@@ -108,6 +110,21 @@ export const useExchangeStore = defineStore('exchange', () => {
   function startSlotDrag(fromSlotId: string, localId: string) {
     draggingSlotMapping.value = { fromSlotId, localId }
     draggingCourse.value = null
+    armedCourse.value = null
+  }
+
+  function armCourse(course: PartnerCourseResponse) {
+    if (armedCourse.value?.id === course.id) {
+      armedCourse.value = null
+      return
+    }
+    armedCourse.value = course
+    draggingCourse.value = null
+    draggingSlotMapping.value = null
+  }
+
+  function disarm() {
+    armedCourse.value = null
   }
 
   function localMoveSlotMapping(fromSlotId: string, toSlotId: string, localId: string, amount?: number) {
@@ -482,6 +499,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     error,
     draggingCourse,
     draggingSlotMapping,
+    armedCourse,
     stagedPartnerCourseIds,
     guestMode,
     partnerCourses,
@@ -491,6 +509,8 @@ export const useExchangeStore = defineStore('exchange', () => {
     startDrag,
     endDrag,
     startSlotDrag,
+    armCourse,
+    disarm,
     localMoveSlotMapping,
     stagePartnerCourse,
     unstagePartnerCourse,

@@ -437,7 +437,9 @@ export default {
     rejected: 'rejected',
   },
   partnerCourses: {
-    dragHint: 'Drag a course onto a cell in the learning agreement',
+    dragHint: 'Drag a course onto a cell in the learning agreement, or click it to place by tapping a cell',
+    armedHint: 'click a slot in the learning agreement to place it',
+    armedCancel: 'Cancel',
     addMapping: 'Add Mapping',
     moveMapping: 'Move Mapping',
     availableEcts: 'Available ECTS',

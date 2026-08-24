@@ -184,10 +184,11 @@ function semesterLabel(semester: string) {
             draggable="true"
             class="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
             :class="
-              exchangeStore.draggingCourse?.id === course.id
+              exchangeStore.draggingCourse?.id === course.id || exchangeStore.armedCourse?.id === course.id
                 ? 'border-primary bg-primary/10'
                 : 'border-primary/20 bg-dark-2'
             "
+            @click="exchangeStore.armCourse(course)"
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
           >
@@ -253,12 +254,13 @@ function semesterLabel(semester: string) {
             draggable="true"
             class="flex items-center gap-3 rounded-lg px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
             :class="
-              exchangeStore.draggingCourse?.id === course.id
+              exchangeStore.draggingCourse?.id === course.id || exchangeStore.armedCourse?.id === course.id
                 ? 'border border-primary bg-primary/10'
                 : mappedEcts(course.id) === 0
                   ? 'border border-dashed border-light/20 bg-dark-2'
                   : 'border border-success-text/35 bg-success-fill'
             "
+            @click="exchangeStore.armCourse(course)"
             @dragstart="onDragStart(course)"
             @dragend="exchangeStore.endDrag()"
           >
