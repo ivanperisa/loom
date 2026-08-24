@@ -46,8 +46,9 @@ export const adminService = {
       registered?: boolean | null
       sortBy?: string
     } = {},
+    signal?: AbortSignal,
   ) =>
-    api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params }),
+    api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params, signal }),
 
   getCoordinatorRequests: () =>
     api.get<CoordinatorRequestResponse[]>('/api/admin/coordinator-requests'),

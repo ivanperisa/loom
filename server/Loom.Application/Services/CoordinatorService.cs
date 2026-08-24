@@ -12,17 +12,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Loom.Application.Services;
 
-public class CoordinatorService(IAppDbContext db) : ICoordinatorService
+public class CoordinatorService(IAppDbContext db, CachedQuery cache) : ICoordinatorService
 {
+    private static readonly TimeSpan LookupTtl = TimeSpan.FromMinutes(5);
+
     public async Task<ErrorOr<List<CoordinatorOptionResponse>>> GetCoordinatorsAsync(CancellationToken ct = default)
     {
-        var coordinators = await db.Users
-            .AsNoTracking()
-            .Where(u => u.Role == UserRole.Coordinator || u.Role == UserRole.Admin)
-            .OrderBy(u => u.Name)
-            .Select(u => new CoordinatorOptionResponse(u.Id, u.Name))
-            .ToListAsync(ct);
-        return coordinators;
+        return await cache.GetOrCreateAsync("coordinators", "all", LookupTtl, async () =>
+        {
+            return await db.Users
+                .AsNoTracking()
+                .Where(u => u.Role == UserRole.Coordinator || u.Role == UserRole.Admin)
+                .OrderBy(u => u.Name)
+                .Select(u => new CoordinatorOptionResponse(u.Id, u.Name))
+                .ToListAsync(ct);
+        });
     }
 
     public async Task<ErrorOr<PagedResponse<CoordinatorStudentResponse>>> GetMyStudentsAsync(int coordinatorId, PagedRequest paging, CoordinatorStudentFilterRequest? filter = null, CancellationToken ct = default)
@@ -33,7 +37,6 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
 
         var query = db.Users
             .AsNoTracking()
-            .Include(u => u.Institution)
             .Where(u => u.Role == UserRole.Student &&
                 (u.CoordinatorId == coordinatorId ||
                  u.StudentExchanges.Any(e => e.CoordinatorId == coordinatorId)));
@@ -57,12 +60,12 @@ public class CoordinatorService(IAppDbContext db) : ICoordinatorService
                 (u.Jmbag != null && EF.Functions.Like(u.Jmbag.ToLower(), term)));
         }
 
-        return await query.ToPagedResponseAsync(
+        return await query.ToProjectedPagedResponseAsync(
             paging,
             q => paging.SortDir == "desc" ? q.OrderByDescending(u => u.Name) : q.OrderBy(u => u.Name),
             u => u.Id,
             u => new CoordinatorStudentResponse(
-                u.Id, u.Name, u.Jmbag, u.Institution?.Name,
+                u.Id, u.Name, u.Jmbag, u.Institution != null ? u.Institution.Name : null,
                 u.ExternalId == u.Jmbag, u.InstitutionId,
                 u.CoordinatorId == coordinatorId),
             ct);

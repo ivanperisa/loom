@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using ErrorOr;
 using Loom.Application.DTOs.Admin;
 using Loom.Application.DTOs.Auth;
@@ -12,59 +13,59 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Loom.Application.Services;
 
-public class AdminService(IAppDbContext db) : IAdminService
+public class AdminService(IAppDbContext db, CachedQuery cache) : IAdminService
 {
+    private static readonly TimeSpan ListTtl = TimeSpan.FromSeconds(30);
+
     #region Users
 
     public async Task<ErrorOr<PagedResponse<UserListResponse>>> GetAllUsersAsync(int adminId, PagedRequest paging, UserRole? role = null, int? institutionId = null, bool? registered = null, string? sortBy = null, CancellationToken ct = default)
     {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "list users", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
-        var query = UsersWithIncludes().AsNoTracking();
-
-        if (role is not null)
-            query = query.Where(u => u.Role == role.Value);
-
-        if (institutionId is not null)
-            query = query.Where(u => u.InstitutionId == institutionId.Value);
-
-        if (registered is not null)
-            query = registered.Value
-                ? query.Where(u => u.Email != "")
-                : query.Where(u => u.Email == "");
-
-        if (!string.IsNullOrWhiteSpace(paging.Search))
+        var key = $"{role}:{institutionId}:{registered}:{sortBy}:{paging.SortDir}:{paging.Search}:{paging.SafePage}:{paging.SafePageSize}";
+        return await cache.GetOrCreateAsync("users", key, ListTtl, async () =>
         {
-            var term = $"%{paging.Search.Trim().ToLower()}%";
-            query = query.Where(u =>
-                EF.Functions.Like(u.Name.ToLower(), term) ||
-                EF.Functions.Like(u.Email.ToLower(), term) ||
-                (u.Jmbag != null && EF.Functions.Like(u.Jmbag.ToLower(), term)) ||
-                (u.Institution != null && EF.Functions.Like(u.Institution.Name.ToLower(), term)));
-        }
+            var query = db.Users.AsNoTracking();
 
-        var desc = paging.SortDir == "desc";
-        Func<IQueryable<User>, IOrderedQueryable<User>> orderBy = sortBy switch
-        {
-            "role" => q => desc ? q.OrderByDescending(u => u.Role) : q.OrderBy(u => u.Role),
-            "jmbag" => q => desc ? q.OrderByDescending(u => u.Jmbag) : q.OrderBy(u => u.Jmbag),
-            _ => q => desc ? q.OrderByDescending(u => u.Name) : q.OrderBy(u => u.Name),
-        };
+            if (role is not null)
+                query = query.Where(u => u.Role == role.Value);
 
-        return await query.ToPagedResponseAsync(
-            paging,
-            orderBy,
-            u => u.Id,
-            ToUserListResponse,
-            ct);
+            if (institutionId is not null)
+                query = query.Where(u => u.InstitutionId == institutionId.Value);
+
+            if (registered is not null)
+                query = registered.Value
+                    ? query.Where(u => u.Email != "")
+                    : query.Where(u => u.Email == "");
+
+            if (!string.IsNullOrWhiteSpace(paging.Search))
+            {
+                var term = $"%{paging.Search.Trim().ToLower()}%";
+                query = query.Where(u =>
+                    EF.Functions.Like(u.Name.ToLower(), term) ||
+                    EF.Functions.Like(u.Email.ToLower(), term) ||
+                    (u.Jmbag != null && EF.Functions.Like(u.Jmbag.ToLower(), term)) ||
+                    (u.Institution != null && EF.Functions.Like(u.Institution.Name.ToLower(), term)));
+            }
+
+            var desc = paging.SortDir == "desc";
+            Func<IQueryable<User>, IOrderedQueryable<User>> orderBy = sortBy switch
+            {
+                "role" => q => desc ? q.OrderByDescending(u => u.Role) : q.OrderBy(u => u.Role),
+                "jmbag" => q => desc ? q.OrderByDescending(u => u.Jmbag) : q.OrderBy(u => u.Jmbag),
+                _ => q => desc ? q.OrderByDescending(u => u.Name) : q.OrderBy(u => u.Name),
+            };
+
+            return await query.ToProjectedPagedResponseAsync(
+                paging,
+                orderBy,
+                u => u.Id,
+                UserListProjection,
+                ct);
+        });
     }
 
     public async Task<ErrorOr<UserListResponse>> UpdateUserAsync(int adminId, int targetUserId, AdminUpdateUserRequest request, CancellationToken ct = default)
     {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "update users", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
         var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
         if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
@@ -85,6 +86,7 @@ public class AdminService(IAppDbContext db) : IAdminService
             if (setCoordinator.IsError) return setCoordinator.Errors;
         }
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("users");
 
         var saved = await UsersWithIncludes()
             .AsNoTracking()
@@ -100,9 +102,6 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<List<CoordinatorRequestResponse>>> GetCoordinatorRequestsAsync(int adminId, CancellationToken ct = default)
     {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "view coordinator requests", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
         var requests = await db.Users
             .AsNoTracking()
             .Include(u => u.Institution)
@@ -115,9 +114,6 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<UserListResponse>> SetUserRoleAsync(int adminId, int targetUserId, UserRole role, CancellationToken ct = default)
     {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "change user roles", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
         if (targetUserId == adminId)
             return Error.Validation("CANNOT_CHANGE_OWN_ROLE", "You cannot change your own role.");
 
@@ -148,6 +144,8 @@ public class AdminService(IAppDbContext db) : IAdminService
             target.Role = role;
             target.CoordinatorRequestStatus = null;
             await db.SaveChangesAsync(ct);
+            cache.BumpVersion("users");
+            cache.BumpVersion("coordinators");
         }
 
         var saved = await UsersWithIncludes()
@@ -159,9 +157,6 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<AuthMeResponse>> RejectCoordinatorRequestAsync(int adminId, int targetUserId, CancellationToken ct = default)
     {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "reject coordinator requests", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
         var target = await db.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
         if (target is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
         if (target.CoordinatorRequestStatus != "Pending")
@@ -169,6 +164,7 @@ public class AdminService(IAppDbContext db) : IAdminService
 
         target.CoordinatorRequestStatus = "Rejected";
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("users");
 
         var saved = await UsersWithIncludes()
             .AsNoTracking()
@@ -183,9 +179,6 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<List<CoordinatorWhitelistEntryResponse>>> GetCoordinatorWhitelistAsync(int adminId, CancellationToken ct = default)
     {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "view the coordinator whitelist", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
         var entries = await db.CoordinatorWhitelist
             .AsNoTracking()
             .OrderBy(e => e.Email)
@@ -197,9 +190,6 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<CoordinatorWhitelistEntryResponse>> AddToCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default)
     {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "manage the coordinator whitelist", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
         if (string.IsNullOrWhiteSpace(email))
             return Error.Validation("INVALID_EMAIL", "Email is required.");
 
@@ -215,9 +205,6 @@ public class AdminService(IAppDbContext db) : IAdminService
 
     public async Task<ErrorOr<Deleted>> RemoveFromCoordinatorWhitelistAsync(int adminId, string email, CancellationToken ct = default)
     {
-        var ensureAdmin = await EnsureAdminAsync(adminId, "manage the coordinator whitelist", ct);
-        if (ensureAdmin.IsError) return ensureAdmin.Errors;
-
         var entry = await db.CoordinatorWhitelist.FirstOrDefaultAsync(e => e.Email == email.ToLowerInvariant(), ct);
         if (entry is null) return Error.NotFound("EMAIL_NOT_FOUND", "Email not found on the coordinator whitelist.");
 
@@ -235,15 +222,7 @@ public class AdminService(IAppDbContext db) : IAdminService
         .Include(u => u.Institution)
         .Include(u => u.Coordinator);
 
-    private async Task<ErrorOr<Success>> EnsureAdminAsync(int adminId, string action, CancellationToken ct)
-    {
-        var admin = await db.Users.FindAsync([adminId], ct);
-        if (admin is null || admin.Role != UserRole.Admin)
-            return Error.Forbidden("FORBIDDEN", $"Only admins can {action}.");
-        return Result.Success;
-    }
-
-    private static UserListResponse ToUserListResponse(User u) => new(
+    private static readonly Expression<Func<User, UserListResponse>> UserListProjection = u => new UserListResponse(
         u.Id,
         u.Name,
         u.Email,
@@ -257,6 +236,8 @@ public class AdminService(IAppDbContext db) : IAdminService
         u.Mentor,
         u.CoordinatorId,
         u.Coordinator != null ? u.Coordinator.Name : null);
+
+    private static readonly Func<User, UserListResponse> ToUserListResponse = UserListProjection.Compile();
 
     #endregion
 }

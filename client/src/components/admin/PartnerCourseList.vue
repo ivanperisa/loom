@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import axios from 'axios'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerCourseResponse } from '@/types/institution.types'
@@ -10,6 +11,7 @@ import PartnerCourseToolbar from '@/components/admin/PartnerCourseToolbar.vue'
 import MergeCoursesModal from '@/components/admin/MergeCoursesModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { minSearchTerm } from '@/utils/searchTerm'
 
 const COURSE_PER_PAGE = 10
 
@@ -27,7 +29,7 @@ const coursePage = ref(1)
 const totalCoursePages = computed(() => Math.max(1, Math.ceil(totalCount.value / COURSE_PER_PAGE)))
 
 const courseSearch = ref('')
-const debouncedCourseSearch = useDebouncedRef(courseSearch)
+const debouncedCourseSearch = useDebouncedRef(courseSearch, 400)
 const showDeletedCourses = ref(false)
 const hasDeletedCourses = ref(false)
 
@@ -41,20 +43,28 @@ const selectedForMerge = ref<Set<string>>(new Set())
 const mergeModal = ref<{ courses: PartnerCourseResponse[] } | null>(null)
 const merging = ref(false)
 
+let loadCoursesController: AbortController | null = null
+
 async function loadCourses() {
+  loadCoursesController?.abort()
+  const controller = new AbortController()
+  loadCoursesController = controller
   loading.value = true
   try {
     const res = await institutionService.getPartnerCoursesByInstitution(props.institutionId, showDeletedCourses.value, {
       page: coursePage.value,
       pageSize: COURSE_PER_PAGE,
-      search: debouncedCourseSearch.value,
-    })
+      search: minSearchTerm(debouncedCourseSearch.value),
+    }, controller.signal)
     courses.value = res.data.items
     totalCount.value = res.data.totalCount
     hasDeletedCourses.value = res.data.hasDeleted
     if (coursePage.value > totalCoursePages.value) coursePage.value = totalCoursePages.value
+  } catch (err) {
+    if (axios.isCancel(err)) return
+    throw err
   } finally {
-    loading.value = false
+    if (loadCoursesController === controller) loading.value = false
   }
 }
 

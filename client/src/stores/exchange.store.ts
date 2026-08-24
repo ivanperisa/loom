@@ -5,7 +5,7 @@ import { exchangeService } from '@/services/exchange.service'
 import { learningAgreementService } from '@/services/learningAgreement.service'
 import { recognitionService } from '@/services/recognition.service'
 import { mappingSchemeService } from '@/services/mappingScheme.service'
-import { institutionService } from '@/services/institution.service'
+import { getAllPartnerCourses } from '@/services/institution.service'
 import { slotMode } from '@/utils/slotMode'
 import { extractApiError } from '@/utils/apiError'
 import { useNotification } from '@/composables/useNotification'
@@ -455,15 +455,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     partnerCoursesRequestId = institutionId
     partnerCoursesLoading.value = true
     try {
-      const items: PartnerCourseResponse[] = []
-      let page = 1
-      let totalPages = 1
-      do {
-        const res = await institutionService.getPartnerCoursesByInstitution(institutionId, false, { page, pageSize: 200 })
-        items.push(...res.data.items)
-        totalPages = Math.ceil(res.data.totalCount / res.data.pageSize) || 1
-        page++
-      } while (page <= totalPages)
+      const items = await getAllPartnerCourses(institutionId, force)
       if (partnerCoursesRequestId === institutionId) partnerCourses.value = items
     } catch {
       if (partnerCoursesRequestId === institutionId) partnerCourses.value = []

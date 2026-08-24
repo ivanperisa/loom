@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import axios from 'axios'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerInstitutionAdminResponse } from '@/types/institution.types'
@@ -7,6 +8,7 @@ import SearchInput from '@/components/common/SearchInput.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { minSearchTerm } from '@/utils/searchTerm'
 import PartnerInstitutionRow from '@/components/admin/PartnerInstitutionRow.vue'
 import PartnerInstitutionFormPanel from '@/components/admin/PartnerInstitutionFormPanel.vue'
 
@@ -23,7 +25,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const institutionSearch = ref('')
-const debouncedInstitutionSearch = useDebouncedRef(institutionSearch)
+const debouncedInstitutionSearch = useDebouncedRef(institutionSearch, 400)
 const showDeleted = ref(false)
 const hasDeleted = ref(false)
 
@@ -46,23 +48,29 @@ watch([institutionPage, debouncedInstitutionSearch, showDeleted], ([newPage, new
   loadInstitutions()
 })
 
+let loadInstitutionsController: AbortController | null = null
+
 async function loadInstitutions() {
+  loadInstitutionsController?.abort()
+  const controller = new AbortController()
+  loadInstitutionsController = controller
   loading.value = true
   error.value = null
   try {
     const res = await institutionService.getPartnerInstitutions(showDeleted.value, {
       page: institutionPage.value,
       pageSize: INST_PER_PAGE,
-      search: debouncedInstitutionSearch.value,
-    })
+      search: minSearchTerm(debouncedInstitutionSearch.value),
+    }, controller.signal)
     institutions.value = res.data.items
     totalCount.value = res.data.totalCount
     hasDeleted.value = res.data.hasDeleted
     if (institutionPage.value > totalInstPages.value) institutionPage.value = totalInstPages.value
-  } catch {
+  } catch (err) {
+    if (axios.isCancel(err)) return
     error.value = t('admin.institutions.saveError')
   } finally {
-    loading.value = false
+    if (loadInstitutionsController === controller) loading.value = false
   }
 }
 
@@ -138,9 +146,12 @@ function onCourseCountChanged(inst: PartnerInstitutionAdminResponse, delta: numb
       <h2 class="text-xl font-semibold text-light">{{ t('admin.institutions.title') }}</h2>
       <button
         type="button"
-        class="rounded-xl bg-primary-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+        class="flex items-center gap-1.5 rounded-xl bg-primary-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
         @click="toggleAddPanel"
       >
+        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+        </svg>
         {{ t('admin.institutions.addButton') }}
       </button>
     </div>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import axios from 'axios'
 import { useI18n } from 'vue-i18n'
 import { adminService, type CoordinatorRequestResponse, type CoordinatorWhitelistEntryResponse, type UserListResponse } from '@/services/admin.service'
-import { coordinatorService } from '@/services/coordinator.service'
+import { coordinatorService, invalidateCoordinators } from '@/services/coordinator.service'
 import { institutionService } from '@/services/institution.service'
 import { useAuthStore } from '@/stores/auth.store'
 import { userRole } from '@/utils/userRole'
@@ -14,6 +15,7 @@ import SortableHeader from '@/components/common/SortableHeader.vue'
 import UserAvatar from '@/components/common/UserAvatar.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { minSearchTerm } from '@/utils/searchTerm'
 import AdminEditUserModal from '@/components/admin/AdminEditUserModal.vue'
 import AdminChangeRoleModal from '@/components/admin/AdminChangeRoleModal.vue'
 import type { CoordinatorOption } from '@/types/coordinator.types'
@@ -45,7 +47,7 @@ const usersTotalCount = ref(0)
 const page = ref(1)
 const USERS_PER_PAGE = 10
 const search = ref('')
-const debouncedSearch = useDebouncedRef(search)
+const debouncedSearch = useDebouncedRef(search, 400)
 const roleFilter = ref<string | null>(null)
 const institutionFilter = ref<string | null>(null)
 const statusFilter = ref<string | null>(null)
@@ -114,24 +116,32 @@ watch([page, debouncedSearch, roleFilter, institutionFilter, statusFilter, sortB
   fetchUsers()
 })
 
+let fetchUsersController: AbortController | null = null
+
 async function fetchUsers() {
+  fetchUsersController?.abort()
+  const controller = new AbortController()
+  fetchUsersController = controller
   loadingUsers.value = true
   try {
     const res = await adminService.getAllUsers({
       page: page.value,
       pageSize: USERS_PER_PAGE,
-      search: debouncedSearch.value,
+      search: minSearchTerm(debouncedSearch.value),
       role: roleFilter.value,
       institutionId: institutionFilter.value,
       registered: statusFilter.value === null ? null : statusFilter.value === 'registered',
       sortBy: sortBy.value,
       sortDir: sortDir.value,
-    })
+    }, controller.signal)
     users.value = res.data.items
     usersTotalCount.value = res.data.totalCount
     if (page.value > totalPages.value) page.value = totalPages.value
+  } catch (err) {
+    if (axios.isCancel(err)) return
+    throw err
   } finally {
-    loadingUsers.value = false
+    if (fetchUsersController === controller) loadingUsers.value = false
   }
 }
 
@@ -171,6 +181,7 @@ async function approve(userId: string) {
   actionLoadingId.value = userId
   try {
     await adminService.setUserRole(userId, userRole.Coordinator)
+    invalidateCoordinators()
     await Promise.all([fetchRequests(), fetchUsers(), fetchCoordinatorOptions()])
   } finally {
     actionLoadingId.value = null

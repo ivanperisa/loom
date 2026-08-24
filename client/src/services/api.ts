@@ -18,6 +18,8 @@ export const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (axios.isCancel(error)) return Promise.reject(error)
+
     const status = error.response?.status
 
     if (status === 401) {

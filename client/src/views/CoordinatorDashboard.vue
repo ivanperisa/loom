@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import axios from 'axios'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { coordinatorService } from '@/services/coordinator.service'
@@ -18,6 +19,7 @@ import Pagination from '@/components/common/Pagination.vue'
 import { useNotification } from '@/composables/useNotification'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { minSearchTerm } from '@/utils/searchTerm'
 import type { SortDir } from '@/composables/useSortable'
 import { useQuerySync } from '@/composables/useQuerySync'
 
@@ -58,7 +60,7 @@ const createExchangeTargetStudentId = ref<string | null>(null)
 const selectedAcademicYear = ref<string | null>(null)
 const selectedPartnerInstitution = ref<string | null>(null)
 const studentSearch = ref<string>(typeof route.query.q === 'string' ? route.query.q : '')
-const debouncedStudentSearch = useDebouncedRef(studentSearch)
+const debouncedStudentSearch = useDebouncedRef(studentSearch, 400)
 
 useQuerySync({
   year: selectedAcademicYear,
@@ -136,7 +138,7 @@ async function fetchData() {
   error.value = null
   try {
     const [studentsRes, exchangesRes, institutionsRes] = await Promise.allSettled([
-      coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, sortDir: studentSortDir.value, academicYear: selectedAcademicYear.value, partnerInstitution: selectedPartnerInstitution.value }),
+      coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: minSearchTerm(debouncedStudentSearch.value), sortDir: studentSortDir.value, academicYear: selectedAcademicYear.value, partnerInstitution: selectedPartnerInstitution.value }),
       coordinatorService.getStudentsExchanges(),
       institutionService.getHomeInstitutions(),
     ])
@@ -153,14 +155,20 @@ async function fetchData() {
   }
 }
 
+let fetchStudentsController: AbortController | null = null
+
 async function fetchStudents() {
   closeMenu()
+  fetchStudentsController?.abort()
+  const controller = new AbortController()
+  fetchStudentsController = controller
   try {
-    const res = await coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, sortDir: studentSortDir.value, academicYear: selectedAcademicYear.value, partnerInstitution: selectedPartnerInstitution.value })
+    const res = await coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: minSearchTerm(debouncedStudentSearch.value), sortDir: studentSortDir.value, academicYear: selectedAcademicYear.value, partnerInstitution: selectedPartnerInstitution.value }, controller.signal)
     students.value = res.data.items
     studentsTotalCount.value = res.data.totalCount
     if (studentPage.value > totalStudentPages.value) studentPage.value = totalStudentPages.value
-  } catch {
+  } catch (err) {
+    if (axios.isCancel(err)) return
     error.value = t('common.error')
   }
 }

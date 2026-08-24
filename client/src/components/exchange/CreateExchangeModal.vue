@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { institutionService } from '@/services/institution.service'
+import { institutionService, getAllPartnerInstitutions } from '@/services/institution.service'
 import { coordinatorService } from '@/services/coordinator.service'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { exchangeSemester } from '@/utils/exchangeSemester'
@@ -181,23 +181,10 @@ watch(selectedProgramId, () => {
   selectedProfileId.value = null
 })
 
-async function fetchAllPartnerInstitutions(): Promise<PartnerInstitutionAdminResponse[]> {
-  const items: PartnerInstitutionAdminResponse[] = []
-  let page = 1
-  let totalPages = 1
-  do {
-    const res = await institutionService.getPartnerInstitutions(false, { page, pageSize: 200 })
-    items.push(...res.data.items)
-    totalPages = Math.ceil(res.data.totalCount / res.data.pageSize) || 1
-    page++
-  } while (page <= totalPages)
-  return items
-}
-
 onMounted(async () => {
   const [programsRes, partnerRes, coordRes] = await Promise.allSettled([
     institutionService.getHomePrograms(),
-    fetchAllPartnerInstitutions(),
+    getAllPartnerInstitutions(),
     coordinatorService.getCoordinators(),
   ])
 

@@ -12,78 +12,95 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Loom.Application.Services;
 
-public class InstitutionService(IAppDbContext db) : IInstitutionService
+public class InstitutionService(IAppDbContext db, CachedQuery cache) : IInstitutionService
 {
+    private static readonly TimeSpan LookupTtl = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan ListTtl = TimeSpan.FromSeconds(30);
+
     #region Lookups
 
     public async Task<ErrorOr<List<InstitutionResponse>>> GetHomeInstitutionsAsync(CancellationToken ct = default)
     {
-        var institutions = await db.Institutions
-            .AsNoTracking()
-            .Where(x => x.Type == InstitutionType.Home)
-            .OrderBy(x => x.Name)
-            .ToListAsync(ct);
-        return institutions.Select(i => i.ToResponse()).ToList();
+        return await cache.GetOrCreateAsync("home-institutions", "all", LookupTtl, async () =>
+        {
+            var institutions = await db.Institutions
+                .AsNoTracking()
+                .Where(x => x.Type == InstitutionType.Home)
+                .OrderBy(x => x.Name)
+                .ToListAsync(ct);
+            return institutions.Select(i => i.ToResponse()).ToList();
+        });
     }
 
     public async Task<ErrorOr<List<HomeProgramResponse>>> GetHomeProgramsAsync(CancellationToken ct = default)
     {
-        var programs = await db.HomePrograms
-            .AsNoTracking()
-            .Include(p => p.Profiles)
-            .OrderBy(p => p.Name)
-            .ToListAsync(ct);
-        return programs.Select(p => p.ToResponse()).ToList();
+        return await cache.GetOrCreateAsync("home-programs", "all", LookupTtl, async () =>
+        {
+            var programs = await db.HomePrograms
+                .AsNoTracking()
+                .Include(p => p.Profiles)
+                .OrderBy(p => p.Name)
+                .ToListAsync(ct);
+            return programs.Select(p => p.ToResponse()).ToList();
+        });
     }
 
     public async Task<ErrorOr<PagedResponse<PartnerInstitutionAdminResponse>>> GetPartnerInstitutionsAsync(bool includeDeleted, PagedRequest paging, CancellationToken ct = default)
     {
-        var query = db.Institutions
-            .AsNoTracking()
-            .Where(i => i.Type == InstitutionType.Partner && (includeDeleted || !i.IsDeleted));
-
-        if (!string.IsNullOrWhiteSpace(paging.Search))
+        var key = $"{includeDeleted}:{paging.Search}:{paging.SafePage}:{paging.SafePageSize}";
+        return await cache.GetOrCreateAsync("partner-institutions", key, ListTtl, async () =>
         {
-            var term = $"%{paging.Search.Trim().ToLower()}%";
-            query = query.Where(i =>
-                EF.Functions.Like(i.Name.ToLower(), term) ||
-                (i.NameHr != null && EF.Functions.Like(i.NameHr.ToLower(), term)) ||
-                (i.City != null && EF.Functions.Like(i.City.ToLower(), term)) ||
-                (i.ErasmusCode != null && EF.Functions.Like(i.ErasmusCode.ToLower(), term)));
-        }
+            var query = db.Institutions
+                .AsNoTracking()
+                .Where(i => i.Type == InstitutionType.Partner && (includeDeleted || !i.IsDeleted));
 
-        var totalCount = await query.CountAsync(ct);
-        var hasDeleted = await db.Institutions.AnyAsync(i => i.Type == InstitutionType.Partner && i.IsDeleted, ct);
+            if (!string.IsNullOrWhiteSpace(paging.Search))
+            {
+                var term = $"%{paging.Search.Trim().ToLower()}%";
+                query = query.Where(i =>
+                    EF.Functions.Like(i.Name.ToLower(), term) ||
+                    (i.NameHr != null && EF.Functions.Like(i.NameHr.ToLower(), term)) ||
+                    (i.City != null && EF.Functions.Like(i.City.ToLower(), term)) ||
+                    (i.ErasmusCode != null && EF.Functions.Like(i.ErasmusCode.ToLower(), term)));
+            }
 
-        var items = await query
-            .OrderBy(i => i.Country).ThenBy(i => i.Name).ThenBy(i => i.Id)
-            .Skip(paging.Skip)
-            .Take(paging.SafePageSize)
-            .Select(i => new PartnerInstitutionAdminResponse(
-                i.Id, i.Name, i.NameHr, i.Country, i.City, i.ErasmusCode, i.PartnerCourses.Count, i.IsDeleted))
-            .ToListAsync(ct);
+            var totalCount = await query.CountAsync(ct);
+            var hasDeleted = await db.Institutions.AnyAsync(i => i.Type == InstitutionType.Partner && i.IsDeleted, ct);
 
-        return new PagedResponse<PartnerInstitutionAdminResponse>(items, paging.SafePage, paging.SafePageSize, totalCount, hasDeleted);
+            var items = await query
+                .OrderBy(i => i.Country).ThenBy(i => i.Name).ThenBy(i => i.Id)
+                .Skip(paging.Skip)
+                .Take(paging.SafePageSize)
+                .Select(i => new PartnerInstitutionAdminResponse(
+                    i.Id, i.Name, i.NameHr, i.Country, i.City, i.ErasmusCode, i.PartnerCourses.Count, i.IsDeleted))
+                .ToListAsync(ct);
+
+            return new PagedResponse<PartnerInstitutionAdminResponse>(items, paging.SafePage, paging.SafePageSize, totalCount, hasDeleted);
+        });
     }
 
     public async Task<ErrorOr<PagedResponse<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, bool includeDeleted, PagedRequest paging, CancellationToken ct = default)
     {
-        var query = db.PartnerCourses
-            .AsNoTracking()
-            .Where(c => c.InstitutionId == institutionId && (includeDeleted || !c.IsDeleted));
-
-        if (!string.IsNullOrWhiteSpace(paging.Search))
+        var key = $"{institutionId}:{includeDeleted}:{paging.Search}:{paging.SafePage}:{paging.SafePageSize}";
+        return await cache.GetOrCreateAsync("partner-courses", key, ListTtl, async () =>
         {
-            var term = $"%{paging.Search.Trim().ToLower()}%";
-            query = query.Where(c =>
-                EF.Functions.Like(c.Code.ToLower(), term) ||
-                EF.Functions.Like(c.Name.ToLower(), term) ||
-                (c.NameHr != null && EF.Functions.Like(c.NameHr.ToLower(), term)));
-        }
+            var query = db.PartnerCourses
+                .AsNoTracking()
+                .Where(c => c.InstitutionId == institutionId && (includeDeleted || !c.IsDeleted));
 
-        var hasDeleted = await db.PartnerCourses.AnyAsync(c => c.InstitutionId == institutionId && c.IsDeleted, ct);
-        var result = await query.ToPagedResponseAsync(paging, q => q.OrderBy(c => c.Code), c => c.Id, c => c.ToResponse(), ct);
-        return result with { HasDeleted = hasDeleted };
+            if (!string.IsNullOrWhiteSpace(paging.Search))
+            {
+                var term = $"%{paging.Search.Trim().ToLower()}%";
+                query = query.Where(c =>
+                    EF.Functions.Like(c.Code.ToLower(), term) ||
+                    EF.Functions.Like(c.Name.ToLower(), term) ||
+                    (c.NameHr != null && EF.Functions.Like(c.NameHr.ToLower(), term)));
+            }
+
+            var hasDeleted = await db.PartnerCourses.AnyAsync(c => c.InstitutionId == institutionId && c.IsDeleted, ct);
+            var result = await query.ToPagedResponseAsync(paging, q => q.OrderBy(c => c.Code), c => c.Id, c => c.ToResponse(), ct);
+            return result with { HasDeleted = hasDeleted };
+        });
     }
 
     #endregion
@@ -108,6 +125,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         };
         db.Institutions.Add(institution);
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("partner-institutions");
 
         return await db.Institutions
             .AsNoTracking()
@@ -134,6 +152,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         institution.City = string.IsNullOrWhiteSpace(request.City) ? null : request.City.Trim();
         institution.ErasmusCode = string.IsNullOrWhiteSpace(request.ErasmusCode) ? null : request.ErasmusCode.Trim();
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("partner-institutions");
 
         return await db.Institutions
             .AsNoTracking()
@@ -155,11 +174,13 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
             institution.IsDeleted = true;
             institution.DeletedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
+            cache.BumpVersion("partner-institutions");
             return Result.Deleted;
         }
 
         db.Institutions.Remove(institution);
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("partner-institutions");
         return Result.Deleted;
     }
 
@@ -172,6 +193,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         institution.IsDeleted = false;
         institution.DeletedAt = null;
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("partner-institutions");
         return Result.Updated;
     }
 
@@ -208,6 +230,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         };
         db.PartnerCourses.Add(course);
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("partner-courses");
         return course.ToResponse();
     }
 
@@ -240,6 +263,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         course.Semester = semester;
         course.Level = level;
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("partner-courses");
         return course.ToResponse();
     }
 
@@ -254,11 +278,13 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
             course.IsDeleted = true;
             course.DeletedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
+            cache.BumpVersion("partner-courses");
             return Result.Deleted;
         }
 
         db.PartnerCourses.Remove(course);
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("partner-courses");
         return Result.Deleted;
     }
 
@@ -270,6 +296,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
         course.IsDeleted = false;
         course.DeletedAt = null;
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("partner-courses");
         return Result.Updated;
     }
 
@@ -298,6 +325,7 @@ public class InstitutionService(IAppDbContext db) : IInstitutionService
 
         db.PartnerCourses.RemoveRange(duplicates);
         await db.SaveChangesAsync(ct);
+        cache.BumpVersion("partner-courses");
         return primary.ToResponse();
     }
 
