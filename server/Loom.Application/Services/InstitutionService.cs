@@ -45,14 +45,17 @@ public class InstitutionService(IAppDbContext db, CachedQuery cache) : IInstitut
         });
     }
 
-    public async Task<ErrorOr<PagedResponse<PartnerInstitutionAdminResponse>>> GetPartnerInstitutionsAsync(bool includeDeleted, PagedRequest paging, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<PartnerInstitutionAdminResponse>>> GetPartnerInstitutionsAsync(bool includeDeleted, PagedRequest paging, string? country = null, string? sortBy = null, CancellationToken ct = default)
     {
-        var key = $"{includeDeleted}:{paging.Search}:{paging.SafePage}:{paging.SafePageSize}";
+        var key = $"{includeDeleted}:{country}:{sortBy}:{paging.SortDir}:{paging.Search}:{paging.SafePage}:{paging.SafePageSize}";
         return await cache.GetOrCreateAsync("partner-institutions", key, ListTtl, async () =>
         {
             var query = db.Institutions
                 .AsNoTracking()
                 .Where(i => i.Type == InstitutionType.Partner && (includeDeleted || !i.IsDeleted));
+
+            if (!string.IsNullOrWhiteSpace(country))
+                query = query.Where(i => i.Country == country);
 
             if (!string.IsNullOrWhiteSpace(paging.Search))
             {
@@ -67,8 +70,17 @@ public class InstitutionService(IAppDbContext db, CachedQuery cache) : IInstitut
             var totalCount = await query.CountAsync(ct);
             var hasDeleted = await db.Institutions.AnyAsync(i => i.Type == InstitutionType.Partner && i.IsDeleted, ct);
 
-            var items = await query
-                .OrderBy(i => i.Country).ThenBy(i => i.Name).ThenBy(i => i.Id)
+            var desc = paging.SortDir == "desc";
+            Func<IQueryable<Institution>, IOrderedQueryable<Institution>> orderBy = sortBy switch
+            {
+                "erasmusCode" => q => desc ? q.OrderByDescending(i => i.ErasmusCode) : q.OrderBy(i => i.ErasmusCode),
+                "name" => q => desc ? q.OrderByDescending(i => i.Name) : q.OrderBy(i => i.Name),
+                "country" => q => desc ? q.OrderByDescending(i => i.Country) : q.OrderBy(i => i.Country),
+                _ => q => q.OrderBy(i => i.Country).ThenBy(i => i.Name),
+            };
+
+            var items = await orderBy(query)
+                .ThenBy(i => i.Id)
                 .Skip(paging.Skip)
                 .Take(paging.SafePageSize)
                 .Select(i => new PartnerInstitutionAdminResponse(
@@ -79,14 +91,20 @@ public class InstitutionService(IAppDbContext db, CachedQuery cache) : IInstitut
         });
     }
 
-    public async Task<ErrorOr<PagedResponse<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, bool includeDeleted, PagedRequest paging, CancellationToken ct = default)
+    public async Task<ErrorOr<PagedResponse<PartnerCourseResponse>>> GetPartnerCoursesByInstitutionAsync(int institutionId, bool includeDeleted, PagedRequest paging, ExchangeSemester? semester = null, StudyProgramLevel? level = null, string? sortBy = null, CancellationToken ct = default)
     {
-        var key = $"{institutionId}:{includeDeleted}:{paging.Search}:{paging.SafePage}:{paging.SafePageSize}";
+        var key = $"{institutionId}:{includeDeleted}:{semester}:{level}:{sortBy}:{paging.SortDir}:{paging.Search}:{paging.SafePage}:{paging.SafePageSize}";
         return await cache.GetOrCreateAsync("partner-courses", key, ListTtl, async () =>
         {
             var query = db.PartnerCourses
                 .AsNoTracking()
                 .Where(c => c.InstitutionId == institutionId && (includeDeleted || !c.IsDeleted));
+
+            if (semester is not null)
+                query = query.Where(c => c.Semester == semester.Value);
+
+            if (level is not null)
+                query = query.Where(c => c.Level == level.Value);
 
             if (!string.IsNullOrWhiteSpace(paging.Search))
             {
@@ -98,7 +116,19 @@ public class InstitutionService(IAppDbContext db, CachedQuery cache) : IInstitut
             }
 
             var hasDeleted = await db.PartnerCourses.AnyAsync(c => c.InstitutionId == institutionId && c.IsDeleted, ct);
-            var result = await query.ToPagedResponseAsync(paging, q => q.OrderBy(c => c.Code), c => c.Id, c => c.ToResponse(), ct);
+
+            var desc = paging.SortDir == "desc";
+            Func<IQueryable<PartnerCourse>, IOrderedQueryable<PartnerCourse>> orderBy = sortBy switch
+            {
+                "name" => q => desc ? q.OrderByDescending(c => c.Name) : q.OrderBy(c => c.Name),
+                "nameHr" => q => desc ? q.OrderByDescending(c => c.NameHr) : q.OrderBy(c => c.NameHr),
+                "semester" => q => desc ? q.OrderByDescending(c => c.Semester) : q.OrderBy(c => c.Semester),
+                "level" => q => desc ? q.OrderByDescending(c => c.Level) : q.OrderBy(c => c.Level),
+                "ects" => q => desc ? q.OrderByDescending(c => c.Ects) : q.OrderBy(c => c.Ects),
+                _ => desc ? q => q.OrderByDescending(c => c.Code) : q => q.OrderBy(c => c.Code),
+            };
+
+            var result = await query.ToPagedResponseAsync(paging, orderBy, c => c.Id, c => c.ToResponse(), ct);
             return result with { HasDeleted = hasDeleted };
         });
     }

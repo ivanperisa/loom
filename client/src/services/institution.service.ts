@@ -17,9 +17,9 @@ export const institutionService = {
     (homeInstitutionsCache ??= api.get<InstitutionResponse[]>('/api/institutions/home')),
   getHomePrograms: () =>
     (homeProgramsCache ??= api.get<HomeProgramResponse[]>('/api/institutions/home-programs')),
-  getPartnerInstitutions: (includeDeleted = false, params: PagedParams = {}, signal?: AbortSignal) =>
+  getPartnerInstitutions: (includeDeleted = false, params: PagedParams & { country?: string | null } = {}, signal?: AbortSignal) =>
     api.get<PagedResponse<PartnerInstitutionAdminResponse>>('/api/institutions/partner', { params: { includeDeleted, ...params }, signal }),
-  getPartnerCoursesByInstitution: (institutionId: string, includeDeleted = false, params: PagedParams = {}, signal?: AbortSignal) =>
+  getPartnerCoursesByInstitution: (institutionId: string, includeDeleted = false, params: PagedParams & { semester?: string | null; level?: string | null } = {}, signal?: AbortSignal) =>
     api.get<PagedResponse<PartnerCourseResponse>>(`/api/institutions/partner/${institutionId}/courses`, { params: { includeDeleted, ...params }, signal }),
 
   createPartnerInstitution: (data: { name: string; nameHr: string; country: string; city?: string; erasmusCode?: string }) =>

@@ -2,6 +2,7 @@ using Loom.Application.DTOs.Common;
 using Loom.Application.DTOs.Institution;
 using Loom.Application.Interfaces.Services;
 using Loom.Domain.Constants;
+using Loom.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,17 +29,17 @@ public class InstitutionController(IInstitutionService institutionService) : Api
     }
 
     [HttpGet("partner")]
-    public async Task<IActionResult> GetPartnerInstitutions([FromQuery] bool includeDeleted, [FromQuery] PagedRequest paging, CancellationToken ct)
+    public async Task<IActionResult> GetPartnerInstitutions([FromQuery] bool includeDeleted, [FromQuery] PagedRequest paging, [FromQuery] string? country, [FromQuery] string? sortBy, CancellationToken ct)
     {
-        var result = await institutionService.GetPartnerInstitutionsAsync(includeDeleted, paging, ct);
+        var result = await institutionService.GetPartnerInstitutionsAsync(includeDeleted, paging, country, sortBy, ct);
         return Match(result, Ok);
     }
 
     [AllowAnonymous]
     [HttpGet("partner/{institutionId:int}/courses")]
-    public async Task<IActionResult> GetPartnerCoursesByInstitution(int institutionId, [FromQuery] bool includeDeleted, [FromQuery] PagedRequest paging, CancellationToken ct)
+    public async Task<IActionResult> GetPartnerCoursesByInstitution(int institutionId, [FromQuery] bool includeDeleted, [FromQuery] PagedRequest paging, [FromQuery] ExchangeSemester? semester, [FromQuery] StudyProgramLevel? level, [FromQuery] string? sortBy, CancellationToken ct)
     {
-        var result = await institutionService.GetPartnerCoursesByInstitutionAsync(institutionId, includeDeleted, paging, ct);
+        var result = await institutionService.GetPartnerCoursesByInstitutionAsync(institutionId, includeDeleted, paging, semester, level, sortBy, ct);
         return Match(result, Ok);
     }
 
