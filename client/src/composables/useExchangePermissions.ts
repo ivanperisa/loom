@@ -8,7 +8,7 @@ export function useExchangePermissions() {
   const authStore = useAuthStore()
 
   const isCoordinator = computed(
-    () => exchangeStore.exchange?.coordinatorId === authStore.user?.id || authStore.isAdmin,
+    () => exchangeStore.exchange?.coordinatorId === authStore.user?.id,
   )
   const isApproved = computed(
     () => exchangeStore.serverLearningAgreement?.status === documentStatus.Approved,

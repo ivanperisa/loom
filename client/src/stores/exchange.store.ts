@@ -5,7 +5,7 @@ import { exchangeService } from '@/services/exchange.service'
 import { learningAgreementService } from '@/services/learningAgreement.service'
 import { recognitionService } from '@/services/recognition.service'
 import { mappingSchemeService } from '@/services/mappingScheme.service'
-import { institutionService } from '@/services/institution.service'
+import { getAllPartnerCourses } from '@/services/institution.service'
 import { slotMode } from '@/utils/slotMode'
 import { extractApiError } from '@/utils/apiError'
 import { useNotification } from '@/composables/useNotification'
@@ -82,6 +82,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   const error = ref<string | null>(null)
   const draggingCourse = ref<PartnerCourseResponse | null>(null)
   const draggingSlotMapping = ref<{ fromSlotId: string; localId: string } | null>(null)
+  const armedCourse = ref<PartnerCourseResponse | null>(null)
   const stagedPartnerCourseIds = ref<Set<string>>(new Set())
   const guestMode = ref(false)
 
@@ -98,6 +99,7 @@ export const useExchangeStore = defineStore('exchange', () => {
   function startDrag(course: PartnerCourseResponse) {
     draggingCourse.value = course
     draggingSlotMapping.value = null
+    armedCourse.value = null
   }
 
   function endDrag() {
@@ -108,6 +110,21 @@ export const useExchangeStore = defineStore('exchange', () => {
   function startSlotDrag(fromSlotId: string, localId: string) {
     draggingSlotMapping.value = { fromSlotId, localId }
     draggingCourse.value = null
+    armedCourse.value = null
+  }
+
+  function armCourse(course: PartnerCourseResponse) {
+    if (armedCourse.value?.id === course.id) {
+      armedCourse.value = null
+      return
+    }
+    armedCourse.value = course
+    draggingCourse.value = null
+    draggingSlotMapping.value = null
+  }
+
+  function disarm() {
+    armedCourse.value = null
   }
 
   function localMoveSlotMapping(fromSlotId: string, toSlotId: string, localId: string, amount?: number) {
@@ -455,15 +472,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     partnerCoursesRequestId = institutionId
     partnerCoursesLoading.value = true
     try {
-      const items: PartnerCourseResponse[] = []
-      let page = 1
-      let totalPages = 1
-      do {
-        const res = await institutionService.getPartnerCoursesByInstitution(institutionId, false, { page, pageSize: 200 })
-        items.push(...res.data.items)
-        totalPages = Math.ceil(res.data.totalCount / res.data.pageSize) || 1
-        page++
-      } while (page <= totalPages)
+      const items = await getAllPartnerCourses(institutionId, force)
       if (partnerCoursesRequestId === institutionId) partnerCourses.value = items
     } catch {
       if (partnerCoursesRequestId === institutionId) partnerCourses.value = []
@@ -490,6 +499,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     error,
     draggingCourse,
     draggingSlotMapping,
+    armedCourse,
     stagedPartnerCourseIds,
     guestMode,
     partnerCourses,
@@ -499,6 +509,8 @@ export const useExchangeStore = defineStore('exchange', () => {
     startDrag,
     endDrag,
     startSlotDrag,
+    armCourse,
+    disarm,
     localMoveSlotMapping,
     stagePartnerCourse,
     unstagePartnerCourse,

@@ -94,7 +94,7 @@ function save() {
         </button>
         <button
           type="button"
-          class="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
+          class="rounded-lg bg-primary-strong px-4 py-1.5 text-sm font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
           :disabled="saving || !isDirty"
           @click="save"
         >

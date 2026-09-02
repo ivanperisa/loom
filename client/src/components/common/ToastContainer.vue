@@ -105,6 +105,11 @@ const icons: Record<ToastType, string> = {
 .toast--warning .toast__icon { background: color-mix(in srgb, #d97706 25%, transparent); color: #d97706; }
 .toast--info    .toast__icon { background: color-mix(in srgb, var(--color-primary) 25%, transparent); color: var(--color-primary); }
 
+:global([data-theme='light']) .toast--success .toast__icon { background: var(--color-success-fill); color: var(--color-success-text); }
+:global([data-theme='light']) .toast--error   .toast__icon { background: var(--color-danger-fill); color: var(--color-danger-text); }
+:global([data-theme='light']) .toast--warning .toast__icon { background: var(--color-warning-fill); color: var(--color-warning-text); }
+:global([data-theme='light']) .toast--info    .toast__icon { background: var(--color-primary-fill); color: var(--color-primary-text); }
+
 .toast__body {
   flex: 1;
   min-width: 0;

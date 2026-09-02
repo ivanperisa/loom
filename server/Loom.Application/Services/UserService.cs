@@ -48,7 +48,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
 
             if (placeholder is not null)
             {
-                user.CoordinatorId ??= placeholder.CoordinatorId;
+                user.CoordinatorId = placeholder.CoordinatorId;
 
                 var exchangesToTransfer = await db.Exchanges
                     .Where(e => e.StudentId == placeholder.Id)
@@ -119,15 +119,8 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
         user.InstitutionId = request.InstitutionId;
         user.Mentor = string.IsNullOrWhiteSpace(request.Mentor) ? null : request.Mentor.Trim();
 
-        if (request.CoordinatorId.HasValue)
-        {
-            var coordinator = await db.Users.FindAsync([request.CoordinatorId.Value], ct);
-            if (coordinator is null || !coordinator.CanActAsCoordinator())
-                return Error.NotFound("COORDINATOR_NOT_FOUND", "Coordinator not found.");
-        }
-        user.CoordinatorId = request.CoordinatorId;
-
-        await db.ReassignUnapprovedExchangesAsync(user.Id, request.CoordinatorId, ct);
+        var setCoordinator = await db.SetStudentCoordinatorAsync(user, request.CoordinatorId, ct);
+        if (setCoordinator.IsError) return setCoordinator.Errors;
 
         await db.SaveChangesAsync(ct);
 
@@ -171,6 +164,7 @@ public class UserService(IAppDbContext db) : IUserService, IUserSyncService
                 if (isWhitelistedNow)
                 {
                     existing.Role = UserRole.Coordinator;
+                    existing.CoordinatorRequestStatus = null;
                     await db.SaveChangesAsync(ct);
                 }
             }

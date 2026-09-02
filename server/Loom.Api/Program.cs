@@ -33,6 +33,7 @@ try
   builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
   builder.Services.AddMemoryCache();
+  builder.Services.AddSingleton<Loom.Application.Helpers.CachedQuery>();
 
   builder.Services.AddScoped<UserService>();
   builder.Services.AddScoped<IUserService>(sp => sp.GetRequiredService<UserService>());

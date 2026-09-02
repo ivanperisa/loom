@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { coordinatorService } from '@/services/coordinator.service'
 import { useExchangeStore } from '@/stores/exchange.store'
+import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import { exchangeSemester } from '@/utils/exchangeSemester'
 import { extractApiError } from '@/utils/apiError'
 import { useNotification } from '@/composables/useNotification'
@@ -24,6 +25,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
 const { notifyError } = useNotification()
+const { isApproved } = useExchangePermissions()
 
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
@@ -177,7 +179,7 @@ async function submit() {
           <!-- Left column: academic year + study semesters -->
           <div class="flex flex-col gap-6">
             <div>
-              <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+              <label class="mb-2 block text-sm font-semibold text-primary-text">{{
                 t('exchange.academicYear')
               }}</label>
               <SearchableSelect
@@ -189,7 +191,7 @@ async function submit() {
 
             <!-- Study semesters -->
             <div>
-              <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+              <label class="mb-2 block text-sm font-semibold text-primary-text">{{
                 t('exchange.studySemester')
               }}</label>
 
@@ -201,7 +203,7 @@ async function submit() {
                   class="h-10 w-10 rounded-xl border text-sm font-semibold transition"
                   :class="
                     studySemesters.includes(s)
-                      ? 'border-primary bg-primary/10 text-white'
+                      ? 'border-primary bg-primary/10 text-primary-on-tint'
                       : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                   "
                   @click="toggleStudySemester(s)"
@@ -218,7 +220,7 @@ async function submit() {
                   class="rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
                   :class="
                     isPairSelected(pair)
-                      ? 'border-primary bg-primary/10 text-white'
+                      ? 'border-primary bg-primary/10 text-primary-on-tint'
                       : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                   "
                   @click="selectPair(pair)"
@@ -231,7 +233,7 @@ async function submit() {
 
           <!-- Right column: semester type + lock warning -->
           <div>
-            <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
               t('exchange.semester')
             }}</label>
             <div class="grid grid-cols-3 gap-2">
@@ -243,7 +245,7 @@ async function submit() {
                 class="rounded-xl border py-2.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                 :class="
                   semesterType === sem
-                    ? 'border-primary bg-primary/10 text-white'
+                    ? 'border-primary bg-primary/10 text-primary-on-tint'
                     : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
                 "
                 @click="setSemesterType(sem)"
@@ -260,7 +262,7 @@ async function submit() {
                 <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
                 <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               </svg>
-              <p class="text-xs text-info">
+              <p class="text-xs text-info-text">
                 {{ t('exchange.editLockedByLa') }}<br />
                 {{ t('exchange.editLockedByLaHint') }}
               </p>
@@ -270,21 +272,25 @@ async function submit() {
 
         <!-- Coordinator -->
         <div v-if="!exchangeStore.guestMode">
-          <label class="mb-2 block text-sm font-semibold text-primary-light">{{
+          <label class="mb-2 block text-sm font-semibold text-primary-text">{{
             t('createExchange.selectCoordinator')
           }}</label>
           <SearchableSelect
             v-model="selectedCoordinatorId"
             :options="coordinatorOptions"
+            :disabled="isApproved"
             :placeholder="t('createExchange.selectCoordinatorPlaceholder')"
             :search-placeholder="t('settings.profile.searchCoordinator')"
             :no-results-label="t('settings.profile.noCoordinatorResults')"
           />
+          <p v-if="isApproved" class="mt-1.5 text-xs text-light/40">
+            {{ t('exchange.coordinatorLockedApproved') }}
+          </p>
         </div>
 
         <!-- Mentor -->
         <div>
-          <label class="mb-2 block text-sm font-semibold text-primary-light">
+          <label class="mb-2 block text-sm font-semibold text-primary-text">
             {{ t('exchange.mentor') }}
             <span class="ml-1 text-xs font-normal text-light/40">({{ t('common.optional') }})</span>
           </label>
@@ -298,7 +304,7 @@ async function submit() {
 
         <!-- EWP link -->
         <div>
-          <label class="mb-2 block text-sm font-semibold text-primary-light">
+          <label class="mb-2 block text-sm font-semibold text-primary-text">
             {{ t('exchange.ewpLink') }}
             <span class="ml-1 text-xs font-normal text-light/40">({{ t('common.optional') }})</span>
           </label>
@@ -310,7 +316,7 @@ async function submit() {
           />
         </div>
 
-        <p v-if="errorMessage" class="text-sm text-danger">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="text-sm text-danger-text">{{ errorMessage }}</p>
       </div>
 
       <!-- Footer -->
@@ -324,7 +330,7 @@ async function submit() {
         </button>
         <button
           type="button"
-          class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/80 disabled:opacity-50"
+          class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/80 disabled:opacity-50"
           :disabled="isSubmitting"
           @click="submit"
         >

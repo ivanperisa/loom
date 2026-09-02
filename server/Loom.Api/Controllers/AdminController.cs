@@ -15,9 +15,9 @@ public class AdminController(IAdminService adminService) : ApiController
     #region Users
 
     [HttpGet("users")]
-    public async Task<IActionResult> GetAllUsers([FromQuery] PagedRequest paging, [FromQuery] UserRole? role, CancellationToken ct)
+    public async Task<IActionResult> GetAllUsers([FromQuery] PagedRequest paging, [FromQuery] UserRole? role, [FromQuery] int? institutionId, [FromQuery] bool? registered, [FromQuery] string? sortBy, CancellationToken ct)
     {
-        var result = await adminService.GetAllUsersAsync(GetCurrentUserId(), paging, role, ct);
+        var result = await adminService.GetAllUsersAsync(GetCurrentUserId(), paging, role, institutionId, registered, sortBy, ct);
         return Match(result, Ok);
     }
 
@@ -39,10 +39,10 @@ public class AdminController(IAdminService adminService) : ApiController
         return Match(result, Ok);
     }
 
-    [HttpPatch("users/{userId:int}/make-coordinator")]
-    public async Task<IActionResult> MakeCoordinator(int userId, CancellationToken ct)
+    [HttpPatch("users/{userId:int}/role")]
+    public async Task<IActionResult> SetUserRole(int userId, [FromBody] AdminSetRoleRequest request, CancellationToken ct)
     {
-        var result = await adminService.MakeCoordinatorAsync(GetCurrentUserId(), userId, ct);
+        var result = await adminService.SetUserRoleAsync(GetCurrentUserId(), userId, request.Role, ct);
         return Match(result, Ok);
     }
 
@@ -50,13 +50,6 @@ public class AdminController(IAdminService adminService) : ApiController
     public async Task<IActionResult> RejectCoordinatorRequest(int userId, CancellationToken ct)
     {
         var result = await adminService.RejectCoordinatorRequestAsync(GetCurrentUserId(), userId, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPatch("users/{userId:int}/remove-coordinator")]
-    public async Task<IActionResult> RemoveCoordinator(int userId, CancellationToken ct)
-    {
-        var result = await adminService.RemoveCoordinatorAsync(GetCurrentUserId(), userId, ct);
         return Match(result, Ok);
     }
 

@@ -42,7 +42,7 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
     [HttpPut("{exchangeGuid:guid}")]
     public async Task<IActionResult> UpdateExchange(Guid exchangeGuid, [FromBody] UpdateExchangeRequest request, CancellationToken ct)
     {
-        var result = await exchangeService.UpdateExchangeAsync(exchangeGuid, GetCurrentUserId(), request, ct);
+        var result = await exchangeService.UpdateExchangeAsync(exchangeGuid, GetCurrentUserId(), request, ct: ct);
         return Match(result, Ok);
     }
 
@@ -53,7 +53,7 @@ public class ExchangeController(IExchangeService exchangeService) : ApiControlle
         var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
         if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
 
-        var result = await exchangeService.UpdateExchangeAsync(exchangeGuid, studentIdResult.Value, request, ct);
+        var result = await exchangeService.UpdateExchangeAsync(exchangeGuid, studentIdResult.Value, request, allowCoordinatorChange: false, ct: ct);
         return Match(result, Ok);
     }
 

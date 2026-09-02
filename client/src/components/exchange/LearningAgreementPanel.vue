@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PartnerCoursePanel from '@/components/exchange/PartnerCoursePanel.vue'
 import DocTableGrid from '@/components/exchange/DocTableGrid.vue'
@@ -38,6 +38,12 @@ const { theme } = useTheme()
 const { confirm } = useConfirm()
 const { notifyError } = useNotification()
 useDragAutoScroll()
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') exchangeStore.disarm()
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 const isSavingLa = ref(false)
 const saveError = ref<string | null>(null)
@@ -99,6 +105,7 @@ const modes: SlotMode[] = [slotMode.AtHome]
 const modeOutlineColor = DOC_TABLE_MODE_OUTLINE_COLOR
 
 const isDragging = computed(() => !!exchangeStore.draggingCourse || !!exchangeStore.draggingSlotMapping)
+const isArmed = computed(() => !!exchangeStore.armedCourse)
 const dragOverSlotId = ref<string | null>(null)
 const pendingDrop = ref<{ slot: HomeSlotResponse; course: PartnerCourseResponse } | null>(null)
 const pendingEcts = ref<number>(0)
@@ -221,7 +228,7 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
     }
   }
 
-  if (isDragging.value) {
+  if (isDragging.value || isArmed.value) {
     return {
       backgroundColor: bg,
       outline: '2px dashed var(--color-primary)',
@@ -274,11 +281,12 @@ function onDrop(event: DragEvent, slot: HomeSlotResponse) {
   }
   const course = exchangeStore.draggingCourse
   if (!course) return
-  if (lineFor(slot.id)?.mode !== slotMode.AtExchange) {
-    exchangeStore.localSetSlotMode(slot.id, slotMode.AtExchange)
-  }
-  pendingDrop.value = { slot, course }
+  placeCourse(slot, course)
   exchangeStore.endDrag()
+}
+
+function placeCourse(slot: HomeSlotResponse, course: PartnerCourseResponse) {
+  pendingDrop.value = { slot, course }
 }
 
 function confirmMove() {
@@ -297,6 +305,9 @@ function confirmDrop() {
   if (!pendingDrop.value) return
   if (pendingEcts.value > remainingEcts.value) return
   const { slot, course } = pendingDrop.value
+  if (lineFor(slot.id)?.mode !== slotMode.AtExchange) {
+    exchangeStore.localSetSlotMode(slot.id, slotMode.AtExchange)
+  }
   const mapping: LocalSlotMapping = {
     localId: crypto.randomUUID(),
     partnerCourseId: course.id,
@@ -316,6 +327,12 @@ function cancelDrop() {
 
 async function cycleMode(slot: HomeSlotResponse) {
   if (!isEditable.value || isThesisSlot(slot)) return
+  const armed = exchangeStore.armedCourse
+  if (armed) {
+    placeCourse(slot, armed)
+    exchangeStore.disarm()
+    return
+  }
   const state = lineFor(slot.id)
   if (state && state.mappings.length > 0) {
     const ok = await confirm({ title: t('la.cycleModeConfirm') })
@@ -392,7 +409,7 @@ function cancelEditEcts() {
         />
         <span
           v-if="amendmentBadge !== null"
-          class="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary-light"
+          class="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary-text"
         >{{ t('la.amendmentLabel', { n: amendmentBadge }) }}</span>
         <!-- Export / Import / History -->
         <div style="display: flex; gap: 6px;">
@@ -446,6 +463,26 @@ function cancelEditEcts() {
       @save="saveLa"
       @discard="discardLa"
     />
+
+    <!-- Armed course banner -->
+    <div
+      v-if="exchangeStore.armedCourse"
+      class="sticky top-0 z-10 mb-2 flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-dark-2 px-4 py-2"
+    >
+      <span class="flex flex-wrap items-baseline gap-x-2">
+        <span class="text-xs font-bold text-light">{{ exchangeStore.armedCourse.code }}</span>
+        <span class="text-sm font-medium text-light">{{ exchangeStore.armedCourse.name }}</span>
+        <span v-if="exchangeStore.armedCourse.nameHr" class="text-xs text-light/60">{{ exchangeStore.armedCourse.nameHr }}</span>
+        <span class="text-xs text-light/60">- {{ t('partnerCourses.armedHint') }}</span>
+      </span>
+      <button
+        type="button"
+        class="shrink-0 rounded-lg border border-primary/20 px-3 py-1 text-xs font-medium text-light/60 transition hover:border-primary hover:text-primary-text"
+        @click="exchangeStore.disarm()"
+      >
+        {{ t('partnerCourses.armedCancel') }}
+      </button>
+    </div>
 
     <!-- Table -->
     <DocTableGrid v-if="exchangeStore.serverLearningAgreement">
@@ -609,7 +646,7 @@ function cancelEditEcts() {
     <!-- Course panels (editable only) -->
     <div v-if="isEditable && exchangeStore.exchange" class="mt-6 flex gap-6 items-start">
       <div class="min-w-0 basis-[60%] rounded-xl border border-primary/20 bg-dark-2 p-4">
-        <h3 class="mb-2 text-sm font-semibold text-primary-light">
+        <h3 class="mb-2 text-sm font-semibold text-primary-text">
           {{ t('partnerCourses.availableCourses') }}
         </h3>
         <p class="mb-3 text-xs text-light/60">{{ t('partnerCourses.dragHint') }}</p>
@@ -620,7 +657,7 @@ function cancelEditEcts() {
         />
       </div>
       <div class="min-w-0 basis-[40%] rounded-xl border border-primary/20 bg-dark-2 p-4">
-        <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-success">
+        <h3 class="mb-2 flex items-center justify-between text-sm font-semibold text-success-text">
           <span>{{ t('partnerCourses.mappedCourses') }}</span>
           <span class="text-xs font-normal text-light/60">{{ totalAwardedEcts }} / {{ mappedCoursesPanel?.mappedCoursesTotalEcts ?? 0 }} ECTS</span>
         </h3>

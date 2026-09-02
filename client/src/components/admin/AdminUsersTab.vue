@@ -1,25 +1,32 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import axios from 'axios'
 import { useI18n } from 'vue-i18n'
 import { adminService, type CoordinatorRequestResponse, type CoordinatorWhitelistEntryResponse, type UserListResponse } from '@/services/admin.service'
-import { coordinatorService } from '@/services/coordinator.service'
+import { coordinatorService, invalidateCoordinators } from '@/services/coordinator.service'
 import { institutionService } from '@/services/institution.service'
+import { useAuthStore } from '@/stores/auth.store'
 import { userRole } from '@/utils/userRole'
+import { ROLE_CHIP_CLASS } from '@/utils/roleColors'
 import SearchInput from '@/components/common/SearchInput.vue'
+import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import Pagination from '@/components/common/Pagination.vue'
+import SortableHeader from '@/components/common/SortableHeader.vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { minSearchTerm } from '@/utils/searchTerm'
 import AdminEditUserModal from '@/components/admin/AdminEditUserModal.vue'
+import AdminChangeRoleModal from '@/components/admin/AdminChangeRoleModal.vue'
 import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 
 const { t } = useI18n()
 const { confirm } = useConfirm()
+const auth = useAuthStore()
 
 const requests = ref<CoordinatorRequestResponse[]>([])
 const whitelist = ref<CoordinatorWhitelistEntryResponse[]>([])
-const admins = ref<UserListResponse[]>([])
-const coordinators = ref<UserListResponse[]>([])
 const newEmail = ref('')
 const coordinatorsList = ref<CoordinatorOption[]>([])
 const institutionsList = ref<InstitutionResponse[]>([])
@@ -31,66 +38,111 @@ const actionLoadingId = ref<string | null>(null)
 const whitelistActionEmail = ref<string | null>(null)
 const addingEmail = ref(false)
 const errorMessage = ref<string | null>(null)
-const userActionId = ref<string | null>(null)
-const openMenuId = ref<string | null>(null)
 
 const editingUser = ref<UserListResponse | null>(null)
+const roleChangeUser = ref<UserListResponse | null>(null)
+
+const users = ref<UserListResponse[]>([])
+const usersTotalCount = ref(0)
+const page = ref(1)
+const USERS_PER_PAGE = 10
+const search = ref('')
+const debouncedSearch = useDebouncedRef(search, 400)
+const roleFilter = ref<string | null>(null)
+const institutionFilter = ref<string | null>(null)
+const statusFilter = ref<string | null>(null)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(usersTotalCount.value / USERS_PER_PAGE)))
+
+const roleOptions = computed(() => [
+  { value: null, label: t('admin.users.allRoles') },
+  ...[userRole.Student, userRole.Coordinator, userRole.Admin].map((r) => ({
+    value: r as string,
+    label: t(`admin.users.role.${r}`),
+  })),
+])
+
+const institutionOptions = computed(() => [
+  { value: null, label: t('admin.users.allInstitutions') },
+  ...institutionsList.value.map((i) => ({ value: i.id, label: i.name, sublabel: i.city ?? undefined })),
+])
+
+const statusOptions = computed(() => [
+  { value: null, label: t('admin.users.allStatuses') },
+  { value: 'registered', label: t('admin.users.status.registered') },
+  { value: 'unregistered', label: t('admin.users.status.unregistered') },
+])
+
+const sortBy = ref('name')
+const sortDir = ref<'asc' | 'desc'>('asc')
+
+function toggleSort(key: string) {
+  if (sortBy.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = key
+    sortDir.value = 'asc'
+  }
+}
 
 function openEditDialog(user: UserListResponse) {
   editingUser.value = user
-  openMenuId.value = null
+}
+
+function openRoleDialog(user: UserListResponse) {
+  roleChangeUser.value = user
 }
 
 function onUserSaved(updated: UserListResponse) {
-  for (const list of [admins.value, coordinators.value, students.value]) {
-    const idx = list.findIndex(u => u.id === updated.id)
-    if (idx !== -1) list[idx] = updated
-  }
+  const idx = users.value.findIndex(u => u.id === updated.id)
+  if (idx !== -1) users.value[idx] = updated
   editingUser.value = null
 }
 
-const studentSearch = ref('')
-const debouncedStudentSearch = useDebouncedRef(studentSearch)
-const studentPage = ref(1)
-const STUDENTS_PER_PAGE = 25
-const students = ref<UserListResponse[]>([])
-const studentsTotalCount = ref(0)
-const totalStudentPages = computed(() => Math.ceil(studentsTotalCount.value / STUDENTS_PER_PAGE))
-
-function toggleMenu(userId: string) {
-  openMenuId.value = openMenuId.value === userId ? null : userId
-}
-
-function handleOutsideClick(e: MouseEvent) {
-  if (!(e.target as HTMLElement).closest('[data-menu-anchor]'))
-    openMenuId.value = null
+async function onRoleSaved() {
+  roleChangeUser.value = null
+  await Promise.all([fetchUsers(), fetchCoordinatorOptions(), fetchRequests()])
 }
 
 onMounted(async () => {
-  await Promise.all([fetchRequests(), fetchWhitelist(), fetchAdmins(), fetchCoordinators(), fetchCoordinatorOptions(), fetchStudents(), fetchInstitutions()])
-  document.addEventListener('click', handleOutsideClick)
+  await Promise.all([fetchRequests(), fetchWhitelist(), fetchCoordinatorOptions(), fetchUsers(), fetchInstitutions()])
 })
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleOutsideClick)
-})
-
-watch([studentPage, debouncedStudentSearch], ([newPage, newSearch], [, oldSearch]) => {
-  if (newSearch !== oldSearch && newPage !== 1) {
-    studentPage.value = 1
+watch([page, debouncedSearch, roleFilter, institutionFilter, statusFilter, sortBy, sortDir], ([newPage], [oldPage]) => {
+  if (newPage === oldPage && newPage !== 1) {
+    page.value = 1
     return
   }
-  fetchStudents()
+  fetchUsers()
 })
 
-async function fetchAdmins() {
-  const res = await adminService.getAllUsers({ pageSize: 200, role: userRole.Admin })
-  admins.value = res.data.items
-}
+let fetchUsersController: AbortController | null = null
 
-async function fetchCoordinators() {
-  const res = await adminService.getAllUsers({ pageSize: 200, role: userRole.Coordinator })
-  coordinators.value = res.data.items
+async function fetchUsers() {
+  fetchUsersController?.abort()
+  const controller = new AbortController()
+  fetchUsersController = controller
+  loadingUsers.value = true
+  try {
+    const res = await adminService.getAllUsers({
+      page: page.value,
+      pageSize: USERS_PER_PAGE,
+      search: minSearchTerm(debouncedSearch.value),
+      role: roleFilter.value,
+      institutionId: institutionFilter.value,
+      registered: statusFilter.value === null ? null : statusFilter.value === 'registered',
+      sortBy: sortBy.value,
+      sortDir: sortDir.value,
+    }, controller.signal)
+    users.value = res.data.items
+    usersTotalCount.value = res.data.totalCount
+    if (page.value > totalPages.value) page.value = totalPages.value
+  } catch (err) {
+    if (axios.isCancel(err)) return
+    throw err
+  } finally {
+    if (fetchUsersController === controller) loadingUsers.value = false
+  }
 }
 
 async function fetchCoordinatorOptions() {
@@ -98,43 +150,11 @@ async function fetchCoordinatorOptions() {
   coordinatorsList.value = res.data
 }
 
-async function fetchStudents() {
-  loadingUsers.value = true
-  try {
-    const res = await adminService.getAllUsers({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: debouncedStudentSearch.value, role: userRole.Student })
-    students.value = res.data.items
-    studentsTotalCount.value = res.data.totalCount
-  } finally {
-    loadingUsers.value = false
-  }
-}
-
 async function fetchInstitutions() {
   try {
     const res = await institutionService.getHomeInstitutions()
     institutionsList.value = res.data
   } catch { /* non-critical */ }
-}
-
-async function makeCoordinatorFromList(userId: string) {
-  userActionId.value = userId
-  try {
-    await adminService.makeCoordinator(userId)
-    await Promise.all([fetchCoordinators(), fetchStudents()])
-  } finally {
-    userActionId.value = null
-  }
-}
-
-async function removeCoordinatorFromList(userId: string) {
-  if (!await confirm({ title: t('admin.users.removeCoordinatorConfirm') })) return
-  userActionId.value = userId
-  try {
-    await adminService.removeCoordinator(userId)
-    await Promise.all([fetchCoordinators(), fetchStudents()])
-  } finally {
-    userActionId.value = null
-  }
 }
 
 async function fetchRequests() {
@@ -160,8 +180,9 @@ async function fetchWhitelist() {
 async function approve(userId: string) {
   actionLoadingId.value = userId
   try {
-    await adminService.makeCoordinator(userId)
-    requests.value = requests.value.filter(r => r.id !== userId)
+    await adminService.setUserRole(userId, userRole.Coordinator)
+    invalidateCoordinators()
+    await Promise.all([fetchRequests(), fetchUsers(), fetchCoordinatorOptions()])
   } finally {
     actionLoadingId.value = null
   }
@@ -205,10 +226,6 @@ async function removeEmail(email: string) {
     whitelistActionEmail.value = null
   }
 }
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
 </script>
 
 <template>
@@ -237,13 +254,13 @@ function formatDate(iso: string) {
           <div class="flex gap-2">
             <button
               type="button"
-              class="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+              class="rounded-lg bg-primary-strong px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
               :disabled="actionLoadingId === req.id"
               @click="approve(req.id)"
             >{{ t('admin.requests.approve') }}</button>
             <button
               type="button"
-              class="rounded-lg border border-danger/40 px-4 py-1.5 text-xs font-medium text-danger transition hover:bg-danger/20 disabled:opacity-50"
+              class="rounded-lg border border-danger-text/35 px-4 py-1.5 text-xs font-medium text-danger-text transition hover:bg-danger-fill disabled:opacity-50"
               :disabled="actionLoadingId === req.id"
               @click="reject(req.id)"
             >{{ t('admin.requests.reject') }}</button>
@@ -254,164 +271,163 @@ function formatDate(iso: string) {
 
     <!-- User management -->
     <section class="rounded-2xl border border-primary/20 bg-dark-2 p-6">
-      <h2 class="mb-5 text-base font-semibold text-light">{{ t('admin.users.title') }}</h2>
-
-      <div v-if="loadingUsers" class="space-y-4">
-        <div v-for="i in 3" :key="i" class="h-12 animate-pulse rounded-xl bg-dark"></div>
+      <div class="mb-5 flex items-baseline gap-2">
+        <h2 class="text-base font-semibold text-light">{{ t('admin.users.title') }}</h2>
+        <span class="text-xs text-light/30">({{ usersTotalCount }})</span>
       </div>
 
-      <div v-else class="space-y-6">
-
-        <!-- Admins -->
-        <div>
-          <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-light/40">
-            {{ t('admin.users.role.Admin') }}
-            <span class="ml-1 font-normal normal-case tracking-normal text-light/30">({{ admins.length }})</span>
-          </p>
-          <p v-if="admins.length === 0" class="text-sm text-light/40">{{ t('admin.users.empty') }}</p>
-          <div v-else class="divide-y divide-hairline-soft rounded-xl bg-dark">
-            <div v-for="u in admins" :key="u.id" class="flex items-center justify-between px-4 py-3">
-              <div>
-                <span class="text-sm font-medium text-light">{{ u.name }}</span>
-                <span class="ml-2 text-xs text-light/50">{{ u.email }}</span>
-              </div>
-              <span class="rounded-full border border-violet/40 bg-violet/10 px-2.5 py-0.5 text-xs font-semibold text-violet">
-                {{ t('admin.users.role.Admin') }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Coordinators -->
-        <div>
-          <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-light/40">
-            {{ t('admin.users.role.Coordinator') }}
-            <span class="ml-1 font-normal normal-case tracking-normal text-light/30">({{ coordinators.length }})</span>
-          </p>
-          <p v-if="coordinators.length === 0" class="text-sm text-light/40">{{ t('admin.users.empty') }}</p>
-          <div v-else class="divide-y divide-hairline-soft rounded-xl bg-dark">
-            <div v-for="u in coordinators" :key="u.id" class="flex items-center justify-between px-4 py-3">
-              <div>
-                <span class="text-sm font-medium text-light">{{ u.name }}</span>
-                <span class="ml-2 text-xs text-light/50">{{ u.email }}</span>
-              </div>
-              <div class="relative" data-menu-anchor>
-                <button
-                  type="button"
-                  class="flex h-7 w-7 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-fill hover:text-light"
-                  :aria-expanded="openMenuId === u.id"
-                  @click.stop="toggleMenu(u.id)"
-                >⋯</button>
-                <div
-                  v-if="openMenuId === u.id"
-                  class="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-primary/20 bg-dark-2 px-1 py-1 shadow-2xl shadow-black/50"
-                >
-                  <button
-                    type="button"
-                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20"
-                    @click.stop="openEditDialog(u)"
-                  >
-                    <svg class="h-3.5 w-3.5 text-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    {{ t('admin.users.editUser') }}
-                  </button>
-                  <button
-                    type="button"
-                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-danger transition hover:bg-danger/20 disabled:opacity-50"
-                    :disabled="userActionId === u.id"
-                    @click.stop="removeCoordinatorFromList(u.id); openMenuId = null"
-                  >
-                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-6-6m6 6l6-6" />
-                    </svg>
-                    {{ t('admin.users.demoteToStudent') }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Students -->
-        <div>
-          <div class="mb-3 flex items-center justify-between">
-            <p class="text-xs font-semibold uppercase tracking-wider text-light/40">
-              {{ t('admin.users.role.Student') }}
-              <span class="ml-1 font-normal normal-case tracking-normal text-light/30">({{ studentsTotalCount }})</span>
-            </p>
-          </div>
-          <SearchInput
-            v-model="studentSearch"
-            :placeholder="t('admin.users.searchPlaceholder')"
-            class="mb-3"
-          />
-          <p v-if="students.length === 0" class="text-sm text-light/40">{{ t('admin.users.empty') }}</p>
-          <div v-else class="divide-y divide-hairline-soft rounded-xl bg-dark">
-            <div v-for="u in students" :key="u.id" class="flex items-center justify-between px-4 py-3">
-              <div class="min-w-0">
-                <div class="flex items-baseline gap-2">
-                  <span class="text-sm font-medium text-light">{{ u.name }}</span>
-                  <span v-if="u.email" class="text-xs text-light/35">{{ u.email }}</span>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span
-                  v-if="u.coordinatorRequestStatus === 'Pending'"
-                  class="whitespace-nowrap rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary-light"
-                >{{ t('admin.users.coordinatorRequest') }}</span>
-                <span
-                  v-else-if="!u.email"
-                  class="whitespace-nowrap rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-[11px] font-medium text-warning"
-                >{{ t('admin.users.notOnboarded') }}</span>
-              <div class="relative" data-menu-anchor>
-                <button
-                  type="button"
-                  class="flex h-7 w-7 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-fill hover:text-light"
-                  :aria-expanded="openMenuId === u.id"
-                  @click.stop="toggleMenu(u.id)"
-                >⋯</button>
-                <div
-                  v-if="openMenuId === u.id"
-                  class="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-primary/20 bg-dark-2 px-1 py-1 shadow-2xl shadow-black/50"
-                >
-                  <button
-                    type="button"
-                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20"
-                    @click.stop="openEditDialog(u)"
-                  >
-                    <svg class="h-3.5 w-3.5 text-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    {{ t('admin.users.editUser') }}
-                  </button>
-                  <button
-                    type="button"
-                    class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-light transition hover:bg-primary/20 disabled:opacity-50"
-                    :disabled="userActionId === u.id"
-                    @click.stop="makeCoordinatorFromList(u.id); openMenuId = null"
-                  >
-                    <svg class="h-3.5 w-3.5 text-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20V4m0 0l-6 6m6-6l6 6" />
-                    </svg>
-                    {{ t('admin.users.makeCoordinator') }}
-                  </button>
-                </div>
-              </div>
-              </div>
-            </div>
-          </div>
-
-          <Pagination
-            :page="studentPage"
-            :total-pages="totalStudentPages"
-            :total="studentsTotalCount"
-            :per-page="STUDENTS_PER_PAGE"
-            @update:page="studentPage = $event"
-          />
-        </div>
-
+      <div class="mb-4 flex flex-wrap gap-3">
+        <SearchInput v-model="search" :placeholder="t('admin.users.searchPlaceholder')" class="min-w-[200px] flex-1" />
+        <SearchableSelect
+          v-model="institutionFilter"
+          :options="institutionOptions"
+          :placeholder="t('admin.users.allInstitutions')"
+          :search-placeholder="t('admin.users.searchInstitution')"
+          :no-results-label="t('admin.users.noInstitutionResults')"
+          class="min-w-[180px] max-w-[280px] flex-none"
+        />
+        <SearchableSelect
+          v-model="roleFilter"
+          :options="roleOptions"
+          :placeholder="t('admin.users.allRoles')"
+          :searchable="false"
+          class="min-w-[150px] max-w-[220px] flex-none"
+        />
+        <SearchableSelect
+          v-model="statusFilter"
+          :options="statusOptions"
+          :placeholder="t('admin.users.allStatuses')"
+          :searchable="false"
+          class="min-w-[150px] max-w-[220px] flex-none"
+        />
       </div>
+
+      <div v-if="loadingUsers && users.length === 0" class="space-y-2">
+        <div v-for="i in 5" :key="i" class="h-14 animate-pulse rounded-xl bg-dark"></div>
+      </div>
+
+      <template v-else>
+        <div class="overflow-x-auto rounded-xl border border-primary/20 bg-dark">
+          <div class="min-w-[980px]">
+            <div class="admin-user-grid gap-4 border-b border-primary/20 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-light/40">
+              <SortableHeader
+                :label="t('admin.users.columns.user')"
+                sort-key="name"
+                :active-key="sortBy"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableHeader
+                :label="t('admin.users.columns.jmbag')"
+                sort-key="jmbag"
+                :active-key="sortBy"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <span>{{ t('admin.users.columns.institution') }}</span>
+              <span>{{ t('admin.users.columns.mentor') }}</span>
+              <span>{{ t('admin.users.columns.coordinator') }}</span>
+              <SortableHeader
+                :label="t('admin.users.columns.role')"
+                sort-key="role"
+                :active-key="sortBy"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <span>{{ t('admin.users.columns.status') }}</span>
+              <span></span>
+            </div>
+
+            <p v-if="users.length === 0" class="px-4 py-6 text-sm text-light/40">{{ t('admin.users.empty') }}</p>
+
+            <div v-else class="divide-y divide-hairline-soft">
+              <div
+                v-for="u in users"
+                :key="u.id"
+                class="admin-user-grid gap-4 px-4 py-3 text-sm transition hover:bg-dark-2"
+              >
+                <!-- User -->
+                <div class="flex min-w-0 items-center gap-3">
+                  <UserAvatar :name="u.name" :role="u.role" />
+                  <div class="min-w-0">
+                    <p class="truncate font-medium text-light">{{ u.name }}</p>
+                    <p class="truncate text-xs text-light/40">{{ u.email || '—' }}</p>
+                  </div>
+                </div>
+
+                <span class="truncate text-light/70">{{ u.jmbag || '—' }}</span>
+
+                <!-- Institution: name may wrap to two lines, city is secondary -->
+                <div class="min-w-0">
+                  <p class="line-clamp-2 text-light/70">{{ u.institutionName || '—' }}</p>
+                  <p v-if="u.institutionCity" class="truncate text-xs text-light/30">{{ u.institutionCity }}</p>
+                </div>
+
+                <span class="truncate text-light/70">{{ u.mentor || '—' }}</span>
+                <span class="truncate text-light/70">{{ u.coordinatorName || '—' }}</span>
+
+                <!-- Role -->
+                <span>
+                  <span
+                    class="whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-medium"
+                    :class="ROLE_CHIP_CLASS[u.role]"
+                  >{{ t(`admin.users.role.${u.role}`) }}</span>
+                </span>
+
+                <div class="min-w-0">
+                  <span class="flex items-center gap-2 text-xs">
+                    <span
+                      class="h-1.5 w-1.5 shrink-0 rounded-full"
+                      :class="u.email ? 'bg-success' : 'bg-warning'"
+                    ></span>
+                    <span :class="u.email ? 'text-light/70' : 'text-light/40'">
+                      {{ u.email ? t('admin.users.status.registered') : t('admin.users.status.unregistered') }}
+                    </span>
+                  </span>
+                  <span
+                    v-if="u.coordinatorRequestStatus === 'Pending'"
+                    class="mt-1 inline-block whitespace-nowrap rounded-full border border-warning-text/35 bg-warning-fill px-2 py-0.5 text-[10px] font-medium text-warning-text"
+                  >{{ t('admin.users.coordinatorRequest') }}</span>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-end gap-1">
+                  <button
+                    v-if="u.id !== auth.user?.id"
+                    type="button"
+                    class="flex h-7 w-7 items-center justify-center rounded-lg text-light/40 transition hover:bg-fill hover:text-light"
+                    :title="t('admin.users.changeRole')"
+                    @click="openRoleDialog(u)"
+                  >
+                    <!-- person with a badge -->
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 7a3 3 0 11-6 0 3 3 0 016 0zM3 20a6 6 0 0112 0M18 4.5l2.5 1V8c0 1.6-1.1 3-2.5 3.5-1.4-.5-2.5-1.9-2.5-3.5V5.5l2.5-1z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="flex h-7 w-7 items-center justify-center rounded-lg text-light/40 transition hover:bg-fill hover:text-light"
+                    :title="t('admin.users.editUser')"
+                    @click="openEditDialog(u)"
+                  >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Pagination
+          :page="page"
+          :total-pages="totalPages"
+          :total="usersTotalCount"
+          :per-page="USERS_PER_PAGE"
+          @update:page="page = $event"
+        />
+      </template>
     </section>
 
     <!-- Coordinator whitelist -->
@@ -429,13 +445,13 @@ function formatDate(iso: string) {
         />
         <button
           type="button"
-          class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+          class="rounded-xl bg-primary-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
           :disabled="addingEmail || !newEmail.trim()"
           @click="addEmail"
         >{{ addingEmail ? t('common.loading') : t('admin.whitelist.add') }}</button>
       </div>
 
-      <p v-if="errorMessage" class="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+      <p v-if="errorMessage" class="mb-4 rounded-xl border border-danger-text/35 bg-danger-fill px-4 py-3 text-sm text-danger-text">
         {{ errorMessage }}
       </p>
 
@@ -454,7 +470,7 @@ function formatDate(iso: string) {
           </div>
           <button
             type="button"
-            class="flex h-7 w-7 items-center justify-center rounded-lg border border-danger/20 text-red-400/60 transition hover:border-danger/50 hover:bg-danger/10 hover:text-danger disabled:opacity-40"
+            class="flex h-7 w-7 items-center justify-center rounded-lg border border-danger/20 text-danger transition hover:border-danger-text/50 hover:bg-danger-fill hover:text-danger-text disabled:opacity-40"
             :disabled="whitelistActionEmail === entry.email"
             :title="t('admin.whitelist.remove')"
             @click="removeEmail(entry.email)"
@@ -476,5 +492,23 @@ function formatDate(iso: string) {
       @close="editingUser = null"
       @saved="onUserSaved"
     />
+
+    <!-- Change role modal -->
+    <AdminChangeRoleModal
+      v-if="roleChangeUser"
+      :user="roleChangeUser"
+      @close="roleChangeUser = null"
+      @saved="onRoleSaved"
+    />
   </div>
 </template>
+
+<style scoped>
+.admin-user-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 1.5fr) 100px minmax(150px, 1.6fr) minmax(90px, 0.9fr)
+    minmax(110px, 1.1fr) minmax(105px, 0.7fr) minmax(105px, 0.7fr) 68px;
+  align-items: center;
+}
+</style>

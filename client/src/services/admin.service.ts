@@ -7,6 +7,7 @@ export interface UserListResponse {
   email: string
   role: string
   institutionName: string | null
+  institutionCity: string | null
   institutionId: string | null
   coordinatorRequestStatus: string | null
   isOnboarded: boolean
@@ -38,18 +39,25 @@ export interface CoordinatorWhitelistEntryResponse {
 }
 
 export const adminService = {
-  getAllUsers: (params: PagedParams & { role?: string } = {}) =>
-    api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params }),
+  getAllUsers: (
+    params: PagedParams & {
+      role?: string | null
+      institutionId?: string | null
+      registered?: boolean | null
+      sortBy?: string
+    } = {},
+    signal?: AbortSignal,
+  ) =>
+    api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params, signal }),
 
   getCoordinatorRequests: () =>
     api.get<CoordinatorRequestResponse[]>('/api/admin/coordinator-requests'),
 
-  makeCoordinator: (userId: string) => api.patch(`/api/admin/users/${userId}/make-coordinator`),
+  setUserRole: (userId: string, role: string) =>
+    api.patch<UserListResponse>(`/api/admin/users/${userId}/role`, { role }),
 
   rejectCoordinatorRequest: (userId: string) =>
     api.patch(`/api/admin/users/${userId}/reject-coordinator-request`),
-
-  removeCoordinator: (userId: string) => api.patch(`/api/admin/users/${userId}/remove-coordinator`),
 
   getCoordinatorWhitelist: () =>
     api.get<CoordinatorWhitelistEntryResponse[]>('/api/admin/coordinator-whitelist'),

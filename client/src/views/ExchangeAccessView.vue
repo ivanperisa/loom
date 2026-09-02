@@ -21,7 +21,7 @@ onUnmounted(() => exchangeStore.setGuestMode(false))
   <main class="min-h-screen bg-dark">
     <header class="sticky top-0 z-50 w-full border-b border-primary/40 bg-dark/95 backdrop-blur">
       <div class="page-container flex h-16 items-center justify-between !py-0">
-        <RouterLink to="/" class="text-lg font-bold text-primary">{{ t('common.appName') }}</RouterLink>
+        <RouterLink to="/" class="text-lg font-bold text-primary-strong">{{ t('common.appName') }}</RouterLink>
 
         <div class="flex items-center gap-3">
           <ThemeToggleButton />
@@ -29,7 +29,7 @@ onUnmounted(() => exchangeStore.setGuestMode(false))
 
           <RouterLink
             to="/"
-            class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+            class="rounded-lg bg-primary-strong px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
           >
             {{ t('exchangeAccess.registerCta') }}
           </RouterLink>

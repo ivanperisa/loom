@@ -3,11 +3,13 @@ import type { CoordinatorOption, CoordinatorStudentResponse, CreatePlaceholderSt
 import type { ExchangeSummaryResponse } from '@/types/exchange.types'
 import type { PagedParams, PagedResponse } from '@/types/paged.types'
 
+let coordinatorsCache: ReturnType<typeof api.get<CoordinatorOption[]>> | null = null
+
 export const coordinatorService = {
   getCoordinators: () =>
-    api.get<CoordinatorOption[]>('/api/coordinators'),
-  getStudents: (params: PagedParams = {}) =>
-    api.get<PagedResponse<CoordinatorStudentResponse>>('/api/coordinator/students', { params }),
+    (coordinatorsCache ??= api.get<CoordinatorOption[]>('/api/coordinators')),
+  getStudents: (params: PagedParams = {}, signal?: AbortSignal) =>
+    api.get<PagedResponse<CoordinatorStudentResponse>>('/api/coordinator/students', { params, signal }),
   createPlaceholderStudent: (request: CreatePlaceholderStudentRequest) =>
     api.post<CoordinatorStudentResponse>('/api/coordinator/students', request),
   updateStudent: (studentId: string, request: UpdateStudentRequest) =>
@@ -16,4 +18,8 @@ export const coordinatorService = {
     api.delete(`/api/coordinator/students/${studentId}`, { suppressErrorToast: true }),
   getStudentsExchanges: () =>
     api.get<ExchangeSummaryResponse[]>('/api/coordinator/students/exchanges'),
+}
+
+export function invalidateCoordinators() {
+  coordinatorsCache = null
 }

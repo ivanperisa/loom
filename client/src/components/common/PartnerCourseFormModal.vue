@@ -124,7 +124,7 @@ function submit() {
                   :key="sem"
                   type="button"
                   class="flex-1 rounded-lg border py-2 text-xs font-medium transition"
-                  :class="courseForm.semester === sem ? 'border-primary bg-primary/10 text-white' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-light'"
+                  :class="courseForm.semester === sem ? 'border-primary bg-primary/10 text-primary-on-tint' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-light'"
                   @click="courseForm.semester = sem"
                 >{{ semesterLabel(sem) }}</button>
               </div>
@@ -137,7 +137,7 @@ function submit() {
                   :key="lvl"
                   type="button"
                   class="flex-1 rounded-lg border py-2 text-xs font-medium transition"
-                  :class="courseForm.level === lvl ? 'border-primary bg-primary/10 text-white' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-light'"
+                  :class="courseForm.level === lvl ? 'border-primary bg-primary/10 text-primary-on-tint' : 'border-hairline bg-dark text-light/60 hover:border-primary/40 hover:text-light'"
                   @click="courseForm.level = lvl"
                 >{{ levelLabel(lvl) }}</button>
               </div>
@@ -188,7 +188,7 @@ function submit() {
           <button type="button" class="rounded-lg border border-hairline px-4 py-2 text-sm text-light/60 transition hover:text-light" @click="emit('close')">{{ t('admin.institutions.cancel') }}</button>
           <button
             type="button"
-            class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
+            class="rounded-lg bg-primary-strong px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-50"
             :disabled="saving || !courseForm.code.trim() || !courseForm.name.trim() || !courseForm.ects"
             @click="submit"
           >
