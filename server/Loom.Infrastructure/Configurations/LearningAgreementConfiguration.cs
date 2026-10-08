@@ -1,4 +1,5 @@
 using Loom.Domain.Entities;
+using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,21 +9,23 @@ public class LearningAgreementConfiguration : IEntityTypeConfiguration<LearningA
 {
     public void Configure(EntityTypeBuilder<LearningAgreement> builder)
     {
-        builder.ToTable("learning_agreement", "exchange");
+        builder.ToTable("learning_agreement", "exchange", t =>
+            t.HasCheckConstraint("learning_agreement_status_check", "status IN ('Draft', 'Submitted', 'Approved', 'Rejected')"));
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(x => x.ExchangeId).HasColumnName("exchange_id");
-        builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20).HasDefaultValue(DocumentStatus.Draft);
         builder.Property(x => x.Message).HasColumnName("message");
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
-        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
+        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
+        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
         builder.Property(x => x.LastModifiedById).HasColumnName("updated_by");
         builder.Property(x => x.SignedById).HasColumnName("approved_by");
         builder.Property(x => x.SignedAt).HasColumnName("approved_at");
 
         builder.HasOne(x => x.Exchange)
             .WithOne(x => x.LearningAgreement)
-            .HasForeignKey<LearningAgreement>(x => x.ExchangeId);
+            .HasForeignKey<LearningAgreement>(x => x.ExchangeId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(x => x.LastModifiedByUser)
             .WithMany()
@@ -34,7 +37,7 @@ public class LearningAgreementConfiguration : IEntityTypeConfiguration<LearningA
             .HasForeignKey(x => x.SignedById)
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasIndex(x => x.ExchangeId).IsUnique();
-        builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => x.ExchangeId).IsUnique().HasDatabaseName("learning_agreement_exchange_id_key");
+        builder.HasIndex(x => x.Status).HasDatabaseName("idx_la_status");
     }
 }

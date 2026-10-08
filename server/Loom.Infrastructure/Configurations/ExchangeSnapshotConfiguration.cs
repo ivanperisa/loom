@@ -9,26 +9,33 @@ public class ExchangeSnapshotConfiguration : IEntityTypeConfiguration<ExchangeSn
 {
     public void Configure(EntityTypeBuilder<ExchangeSnapshot> builder)
     {
-        builder.ToTable("snapshot", "exchange");
+        builder.ToTable("snapshot", "exchange", t =>
+        {
+            t.HasCheckConstraint("snapshot_phase_check", "phase IN ('LearningAgreement', 'Recognition')");
+            t.HasCheckConstraint("snapshot_type_check", "type IN ('Auto', 'PreImport')");
+        });
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(x => x.ExchangeId).HasColumnName("exchange_id");
         builder.Property(x => x.ChangedById).HasColumnName("changed_by_id");
-        builder.Property(x => x.Phase).HasColumnName("phase").HasConversion<string>();
-        builder.Property(x => x.Type).HasColumnName("type").HasMaxLength(20).HasConversion<string>().HasDefaultValue(SnapshotType.Auto);
+        builder.Property(x => x.Phase).HasColumnName("phase").HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Type).HasColumnName("type").HasConversion<string>().HasMaxLength(20).HasDefaultValue(SnapshotType.Auto);
         builder.Property(x => x.Snapshot).HasColumnName("snapshot").HasColumnType("jsonb");
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
 
         builder.HasOne(x => x.Exchange)
             .WithMany(x => x.Snapshots)
-            .HasForeignKey(x => x.ExchangeId);
+            .HasForeignKey(x => x.ExchangeId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(x => x.ChangedBy)
             .WithMany()
-            .HasForeignKey(x => x.ChangedById);
+            .HasForeignKey(x => x.ChangedById)
+            .OnDelete(DeleteBehavior.NoAction);
 
-        builder.HasIndex(x => x.ExchangeId);
-        builder.HasIndex(x => new { x.ExchangeId, x.CreatedAt });
-        builder.HasIndex(x => x.CreatedAt);
+        builder.HasIndex(x => new { x.ExchangeId, x.CreatedAt })
+            .IsDescending(false, true)
+            .HasDatabaseName("idx_snapshot_exchange_created");
+        builder.HasIndex(x => x.CreatedAt).HasDatabaseName("idx_snapshot_created");
     }
 }
