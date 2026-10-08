@@ -1,6 +1,5 @@
-using Loom.Application.DTOs.LearningAgreement;
-using Loom.Application.DTOs.Recognition;
-using Loom.Application.Interfaces.Services;
+using Loom.Application.Features.Planning;
+using Loom.Application.Features.Completion;
 using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,14 +57,14 @@ public class DocumentRulesTests(DatabaseFixture fixture) : IntegrationTest(fixtu
     public async Task Approved_la_cannot_be_saved_imported_or_restored()
     {
         var (student, coordinator, exchange, courses) = await ExchangeWithLa();
-        var export = await Ok<ILearningAgreementService, MappingExportDto>(s => s.ExportMappingsAsync(exchange, student, Ct));
+        var export = await Ok<LaTransferService, MappingExportDto>(s => s.ExportAsync(exchange, Ct), actor: student);
         Assert.False((await SetLaStatus(exchange, coordinator, "Approved")).IsError);
         var snapshotId = await Db(db => db.ExchangeSnapshots.Where(s => s.Exchange.Guid == exchange).Select(s => s.Id).SingleAsync(Ct));
 
-        var save = await Call<ILearningAgreementService, LearningAgreementResponse>(s =>
-            s.SaveLearningAgreementAsync(exchange, student, new SaveLearningAgreementRequest([AtExchange(Slot1, courses["C"], 5)]), Ct));
-        var import = await Call<ILearningAgreementService, MappingImportResult>(s => s.ImportMappingsAsync(exchange, student, export, Ct));
-        var restore = await Call<ILearningAgreementService, ErrorOr.Updated>(s => s.RestoreSnapshotAsync(exchange, snapshotId, student, Ct));
+        var save = await Call<LearningAgreementService, LearningAgreementResponse>(s =>
+            s.SaveAsync(exchange, new SaveLearningAgreementRequest([AtExchange(Slot1, courses["C"], 5)]), Ct), actor: student);
+        var import = await Call<LaTransferService, MappingImportResult>(s => s.ImportAsync(exchange, export, Ct), actor: student);
+        var restore = await Call<LaVersionService, ErrorOr.Updated>(s => s.RestoreAsync(exchange, snapshotId, Ct), actor: student);
 
         Assert.Equal("LA_LOCKED", save.FirstError.Code);
         Assert.Equal("LA_LOCKED", import.FirstError.Code);
@@ -82,7 +81,7 @@ public class DocumentRulesTests(DatabaseFixture fixture) : IntegrationTest(fixtu
         await SaveLa(exchange, student, AtExchange(Slot1, courses["C"], 5));
         var approved = await Db(db => db.ExchangeSnapshots.Where(s => s.Exchange.Guid == exchange).Select(s => s.Id).SingleAsync(Ct));
 
-        await Ok<ILearningAgreementService, ErrorOr.Updated>(s => s.RestoreSnapshotAsync(exchange, approved, student, Ct));
+        await Ok<LaVersionService, ErrorOr.Updated>(s => s.RestoreAsync(exchange, approved, Ct), actor: student);
 
         Assert.Equal(DocumentStatus.Draft, await LaStatus(exchange));
         var entries = await Db(db => db.LearningAgreementEntries.Where(e => e.LearningAgreement.Exchange.Guid == exchange)
@@ -95,10 +94,10 @@ public class DocumentRulesTests(DatabaseFixture fixture) : IntegrationTest(fixtu
     public async Task Import_runs_the_normal_save_validation()
     {
         var (student, _, exchange, _) = await ExchangeWithLa();
-        var export = await Ok<ILearningAgreementService, MappingExportDto>(s => s.ExportMappingsAsync(exchange, student, Ct));
+        var export = await Ok<LaTransferService, MappingExportDto>(s => s.ExportAsync(exchange, Ct), actor: student);
         var invalid = export with { Mappings = export.Mappings.Select(m => m with { Mode = "Bogus", PartnerCourse = null }).ToList() };
 
-        var result = await Call<ILearningAgreementService, MappingImportResult>(s => s.ImportMappingsAsync(exchange, student, invalid, Ct));
+        var result = await Call<LaTransferService, MappingImportResult>(s => s.ImportAsync(exchange, invalid, Ct), actor: student);
 
         Assert.Equal("INVALID_MODE", result.FirstError.Code);
     }
@@ -110,10 +109,10 @@ public class DocumentRulesTests(DatabaseFixture fixture) : IntegrationTest(fixtu
         var (otherStudent, _, otherExchange, _) = await ExchangeWithLa();
         var foreignEntry = await Db(db => db.LearningAgreementEntries
             .Where(e => e.LearningAgreement.Exchange.Guid == otherExchange).Select(e => e.Id).FirstAsync(Ct));
-        await Ok<IRecognitionService, RecognitionResponse>(s => s.GetOrCreateRecognitionAsync(exchange, student, Ct));
+        await Ok<RecognitionService, RecognitionResponse>(s => s.GetOrCreateRecognitionAsync(exchange, Ct), actor: student);
 
-        var result = await Call<IRecognitionService, RecognitionResponse>(s => s.SaveRecognitionAsync(exchange, student,
-            new SaveRecognitionRequest([new UpsertRecognitionEntryRequest(foreignEntry, "Passed", "9", "A", "5", null)]), Ct));
+        var result = await Call<RecognitionService, RecognitionResponse>(s => s.SaveRecognitionAsync(exchange,
+            new SaveRecognitionRequest([new UpsertRecognitionEntryRequest(foreignEntry, "Passed", "9", "A", "5", null)]), Ct), actor: student);
 
         Assert.Equal("ENTRY_NOT_FOUND", result.FirstError.Code);
         Assert.NotEqual(student, otherStudent);
@@ -123,12 +122,12 @@ public class DocumentRulesTests(DatabaseFixture fixture) : IntegrationTest(fixtu
     public async Task Only_the_assigned_coordinator_changes_recognition_status()
     {
         var (student, coordinator, exchange, _) = await ExchangeWithLa();
-        await Ok<IRecognitionService, RecognitionResponse>(s => s.GetOrCreateRecognitionAsync(exchange, student, Ct));
+        await Ok<RecognitionService, RecognitionResponse>(s => s.GetOrCreateRecognitionAsync(exchange, Ct), actor: student);
 
-        var byStudent = await Call<IRecognitionService, RecognitionResponse>(s =>
-            s.UpdateRecognitionStatusAsync(exchange, student, new UpdateRecognitionStatusRequest("Approved"), Ct));
-        var submitted = await Call<IRecognitionService, RecognitionResponse>(s =>
-            s.UpdateRecognitionStatusAsync(exchange, coordinator, new UpdateRecognitionStatusRequest("Submitted"), Ct));
+        var byStudent = await Call<RecognitionService, RecognitionResponse>(s =>
+            s.UpdateRecognitionStatusAsync(exchange, new UpdateRecognitionStatusRequest("Approved"), Ct), actor: student);
+        var submitted = await Call<RecognitionService, RecognitionResponse>(s =>
+            s.UpdateRecognitionStatusAsync(exchange, new UpdateRecognitionStatusRequest("Submitted"), Ct), actor: coordinator);
 
         Assert.Equal("FORBIDDEN", byStudent.FirstError.Code);
         Assert.Equal("INVALID_STATUS", submitted.FirstError.Code);

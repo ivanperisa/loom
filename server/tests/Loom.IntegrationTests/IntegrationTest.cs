@@ -1,9 +1,7 @@
 using Loom.Application.Common.Security;
 using ErrorOr;
-using Loom.Application.DTOs.Exchange;
+using Loom.Application.Features.Planning;
 using Loom.Application.Features.Exchanges;
-using Loom.Application.DTOs.LearningAgreement;
-using Loom.Application.Interfaces.Services;
 using Loom.Domain.Entities;
 using Loom.Domain.Enums;
 using Loom.Infrastructure;
@@ -72,12 +70,12 @@ public abstract class IntegrationTest(DatabaseFixture fixture)
     }
 
     protected Task SaveLa(Guid exchange, int requester, params LearningAgreementEntryUpsertDto[] entries) =>
-        Ok<ILearningAgreementService, LearningAgreementResponse>(s =>
-            s.SaveLearningAgreementAsync(exchange, requester, new SaveLearningAgreementRequest([.. entries]), Ct));
+        Ok<LearningAgreementService, LearningAgreementResponse>(s =>
+            s.SaveAsync(exchange, new SaveLearningAgreementRequest([.. entries]), Ct), actor: requester);
 
     protected Task<ErrorOr<ExchangeResponse>> SetLaStatus(Guid exchange, int requester, string status) =>
-        Call<ILearningAgreementService, ExchangeResponse>(s =>
-            s.UpdateLearningAgreementStatusAsync(exchange, requester, new UpdateLearningAgreementStatusRequest(status), Ct));
+        Call<LearningAgreementWorkflow, ExchangeResponse>(s =>
+            s.SetStatusAsync(exchange, new UpdateLearningAgreementStatusRequest(status), Ct), actor: requester);
 
     protected static LearningAgreementEntryUpsertDto AtExchange(int slot, int course, decimal ects) => new(slot, "AtExchange", course, ects);
 }

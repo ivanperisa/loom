@@ -1,12 +1,11 @@
 using Loom.Application.Common.Security;
 using Loom.Application.Features.Admin;
 using Loom.Application.Features.Catalog;
+using Loom.Application.Features.Completion;
 using Loom.Application.Features.Coordination;
 using Loom.Application.Features.Exchanges;
+using Loom.Application.Features.Planning;
 using Loom.Application.Features.Users;
-using Loom.Application.Helpers;
-using Loom.Application.Interfaces.Services;
-using Loom.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Loom.Application;
@@ -16,7 +15,6 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddMemoryCache();
-        services.AddSingleton<CachedQuery>();
 
         services.AddScoped<CurrentActor>();
         services.AddScoped<ICurrentActor>(sp => sp.GetRequiredService<CurrentActor>());
@@ -41,9 +39,17 @@ public static class DependencyInjection
         services.AddScoped<ExchangeService>();
         services.AddScoped<GuestAccessService>();
 
-        services.AddScoped<ILearningAgreementService, LearningAgreementService>();
-        services.AddScoped<IRecognitionService, RecognitionService>();
-        services.AddScoped<IMappingSchemeService, MappingSchemeService>();
+        // Planning (learning agreement)
+        services.AddScoped<LaEntryWriter>();
+        services.AddScoped<LaSnapshots>();
+        services.AddScoped<LearningAgreementService>();
+        services.AddScoped<LearningAgreementWorkflow>();
+        services.AddScoped<LaVersionService>();
+        services.AddScoped<LaTransferService>();
+
+        // Completion (recognition, mapping scheme)
+        services.AddScoped<RecognitionService>();
+        services.AddScoped<MappingSchemeService>();
 
         return services;
     }

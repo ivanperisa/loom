@@ -4,7 +4,6 @@ using Loom.Application.Common.Errors;
 using Loom.Application.Common.Querying;
 using Loom.Application.Common.Security;
 using Loom.Application.Features.Users;
-using Loom.Application.Helpers;
 using Loom.Application.Interfaces;
 using Loom.Domain.Entities;
 using Loom.Domain.Enums;

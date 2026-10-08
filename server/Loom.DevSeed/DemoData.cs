@@ -1,14 +1,13 @@
 using ErrorOr;
-using Loom.Application.DTOs.Exchange;
+using Loom.Application.Features.Planning;
 using Loom.Application.Features.Exchanges;
-using Loom.Application.DTOs.LearningAgreement;
-using Loom.Application.DTOs.MappingScheme;
-using Loom.Application.DTOs.Recognition;
+using Loom.Application.Features.Planning;
+using Loom.Application.Features.Completion;
+using Loom.Application.Features.Completion;
 using Loom.Application.Features.Admin;
 using Loom.Application.Features.Coordination;
 using Loom.Application.Features.Users;
 using Loom.Application.Common.Security;
-using Loom.Application.Interfaces.Services;
 using Loom.Domain.Entities;
 using Loom.Domain.Enums;
 using Loom.Infrastructure;
@@ -222,9 +221,9 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
             AtExchange(SlotElective3, c["IN2346"], 5), AtExchange(SlotFree1, c["IN2211"], 5));
         await SetLaStatus(g6, DocumentStatus.Approved);                                                   // v2
         await SetLaStatus(g6, DocumentStatus.Draft);
-        var firstApproval = (await Call<ILearningAgreementService, List<SnapshotListItem>>(s => s.GetSnapshotsAsync(g6, s6)))
+        var firstApproval = (await Call<LaVersionService, List<SnapshotListItem>>(s => s.ListSnapshotsAsync(g6, default), actor: s6))
             .Where(x => x.Type == SnapshotType.Auto).MinBy(x => x.CreatedAt)!;
-        await Call<ILearningAgreementService, Updated>(s => s.RestoreSnapshotAsync(g6, firstApproval.Id, s6));   // creates a backup
+        await Call<LaVersionService, Updated>(s => s.RestoreAsync(g6, firstApproval.Id, default), actor: s6);   // creates a backup
         await SaveLa(g6, s6, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2259"], 5),
             AtExchange(SlotElective3, c["IN2346"], 5), AtExchange(SlotFree1, c["IN2211"], 5));
         await SetLaStatus(g6, DocumentStatus.Approved);                                                   // v3
@@ -269,8 +268,8 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
             AtExchange(SlotElective3, c["IN2064"], 3), AtExchange(SlotFree1, c["IN2121"], 5));
         await SetLaStatus(exchange, DocumentStatus.Approved);
 
-        var la = await Call<ILearningAgreementService, LearningAgreementResponse>(s => s.GetLearningAgreementAsync(exchange, student));
-        await Call<IRecognitionService, RecognitionResponse>(s => s.GetOrCreateRecognitionAsync(exchange, student));
+        var la = await Call<LearningAgreementService, LearningAgreementResponse>(s => s.GetAsync(exchange, default), actor: student);
+        await Call<RecognitionService, RecognitionResponse>(s => s.GetOrCreateRecognitionAsync(exchange, default), actor: student);
 
         UpsertRecognitionEntryRequest Grade(string code, string status, string original, string ects, string hr) =>
             new(la.Entries.First(e => e.PartnerCourseCode == code).Id, status, original, ects, hr, new DateOnly(2026, 2, 10));
@@ -281,10 +280,10 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
             grades.Add(Grade("IN2003", "Passed", "2.0", "B", "4"));
             grades.Add(Grade("IN2121", "NotPassed", "5.0", "F", "1"));
         }
-        await Call<IRecognitionService, RecognitionResponse>(s => s.SaveRecognitionAsync(exchange, student, new SaveRecognitionRequest(grades)));
+        await Call<RecognitionService, RecognitionResponse>(s => s.SaveRecognitionAsync(exchange, new SaveRecognitionRequest(grades), default), actor: student);
 
         // Rearrange the mapping scheme: move NLP to another slot and mark it not passed, split algorithms over two slots.
-        var scheme = await Call<IMappingSchemeService, MappingSchemeResponse>(s => s.GetMappingSchemeAsync(exchange, student));
+        var scheme = await Call<MappingSchemeService, MappingSchemeResponse>(s => s.GetMappingSchemeAsync(exchange, default), actor: student);
         var entries = scheme.Entries.Select(e =>
         {
             var slot = e.HomeSlotId;
@@ -297,10 +296,10 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         var algorithms = scheme.Entries.First(e => e.PartnerCourseCode == "IN2003");
         entries.Add(new SaveMappingSchemeEntryRequest(0, SlotSeminar, algorithms.PartnerCourseId, 2,
             algorithms.EnrollmentStatus, algorithms.OriginalGrade, algorithms.EctsGrade, algorithms.HrGrade, algorithms.ExamDate));
-        await Call<IMappingSchemeService, MappingSchemeResponse>(s => s.SaveMappingSchemeAsync(exchange, student, new SaveMappingSchemeRequest(entries)));
+        await Call<MappingSchemeService, MappingSchemeResponse>(s => s.SaveMappingSchemeAsync(exchange, new SaveMappingSchemeRequest(entries), default), actor: student);
 
         if (finish)
-            await Call<IRecognitionService, RecognitionResponse>(s => s.UpdateRecognitionStatusAsync(exchange, _ana, new UpdateRecognitionStatusRequest("Approved")));
+            await Call<RecognitionService, RecognitionResponse>(s => s.UpdateRecognitionStatusAsync(exchange, new UpdateRecognitionStatusRequest("Approved"), default), actor: _ana);
     }
 
     // ---------------------------------------------------------------- volume
@@ -366,12 +365,12 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
     private static LearningAgreementEntryUpsertDto Mode(int slot, SlotMode mode) => new(slot, mode.ToString(), null, null);
 
     private Task SaveLa(Guid exchange, int requester, params LearningAgreementEntryUpsertDto[] entries) =>
-        Call<ILearningAgreementService, LearningAgreementResponse>(s =>
-            s.SaveLearningAgreementAsync(exchange, requester, new SaveLearningAgreementRequest([.. entries])));
+        Call<LearningAgreementService, LearningAgreementResponse>(s =>
+            s.SaveAsync(exchange, new SaveLearningAgreementRequest([.. entries]), default), actor: requester);
 
     private Task SetLaStatus(Guid exchange, DocumentStatus status) =>
-        Call<ILearningAgreementService, ExchangeResponse>(s =>
-            s.UpdateLearningAgreementStatusAsync(exchange, _ana, new UpdateLearningAgreementStatusRequest(status.ToString())));
+        Call<LearningAgreementWorkflow, ExchangeResponse>(s =>
+            s.SetStatusAsync(exchange, new UpdateLearningAgreementStatusRequest(status.ToString()), default), actor: _ana);
 
     /// <summary>One DI scope per call, like one HTTP request. Any error stops the seed.</summary>
     private async Task<T> Call<TService, T>(Func<TService, Task<ErrorOr<T>>> call, int? actor = null) where TService : notnull

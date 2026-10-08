@@ -1,7 +1,5 @@
 using Loom.Api.Filters;
-using Loom.Application.Common.Security;
-using Loom.Application.DTOs.MappingScheme;
-using Loom.Application.Interfaces.Services;
+using Loom.Application.Features.Completion;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,13 +10,13 @@ namespace Loom.Api.Controllers;
 [Route("api/exchanges/access/{exchangeGuid:guid}/mapping-scheme")]
 [AllowAnonymous]
 [ExchangeActor]
-public class MappingSchemeController(IMappingSchemeService mappingSchemes, ICurrentActor actor) : ApiController
+public class MappingSchemeController(MappingSchemeService mappingSchemes) : ApiController
 {
     [HttpGet]
     public async Task<IActionResult> Get(Guid exchangeGuid, CancellationToken ct) =>
-        Match(await mappingSchemes.GetMappingSchemeAsync(exchangeGuid, actor.UserId, ct), Ok);
+        Match(await mappingSchemes.GetMappingSchemeAsync(exchangeGuid, ct), Ok);
 
     [HttpPut("entries")]
     public async Task<IActionResult> Save(Guid exchangeGuid, [FromBody] SaveMappingSchemeRequest request, CancellationToken ct) =>
-        Match(await mappingSchemes.SaveMappingSchemeAsync(exchangeGuid, actor.UserId, request, ct), Ok);
+        Match(await mappingSchemes.SaveMappingSchemeAsync(exchangeGuid, request, ct), Ok);
 }
