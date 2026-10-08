@@ -241,8 +241,18 @@ internal sealed class OfficialWorkbook(OfficialDocumentData data, OfficialText t
             var maxLines = slots.Max(s => grid.GetValueOrDefault(s.Id)?.Lines.Count ?? 0);
             var rows = 2 + maxLines * 2;
 
+            // Borders go on every cell before merging; a merged cell keeps only some edges otherwise.
+            for (var r = cursor; r < cursor + rows; r++)
+            {
+                var border = ws.Cell(r, 1).Style.Border;
+                border.LeftBorder = border.RightBorder = XLBorderStyleValues.Thin;
+                border.LeftBorderColor = border.RightBorderColor = Hairline;
+                if (r == cursor) { border.TopBorder = XLBorderStyleValues.Thin; border.TopBorderColor = Hairline; }
+                if (r == cursor + rows - 1) { border.BottomBorder = XLBorderStyleValues.Thin; border.BottomBorderColor = Hairline; }
+                ws.Cell(r, 1).Style.Fill.BackgroundColor = HeaderBg;
+            }
             Number(ws.Cell(cursor, 1), semester, bold: true, bg: HeaderBg);
-            ws.Range(cursor, 1, cursor + rows - 1, 1).Merge().Style.Fill.BackgroundColor = HeaderBg;
+            ws.Range(cursor, 1, cursor + rows - 1, 1).Merge().Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
             foreach (var slot in slots)
             {
@@ -289,10 +299,16 @@ internal sealed class OfficialWorkbook(OfficialDocumentData data, OfficialText t
             cursor += rows;
         }
 
-        cursor++;
+        // A frame around the whole grid (header row to the last semester).
+        var gridRange = ws.Range(3, 1, cursor - 1, columns + 1);
+        gridRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        gridRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#808080");
+
+        cursor += 2;
+        ws.Row(cursor - 1).Height = 8;
         Cell(ws.Cell(cursor, 2), "", bg: AtHomeOutline);
-        Cell(ws.Cell(cursor, 3), t["atHome"], borders: false, size: 9);
-        ws.Range(cursor, 3, cursor, 8).Merge();
+        Cell(ws.Cell(cursor, 3), $"  {t["atHome"]}", borders: false, size: 9);
+        ws.Range(cursor, 3, cursor, 10).Merge();
 
         ws.Column(1).Width = 9;
         for (var c = 2; c <= columns + 1; c++) ws.Column(c).Width = 5.5;
