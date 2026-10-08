@@ -170,7 +170,8 @@ watch(activeTab, async (tab) => {
 })
 
 onMounted(async () => {
-  await Promise.all([
+  // allSettled: a failing document fetch (e.g. 403) must not skip the redirect below.
+  await Promise.allSettled([
     exchangeStore.fetchExchange(props.exchangeId),
     exchangeStore.fetchLearningAgreement(props.exchangeId),
     exchangeStore.fetchRecognition(props.exchangeId),
