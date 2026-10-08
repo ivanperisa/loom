@@ -1,0 +1,72 @@
+# Loom server
+
+ASP.NET Core (.NET 10) + EF Core + PostgreSQL. Run it, seed it and test it from the repository root (see `../README.md`).
+
+## Projects
+
+| Project | What lives there |
+|---|---|
+| `Loom.Domain` | Entities, enums, small rules that only need the entity (`User.IsPlaceholder`, `HomeSlot.Label`, `ISoftDeletable`) |
+| `Loom.Application` | Use cases, organised by feature. No HTTP. |
+| `Loom.Infrastructure` | `AppDbContext`, EF configurations, migrations, cache invalidation |
+| `Loom.Api` | Thin controllers, authentication, error handling, the exchange actor filter |
+| `Loom.DevSeed` | Applies migrations and loads reference + demo data (local only) |
+| `tests/Loom.IntegrationTests` | Tests against a real PostgreSQL (Testcontainers), incl. HTTP tests |
+
+## Features (`Loom.Application/Features`)
+
+Each folder holds its services, contracts (requests/responses), errors and projections.
+
+| Feature | Covers |
+|---|---|
+| `Catalog` | Home catalogue (cached), partner institutions, partner courses, course merge |
+| `Users` | Login sync, own account (me, onboarding, profile, coordinator request), coordinator assignment |
+| `Admin` | User list/edit/roles, coordinator requests, coordinator whitelist |
+| `Coordination` | Coordinator directory, a coordinator's students and placeholder students |
+| `Exchanges` | Exchanges (create/edit/delete/list), access links |
+| `Planning` | Learning agreement: document, workflow (Draft ⇄ Approved), versions (history/restore), JSON import/export |
+| `Completion` | Recognition and mapping scheme (after the exchange) |
+
+`Common` has what features share: list querying, the current actor, exchange access, shared errors, cache tags.
+
+## Conventions
+
+**Who is calling.** Services never take a `requesterId`. They inject `ICurrentActor`, which the API fills in from the cookie (`UserSyncMiddleware`) or, on `/api/exchanges/access/{guid}/…` routes, from the access link (`ExchangeActorAttribute`). The seeder and tests set it explicitly.
+
+**Exchange-scoped work** starts with `ExchangeAccess.LoadAsync(guid)`. It is one query: exchange ids + "is the actor its student or assigned coordinator", or `EXCHANGE_NOT_FOUND` / `ACCESS_DENIED`.
+
+**Errors** are `ErrorOr` results, never exceptions. Each feature has a `*Errors` class; the `code` is part of the API contract (the client maps it). Controllers just `Match(result, Ok)`. Unexpected exceptions go to `ApiExceptionHandler`. It maps DB conflicts to 409 and never leaks messages.
+
+**Reads** are `IQueryable` → `Where` → `Select(projection)`, with no tracking and no `Include` when a projection does. Projections are `Expression<Func<…>>` fields in the feature (`CatalogProjections`, `ExchangeProjections`, …).
+
+**Writes** load tracked entities, change them, then call `SaveChangesAsync` once. Use a transaction only when a flow needs two saves (`AccountService.TakeOverPlaceholderAsync`).
+
+**Lists** use one shape everywhere: `ListQuery` (`page`, `pageSize`, `search`, `sort=name|-name`; legacy `sortBy`+`sortDir` still accepted) plus typed filters:
+
+```csharp
+private static readonly ListSpec<PartnerCourse, PartnerCourseResponse> List = ListSpec.For<PartnerCourse>()
+    .SearchIn(c => c.Code, c => c.Name, c => c.NameHr)   // case-insensitive LIKE, escaped, in SQL
+    .SortBy("code", c => c.Code, isDefault: true)
+    .SortBy("ects", c => c.Ects)
+    .Project(CatalogProjections.PartnerCourse);
+
+db.PartnerCourses
+    .Where(c => c.InstitutionId == institutionId)
+    .IncludeDeleted(query.IncludeDeleted)
+    .WhereIf(query.Level is not null, c => c.Level == query.Level)
+    .ToPageAsync(List, query, ct);   // count + sort (+ Id tiebreaker) + page + project
+```
+
+**Soft delete** is explicit (`.IncludeDeleted(flag)`), not a global filter. A global filter would silently hide soft-deleted courses that learning agreements still point to.
+
+**Caching** is only for reference data (`HybridCache`, tags in `CacheTags`). `CacheInvalidationInterceptor` clears a tag whenever SaveChanges touches one of its entity types, so services never invalidate by hand. Paged lists are not cached.
+
+**Concurrency:** `Exchange`, `LearningAgreement` and `Recognition` carry PostgreSQL's `xmin` as a row version. Two overlapping writes fail with 409 `CONCURRENT_UPDATE` instead of overwriting each other.
+
+## Adding an endpoint
+
+1. Add the use case to the feature's service, or a new service registered in `DependencyInjection.cs`. Request/response records go in the feature's contracts file; error codes go in its `*Errors` class.
+2. Exchange-scoped? Start with `ExchangeAccess.LoadAsync`. A list? Give it a `ListSpec`.
+3. Add a thin controller action (`Match(await service.X(...), Ok)`).
+4. Add an integration test (`tests/Loom.IntegrationTests`); for auth/routing, an HTTP test in `ApiTests`.
+5. Changed an entity or configuration? Add a migration (see `../README.md`).

@@ -35,6 +35,7 @@ public sealed class AccountService(IAppDbContext db, ICurrentActor actor)
         }
         else if (!string.IsNullOrWhiteSpace(request.Jmbag))
         {
+            if (!Text.IsValidJmbag(request.Jmbag)) return CommonErrors.InvalidJmbag;
             var placeholder = await db.Users.FirstOrDefaultAsync(u => u.ExternalId == request.Jmbag && u.Jmbag == request.Jmbag, ct);
             if (placeholder is not null)
             {
@@ -65,6 +66,7 @@ public sealed class AccountService(IAppDbContext db, ICurrentActor actor)
         if (institution.IsError) return institution.Errors;
 
         var jmbag = request.Jmbag.NullIfBlank();
+        if (jmbag is not null && !Text.IsValidJmbag(jmbag)) return CommonErrors.InvalidJmbag;
         if (jmbag is not null && await db.Users.AnyAsync(u => u.Jmbag == jmbag && u.Id != user.Id, ct))
             return UserErrors.JmbagTaken;
 

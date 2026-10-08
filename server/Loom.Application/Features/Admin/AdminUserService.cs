@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using ErrorOr;
+using Loom.Application.Common;
 using Loom.Application.Common.Errors;
 using Loom.Application.Common.Querying;
 using Loom.Application.Common.Security;
@@ -42,6 +43,7 @@ public sealed class AdminUserService(IAppDbContext db, ICurrentActor actor, IMem
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null) return CommonErrors.UserNotFound;
 
+        if (!string.IsNullOrWhiteSpace(request.Jmbag) && !Text.IsValidJmbag(request.Jmbag)) return CommonErrors.InvalidJmbag;
         if (!string.IsNullOrWhiteSpace(request.Jmbag) && await db.Users.AnyAsync(u => u.Jmbag == request.Jmbag && u.Id != userId, ct))
             return AdminErrors.JmbagTaken;
 

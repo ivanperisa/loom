@@ -2,7 +2,7 @@
 
 Erasmus exchange course mapping: learning agreements, recognition and mapping schemes.
 
-- `server/` – ASP.NET Core API (.NET 10, EF Core, PostgreSQL)
+- `server/` – ASP.NET Core API (.NET 10, EF Core, PostgreSQL); structure and conventions in `server/README.md`
   - `Loom.Api`, `Loom.Application`, `Loom.Domain`, `Loom.Infrastructure` (DbContext, configurations, migrations)
   - `Loom.DevSeed` – applies migrations and loads reference + demo data for local development
 - `client/` – Vue 3 + TypeScript + Pinia + Tailwind (Vite)
