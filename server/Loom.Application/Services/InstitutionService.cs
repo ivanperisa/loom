@@ -347,10 +347,30 @@ public class InstitutionService(IAppDbContext db, CachedQuery cache) : IInstitut
             return Error.Validation("INVALID_MERGE_SET", "Courses to merge must belong to the same institution.");
 
         var duplicateIds = duplicates.Select(c => c.Id).ToList();
+        var mergedIds = duplicateIds.Append(primary.Id).ToList();
+
+        // Merging must not put two of the merged courses into the same slot of one document.
+        var laConflict = await db.LearningAgreementEntries
+            .Where(e => e.PartnerCourseId != null && mergedIds.Contains(e.PartnerCourseId.Value))
+            .GroupBy(e => new { e.LearningAgreementId, e.HomeSlotId })
+            .AnyAsync(g => g.Count() > 1, ct);
+        var schemeConflict = await db.MappingSchemeEntries
+            .Where(e => e.PartnerCourseId != null && mergedIds.Contains(e.PartnerCourseId.Value))
+            .GroupBy(e => new { e.ExchangeId, e.HomeSlotId })
+            .AnyAsync(g => g.Count() > 1, ct);
+        if (laConflict || schemeConflict)
+            return Error.Conflict("MERGE_CONFLICT", "Some of these courses are mapped to the same slot in one exchange.");
+
         var entries = await db.LearningAgreementEntries
             .Where(e => e.PartnerCourseId != null && duplicateIds.Contains(e.PartnerCourseId.Value))
             .ToListAsync(ct);
         foreach (var entry in entries)
+            entry.PartnerCourseId = primary.Id;
+
+        var schemeEntries = await db.MappingSchemeEntries
+            .Where(e => e.PartnerCourseId != null && duplicateIds.Contains(e.PartnerCourseId.Value))
+            .ToListAsync(ct);
+        foreach (var entry in schemeEntries)
             entry.PartnerCourseId = primary.Id;
 
         db.PartnerCourses.RemoveRange(duplicates);
