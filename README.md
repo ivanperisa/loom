@@ -100,6 +100,16 @@ Exchange links are `http://localhost:5173/exchange/00000000-0000-4000-8000-00000
 | 06 | s.history | 101–120 | student01–20 |
 | 07 | s.recognition.draft | | |
 
+## Tests
+
+```sh
+dotnet test Loom.slnx          # integration tests: real PostgreSQL via Testcontainers (needs Docker)
+cd client && pnpm lint:check && pnpm type-check
+cd client && pnpm exec playwright install chromium && pnpm e2e   # browser smoke tests against `docker compose up`
+```
+
+The integration tests also check that every model change has a migration, and run the full demo seed once.
+
 ## Database migrations
 
 The schema is managed by EF Core migrations in `server/Loom.Infrastructure/Migrations`. Never edit the database by hand.

@@ -13,6 +13,7 @@
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
     "lint:check": "oxlint . && eslint . --cache",
+    "e2e": "playwright test",
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
@@ -25,6 +26,7 @@
     "xlsx-js-style": "^1.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.59.1",
     "@tailwindcss/vite": "^4.2.1",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.11.0",

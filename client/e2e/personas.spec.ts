@@ -1,0 +1,56 @@
+import { expect, test, type Page } from '@playwright/test'
+
+// Personas and fixed exchange GUIDs come from server/Loom.DevSeed (see README "Dev login and personas").
+const exchangeUrl = (n: number) => `/exchange/00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+
+async function loginAs(page: Page, email: string) {
+  const response = await page.request.post('/auth/dev/login', { data: { email } })
+  expect(response.ok(), `dev login as ${email}`).toBeTruthy()
+}
+
+test('landing page lists the dev personas', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: /admin@loom\.dev/ })).toBeVisible()
+})
+
+test('a new user is sent to onboarding', async ({ page }) => {
+  await loginAs(page, 'fresh.student@loom.dev')
+  await page.goto('/home')
+  await expect(page).toHaveURL(/\/onboarding/)
+})
+
+test('the coordinator sees their students', async ({ page }) => {
+  await loginAs(page, 'ana.coordinator@loom.dev')
+  await page.goto('/coordinator')
+  await expect(page.getByText('Hana History')).toBeVisible()
+})
+
+test('a coordinator without students sees none of them', async ({ page }) => {
+  await loginAs(page, 'ivo.coordinator@loom.dev')
+  await page.goto('/coordinator')
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByText('Hana History')).toHaveCount(0)
+})
+
+test('a student opens their approved exchange', async ({ page }) => {
+  await loginAs(page, 's.history@loom.dev')
+  await page.goto(exchangeUrl(6))
+  await expect(page.getByText('IN2259').first()).toBeVisible()
+})
+
+test("a student cannot open someone else's exchange", async ({ page }) => {
+  await loginAs(page, 's.draft.empty@loom.dev')
+  await page.goto(exchangeUrl(6))
+  await expect(page).toHaveURL(/\/home$/)
+})
+
+test('the access link opens the placeholder exchange without login', async ({ page }) => {
+  await page.goto('/access/00000000-0000-4000-8000-000000000013')
+  await expect(page.getByText('IN2064').first()).toBeVisible()
+})
+
+test('the admin panel lists users', async ({ page }) => {
+  await loginAs(page, 'admin@loom.dev')
+  await page.goto('/admin')
+  await expect(page.getByText('ana.coordinator@loom.dev').first()).toBeVisible()
+})
