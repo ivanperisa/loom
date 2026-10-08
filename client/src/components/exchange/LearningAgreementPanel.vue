@@ -570,7 +570,7 @@ function cancelEditEcts() {
               </span><br />
               <span style="font-weight: 700; color: #000">{{ mapping.partnerCourseName }}</span><br />
               <span style="font-size: 10px; color: #777">{{ mapping.partnerCourseNameHr ?? '-' }}</span><br />
-              <template v-if="editingMapping?.localId === mapping.localId" :key="`edit-${mapping.localId}`">
+              <template v-if="editingMapping?.localId === mapping.localId">
                 <input
                   :ref="setEctsInputRef"
                   v-model.number="editingEcts"

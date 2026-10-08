@@ -47,7 +47,7 @@ Useful for debugging in the IDE. Start only the database and seed it:
 docker compose up -d db && docker compose run --rm seed
 ```
 
-- **API:** `dotnet run --project server/Loom.Api`. Development settings enable dev login. The connection string comes from user secrets or `ConnectionStrings__DefaultConnection`, for example `Host=localhost;Port=5432;Database=loom;Username=loom;Password=loom`.
+- **API:** `dotnet run --project server/Loom.Api`. The launch profile enables dev login (`DevAuth__Enabled=true`). The connection string comes from user secrets or `ConnectionStrings__DefaultConnection`, for example `Host=localhost;Port=5432;Database=loom;Username=loom;Password=loom`.
 - **Client:** `cd client && pnpm install && pnpm dev`. To use the dev login against a local API, create `client/.env.development.local` with:
   ```
   VITE_API_URL=

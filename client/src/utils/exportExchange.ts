@@ -459,8 +459,6 @@ function buildLASheet(
       const slotBg = slot.color.replace('#', '')
       const startCol = slot.slotPosition
       const endCol = slot.slotPosition + slot.ects - 1
-      const colWidthChars = Math.max(1, slot.ects) * CHARS_PER_COL
-
       const outlineColor = state?.mode ? MODE_OUTLINE_COLOR[state.mode] : undefined
       const outlineBorder = outlineColor
         ? { style: 'medium' as const, color: { rgb: outlineColor } }

@@ -78,6 +78,19 @@ jobs:
         working-directory: ${{ env.PROJECT_FOLDER }}
         run: dotnet build --configuration Release --no-restore
 
+      # Schema changes are applied separately (see README "Database migrations").
+      # The idempotent script is attached to the run, ready to apply with psql.
+      - name: Generate migration script
+        run: |
+          dotnet tool restore
+          dotnet ef migrations script --idempotent --project server/Loom.Infrastructure --startup-project server/Loom.Infrastructure -o migrations.sql
+
+      - name: Upload migration script
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrations-sql
+          path: migrations.sql
+
       - name: Publish
         working-directory: ${{ env.PROJECT_FOLDER }}
         run: dotnet publish -c Release --property:PublishDir='${{ needs.setup-variables.outputs.publish-folder }}'
