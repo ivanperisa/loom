@@ -77,5 +77,17 @@ public abstract class IntegrationTest(DatabaseFixture fixture)
         Call<LearningAgreementWorkflow, ExchangeResponse>(s =>
             s.SetStatusAsync(exchange, new UpdateLearningAgreementStatusRequest(status), Ct), actor: requester);
 
+    protected async Task Approve(Guid exchange, int coordinator)
+    {
+        var result = await SetLaStatus(exchange, coordinator, "Approved");
+        Assert.False(result.IsError, result.IsError ? result.FirstError.Code : null);
+    }
+
+    protected async Task Reopen(Guid exchange, int coordinator)
+    {
+        var result = await SetLaStatus(exchange, coordinator, "Draft");
+        Assert.False(result.IsError, result.IsError ? result.FirstError.Code : null);
+    }
+
     protected static LearningAgreementEntryUpsertDto AtExchange(int slot, int course, decimal ects) => new(slot, "AtExchange", course, ects);
 }

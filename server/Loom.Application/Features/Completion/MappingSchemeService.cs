@@ -1,137 +1,101 @@
 using ErrorOr;
+using Loom.Application.Common;
 using Loom.Application.Common.Security;
 using Loom.Application.Interfaces;
 using Loom.Domain.Entities;
-using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Loom.Application.Features.Completion;
 
-public sealed class MappingSchemeService(IAppDbContext db, ExchangeAccess access)
+/// <summary>
+/// The mapping scheme: where each passed course is finally recognised (moving between slots, splitting ECTS, marking a
+/// course not passed). Same data as table 2. May drift from the frozen LA; that is the point of it.
+/// </summary>
+public sealed class MappingSchemeService(IAppDbContext db, ExchangeAccess access, ResultsGuard guard, ICurrentActor actor)
 {
-    private IQueryable<MappingSchemeEntry> WithIncludes() => db.MappingSchemeEntries
-        .Include(e => e.PartnerCourse)
-        .Include(e => e.HomeSlot).ThenInclude(s => s.SlotType)
-        .Include(e => e.HomeSlot).ThenInclude(s => s.Course)
-        .Include(e => e.HomeSlot).ThenInclude(s => s.CourseGroup)
-        .Include(e => e.RecognizedAsCourse);
-
-    private async Task<ErrorOr<int>> CheckAccessAsync(Guid exchangeGuid, CancellationToken ct)
+    public async Task<ErrorOr<MappingSchemeResponse>> GetAsync(Guid exchangeGuid, CancellationToken ct)
     {
         var context = await access.LoadAsync(exchangeGuid, ct);
         if (context.IsError) return context.Errors;
-        return context.Value.ExchangeId;
+        return await BuildResponseAsync(context.Value.ExchangeId, ct);
     }
 
-    public async Task<ErrorOr<MappingSchemeResponse>> GetMappingSchemeAsync(Guid exchangeGuid, CancellationToken ct = default)
+    /// <summary>
+    /// Replaces the scheme with the request: existing entries by id (moved, resized, status), new entries (id ≤ 0) as
+    /// splits of a course already in the scheme, missing entries removed. A course never gets more ECTS than it has.
+    /// </summary>
+    public async Task<ErrorOr<MappingSchemeResponse>> SaveAsync(Guid exchangeGuid, SaveMappingSchemeRequest request, CancellationToken ct)
     {
-        var accessResult = await CheckAccessAsync(exchangeGuid, ct);
-        if (accessResult.IsError) return accessResult.Errors;
-        var exchangeId = accessResult.Value;
+        var context = await access.LoadAsync(exchangeGuid, ct);
+        if (context.IsError) return context.Errors;
+        var exchange = context.Value;
 
-        var entries = await WithIncludes()
-            .Where(e => e.ExchangeId == exchangeId)
-            .OrderBy(e => e.Id)
-            .ToListAsync(ct);
+        var recognition = await guard.EditableAsync(exchange.ExchangeId, ct);
+        if (recognition.IsError) return recognition.Errors;
 
-        return entries.ToResponse(exchangeId);
-    }
+        var entries = await db.MappingSchemeEntries.Where(e => e.ExchangeId == exchange.ExchangeId).ToListAsync(ct);
+        var byId = entries.ToDictionary(e => e.Id);
+        var schemeCourses = entries.Where(e => e.PartnerCourseId != null).Select(e => e.PartnerCourseId!.Value).ToHashSet();
+        var profileSlots = await db.HomeSlots.Where(s => s.ProfileId == exchange.HomeProfileId).Select(s => s.Id).ToHashSetAsync(ct);
 
-    public async Task<ErrorOr<MappingSchemeResponse>> SaveMappingSchemeAsync(Guid exchangeGuid, SaveMappingSchemeRequest request, CancellationToken ct = default)
-    {
-        var accessResult = await CheckAccessAsync(exchangeGuid, ct);
-        if (accessResult.IsError) return accessResult.Errors;
-        var exchangeId = accessResult.Value;
-
-        var recognitionApproved = await db.Recognitions
-            .AnyAsync(r => r.ExchangeId == exchangeId && r.Status == DocumentStatus.Approved, ct);
-        if (recognitionApproved)
-            return Error.Conflict("RECOGNITION_LOCKED", "Mapping scheme cannot be modified after the recognition is approved.");
-
-        var entries = await db.MappingSchemeEntries
-            .Where(e => e.ExchangeId == exchangeId)
-            .ToListAsync(ct);
-
-        var validPartnerCourseIds = entries
-            .Where(e => e.PartnerCourseId != null)
-            .Select(e => e.PartnerCourseId!.Value)
-            .ToHashSet();
-
-        var keepIds = new HashSet<int>();
-
-        foreach (var req in request.Entries)
+        var keep = new HashSet<int>();
+        var resulting = new List<MappingSchemeEntry>();
+        foreach (var item in request.Entries)
         {
-            if (req.AwardedEcts < 0)
-                return Error.Validation("INVALID_ECTS", "Awarded ECTS cannot be negative.");
+            if (item.AwardedEcts < 0) return CompletionErrors.NegativeEcts;
+            if (!profileSlots.Contains(item.HomeSlotId)) return CompletionErrors.SlotNotInProfile(item.HomeSlotId);
+            if (!RecognitionService.TryParseStatus(item.EnrollmentStatus, out var status)) return CompletionErrors.InvalidEnrollmentStatus(item.EnrollmentStatus);
+            var grades = RecognitionService.ValidateGrades(item.OriginalGrade, item.EctsGrade, item.HrGrade);
+            if (grades.IsError) return grades.Errors;
 
-            if (req.Id > 0)
+            MappingSchemeEntry entry;
+            if (item.Id > 0)
             {
-                var existing = entries.FirstOrDefault(e => e.Id == req.Id);
-                if (existing is null) continue;
-
-                existing.HomeSlotId = req.HomeSlotId;
-                existing.AwardedEcts = req.AwardedEcts;
-                existing.EnrollmentStatus = ParseStatus(req.EnrollmentStatus);
-                existing.OriginalGrade = req.OriginalGrade;
-                existing.EctsGrade = req.EctsGrade;
-                existing.HrGrade = req.HrGrade;
-                existing.ExamDate = req.ExamDate;
-                keepIds.Add(existing.Id);
+                if (!byId.TryGetValue(item.Id, out entry!)) return CompletionErrors.EntryNotFound(item.Id);
+                keep.Add(entry.Id);
             }
             else
             {
-                if (req.PartnerCourseId is not int pcId || !validPartnerCourseIds.Contains(pcId))
-                    return Error.Validation("INVALID_PARTNER_COURSE", "Split entry must reference a partner course already in the scheme.");
-
-                db.MappingSchemeEntries.Add(new MappingSchemeEntry
-                {
-                    ExchangeId = exchangeId,
-                    HomeSlotId = req.HomeSlotId,
-                    PartnerCourseId = pcId,
-                    AwardedEcts = req.AwardedEcts,
-                    EnrollmentStatus = ParseStatus(req.EnrollmentStatus),
-                    OriginalGrade = req.OriginalGrade,
-                    EctsGrade = req.EctsGrade,
-                    HrGrade = req.HrGrade,
-                    ExamDate = req.ExamDate,
-                });
+                if (item.PartnerCourseId is not int courseId || !schemeCourses.Contains(courseId)) return CompletionErrors.CourseNotInScheme(item.PartnerCourseId ?? 0);
+                entry = new MappingSchemeEntry { ExchangeId = exchange.ExchangeId, PartnerCourseId = courseId };
+                db.MappingSchemeEntries.Add(entry);
             }
+            entry.HomeSlotId = item.HomeSlotId;
+            entry.AwardedEcts = item.AwardedEcts;
+            entry.EnrollmentStatus = status;
+            entry.OriginalGrade = item.OriginalGrade.NullIfBlank();
+            entry.EctsGrade = item.EctsGrade.NullIfBlank();
+            entry.HrGrade = item.HrGrade.NullIfBlank();
+            entry.ExamDate = item.ExamDate;
+            resulting.Add(entry);
         }
 
-        foreach (var e in entries)
-            if (!keepIds.Contains(e.Id))
-                db.MappingSchemeEntries.Remove(e);
-
-        await db.SaveChangesAsync(ct);
-        return await GetMappingSchemeAsync(exchangeGuid, ct);
-    }
-
-    public async Task<bool> EnsureMappingSchemeInitializedAsync(int exchangeId, CancellationToken ct = default)
-    {
-        var exists = await db.MappingSchemeEntries.AnyAsync(e => e.ExchangeId == exchangeId, ct);
-        if (exists) return false;
-
-        var laEntries = await db.LearningAgreementEntries
-            .AsNoTracking()
-            .Where(e => e.LearningAgreement.ExchangeId == exchangeId && e.PartnerCourseId != null && !e.IsDeleted)
-            .ToListAsync(ct);
-        if (laEntries.Count == 0) return false;
-
-        foreach (var la in laEntries)
+        var courseIds = resulting.Where(e => e.PartnerCourseId != null).Select(e => e.PartnerCourseId!.Value).Distinct().ToList();
+        var available = await db.PartnerCourses.Where(c => courseIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Ects, ct);
+        foreach (var course in resulting.Where(e => e.PartnerCourseId != null).GroupBy(e => e.PartnerCourseId!.Value))
         {
-            db.MappingSchemeEntries.Add(new MappingSchemeEntry
-            {
-                ExchangeId = exchangeId,
-                HomeSlotId = la.HomeSlotId,
-                PartnerCourseId = la.PartnerCourseId,
-                AwardedEcts = la.AwardedEcts,
-            });
+            var max = available.GetValueOrDefault(course.Key);
+            if (course.Sum(e => e.AwardedEcts ?? 0) > max) return CompletionErrors.EctsExceeded(course.Key, max);
         }
 
+        foreach (var entry in entries.Where(e => !keep.Contains(e.Id))) db.MappingSchemeEntries.Remove(entry);
+        recognition.Value.LastModifiedById = actor.UserId;
+        recognition.Value.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
-        return true;
+        return await BuildResponseAsync(exchange.ExchangeId, ct);
     }
 
-    public static EnrollmentStatus? ParseStatus(string? value) =>
-        Enum.TryParse<EnrollmentStatus>(value, out var parsed) ? parsed : null;
+    private async Task<MappingSchemeResponse> BuildResponseAsync(int exchangeId, CancellationToken ct)
+    {
+        var entries = await db.MappingSchemeEntries
+            .AsNoTracking()
+            .Include(e => e.PartnerCourse)
+            .Include(e => e.HomeSlot).ThenInclude(s => s.SlotType)
+            .Include(e => e.HomeSlot).ThenInclude(s => s.Course)
+            .Include(e => e.HomeSlot).ThenInclude(s => s.CourseGroup)
+            .Where(e => e.ExchangeId == exchangeId)
+            .OrderBy(e => e.Id)
+            .ToListAsync(ct);
+        return entries.ToResponse(exchangeId);
+    }
 }

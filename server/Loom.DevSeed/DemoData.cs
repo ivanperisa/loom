@@ -2,6 +2,7 @@ using ErrorOr;
 using Loom.Application.Features.Planning;
 using Loom.Application.Features.Exchanges;
 using Loom.Application.Features.Completion;
+using Loom.Application.Features.Documents;
 using Loom.Application.Features.Admin;
 using Loom.Application.Features.Coordination;
 using Loom.Application.Features.Users;
@@ -198,7 +199,7 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         await Call<ExchangeService, ExchangeResponse>(s => s.UpdateCoordinatorMessageAsync(g3,
             "IN2121 is only offered in summer, please pick a winter course for this slot.", default), actor: _ana);
 
-        // 4. Approved
+        // 4. Approved, ready for "Start final recognition"
         var s4 = await Student("s.approved@loom.dev", "Ana Approved", "0036100004");
         var g4 = await NewExchange(4, s4, tum, coordinator: _ana);
         await SaveLa(g4, s4, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5), AtExchange(SlotFree1, c["IN2211"], 5));
@@ -222,9 +223,9 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
             AtExchange(SlotElective3, c["IN2346"], 5), AtExchange(SlotFree1, c["IN2211"], 5));
         await SetLaStatus(g6, DocumentStatus.Approved);                                                   // v2
         await SetLaStatus(g6, DocumentStatus.Draft);
-        var firstApproval = (await Call<LaVersionService, List<SnapshotListItem>>(s => s.ListSnapshotsAsync(g6, default), actor: s6))
-            .Where(x => x.Type == SnapshotType.Auto).MinBy(x => x.CreatedAt)!;
-        await Call<LaVersionService, Updated>(s => s.RestoreAsync(g6, firstApproval.Id, default), actor: s6);   // creates a backup
+        var firstApproval = (await Call<LaVersionService, List<DocumentVersionResponse>>(s => s.ListAsync(g6, default), actor: s6))
+            .Single(x => x.VersionNo == 1);
+        await Call<LaVersionService, RestoreResult>(s => s.RestoreAsync(g6, firstApproval.Id, default), actor: s6);   // creates a backup
         await SaveLa(g6, s6, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2259"], 5),
             AtExchange(SlotElective3, c["IN2346"], 5), AtExchange(SlotFree1, c["IN2211"], 5));
         await SetLaStatus(g6, DocumentStatus.Approved);                                                   // v3
@@ -271,22 +272,22 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
             AtExchange(SlotElective3, c["IN2064"], 3), AtExchange(SlotFree1, c["IN2121"], 5));
         await SetLaStatus(exchange, DocumentStatus.Approved);
 
-        var la = await Call<LearningAgreementService, LearningAgreementResponse>(s => s.GetAsync(exchange, default), actor: student);
-        await Call<RecognitionService, RecognitionResponse>(s => s.GetOrCreateRecognitionAsync(exchange, default), actor: student);
+        // "Start final recognition": freezes the LA and table 1, creates the results from the approved version.
+        await Call<RecognitionService, RecognitionResponse>(s => s.StartAsync(exchange, default), actor: student);
 
-        UpsertRecognitionEntryRequest Grade(string code, string status, string original, string ects, string hr) =>
-            new(la.Entries.First(e => e.PartnerCourseCode == code).Id, status, original, ects, hr, new DateOnly(2026, 2, 10));
+        CourseGradesRequest Grade(string code, string status, string original, string ects, string hr) =>
+            new(c[code], status, original, ects, hr, new DateOnly(2026, 2, 10));
 
-        var grades = new List<UpsertRecognitionEntryRequest> { Grade("IN2064", "Passed", "1.3", "A", "5") };
+        var grades = new List<CourseGradesRequest> { Grade("IN2064", "Passed", "1.3", "A", "5") };
         if (finish)
         {
             grades.Add(Grade("IN2003", "Passed", "2.0", "B", "4"));
             grades.Add(Grade("IN2121", "NotPassed", "5.0", "F", "1"));
         }
-        await Call<RecognitionService, RecognitionResponse>(s => s.SaveRecognitionAsync(exchange, new SaveRecognitionRequest(grades), default), actor: student);
+        await Call<RecognitionService, RecognitionResponse>(s => s.SaveGradesAsync(exchange, new SaveGradesRequest(grades), default), actor: student);
 
         // Rearrange the mapping scheme: move NLP to another slot and mark it not passed, split algorithms over two slots.
-        var scheme = await Call<MappingSchemeService, MappingSchemeResponse>(s => s.GetMappingSchemeAsync(exchange, default), actor: student);
+        var scheme = await Call<MappingSchemeService, MappingSchemeResponse>(s => s.GetAsync(exchange, default), actor: student);
         var entries = scheme.Entries.Select(e =>
         {
             var slot = e.HomeSlotId;
@@ -299,10 +300,10 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         var algorithms = scheme.Entries.First(e => e.PartnerCourseCode == "IN2003");
         entries.Add(new SaveMappingSchemeEntryRequest(0, SlotSeminar, algorithms.PartnerCourseId, 2,
             algorithms.EnrollmentStatus, algorithms.OriginalGrade, algorithms.EctsGrade, algorithms.HrGrade, algorithms.ExamDate));
-        await Call<MappingSchemeService, MappingSchemeResponse>(s => s.SaveMappingSchemeAsync(exchange, new SaveMappingSchemeRequest(entries), default), actor: student);
+        await Call<MappingSchemeService, MappingSchemeResponse>(s => s.SaveAsync(exchange, new SaveMappingSchemeRequest(entries), default), actor: student);
 
         if (finish)
-            await Call<RecognitionService, RecognitionResponse>(s => s.UpdateRecognitionStatusAsync(exchange, new UpdateRecognitionStatusRequest("Approved"), default), actor: _ana);
+            await Call<RecognitionService, RecognitionResponse>(s => s.SetStatusAsync(exchange, new UpdateRecognitionStatusRequest("Approved"), default), actor: _ana);
     }
 
     // ---------------------------------------------------------------- volume

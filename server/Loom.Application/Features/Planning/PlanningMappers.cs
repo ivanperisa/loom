@@ -32,6 +32,6 @@ public static class PlanningMappers
         entry.PartnerCourse?.Url,
         entry.AwardedEcts,
         entry.IsDeleted,
-        AmendmentNumber: null
+        AmendmentNumber: (entry.IsDeleted ? entry.RemovedInVersion : entry.AddedInVersion) - 1
     );
 }

@@ -8,18 +8,40 @@ using Microsoft.EntityFrameworkCore;
 namespace Loom.Application.Features.Planning;
 
 /// <summary>
-/// The one place that validates and writes learning agreement entries.
-/// Used by save, import and restore, so they all apply the same rules.
+/// The one place that checks and writes learning agreement entries. Save, import and restore all go through it,
+/// so they follow the same rules: editable only as a draft before final recognition, same validation, same history.
 /// </summary>
 public sealed class LaEntryWriter(IAppDbContext db)
 {
-    /// <summary>Modes, slots belonging to the exchange's profile, and ECTS not exceeding each partner course.</summary>
+    /// <summary>The LA can change only while it is a draft and final recognition has not started.</summary>
+    public async Task<ErrorOr<Success>> CheckEditableAsync(int exchangeId, CancellationToken ct)
+    {
+        var state = await db.LearningAgreements
+            .Where(l => l.ExchangeId == exchangeId)
+            .Select(l => new { l.Status, l.ConcludedAt })
+            .FirstOrDefaultAsync(ct);
+        if (state is null) return Result.Success;
+        if (state.ConcludedAt is not null) return PlanningErrors.Concluded;
+        if (state.Status != DocumentStatus.Draft) return PlanningErrors.Locked;
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// Valid modes; one mode per slot; no course twice in a slot; slots from the exchange's profile; courses from its
+    /// partner institution, each with positive ECTS, and in total not more than the course has.
+    /// </summary>
     public async Task<ErrorOr<Success>> ValidateAsync(SaveLearningAgreementRequest request, ExchangeContext exchange, CancellationToken ct)
     {
         foreach (var entry in request.Entries)
         {
-            if (!Enum.TryParse<SlotMode>(entry.Mode, out var mode)) return PlanningErrors.InvalidMode(entry.Mode);
+            if (!Enum.TryParse<SlotMode>(entry.Mode, out var mode) || !Enum.IsDefined(mode)) return PlanningErrors.InvalidMode(entry.Mode);
             if (mode != SlotMode.AtExchange && entry.PartnerCourseId is not null) return PlanningErrors.CourseOnNonExchangeSlot;
+            if (entry.PartnerCourseId is not null && entry.AwardedEcts is not > 0) return PlanningErrors.EctsRequired(entry.HomeSlotId);
+        }
+        foreach (var slot in request.Entries.GroupBy(e => e.HomeSlotId))
+        {
+            if (slot.Select(e => e.Mode).Distinct().Count() > 1) return PlanningErrors.MixedSlotModes(slot.Key);
+            if (slot.GroupBy(e => e.PartnerCourseId).Any(g => g.Count() > 1)) return PlanningErrors.DuplicateEntry(slot.Key);
         }
 
         var profileSlotIds = await db.HomeSlots
@@ -32,17 +54,14 @@ public sealed class LaEntryWriter(IAppDbContext db)
         var courseIds = request.Entries.Where(e => e.PartnerCourseId.HasValue).Select(e => e.PartnerCourseId!.Value).Distinct().ToList();
         if (courseIds.Count == 0) return Result.Success;
 
-        var available = await db.PartnerCourses
+        var courses = await db.PartnerCourses
             .Where(c => courseIds.Contains(c.Id))
-            .ToDictionaryAsync(c => c.Id, c => c.Ects, ct);
-        var used = request.Entries
-            .Where(e => e.PartnerCourseId.HasValue && e.AwardedEcts.HasValue)
-            .GroupBy(e => e.PartnerCourseId!.Value)
-            .Select(g => (CourseId: g.Key, Ects: g.Sum(e => e.AwardedEcts!.Value)));
-        foreach (var (courseId, ects) in used)
+            .ToDictionaryAsync(c => c.Id, c => new { c.Ects, c.InstitutionId }, ct);
+        foreach (var group in request.Entries.Where(e => e.PartnerCourseId.HasValue).GroupBy(e => e.PartnerCourseId!.Value))
         {
-            if (!available.TryGetValue(courseId, out var max)) return PlanningErrors.PartnerCourseNotFound(courseId);
-            if (ects > max) return PlanningErrors.EctsExceeded(courseId, max);
+            if (!courses.TryGetValue(group.Key, out var course)) return PlanningErrors.PartnerCourseNotFound(group.Key);
+            if (course.InstitutionId != exchange.PartnerInstitutionId) return PlanningErrors.CourseNotAtPartner(group.Key);
+            if (group.Sum(e => e.AwardedEcts!.Value) > course.Ects) return PlanningErrors.EctsExceeded(group.Key, course.Ects);
         }
         return Result.Success;
     }
@@ -55,38 +74,34 @@ public sealed class LaEntryWriter(IAppDbContext db)
         learningAgreement = new LearningAgreement { ExchangeId = exchangeId, Status = DocumentStatus.Draft };
         db.LearningAgreements.Add(learningAgreement);
         await db.SaveChangesAsync(ct);
-        learningAgreement.Entries = [];
         return learningAgreement;
     }
 
     /// <summary>
-    /// Makes the entries match the request (keyed by slot + course): updates, adds and removes.
-    /// Entries that already have recognition data cannot be removed.
+    /// Makes the live entries match the request (keyed by slot + course). Something that was never approved is simply
+    /// deleted; an approved component is only marked for removal, so the amendment can show it struck through.
+    /// Adding back a component marked for removal un-marks it.
     /// </summary>
-    public async Task<ErrorOr<Success>> ReplaceEntriesAsync(int learningAgreementId, SaveLearningAgreementRequest request, CancellationToken ct)
+    public async Task ApplyAsync(int learningAgreementId, SaveLearningAgreementRequest request, CancellationToken ct)
     {
-        var existing = await db.LearningAgreementEntries.Where(e => e.LearningAgreementId == learningAgreementId).ToListAsync(ct);
-        var requestedKeys = request.Entries.Select(e => (e.HomeSlotId, e.PartnerCourseId)).ToHashSet();
-        var toDelete = existing.Where(e => !requestedKeys.Contains((e.HomeSlotId, e.PartnerCourseId))).ToList();
+        var live = await db.LearningAgreementEntries
+            .Where(e => e.LearningAgreementId == learningAgreementId && e.RemovedInVersion == null)
+            .ToListAsync(ct);
+        var byKey = live.GroupBy(e => (e.HomeSlotId, e.PartnerCourseId)).ToDictionary(g => g.Key, g => g.First());
+        var requested = request.Entries.Select(e => (e.HomeSlotId, e.PartnerCourseId)).ToHashSet();
 
-        if (toDelete.Count > 0)
+        foreach (var entry in live.Where(e => !requested.Contains((e.HomeSlotId, e.PartnerCourseId)) || byKey[(e.HomeSlotId, e.PartnerCourseId)] != e))
         {
-            var toDeleteIds = toDelete.Select(e => e.Id).ToList();
-            var recognitionEntries = await db.RecognitionEntries.Where(r => toDeleteIds.Contains(r.LearningAgreementEntryId)).ToListAsync(ct);
-            if (recognitionEntries.Any(r => r.EnrollmentStatus != null || r.OriginalGrade != null || r.EctsGrade != null
-                    || r.HrGrade != null || r.ExamDate != null || r.IsRecognized != null))
-                return PlanningErrors.RecognitionExists;
-
-            db.RecognitionEntries.RemoveRange(recognitionEntries);
-            db.LearningAgreementEntries.RemoveRange(toDelete);
+            if (entry.AddedInVersion is null) db.LearningAgreementEntries.Remove(entry);
+            else entry.IsDeleted = true;
         }
 
-        var existingByKey = existing.ToDictionary(e => (e.HomeSlotId, e.PartnerCourseId));
         foreach (var dto in request.Entries)
         {
-            var mode = Enum.Parse<SlotMode>(dto.Mode);   // validated by ValidateAsync
-            if (existingByKey.TryGetValue((dto.HomeSlotId, dto.PartnerCourseId), out var entry))
+            var mode = Enum.Parse<SlotMode>(dto.Mode);   // checked by ValidateAsync
+            if (byKey.TryGetValue((dto.HomeSlotId, dto.PartnerCourseId), out var entry))
             {
+                entry.IsDeleted = false;
                 entry.Mode = mode;
                 entry.AwardedEcts = dto.AwardedEcts;
             }
@@ -102,6 +117,5 @@ public sealed class LaEntryWriter(IAppDbContext db)
                 });
             }
         }
-        return Result.Success;
     }
 }

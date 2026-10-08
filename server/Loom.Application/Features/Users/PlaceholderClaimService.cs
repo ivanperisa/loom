@@ -34,10 +34,10 @@ public sealed class PlaceholderClaimService(IAppDbContext db, ICurrentActor acto
         foreach (var exchange in exchanges) exchange.StudentId = user.Id;
         await links.RevokeAllAsync(exchanges.Select(e => e.Id).ToList(), ct);
 
-        // Snapshots reference their author without ON DELETE, so they have to move before the placeholder goes.
-        await db.ExchangeSnapshots
-            .Where(s => s.ChangedById == placeholder.Id)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.ChangedById, user.Id), ct);
+        // Keep the history's authorship (the reference would otherwise be cleared when the placeholder goes).
+        await db.DocumentVersions
+            .Where(v => v.CreatedById == placeholder.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(v => v.CreatedById, user.Id), ct);
 
         user.CoordinatorId ??= placeholder.CoordinatorId;
         user.Mentor ??= placeholder.Mentor;

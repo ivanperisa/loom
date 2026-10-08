@@ -10,7 +10,7 @@ public class RecognitionConfiguration : IEntityTypeConfiguration<Recognition>
     public void Configure(EntityTypeBuilder<Recognition> builder)
     {
         builder.ToTable("recognition", "exchange", t =>
-            t.HasCheckConstraint("recognition_status_check", "status IN ('Draft', 'Submitted', 'Approved', 'Rejected')"));
+            t.HasCheckConstraint("recognition_status_check", "status IN ('Draft', 'Approved')"));
         builder.HasKey(x => x.Id);
         // Optimistic concurrency via PostgreSQL's xmin: concurrent writes to the same row fail instead of overwriting.
         builder.Property<uint>("Version").IsRowVersion();

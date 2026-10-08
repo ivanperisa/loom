@@ -1,66 +1,16 @@
+using System.Globalization;
 using Loom.Application.Features.Catalog;
+using Loom.Application.Features.Documents;
 using Loom.Domain.Entities;
 
 namespace Loom.Application.Features.Completion;
 
 public static class CompletionMappers
 {
-    public static RecognitionResponse ToResponse(this Recognition recognition) => new(
-        recognition.Id,
-        recognition.ExchangeId,
-        recognition.Status.ToString(),
-        recognition.Message,
-        recognition.Entries.Select(e => e.ToResponse()).ToList(),
-        recognition.CreatedAt,
-        recognition.UpdatedAt,
-        recognition.UpdatedAt,
-        recognition.LastModifiedByUser?.Name,
-        recognition.SignedAt,
-        recognition.SignedByUser?.Name
-    );
-
-    public static RecognitionEntryResponse ToResponse(this RecognitionEntry entry)
-    {
-        var laEntry = entry.LearningAgreementEntry;
-        var pc = laEntry.PartnerCourse!;
-        var slot = laEntry.HomeSlot;
-        var hours = pc.Hours();
-
-        var slotCourseName = slot.Course?.Name ?? string.Empty;
-        var slotCourseIsvuCode = slot.Course?.IsvuCode;
-        var slotCourseGroupIsvuCode = slot.CourseGroup?.IsvuCode;
-        var slotCourseGroupName = slot.CourseGroup?.Name ?? string.Empty;
-
-        return new(
-            entry.Id,
-            entry.LearningAgreementEntryId,
-            pc.Code,
-            pc.Name,
-            pc.NameHr,
-            pc.Url,
-            hours,
-            pc.Ects,
-            slotCourseIsvuCode,
-            slotCourseName,
-            slotCourseGroupIsvuCode,
-            slotCourseGroupName,
-            slot.SlotType.Color,
-            slot.Semester,
-            laEntry.AwardedEcts!.Value,
-            entry.EnrollmentStatus,
-            entry.OriginalGrade,
-            entry.EctsGrade,
-            entry.HrGrade,
-            entry.ExamDate
-        );
-    }
-
     public static MappingSchemeEntryResponse ToResponse(this MappingSchemeEntry entry)
     {
         var pc = entry.PartnerCourse;
         var slot = entry.HomeSlot;
-        var hours = pc?.Hours();
-
         return new(
             entry.Id,
             entry.HomeSlotId,
@@ -69,7 +19,7 @@ public static class CompletionMappers
             pc?.Name ?? string.Empty,
             pc?.NameHr,
             pc?.Url,
-            hours,
+            pc?.Hours(),
             pc?.Ects ?? 0,
             slot.Course?.IsvuCode,
             slot.Course?.Name ?? string.Empty,
@@ -88,4 +38,25 @@ public static class CompletionMappers
 
     public static MappingSchemeResponse ToResponse(this IEnumerable<MappingSchemeEntry> entries, int exchangeId) =>
         new(exchangeId, entries.Select(e => e.ToResponse()).ToList());
+
+    public static RecognitionVersionEntry ToVersionEntry(this MappingSchemeEntry e) => new(
+        e.HomeSlotId, e.HomeSlot.Label, e.PartnerCourseId, e.PartnerCourse?.Code, e.PartnerCourse?.Name, e.AwardedEcts,
+        e.EnrollmentStatus?.ToString(), e.OriginalGrade, e.EctsGrade, e.HrGrade, e.ExamDate);
+
+    public static string Hash(RecognitionVersionPayload payload) =>
+        VersionStore.Hash(payload.Entries.Select(e => string.Create(CultureInfo.InvariantCulture,
+            $"{e.HomeSlotId}|{e.PartnerCourseId}|{e.AwardedEcts:0.0}|{e.EnrollmentStatus}|{e.OriginalGrade}|{e.EctsGrade}|{e.HrGrade}|{e.ExamDate:yyyy-MM-dd}")));
+
+    public static IEnumerable<DiffRow> DiffRows(RecognitionVersionPayload payload) =>
+        payload.Entries.Select(e => new DiffRow(
+            e.HomeSlotId, e.HomeSlotLabel, e.PartnerCourseId, e.PartnerCourseCode, e.PartnerCourseName,
+            new Dictionary<string, string?>
+            {
+                ["ects"] = e.AwardedEcts?.ToString("0.0", CultureInfo.InvariantCulture),
+                ["enrollmentStatus"] = e.EnrollmentStatus,
+                ["originalGrade"] = e.OriginalGrade,
+                ["ectsGrade"] = e.EctsGrade,
+                ["hrGrade"] = e.HrGrade,
+                ["examDate"] = e.ExamDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            }));
 }

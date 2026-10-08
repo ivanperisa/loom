@@ -3,6 +3,7 @@ using Loom.Application.Features.Admin;
 using Loom.Application.Features.Catalog;
 using Loom.Application.Features.Completion;
 using Loom.Application.Features.Coordination;
+using Loom.Application.Features.Documents;
 using Loom.Application.Features.Exchanges;
 using Loom.Application.Features.Planning;
 using Loom.Application.Features.Users;
@@ -40,15 +41,19 @@ public static class DependencyInjection
         services.AddScoped<ExchangeService>();
         services.AddScoped<AccessLinkService>();
 
+        // Documents (versions shared by the LA and the recognition)
+        services.AddScoped<VersionStore>();
+
         // Planning (learning agreement)
         services.AddScoped<LaEntryWriter>();
-        services.AddScoped<LaSnapshots>();
+        services.AddScoped<LaContent>();
         services.AddScoped<LearningAgreementService>();
         services.AddScoped<LearningAgreementWorkflow>();
         services.AddScoped<LaVersionService>();
         services.AddScoped<LaTransferService>();
 
         // Completion (recognition, mapping scheme)
+        services.AddScoped<ResultsGuard>();
         services.AddScoped<RecognitionService>();
         services.AddScoped<MappingSchemeService>();
 

@@ -33,18 +33,16 @@ public class LearningAgreementController(
     public async Task<IActionResult> UpdateStatus(Guid exchangeGuid, [FromBody] UpdateLearningAgreementStatusRequest request, CancellationToken ct) =>
         Match(await workflow.SetStatusAsync(exchangeGuid, request, ct), Ok);
 
-    [HttpGet("history")]
-    public async Task<IActionResult> GetHistory(Guid exchangeGuid, CancellationToken ct) =>
-        Match(await versions.GetApprovalHistoryAsync(exchangeGuid, ct), Ok);
+    [HttpGet("versions")]
+    public async Task<IActionResult> GetVersions(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await versions.ListAsync(exchangeGuid, ct), Ok);
 
-    [HttpGet("snapshots")]
-    public async Task<IActionResult> GetSnapshots(Guid exchangeGuid, CancellationToken ct) =>
-        Match(await versions.ListSnapshotsAsync(exchangeGuid, ct), Ok);
+    /// <summary>Loads a version (approval or backup) into the draft; the status never changes.</summary>
+    [HttpPost("versions/{versionId:int}/restore")]
+    public async Task<IActionResult> Restore(Guid exchangeGuid, int versionId, CancellationToken ct) =>
+        Match(await versions.RestoreAsync(exchangeGuid, versionId, ct), Ok);
 
-    [HttpPost("snapshots/{snapshotId:int}/restore")]
-    public async Task<IActionResult> RestoreSnapshot(Guid exchangeGuid, int snapshotId, CancellationToken ct) =>
-        Match(await versions.RestoreAsync(exchangeGuid, snapshotId, ct), _ => NoContent());
-
+    /// <summary>"Export for import": JSON that another exchange (or this one) can import.</summary>
     [HttpGet("export")]
     public async Task<IActionResult> Export(Guid exchangeGuid, CancellationToken ct) =>
         Match(await transfer.ExportAsync(exchangeGuid, ct), export => File(
@@ -52,7 +50,13 @@ public class LearningAgreementController(
             "application/json",
             $"la-export-{DateTime.UtcNow:yyyy-MM-dd}.json"));
 
+    /// <summary>What importing the file would change. Nothing is saved.</summary>
+    [HttpPost("import/preview")]
+    public async Task<IActionResult> PreviewImport(Guid exchangeGuid, [FromBody] MappingExportDto file, CancellationToken ct) =>
+        Match(await transfer.PreviewAsync(exchangeGuid, file, ct), Ok);
+
+    /// <summary>Replaces the draft with the file (after the same checks as the preview), keeping a backup.</summary>
     [HttpPost("import")]
     public async Task<IActionResult> Import(Guid exchangeGuid, [FromBody] MappingExportDto file, CancellationToken ct) =>
-        Match(await transfer.ImportAsync(exchangeGuid, file, ct), Ok);
+        Match(await transfer.ApplyAsync(exchangeGuid, file, ct), Ok);
 }

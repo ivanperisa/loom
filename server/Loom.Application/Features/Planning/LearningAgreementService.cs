@@ -1,6 +1,7 @@
 using ErrorOr;
 using Loom.Application.Common;
 using Loom.Application.Common.Security;
+using Loom.Application.Features.Documents;
 using Loom.Application.Interfaces;
 using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Loom.Application.Features.Planning;
 
 /// <summary>Reading and editing the learning agreement (slot ↔ partner course mapping) while it is a draft.</summary>
-public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LaEntryWriter writer)
+public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LaEntryWriter writer, VersionStore versions)
 {
     public async Task<ErrorOr<LearningAgreementResponse>> GetAsync(Guid exchangeGuid, CancellationToken ct)
     {
@@ -23,21 +24,20 @@ public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess ac
         if (context.IsError) return context.Errors;
         var exchange = context.Value;
 
-        var status = await db.LearningAgreements.Where(l => l.ExchangeId == exchange.ExchangeId).Select(l => (DocumentStatus?)l.Status).FirstOrDefaultAsync(ct);
-        if (status is not null and not DocumentStatus.Draft) return PlanningErrors.Locked;
-
+        var editable = await writer.CheckEditableAsync(exchange.ExchangeId, ct);
+        if (editable.IsError) return editable.Errors;
         var valid = await writer.ValidateAsync(request, exchange, ct);
         if (valid.IsError) return valid.Errors;
 
         var learningAgreement = await writer.GetOrCreateAsync(exchange.ExchangeId, ct);
-        var replaced = await writer.ReplaceEntriesAsync(learningAgreement.Id, request, ct);
-        if (replaced.IsError) return replaced.Errors;
-
+        await writer.ApplyAsync(learningAgreement.Id, request, ct);
         learningAgreement.LastModifiedById = actor.UserId;
+        learningAgreement.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         return await BuildResponseAsync(exchange, ct);
     }
 
+    /// <summary>Notes stay editable in every state (they are feedback, not content).</summary>
     public async Task<ErrorOr<LearningAgreementResponse>> UpdateMessageAsync(Guid exchangeGuid, string? message, CancellationToken ct)
     {
         var context = await access.LoadAsync(exchangeGuid, ct);
@@ -68,29 +68,27 @@ public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess ac
             .Include(l => l.Entries).ThenInclude(e => e.PartnerCourse)
             .Include(l => l.LastModifiedByUser)
             .Include(l => l.SignedByUser)
+            .Include(l => l.ConcludedByUser)
             .FirstOrDefaultAsync(l => l.ExchangeId == exchange.ExchangeId, ct);
 
-        var approvals = (await db.ExchangeSnapshots
-                .AsNoTracking()
-                .Where(s => s.ExchangeId == exchange.ExchangeId && s.Phase == SnapshotPhase.LearningAgreement && s.Type == SnapshotType.Auto)
-                .OrderBy(s => s.CreatedAt)
-                .ToListAsync(ct))
-            .Select(LaSnapshots.Read)
-            .OfType<LaSnapshotData>()
-            .ToList();
-
-        var active = learningAgreement?.Entries.Select(e => e.ToResponse()).ToList() ?? [];
+        var entries = learningAgreement?.Entries
+            .OrderBy(e => e.HomeSlotId).ThenBy(e => e.Id)
+            .Select(e => e.ToResponse())
+            .ToList() ?? [];
 
         return new LearningAgreementResponse(
             exchange.ExchangeId,
             (learningAgreement?.Status ?? DocumentStatus.Draft).ToString(),
             learningAgreement?.Message,
             slots.Select(s => s.ToResponse()).ToList(),
-            AmendmentHistory.Apply(active, approvals),
+            entries,
             learningAgreement?.UpdatedAt,
             learningAgreement?.LastModifiedByUser?.Name,
             learningAgreement?.SignedAt,
             learningAgreement?.SignedByUser?.Name,
-            approvals.Count);
+            await versions.ApprovedCountAsync(exchange.ExchangeId, DocumentKind.LearningAgreement, ct),
+            learningAgreement?.IsConcluded ?? false,
+            learningAgreement?.ConcludedAt,
+            learningAgreement?.ConcludedByUser?.Name);
     }
 }

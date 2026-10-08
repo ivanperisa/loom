@@ -10,5 +10,9 @@ public record LearningAgreementResponse(
     string? LastModifiedByName,
     DateTime? SignedAt,
     string? SignedByName,
-    int SignedCount
-);
+    /// <summary>Number of approved versions (1 = original only, 2 = up to A1, …).</summary>
+    int SignedCount,
+    /// <summary>"Start final recognition" was pressed: the LA and table 1 can never change again.</summary>
+    bool IsConcluded,
+    DateTime? ConcludedAt,
+    string? ConcludedByName);

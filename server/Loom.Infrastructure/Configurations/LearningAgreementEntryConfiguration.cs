@@ -19,6 +19,8 @@ public class LearningAgreementEntryConfiguration : IEntityTypeConfiguration<Lear
         builder.Property(x => x.PartnerCourseId).HasColumnName("partner_course_id");
         builder.Property(x => x.AwardedEcts).HasColumnName("awarded_ects").HasPrecision(4, 1);
         builder.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false).IsRequired();
+        builder.Property(x => x.AddedInVersion).HasColumnName("added_in_version");
+        builder.Property(x => x.RemovedInVersion).HasColumnName("removed_in_version");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
 
         builder.HasOne(x => x.LearningAgreement)

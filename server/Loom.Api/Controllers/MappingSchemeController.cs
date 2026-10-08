@@ -13,9 +13,9 @@ public class MappingSchemeController(MappingSchemeService mappingSchemes) : ApiC
 {
     [HttpGet]
     public async Task<IActionResult> Get(Guid exchangeGuid, CancellationToken ct) =>
-        Match(await mappingSchemes.GetMappingSchemeAsync(exchangeGuid, ct), Ok);
+        Match(await mappingSchemes.GetAsync(exchangeGuid, ct), Ok);
 
     [HttpPut("entries")]
     public async Task<IActionResult> Save(Guid exchangeGuid, [FromBody] SaveMappingSchemeRequest request, CancellationToken ct) =>
-        Match(await mappingSchemes.SaveMappingSchemeAsync(exchangeGuid, request, ct), Ok);
+        Match(await mappingSchemes.SaveAsync(exchangeGuid, request, ct), Ok);
 }

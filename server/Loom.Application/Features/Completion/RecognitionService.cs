@@ -1,8 +1,9 @@
-using Loom.Application.Features.Catalog;
-using System.Text.Json;
 using ErrorOr;
 using Loom.Application.Common;
 using Loom.Application.Common.Security;
+using Loom.Application.Features.Catalog;
+using Loom.Application.Features.Documents;
+using Loom.Application.Features.Planning;
 using Loom.Application.Interfaces;
 using Loom.Domain.Entities;
 using Loom.Domain.Enums;
@@ -10,356 +11,293 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Loom.Application.Features.Completion;
 
-public sealed class RecognitionService(IAppDbContext db, MappingSchemeService mappingSchemeService, ExchangeAccess access, ICurrentActor actor)
+/// <summary>
+/// Recognition after the exchange. "Start final recognition" freezes the LA and table 1 and creates the results
+/// (table 2 + mapping scheme) from the latest approved LA version. From then on only the results change: grades here,
+/// placement in the mapping scheme. The coordinator approves the results; each approval with changes is a version.
+/// </summary>
+public sealed class RecognitionService(
+    IAppDbContext db, ExchangeAccess access, ICurrentActor actor, ResultsGuard guard, VersionStore versions)
 {
-    private IQueryable<Recognition> RecognitionsWithIncludes() => db.Recognitions
-        .Include(r => r.Entries)
-            .ThenInclude(e => e.LearningAgreementEntry)
-                .ThenInclude(e => e.PartnerCourse)
-        .Include(r => r.Entries)
-            .ThenInclude(e => e.LearningAgreementEntry)
-                .ThenInclude(e => e.HomeSlot)
-                    .ThenInclude(s => s.SlotType)
-        .Include(r => r.Entries)
-            .ThenInclude(e => e.LearningAgreementEntry)
-                .ThenInclude(e => e.HomeSlot)
-                    .ThenInclude(s => s.Course)
-        .Include(r => r.Entries)
-            .ThenInclude(e => e.LearningAgreementEntry)
-                .ThenInclude(e => e.HomeSlot)
-                    .ThenInclude(s => s.CourseGroup)
-        .Include(r => r.Entries)
-            .ThenInclude(e => e.RecognizedAsCourse)
-        .Include(r => r.LastModifiedByUser)
-        .Include(r => r.SignedByUser);
+    public async Task<ErrorOr<RecognitionResponse>> GetAsync(Guid exchangeGuid, CancellationToken ct)
+    {
+        var context = await access.LoadAsync(exchangeGuid, ct);
+        if (context.IsError) return context.Errors;
+        return await BuildResponseAsync(context.Value.ExchangeId, ct);
+    }
 
-    public async Task<ErrorOr<RecognitionResponse>> GetOrCreateRecognitionAsync(Guid exchangeGuid, CancellationToken ct = default)
+    /// <summary>
+    /// Anyone who can edit the exchange may start it, once the LA is approved. It cannot be undone: the LA and table 1
+    /// are frozen for good, and the results start as a copy of the latest approved LA version.
+    /// </summary>
+    public async Task<ErrorOr<RecognitionResponse>> StartAsync(Guid exchangeGuid, CancellationToken ct)
     {
         var context = await access.LoadAsync(exchangeGuid, ct);
         if (context.IsError) return context.Errors;
         var exchangeId = context.Value.ExchangeId;
 
-        var recognition = await RecognitionsWithIncludes()
-            .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
+        var learningAgreement = await db.LearningAgreements.FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
+        if (learningAgreement?.IsConcluded == true) return CompletionErrors.AlreadyStarted;
+        if (learningAgreement is not { Status: DocumentStatus.Approved }) return CompletionErrors.LaNotApproved;
+        var agreed = await versions.LatestApprovedAsync(exchangeId, DocumentKind.LearningAgreement, ct);
+        if (agreed is null || VersionStore.Deserialize<LaVersionPayload>(agreed) is not { } payload) return CompletionErrors.LaNotApproved;
 
+        learningAgreement.ConcludedAt = DateTime.UtcNow;
+        learningAgreement.ConcludedById = actor.UserId;
+
+        var recognition = await db.Recognitions.FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null)
         {
-            recognition = new Recognition
-            {
-                ExchangeId = exchangeId,
-                Status = DocumentStatus.Draft
-            };
+            recognition = new Recognition { ExchangeId = exchangeId, Status = DocumentStatus.Draft };
             db.Recognitions.Add(recognition);
-            await db.SaveChangesAsync(ct);
-            recognition.Entries = new List<RecognitionEntry>();
         }
+        recognition.LastModifiedById = actor.UserId;
 
-        var existingEntryIds = recognition.Entries.Select(e => e.LearningAgreementEntryId).ToHashSet();
-        var allEntryIds = await db.LearningAgreementEntries
-            .AsNoTracking()
-            .Where(e => e.LearningAgreement.ExchangeId == exchangeId && e.PartnerCourseId != null)
-            .Select(e => e.Id)
-            .ToListAsync(ct);
-
-        var missingIds = allEntryIds.Where(id => !existingEntryIds.Contains(id)).ToList();
-        if (missingIds.Count > 0)
+        // Exchanges from before this step existed may already have results; keep them.
+        if (!await db.MappingSchemeEntries.AnyAsync(e => e.ExchangeId == exchangeId, ct))
         {
-            var newEntries = missingIds.Select(id => new RecognitionEntry
+            var courseIds = payload.Entries.Where(e => e.PartnerCourseId.HasValue).Select(e => e.PartnerCourseId!.Value).ToList();
+            var existing = await db.PartnerCourses.Where(c => courseIds.Contains(c.Id)).Select(c => c.Id).ToHashSetAsync(ct);
+            foreach (var entry in payload.Entries.Where(e => e.PartnerCourseId is int id && existing.Contains(id)))
             {
-                RecognitionId = recognition.Id,
-                LearningAgreementEntryId = id,
-            }).ToList();
-            db.RecognitionEntries.AddRange(newEntries);
-            await db.SaveChangesAsync(ct);
-
-            recognition = await RecognitionsWithIncludes()
-                .FirstAsync(r => r.ExchangeId == exchangeId, ct);
+                db.MappingSchemeEntries.Add(new MappingSchemeEntry
+                {
+                    ExchangeId = exchangeId,
+                    HomeSlotId = entry.HomeSlotId,
+                    PartnerCourseId = entry.PartnerCourseId,
+                    AwardedEcts = entry.AwardedEcts,
+                });
+            }
         }
 
-        var response = recognition.ToResponse();
-        return await OverlayMappingGradesAsync(exchangeId, response, ct);
+        await db.SaveChangesAsync(ct);
+        return await BuildResponseAsync(exchangeId, ct);
     }
 
-    private async Task<RecognitionResponse> OverlayMappingGradesAsync(int exchangeId, RecognitionResponse response, CancellationToken ct)
-    {
-        var byCode = await GetMappingGradesByCodeAsync(exchangeId, ct);
-        if (byCode.Count == 0) return response;
-
-        var entries = response.Entries.Select(e =>
-            byCode.TryGetValue(e.PartnerCourseCode, out var ms)
-                ? e with
-                {
-                    EnrollmentStatus = ms.EnrollmentStatus?.ToString(),
-                    OriginalGrade = ms.OriginalGrade,
-                    EctsGrade = ms.EctsGrade,
-                    HrGrade = ms.HrGrade,
-                    ExamDate = ms.ExamDate,
-                }
-                : e
-        ).ToList();
-
-        return response with { Entries = entries };
-    }
-
-    private async Task<Dictionary<string, MappingSchemeEntry>> GetMappingGradesByCodeAsync(int exchangeId, CancellationToken ct)
-    {
-        var msEntries = await db.MappingSchemeEntries
-            .AsNoTracking()
-            .Include(e => e.PartnerCourse)
-            .Where(e => e.ExchangeId == exchangeId && e.PartnerCourseId != null)
-            .ToListAsync(ct);
-
-        return msEntries
-            .Where(e => e.PartnerCourse != null)
-            .GroupBy(e => e.PartnerCourse!.Code)
-            .ToDictionary(g => g.Key, g => g.First());
-    }
-
-    private static bool HasGrade(UpsertRecognitionEntryRequest e) =>
-        !string.IsNullOrWhiteSpace(e.EnrollmentStatus)
-        || !string.IsNullOrWhiteSpace(e.OriginalGrade)
-        || !string.IsNullOrWhiteSpace(e.EctsGrade)
-        || !string.IsNullOrWhiteSpace(e.HrGrade)
-        || e.ExamDate is not null;
-
-    public async Task<ErrorOr<RecognitionResponse>> SaveRecognitionAsync(Guid exchangeGuid, SaveRecognitionRequest request, CancellationToken ct = default)
+    /// <summary>Table 2. Grades belong to a partner course, so they apply to every slot the course is placed in.</summary>
+    public async Task<ErrorOr<RecognitionResponse>> SaveGradesAsync(Guid exchangeGuid, SaveGradesRequest request, CancellationToken ct)
     {
         var context = await access.LoadAsync(exchangeGuid, ct);
         if (context.IsError) return context.Errors;
         var exchangeId = context.Value.ExchangeId;
-        var requester = await db.Users.FindAsync([actor.UserId], ct);
 
-        var recognition = await RecognitionsWithIncludes()
-            .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
-        if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Create recognition first.");
-        if (recognition.Status != DocumentStatus.Draft)
-            return Error.Conflict("RECOGNITION_LOCKED", "Recognition cannot be modified in current status.");
+        var recognition = await guard.EditableAsync(exchangeId, ct);
+        if (recognition.IsError) return recognition.Errors;
 
-        var entryIds = request.Entries.Select(e => e.LearningAgreementEntryId).Distinct().ToList();
-        var entries = await db.LearningAgreementEntries
-            .Where(e => entryIds.Contains(e.Id) && e.LearningAgreement.ExchangeId == exchangeId)
-            .ToListAsync(ct);
-        if (entries.Count != entryIds.Count) return Error.NotFound("ENTRY_NOT_FOUND", "Some learning agreement entries were not found.");
-
-        recognition.UpdatedAt = DateTime.UtcNow;
-        recognition.LastModifiedById = actor.UserId;
-        recognition.LastModifiedByUser = requester;
-
-        var mappingExists = await db.MappingSchemeEntries.AnyAsync(e => e.ExchangeId == exchangeId, ct);
-
-        if (mappingExists)
+        var entries = await db.MappingSchemeEntries.Where(e => e.ExchangeId == exchangeId).ToListAsync(ct);
+        foreach (var grades in request.Entries)
         {
-            await ApplyGradesToMappingSchemeAsync(exchangeId, request, entries, ct);
-            await db.SaveChangesAsync(ct);
-        }
-        else
-        {
-            foreach (var entryReq in request.Entries)
-            {
-                var existing = recognition.Entries.FirstOrDefault(e => e.LearningAgreementEntryId == entryReq.LearningAgreementEntryId);
-                if (existing is null)
-                {
-                    db.RecognitionEntries.Add(new RecognitionEntry
-                    {
-                        RecognitionId = recognition.Id,
-                        LearningAgreementEntryId = entryReq.LearningAgreementEntryId,
-                        EnrollmentStatus = entryReq.EnrollmentStatus,
-                        OriginalGrade = entryReq.OriginalGrade,
-                        EctsGrade = entryReq.EctsGrade,
-                        HrGrade = entryReq.HrGrade,
-                        ExamDate = entryReq.ExamDate
-                    });
-                }
-                else
-                {
-                    existing.EnrollmentStatus = entryReq.EnrollmentStatus;
-                    existing.OriginalGrade = entryReq.OriginalGrade;
-                    existing.EctsGrade = entryReq.EctsGrade;
-                    existing.HrGrade = entryReq.HrGrade;
-                    existing.ExamDate = entryReq.ExamDate;
-                }
-            }
+            if (!TryParseStatus(grades.EnrollmentStatus, out var status)) return CompletionErrors.InvalidEnrollmentStatus(grades.EnrollmentStatus);
+            var valid = ValidateGrades(grades.OriginalGrade, grades.EctsGrade, grades.HrGrade);
+            if (valid.IsError) return valid.Errors;
 
-            await db.SaveChangesAsync(ct);
-
-            if (request.Entries.Any(HasGrade))
+            var forCourse = entries.Where(e => e.PartnerCourseId == grades.PartnerCourseId).ToList();
+            if (forCourse.Count == 0) return CompletionErrors.CourseNotInScheme(grades.PartnerCourseId);
+            foreach (var entry in forCourse)
             {
-                await mappingSchemeService.EnsureMappingSchemeInitializedAsync(exchangeId, ct);
-                await ApplyGradesToMappingSchemeAsync(exchangeId, request, entries, ct);
+                entry.EnrollmentStatus = status;
+                entry.OriginalGrade = grades.OriginalGrade.NullIfBlank();
+                entry.EctsGrade = grades.EctsGrade.NullIfBlank();
+                entry.HrGrade = grades.HrGrade.NullIfBlank();
+                entry.ExamDate = grades.ExamDate;
             }
         }
 
-        return await GetOrCreateRecognitionAsync(exchangeGuid, ct);
-    }
-
-    private async Task ApplyGradesToMappingSchemeAsync(int exchangeId, SaveRecognitionRequest request, List<LearningAgreementEntry> laEntries, CancellationToken ct)
-    {
-        var laById = laEntries.ToDictionary(e => e.Id);
-        var gradesByPartner = new Dictionary<int, UpsertRecognitionEntryRequest>();
-        foreach (var r in request.Entries)
-            if (laById.TryGetValue(r.LearningAgreementEntryId, out var la) && la.PartnerCourseId is int pcId)
-                gradesByPartner[pcId] = r;
-
-        if (gradesByPartner.Count == 0) return;
-
-        var msEntries = await db.MappingSchemeEntries.Where(e => e.ExchangeId == exchangeId).ToListAsync(ct);
-        foreach (var ms in msEntries)
-            if (ms.PartnerCourseId is int pid && gradesByPartner.TryGetValue(pid, out var g))
-            {
-                ms.EnrollmentStatus = MappingSchemeService.ParseStatus(g.EnrollmentStatus);
-                ms.OriginalGrade = g.OriginalGrade;
-                ms.EctsGrade = g.EctsGrade;
-                ms.HrGrade = g.HrGrade;
-                ms.ExamDate = g.ExamDate;
-            }
-
+        recognition.Value.LastModifiedById = actor.UserId;
+        recognition.Value.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+        return await BuildResponseAsync(exchangeId, ct);
     }
 
-    public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionStatusAsync(Guid exchangeGuid, UpdateRecognitionStatusRequest request, CancellationToken ct = default)
+    /// <summary>The assigned coordinator approves the results (a new version when something changed) or reopens them.</summary>
+    public async Task<ErrorOr<RecognitionResponse>> SetStatusAsync(Guid exchangeGuid, UpdateRecognitionStatusRequest request, CancellationToken ct)
     {
-        var idResult = await access.ResolveIdAsync(exchangeGuid, ct);
-        if (idResult.IsError) return idResult.Errors;
-        var exchangeId = idResult.Value;
+        if (!Enum.TryParse<DocumentStatus>(request.Status, out var status) || !Enum.IsDefined(status)) return CompletionErrors.InvalidStatus;
 
-        if (!Enum.TryParse<DocumentStatus>(request.Status, out var newStatus)
-            || newStatus is not (DocumentStatus.Draft or DocumentStatus.Approved))
-            return Error.Validation("INVALID_STATUS", "Invalid recognition status.");
+        var context = await access.LoadAsync(exchangeGuid, ct);
+        if (context.IsError) return context.Errors;
+        if (!context.Value.IsAssignedCoordinator || actor.IsGuest) return CompletionErrors.NotAssignedCoordinator;
+        var exchangeId = context.Value.ExchangeId;
 
-        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+        if (!await db.LearningAgreements.AnyAsync(l => l.ExchangeId == exchangeId && l.ConcludedAt != null, ct)) return CompletionErrors.NotStarted;
+        var recognition = await db.Recognitions.FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
+        if (recognition is null) return CompletionErrors.NotStarted;
+        if (recognition.Status == status) return CompletionErrors.StatusUnchanged(status);
 
-        var requester = await db.Users.FindAsync([actor.UserId], ct);
-        if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
-
-        if (!requester.IsCoordinatorFor(exchange.CoordinatorId))
-            return Error.Forbidden("FORBIDDEN", "Only the assigned coordinator can change the recognition status.");
-
-        var recognition = await RecognitionsWithIncludes()
-            .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
-        if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
-
-        if (recognition.Status == newStatus)
-            return Error.Conflict("STATUS_UNCHANGED", $"Recognition is already {newStatus}.");
-
-        recognition.Status = newStatus;
-        recognition.UpdatedAt = DateTime.UtcNow;
+        recognition.Status = status;
         recognition.LastModifiedById = actor.UserId;
-        recognition.LastModifiedByUser = requester;
-
-        if (newStatus == DocumentStatus.Approved)
+        recognition.UpdatedAt = DateTime.UtcNow;
+        if (status == DocumentStatus.Approved)
         {
             recognition.SignedAt = DateTime.UtcNow;
             recognition.SignedById = actor.UserId;
-            recognition.SignedByUser = requester;
+            await RecordVersionAsync(exchangeId, ct);
         }
-        else if (newStatus == DocumentStatus.Draft)
+        else
         {
             recognition.SignedAt = null;
             recognition.SignedById = null;
-            recognition.SignedByUser = null;
-        }
-
-        if (newStatus == DocumentStatus.Approved)
-        {
-            var recWithEntries = await RecognitionsWithIncludes()
-                .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
-
-            var byCode = await GetMappingGradesByCodeAsync(exchangeId, ct);
-
-            var snapshotData = new RecognitionSnapshotData(
-                recWithEntries?.Entries.Select(e =>
-                {
-                    var code = e.LearningAgreementEntry.PartnerCourse?.Code;
-                    var ms = code is not null && byCode.TryGetValue(code, out var m) ? m : null;
-                    return new RecognitionSnapshotEntry(
-                        e.LearningAgreementEntry.HomeSlot.Course?.Name
-                            ?? e.LearningAgreementEntry.HomeSlot.CourseGroup?.Name
-                            ?? $"Slot {e.LearningAgreementEntry.HomeSlotId}",
-                        code,
-                        e.LearningAgreementEntry.PartnerCourse?.Name,
-                        ms?.EnrollmentStatus?.ToString() ?? e.EnrollmentStatus,
-                        ms?.OriginalGrade ?? e.OriginalGrade,
-                        ms?.EctsGrade ?? e.EctsGrade,
-                        ms?.HrGrade ?? e.HrGrade,
-                        ms?.ExamDate ?? e.ExamDate,
-                        ms?.IsRecognized ?? e.IsRecognized,
-                        e.RecognizedAsCourse?.Name
-                    );
-                }).ToList() ?? []);
-
-            db.ExchangeSnapshots.Add(new ExchangeSnapshot
-            {
-                ExchangeId = exchangeId,
-                ChangedById = actor.UserId,
-                Phase = SnapshotPhase.Recognition,
-                Type = SnapshotType.Auto,
-                Snapshot = JsonSerializer.Serialize(snapshotData, JsonHelper.DefaultOptions),
-            });
         }
 
         await db.SaveChangesAsync(ct);
-        return recognition.ToResponse();
+        return await BuildResponseAsync(exchangeId, ct);
     }
 
-    public async Task<ErrorOr<RecognitionResponse>> UpdateRecognitionMessageAsync(Guid exchangeGuid, string? message, CancellationToken ct = default)
+    /// <summary>Notes work before final recognition too, so the header is created on demand.</summary>
+    public async Task<ErrorOr<RecognitionResponse>> UpdateMessageAsync(Guid exchangeGuid, string? message, CancellationToken ct)
     {
         var context = await access.LoadAsync(exchangeGuid, ct);
         if (context.IsError) return context.Errors;
         var exchangeId = context.Value.ExchangeId;
-        var requester = await db.Users.FindAsync([actor.UserId], ct);
 
         var recognition = await db.Recognitions.FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
-        if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
-
-        recognition.Message = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
-        recognition.UpdatedAt = DateTime.UtcNow;
+        if (recognition is null)
+        {
+            recognition = new Recognition { ExchangeId = exchangeId, Status = DocumentStatus.Draft };
+            db.Recognitions.Add(recognition);
+        }
+        recognition.Message = message.NullIfBlank();
         recognition.LastModifiedById = actor.UserId;
-        recognition.LastModifiedByUser = requester;
+        recognition.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
-
-        return await GetOrCreateRecognitionAsync(exchangeGuid, ct);
+        return await BuildResponseAsync(exchangeId, ct);
     }
 
-    public async Task<ErrorOr<List<RecognitionSnapshotSummary>>> GetRecognitionHistoryAsync(Guid exchangeGuid, CancellationToken ct = default)
+    public async Task<ErrorOr<List<DocumentVersionResponse>>> ListVersionsAsync(Guid exchangeGuid, CancellationToken ct)
     {
         var context = await access.LoadAsync(exchangeGuid, ct);
         if (context.IsError) return context.Errors;
-        var exchangeId = context.Value.ExchangeId;
 
-        var snapshots = await db.ExchangeSnapshots
+        var all = await db.DocumentVersions
             .AsNoTracking()
-            .Include(s => s.ChangedBy)
-            .Where(s => s.ExchangeId == exchangeId && s.Phase == SnapshotPhase.Recognition && s.Type == SnapshotType.Auto)
-            .OrderBy(s => s.CreatedAt)
+            .Include(v => v.CreatedBy)
+            .Where(v => v.ExchangeId == context.Value.ExchangeId && v.Document == DocumentKind.Recognition)
+            .OrderBy(v => v.VersionNo).ThenBy(v => v.CreatedAt)
             .ToListAsync(ct);
 
-        var result = new List<RecognitionSnapshotSummary>();
-        RecognitionSnapshotData? previous = null;
-
-        foreach (var snapshot in snapshots)
+        var result = new List<DocumentVersionResponse>();
+        var previous = new RecognitionVersionPayload([]);
+        foreach (var version in all)
         {
-            var data = JsonSerializer.Deserialize<RecognitionSnapshotData>(snapshot.Snapshot, JsonHelper.DefaultOptions);
-            if (data is null) continue;
-
-            var diff = previous is not null ? ComputeRecognitionDiff(data, previous) : null;
-            result.Add(new RecognitionSnapshotSummary(snapshot.Id, snapshot.CreatedAt, snapshot.ChangedBy.Name, data.Entries.Count, diff));
-            previous = data;
+            // Versions carried over from the old snapshots stored labels only; they are listed without a diff.
+            var payload = version.SchemaVersion >= 1 ? VersionStore.Deserialize<RecognitionVersionPayload>(version) : null;
+            var changes = payload is null ? null : DocumentDiff.Compare(CompletionMappers.DiffRows(previous), CompletionMappers.DiffRows(payload));
+            if (payload is not null) previous = payload;
+            result.Add(new DocumentVersionResponse(
+                version.Id, version.Kind.ToString(), version.VersionNo, null, version.CreatedAt, version.CreatedBy?.Name,
+                payload?.Entries.Count ?? 0, changes));
         }
-
         result.Reverse();
         return result;
     }
 
-    private static RecognitionSnapshotDiff ComputeRecognitionDiff(RecognitionSnapshotData current, RecognitionSnapshotData previous)
+    private async Task RecordVersionAsync(int exchangeId, CancellationToken ct)
     {
-        static string Key(RecognitionSnapshotEntry e) => $"{e.HomeSlotLabel}|{e.PartnerCourseCode}";
+        var entries = await db.MappingSchemeEntries
+            .AsNoTracking()
+            .Include(e => e.PartnerCourse)
+            .Include(e => e.HomeSlot).ThenInclude(s => s.Course)
+            .Include(e => e.HomeSlot).ThenInclude(s => s.CourseGroup)
+            .Where(e => e.ExchangeId == exchangeId)
+            .OrderBy(e => e.HomeSlotId).ThenBy(e => e.Id)
+            .ToListAsync(ct);
+        var payload = new RecognitionVersionPayload(entries.Select(e => e.ToVersionEntry()).ToList());
+        var hash = CompletionMappers.Hash(payload);
 
-        var prevByKey = previous.Entries.ToDictionary(Key);
-        var currByKey = current.Entries.ToDictionary(Key);
+        var latest = await versions.LatestApprovedAsync(exchangeId, DocumentKind.Recognition, ct);
+        if (latest?.ContentHash == hash) return;
+        versions.AddApproved(exchangeId, DocumentKind.Recognition, (latest?.VersionNo ?? 0) + 1, VersionStore.Serialize(payload), hash, actor.UserId);
+    }
 
-        var added = currByKey.Where(kv => !prevByKey.ContainsKey(kv.Key)).Select(kv => kv.Value).ToList();
-        var removed = prevByKey.Where(kv => !currByKey.ContainsKey(kv.Key)).Select(kv => kv.Value).ToList();
-        return new RecognitionSnapshotDiff(added, removed, []);
+    private async Task<RecognitionResponse> BuildResponseAsync(int exchangeId, CancellationToken ct)
+    {
+        var learningAgreement = await db.LearningAgreements
+            .AsNoTracking()
+            .Include(l => l.ConcludedByUser)
+            .FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
+        var recognition = await db.Recognitions
+            .AsNoTracking()
+            .Include(r => r.LastModifiedByUser)
+            .Include(r => r.SignedByUser)
+            .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
+        var agreed = await versions.LatestApprovedAsync(exchangeId, DocumentKind.LearningAgreement, ct);
+        var isStarted = learningAgreement?.IsConcluded ?? false;
+
+        return new RecognitionResponse(
+            exchangeId,
+            (recognition?.Status ?? DocumentStatus.Draft).ToString(),
+            recognition?.Message,
+            isStarted,
+            learningAgreement?.ConcludedAt,
+            learningAgreement?.ConcludedByUser?.Name,
+            CanStart: !isStarted && learningAgreement?.Status == DocumentStatus.Approved && agreed is not null,
+            agreed?.VersionNo,
+            agreed is null ? [] : await AgreedEntriesAsync(agreed, ct),
+            recognition?.UpdatedAt,
+            recognition?.LastModifiedByUser?.Name,
+            recognition?.SignedAt,
+            recognition?.SignedByUser?.Name,
+            await versions.ApprovedCountAsync(exchangeId, DocumentKind.Recognition, ct));
+    }
+
+    /// <summary>Table 1: the approved LA version's courses, with today's slot and course details (falling back to the stored copy).</summary>
+    private async Task<List<AgreedEntryResponse>> AgreedEntriesAsync(DocumentVersion agreed, CancellationToken ct)
+    {
+        var payload = VersionStore.Deserialize<LaVersionPayload>(agreed);
+        if (payload is null) return [];
+        var rows = payload.Entries.Where(e => e.PartnerCourseId.HasValue).ToList();
+
+        var slotIds = rows.Select(e => e.HomeSlotId).Distinct().ToList();
+        var slots = await db.HomeSlots.AsNoTracking()
+            .Include(s => s.SlotType).Include(s => s.Course).Include(s => s.CourseGroup)
+            .Where(s => slotIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, ct);
+        var courseIds = rows.Select(e => e.PartnerCourseId!.Value).Distinct().ToList();
+        var courses = await db.PartnerCourses.AsNoTracking().Where(c => courseIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, ct);
+
+        return rows
+            .Where(e => slots.ContainsKey(e.HomeSlotId))
+            .Select(e =>
+            {
+                var slot = slots[e.HomeSlotId];
+                var course = courses.GetValueOrDefault(e.PartnerCourseId!.Value);
+                return new AgreedEntryResponse(
+                    $"{e.HomeSlotId}-{e.PartnerCourseId}",
+                    e.HomeSlotId,
+                    e.PartnerCourseId!.Value,
+                    course?.Code ?? e.PartnerCourseCode ?? string.Empty,
+                    course?.Name ?? e.PartnerCourseName ?? string.Empty,
+                    course?.NameHr ?? e.PartnerCourseNameHr,
+                    course?.Url ?? e.PartnerCourseUrl,
+                    course?.Hours(),
+                    course?.Ects ?? 0,
+                    slot.Course?.IsvuCode,
+                    slot.Course?.Name ?? string.Empty,
+                    slot.CourseGroup?.IsvuCode,
+                    slot.CourseGroup?.Name ?? string.Empty,
+                    slot.SlotType.Color,
+                    slot.Semester,
+                    e.AwardedEcts ?? 0);
+            })
+            .ToList();
+    }
+
+    /// <summary>Blank means "no status yet"; anything else must be Passed or NotPassed.</summary>
+    public static bool TryParseStatus(string? value, out EnrollmentStatus? status)
+    {
+        status = null;
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        if (!Enum.TryParse<EnrollmentStatus>(value, out var parsed) || !Enum.IsDefined(parsed)) return false;
+        status = parsed;
+        return true;
+    }
+
+    /// <summary>Column limits: original grade 20, ECTS grade 5, Croatian grade 10 characters.</summary>
+    public static ErrorOr<Success> ValidateGrades(string? original, string? ects, string? hr)
+    {
+        if (original?.Trim().Length > 20) return CompletionErrors.GradeTooLong("Original grade", 20);
+        if (ects?.Trim().Length > 5) return CompletionErrors.GradeTooLong("ECTS grade", 5);
+        if (hr?.Trim().Length > 10) return CompletionErrors.GradeTooLong("Croatian grade", 10);
+        return Result.Success;
     }
 }

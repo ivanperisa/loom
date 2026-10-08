@@ -17,5 +17,4 @@ public class Recognition : AuditableEntity
     public User? SignedByUser { get; set; }
     public DateTime? SignedAt { get; set; }
 
-    public ICollection<RecognitionEntry> Entries { get; set; } = null!;
 }

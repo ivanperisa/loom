@@ -1,7 +1,7 @@
 namespace Loom.Domain.Enums;
 
-public enum SnapshotPhase
+public enum DocumentKind
 {
     LearningAgreement,
-    Recognition 
+    Recognition
 }
