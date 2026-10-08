@@ -117,7 +117,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         var (exchange, _) = accessCheck.Value;
 
         var la = await db.LearningAgreements.FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
-        if (la is not null && (la.Status is DocumentStatus.Approved or DocumentStatus.Submitted))
+        if (la is not null && la.Status != DocumentStatus.Draft)
             return Error.Conflict("LA_LOCKED", "Learning agreement cannot be modified in current status.");
 
         var validationError = ValidateEntryRequest(request);
@@ -154,7 +154,8 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        if (!Enum.TryParse<DocumentStatus>(request.Status, out var newStatus))
+        if (!Enum.TryParse<DocumentStatus>(request.Status, out var newStatus)
+            || newStatus is not (DocumentStatus.Draft or DocumentStatus.Approved))
             return Error.Validation("INVALID_STATUS", "Invalid status.");
 
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
@@ -163,19 +164,16 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        var isStudent = exchange.StudentId == requesterId;
         var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.CoordinatorId);
 
-        if (!isStudent && !isCoordinatorOrAdmin)
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        if (!isCoordinatorOrAdmin)
+            return Error.Forbidden("FORBIDDEN", "Only the assigned coordinator can change the learning agreement status.");
 
         var la = await db.LearningAgreements.FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
         if (la is null) return Error.NotFound("LA_NOT_FOUND", "Learning agreement not found.");
 
-        if (isStudent && newStatus != DocumentStatus.Submitted && newStatus != DocumentStatus.Draft)
-            return Error.Forbidden("FORBIDDEN", "Students can only submit or revert to draft.");
-        if (isStudent && newStatus == DocumentStatus.Draft && la.Status == DocumentStatus.Approved)
-            return Error.Forbidden("FORBIDDEN", "Cannot revert an approved learning agreement to draft.");
+        if (la.Status == newStatus)
+            return Error.Conflict("STATUS_UNCHANGED", $"Learning agreement is already {newStatus}.");
 
         la.Status = newStatus;
         la.UpdatedAt = DateTime.UtcNow;
@@ -346,6 +344,8 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         var la = await db.LearningAgreements
             .Include(la => la.Entries)
             .FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+        if (la is not null && la.Status != DocumentStatus.Draft)
+            return Error.Conflict("LA_LOCKED", "Learning agreement cannot be modified in current status.");
 
         var entriesWithRecognition = la is not null
             ? (await db.RecognitionEntries
@@ -392,24 +392,20 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
 
         if (applyList.Count > 0)
         {
-            await SavePreImportSnapshotAsync(exchangeId, requesterId, ct);
-
             var saveRequest = new SaveLearningAgreementRequest(applyList.Select(a =>
                 new LearningAgreementEntryUpsertDto(a.entry.HomeSlotId, a.entry.Mode, a.resolvedCourseId, a.entry.AwardedEcts)
             ).ToList());
 
+            var validationError = ValidateEntryRequest(saveRequest);
+            if (validationError is not null) return validationError.Value.Errors;
+            var ectsError = await ValidatePartnerCourseEctsAsync(saveRequest, ct);
+            if (ectsError is not null) return ectsError.Value.Errors;
+
+            await SavePreImportSnapshotAsync(exchangeId, requesterId, ct);
+
             var laEntity = await GetOrCreateLearningAgreementAsync(exchangeId, ct);
             var upsertResult = await UpsertEntriesAsync(laEntity.Id, saveRequest, ct);
             if (upsertResult.IsError) return upsertResult.Errors;
-
-            if (la?.Status is DocumentStatus.Approved or DocumentStatus.Submitted)
-            {
-                var laRecord = await db.LearningAgreements.FirstAsync(l => l.ExchangeId == exchangeId, ct);
-                laRecord.Status = DocumentStatus.Draft;
-                laRecord.UpdatedAt = DateTime.UtcNow;
-                laRecord.SignedAt = null;
-                laRecord.SignedById = null;
-            }
 
             laEntity.LastModifiedById = requesterId;
             laEntity.UpdatedAt = DateTime.UtcNow;
@@ -497,37 +493,56 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
         var data = JsonSerializer.Deserialize<LaSnapshotData>(snapshot.Snapshot, JsonHelper.DefaultOptions);
         if (data is null) return Error.Validation("INVALID_SNAPSHOT", "Snapshot data is corrupted.");
 
-        await SavePreImportSnapshotAsync(exchangeId, requesterId, ct);
+        var exchange = accessCheck.Value.Exchange;
 
-        var exchange = await db.Exchanges.FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
-        if (exchange is null) return Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.");
+        var currentLa = await db.LearningAgreements.FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
+        if (currentLa is not null && currentLa.Status != DocumentStatus.Draft)
+            return Error.Conflict("LA_LOCKED", "Learning agreement cannot be modified in current status.");
 
-        var filteredCoursesForInstitution = await db.PartnerCourses
+        var profileSlotIds = await db.HomeSlots
             .AsNoTracking()
-            .Where(pc => pc.InstitutionId == exchange.PartnerInstitutionId)
-            .ToDictionaryAsync(pc => pc.Code, StringComparer.OrdinalIgnoreCase, ct);
+            .Where(s => s.ProfileId == exchange.HomeProfileId)
+            .Select(s => s.Id)
+            .ToHashSetAsync(ct);
 
-        var saveRequest = new SaveLearningAgreementRequest(data.Entries.Select(e =>
+        var institutionCourses = await db.PartnerCourses
+            .AsNoTracking()
+            .Where(pc => pc.InstitutionId == exchange.PartnerInstitutionId && !pc.IsDeleted)
+            .Select(pc => new { pc.Id, pc.Code })
+            .ToListAsync(ct);
+        var courseIds = institutionCourses.Select(pc => pc.Id).ToHashSet();
+        var courseIdByCode = institutionCourses
+            .GroupBy(pc => pc.Code, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Id, StringComparer.OrdinalIgnoreCase);
+
+        // Only restore entries that still fit this exchange: slot in the profile, course from the partner institution.
+        var restorable = new List<LearningAgreementEntryUpsertDto>();
+        foreach (var e in data.Entries.Where(e => profileSlotIds.Contains(e.HomeSlotId)))
         {
             int? courseId = null;
-            if (e.PartnerCourseId.HasValue && filteredCoursesForInstitution.TryGetValue(e.PartnerCourseCode ?? "", out var pc))
-                courseId = pc.Id;
-            else if (e.PartnerCourseId.HasValue)
-                courseId = e.PartnerCourseId;
+            if (e.PartnerCourseId is int id)
+            {
+                if (courseIds.Contains(id)) courseId = id;
+                else if (e.PartnerCourseCode is not null && courseIdByCode.TryGetValue(e.PartnerCourseCode, out var byCode)) courseId = byCode;
+                else continue;
+            }
+            restorable.Add(new LearningAgreementEntryUpsertDto(e.HomeSlotId, e.Mode, courseId, e.AwardedEcts));
+        }
+        var saveRequest = new SaveLearningAgreementRequest(restorable);
 
-            return new LearningAgreementEntryUpsertDto(e.HomeSlotId, e.Mode, courseId, e.AwardedEcts);
-        }).ToList());
+        var validationError = ValidateEntryRequest(saveRequest);
+        if (validationError is not null) return validationError.Value.Errors;
+        var ectsError = await ValidatePartnerCourseEctsAsync(saveRequest, ct);
+        if (ectsError is not null) return ectsError.Value.Errors;
+
+        await SavePreImportSnapshotAsync(exchangeId, requesterId, ct);
 
         var laEntity = await GetOrCreateLearningAgreementAsync(exchangeId, ct);
         var upsertResult = await UpsertEntriesAsync(laEntity.Id, saveRequest, ct);
         if (upsertResult.IsError) return upsertResult.Errors;
 
-        var la = await db.LearningAgreements.FirstAsync(l => l.ExchangeId == exchangeId, ct);
-        la.Status = DocumentStatus.Draft;
-        la.UpdatedAt = DateTime.UtcNow;
-        la.LastModifiedById = requesterId;
-        la.SignedAt = null;
-        la.SignedById = null;
+        laEntity.UpdatedAt = DateTime.UtcNow;
+        laEntity.LastModifiedById = requesterId;
 
         await db.SaveChangesAsync(ct);
         return Result.Updated;

@@ -51,6 +51,11 @@ public class MappingSchemeService(IAppDbContext db) : IMappingSchemeService
         if (accessResult.IsError) return accessResult.Errors;
         var exchangeId = accessResult.Value;
 
+        var recognitionApproved = await db.Recognitions
+            .AnyAsync(r => r.ExchangeId == exchangeId && r.Status == DocumentStatus.Approved, ct);
+        if (recognitionApproved)
+            return Error.Conflict("RECOGNITION_LOCKED", "Mapping scheme cannot be modified after the recognition is approved.");
+
         var entries = await db.MappingSchemeEntries
             .Where(e => e.ExchangeId == exchangeId)
             .ToListAsync(ct);

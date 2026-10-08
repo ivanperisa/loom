@@ -139,9 +139,13 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Create recognition first.");
+        if (recognition.Status != DocumentStatus.Draft)
+            return Error.Conflict("RECOGNITION_LOCKED", "Recognition cannot be modified in current status.");
 
-        var entryIds = request.Entries.Select(e => e.LearningAgreementEntryId).ToList();
-        var entries = await db.LearningAgreementEntries.Where(e => entryIds.Contains(e.Id)).ToListAsync(ct);
+        var entryIds = request.Entries.Select(e => e.LearningAgreementEntryId).Distinct().ToList();
+        var entries = await db.LearningAgreementEntries
+            .Where(e => entryIds.Contains(e.Id) && e.LearningAgreement.ExchangeId == exchangeId)
+            .ToListAsync(ct);
         if (entries.Count != entryIds.Count) return Error.NotFound("ENTRY_NOT_FOUND", "Some learning agreement entries were not found.");
 
         recognition.UpdatedAt = DateTime.UtcNow;
@@ -225,7 +229,8 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         if (idResult.IsError) return idResult.Errors;
         var exchangeId = idResult.Value;
 
-        if (!Enum.TryParse<DocumentStatus>(request.Status, out var newStatus))
+        if (!Enum.TryParse<DocumentStatus>(request.Status, out var newStatus)
+            || newStatus is not (DocumentStatus.Draft or DocumentStatus.Approved))
             return Error.Validation("INVALID_STATUS", "Invalid recognition status.");
 
         var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Id == exchangeId, ct);
@@ -234,20 +239,15 @@ public class RecognitionService(IAppDbContext db, IMappingSchemeService mappingS
         var requester = await db.Users.FindAsync([requesterId], ct);
         if (requester is null) return Error.NotFound("USER_NOT_FOUND", "User not found.");
 
-        var isStudent = exchange.StudentId == requesterId;
-        var isCoordinatorOrAdmin = requester.IsCoordinatorFor(exchange.CoordinatorId);
-
-        if (isStudent && newStatus != DocumentStatus.Submitted && newStatus != DocumentStatus.Draft)
-            return Error.Forbidden("FORBIDDEN", "Students can only submit or revert recognition to draft.");
-        if (!isStudent && !isCoordinatorOrAdmin)
-            return Error.Forbidden("ACCESS_DENIED", "Access denied.");
+        if (!requester.IsCoordinatorFor(exchange.CoordinatorId))
+            return Error.Forbidden("FORBIDDEN", "Only the assigned coordinator can change the recognition status.");
 
         var recognition = await RecognitionsWithIncludes()
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition is null) return Error.NotFound("RECOGNITION_NOT_FOUND", "Recognition not found.");
 
-        if (isStudent && newStatus == DocumentStatus.Draft && recognition.Status == DocumentStatus.Approved)
-            return Error.Forbidden("FORBIDDEN", "Cannot revert an approved recognition to draft.");
+        if (recognition.Status == newStatus)
+            return Error.Conflict("STATUS_UNCHANGED", $"Recognition is already {newStatus}.");
 
         recognition.Status = newStatus;
         recognition.UpdatedAt = DateTime.UtcNow;
