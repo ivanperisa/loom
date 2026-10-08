@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Loom.Api.Controllers;
 
-[Route("[controller]")]
+[Route("api/auth")]
 public class AuthController(
     FrontendUrls frontend,
     AccountService accounts,
@@ -30,7 +30,7 @@ public class AuthController(
         if (User.Identity?.IsAuthenticated == true)
         {
             return SignOut(
-            new AuthenticationProperties { RedirectUri = $"{Request.PathBase}/auth/login?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}"},
+            new AuthenticationProperties { RedirectUri = $"{Request.PathBase}/api/auth/login?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}"},
             CookieAuthenticationDefaults.AuthenticationScheme);
         }
 
@@ -40,14 +40,15 @@ public class AuthController(
         return Challenge(authProperties, AuthenticationSetup.GoogleScheme);
     }
 
+    /// <summary>Whether someone is signed in, and who. Always 200, so an anonymous visit is not an error.</summary>
     [AllowAnonymous]
-    [HttpGet("me")]
-    public async Task<IActionResult> Me(CancellationToken ct)
+    [HttpGet("session")]
+    public async Task<ActionResult<SessionResponse>> Session(CancellationToken ct)
     {
-        if (!actor.IsAuthenticated) return Ok(new { IsAuthenticated = false });
+        if (!actor.IsAuthenticated) return new SessionResponse(false, null);
 
         var result = await accounts.GetAsync(actor.UserId, ct);
-        return result.IsError ? Ok(new { IsAuthenticated = false }) : Ok(result.Value);
+        return result.IsError ? new SessionResponse(false, null) : new SessionResponse(true, result.Value);
     }
 
     [Authorize]

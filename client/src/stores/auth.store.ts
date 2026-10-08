@@ -2,7 +2,6 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { authService } from '@/services/auth.service'
 import { userService } from '@/services/user.service'
-import { api } from '@/services/api'
 import router from '@/router'
 import type { AuthMeResponse, UserRole } from '@/types/auth.types'
 import type { CompleteOnboardingRequest, UpdateProfileRequest } from '@/types/onboarding.types'
@@ -31,13 +30,12 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = true
       error.value = null
       try {
-        const response = await api.get<AuthMeResponse | { isAuthenticated: false }>('/auth/me')
-        const data = response.data
-        if ('isAuthenticated' in data && data.isAuthenticated === false) {
+        const { data } = await authService.session()
+        if (!data.isAuthenticated || !data.user) {
           reset()
           return
         }
-        user.value = data as AuthMeResponse
+        user.value = data.user
       } catch {
         reset()
       } finally {

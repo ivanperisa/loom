@@ -24,7 +24,7 @@ public static class AuthenticationSetup
         var authentication = builder.Services.AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                // API calls without a session get a 401, never a redirect to Google; /auth/login challenges Google itself.
+                // API calls without a session get a 401, never a redirect to Google; /api/auth/login challenges Google itself.
                 options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             })
             .AddCookie(options => ConfigureApiCookie(options, builder.Environment))

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Local development only (VITE_DEV_LOGIN=true): log in as any seeded persona without Google.
-// The API only exposes /auth/dev/* when DevAuth is enabled in the Development environment.
+// The API only exposes /api/auth/dev/* when DevAuth is enabled in the Development environment.
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
@@ -31,7 +31,7 @@ const visible = computed(() => {
 
 onMounted(async () => {
   try {
-    const res = await api.get<DevUser[]>('/auth/dev/users', { suppressErrorToast: true })
+    const res = await api.get<DevUser[]>('/api/auth/dev/users', { suppressErrorToast: true })
     users.value = res.data
   } catch {
     error.value = 'Dev login is not available (is DevAuth enabled on the API?).'
@@ -43,7 +43,7 @@ async function loginAs(email: string) {
   busy.value = true
   error.value = null
   try {
-    await api.post('/auth/dev/login', { email }, { suppressErrorToast: true })
+    await api.post('/api/auth/dev/login', { email }, { suppressErrorToast: true })
     await authStore.init(true)
     await router.push('/home')
   } catch {

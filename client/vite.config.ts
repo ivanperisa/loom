@@ -29,7 +29,6 @@ export default defineConfig(({ mode }) => {
       proxy: proxyTarget
         ? {
             '/api': proxyTarget,
-            '/auth': proxyTarget,
             '/signin-oidc': proxyTarget,
           }
         : undefined,

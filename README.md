@@ -58,7 +58,7 @@ docker compose up -d db && docker compose run --rm seed
 
 ## Dev login and personas
 
-The API exposes `POST /auth/dev/login` only when `ASPNETCORE_ENVIRONMENT=Development` **and** `DevAuth:Enabled=true`. The app refuses to start if DevAuth is enabled in any other environment. Dev login creates the same claims Google would, so user sync, roles and permissions behave as in production. Any email you type that isn't seeded behaves like a first Google login.
+The API exposes `POST /api/auth/dev/login` only when `ASPNETCORE_ENVIRONMENT=Development` **and** `DevAuth:Enabled=true`. The app refuses to start if DevAuth is enabled in any other environment. Dev login creates the same claims Google would, so user sync, roles and permissions behave as in production. Any email you type that isn't seeded behaves like a first Google login.
 
 All demo data is created through the real application services (`server/Loom.DevSeed/DemoData.cs`). Exchange GUIDs are fixed, so the links below survive a reset.
 

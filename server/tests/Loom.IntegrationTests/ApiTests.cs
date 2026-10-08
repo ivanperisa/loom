@@ -70,10 +70,25 @@ public class ApiTests(DatabaseFixture fixture) : HttpTest(fixture)
     }
 
     [Fact]
+    public async Task The_session_says_who_is_signed_in()
+    {
+        await using var factory = Factory();
+
+        var anonymous = await factory.CreateClient().GetFromJsonAsync<JsonElement>("/api/auth/session", Ct);
+        Assert.False(anonymous.GetProperty("isAuthenticated").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, anonymous.GetProperty("user").ValueKind);
+
+        var client = await LoggedIn(factory, "session.user@loom.dev");
+        var signedIn = await client.GetFromJsonAsync<JsonElement>("/api/auth/session", Ct);
+        Assert.True(signedIn.GetProperty("isAuthenticated").GetBoolean());
+        Assert.Equal("session.user@loom.dev", signedIn.GetProperty("user").GetProperty("email").GetString());
+    }
+
+    [Fact]
     public async Task Dev_login_does_not_exist_outside_development()
     {
         await using var factory = Factory("Production");
-        var response = await factory.CreateClient().PostAsJsonAsync("/auth/dev/login", new { email = "admin@loom.dev" }, Ct);
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/auth/dev/login", new { email = "admin@loom.dev" }, Ct);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

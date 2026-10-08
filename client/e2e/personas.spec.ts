@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 const exchangeUrl = (n: number) => `/exchange/00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 
 async function loginAs(page: Page, email: string) {
-  const response = await page.request.post('/auth/dev/login', { data: { email } })
+  const response = await page.request.post('/api/auth/dev/login', { data: { email } })
   expect(response.ok(), `dev login as ${email}`).toBeTruthy()
 }
 

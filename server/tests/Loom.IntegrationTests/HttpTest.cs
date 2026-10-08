@@ -28,7 +28,7 @@ public abstract class HttpTest(DatabaseFixture fixture) : IntegrationTest(fixtur
     protected static async Task<HttpClient> LoggedIn(WebApplicationFactory<Program> factory, string email)
     {
         var client = factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/auth/dev/login", new { email }, Ct);
+        var response = await client.PostAsJsonAsync("/api/auth/dev/login", new { email }, Ct);
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         return client;
     }

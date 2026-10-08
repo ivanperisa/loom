@@ -15,4 +15,9 @@ export interface AuthMeResponse {
   coordinatorRequestStatus: 'Pending' | 'Rejected' | null
 }
 
+export interface SessionResponse {
+  isAuthenticated: boolean
+  user: AuthMeResponse | null
+}
+
 export type UserRole = (typeof userRole)[keyof typeof userRole]

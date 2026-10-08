@@ -16,6 +16,9 @@ public record AuthMeResponse(
     string? CoordinatorName,
     CoordinatorRequestStatus? CoordinatorRequestStatus);
 
+/// <summary>Who is signed in. <see cref="User"/> is null when nobody is.</summary>
+public record SessionResponse(bool IsAuthenticated, AuthMeResponse? User);
+
 public record CompleteOnboardingRequest(int InstitutionId, string? Jmbag = null, bool RequestCoordinatorRole = false);
 
 public record UpdateProfileRequest(string Name, string? Jmbag, int InstitutionId, string? Mentor, int? CoordinatorId);
