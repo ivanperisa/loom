@@ -1,5 +1,8 @@
 using Loom.Application.Common.Security;
+using Loom.Application.Features.Admin;
 using Loom.Application.Features.Catalog;
+using Loom.Application.Features.Coordination;
+using Loom.Application.Features.Users;
 using Loom.Application.Helpers;
 using Loom.Application.Interfaces.Services;
 using Loom.Application.Services;
@@ -24,15 +27,19 @@ public static class DependencyInjection
         services.AddScoped<PartnerCourseService>();
         services.AddScoped<CourseMergeService>();
 
-        services.AddScoped<UserService>();
-        services.AddScoped<IUserService>(sp => sp.GetRequiredService<UserService>());
-        services.AddScoped<IUserSyncService>(sp => sp.GetRequiredService<UserService>());
+        // Users, admin, coordination
+        services.AddScoped<UserSyncService>();
+        services.AddScoped<AccountService>();
+        services.AddScoped<AdminUserService>();
+        services.AddScoped<CoordinatorRequestService>();
+        services.AddScoped<CoordinatorWhitelistService>();
+        services.AddScoped<CoordinatorDirectoryService>();
+        services.AddScoped<StudentService>();
+
         services.AddScoped<IExchangeService, ExchangeService>();
         services.AddScoped<ILearningAgreementService, LearningAgreementService>();
         services.AddScoped<IRecognitionService, RecognitionService>();
         services.AddScoped<IMappingSchemeService, MappingSchemeService>();
-        services.AddScoped<ICoordinatorService, CoordinatorService>();
-        services.AddScoped<IAdminService, AdminService>();
 
         return services;
     }

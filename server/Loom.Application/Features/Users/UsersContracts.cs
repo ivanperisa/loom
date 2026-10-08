@@ -1,0 +1,24 @@
+using Loom.Domain.Enums;
+
+namespace Loom.Application.Features.Users;
+
+public record AuthMeResponse(
+    int Id,
+    string Email,
+    string Name,
+    string? Jmbag,
+    string? Mentor,
+    string Role,
+    bool IsOnboarded,
+    int? InstitutionId,
+    string? InstitutionName,
+    int? CoordinatorId,
+    string? CoordinatorName,
+    CoordinatorRequestStatus? CoordinatorRequestStatus);
+
+public record CompleteOnboardingRequest(int InstitutionId, string? Jmbag = null, bool RequestCoordinatorRole = false);
+
+public record UpdateProfileRequest(string Name, string? Jmbag, int InstitutionId, string? Mentor, int? CoordinatorId);
+
+/// <summary>What the API needs about the signed-in user on every request.</summary>
+public record SyncedUser(int Id, UserRole Role);

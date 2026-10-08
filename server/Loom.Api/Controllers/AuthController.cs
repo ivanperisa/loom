@@ -1,5 +1,5 @@
 using Loom.Api.Extensions;
-using Loom.Application.Interfaces.Services;
+using Loom.Application.Features.Users;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +12,7 @@ namespace Loom.Api.Controllers;
 [Route("[controller]")]
 public class AuthController(
     IConfiguration configuration,
-    IUserService userService,
+    AccountService accounts,
     IAuthenticationSchemeProvider schemes) : ApiController
 {
     [AllowAnonymous]
@@ -49,7 +49,7 @@ public class AuthController(
             return Ok(new { IsAuthenticated = false });
         }
 
-        var result = await userService.GetCurrentUserAsync(userId.Value, ct);
+        var result = await accounts.GetAsync(userId.Value, ct);
         if (result.IsError)
         {
             return Ok(new { IsAuthenticated = false });

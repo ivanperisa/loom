@@ -15,6 +15,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             t.HasCheckConstraint("user_coordinator_request_status_check", "coordinator_request_status IN ('Pending', 'Rejected')");
         });
         builder.HasKey(x => x.Id);
+        builder.Ignore(x => x.IsPlaceholder);
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(x => x.ExternalId).HasColumnName("external_id").HasMaxLength(255).IsRequired();
         builder.Property(x => x.Email).HasColumnName("email").HasMaxLength(255).IsRequired();
@@ -30,7 +31,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.Mentor).HasColumnName("mentor").HasMaxLength(255);
         builder.Property(x => x.InstitutionId).HasColumnName("institution_id");
         builder.Property(x => x.CoordinatorId).HasColumnName("coordinator_id");
-        builder.Property(x => x.CoordinatorRequestStatus).HasColumnName("coordinator_request_status").HasMaxLength(20);
+        builder.Property(x => x.CoordinatorRequestStatus).HasColumnName("coordinator_request_status").HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()").IsRequired();
         // Exists in the database but is not used by the domain yet.
         builder.Property<DateTime>("UpdatedAt").HasColumnName("updated_at").HasDefaultValueSql("now()").IsRequired();

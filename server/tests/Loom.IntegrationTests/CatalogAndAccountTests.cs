@@ -1,5 +1,5 @@
 using Loom.Application.Features.Catalog;
-using Loom.Application.DTOs.Admin;
+using Loom.Application.Features.Admin;
 using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.Helpers;
 using Loom.Application.Interfaces.Services;
@@ -70,7 +70,7 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
         var cache = _fixture.Services.GetRequiredService<IMemoryCache>();
         cache.Set(UserSyncCache.Key(externalId), "stale");
 
-        await Ok<IAdminService, UserListResponse>(s => s.SetUserRoleAsync(admin, target, UserRole.Coordinator, Ct));
+        await Ok<AdminUserService, UserListResponse>(s => s.SetRoleAsync(target, UserRole.Coordinator, Ct), actor: admin);
 
         Assert.False(cache.TryGetValue(UserSyncCache.Key(externalId), out _));
     }

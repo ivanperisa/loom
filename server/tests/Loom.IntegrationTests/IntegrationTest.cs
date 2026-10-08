@@ -1,3 +1,4 @@
+using Loom.Application.Common.Security;
 using ErrorOr;
 using Loom.Application.DTOs.Exchange;
 using Loom.Application.DTOs.LearningAgreement;
@@ -18,16 +19,17 @@ public abstract class IntegrationTest(DatabaseFixture fixture)
     protected static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     /// <summary>Calls a service in its own DI scope (one "request").</summary>
-    protected async Task<ErrorOr<T>> Call<TService, T>(Func<TService, Task<ErrorOr<T>>> call) where TService : notnull
+    protected async Task<ErrorOr<T>> Call<TService, T>(Func<TService, Task<ErrorOr<T>>> call, int? actor = null) where TService : notnull
     {
         await using var scope = fixture.Services.CreateAsyncScope();
+        if (actor is not null) scope.ServiceProvider.GetRequiredService<CurrentActor>().Set(actor.Value);
         return await call(scope.ServiceProvider.GetRequiredService<TService>());
     }
 
     /// <summary>Like <see cref="Call{TService,T}"/> but fails the test on an error result.</summary>
-    protected async Task<T> Ok<TService, T>(Func<TService, Task<ErrorOr<T>>> call) where TService : notnull
+    protected async Task<T> Ok<TService, T>(Func<TService, Task<ErrorOr<T>>> call, int? actor = null) where TService : notnull
     {
-        var result = await Call(call);
+        var result = await Call(call, actor);
         Assert.False(result.IsError, result.IsError ? $"{result.FirstError.Code}: {result.FirstError.Description}" : null);
         return result.Value;
     }

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Loom.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +23,8 @@ public interface IAppDbContext
     DbSet<MappingSchemeEntry> MappingSchemeEntries { get; }
     DbSet<ExchangeSnapshot> ExchangeSnapshots { get; }
     DbSet<CoordinatorWhitelist> CoordinatorWhitelist { get; }
+
+    DatabaseFacade Database { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

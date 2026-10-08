@@ -3,7 +3,10 @@ using Loom.Application.DTOs.Exchange;
 using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.DTOs.MappingScheme;
 using Loom.Application.DTOs.Recognition;
-using Loom.Application.DTOs.User;
+using Loom.Application.Features.Admin;
+using Loom.Application.Features.Coordination;
+using Loom.Application.Features.Users;
+using Loom.Application.Common.Security;
 using Loom.Application.Interfaces.Services;
 using Loom.Domain.Entities;
 using Loom.Domain.Enums;
@@ -150,19 +153,18 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         await Onboard(_adminId, jmbag: null);
 
         // Coordinators get their role through the whitelist, as in production.
-        await Call<IAdminService, Application.DTOs.Admin.CoordinatorWhitelistEntryResponse>(s => s.AddToCoordinatorWhitelistAsync(_adminId, "ana.coordinator@loom.dev"));
-        await Call<IAdminService, Application.DTOs.Admin.CoordinatorWhitelistEntryResponse>(s => s.AddToCoordinatorWhitelistAsync(_adminId, "ivo.coordinator@loom.dev"));
-        await Call<IAdminService, Application.DTOs.Admin.CoordinatorWhitelistEntryResponse>(s => s.AddToCoordinatorWhitelistAsync(_adminId, "new.coordinator@loom.dev"));
+        foreach (var email in new[] { "ana.coordinator@loom.dev", "ivo.coordinator@loom.dev", "new.coordinator@loom.dev" })
+            await Call<CoordinatorWhitelistService, CoordinatorWhitelistEntryResponse>(s => s.AddAsync(email, default), actor: _adminId);
         _ana = await CreateUser("ana.coordinator@loom.dev", "Ana Anić");
         _ivo = await CreateUser("ivo.coordinator@loom.dev", "Ivo Ivić");
         await Onboard(_ana, null);
         await Onboard(_ivo, null);
 
         var pending = await CreateUser("req.pending@loom.dev", "Petar Pending");
-        await Call<IUserService, Application.DTOs.Auth.AuthMeResponse>(s => s.CompleteOnboardingAsync(pending, new CompleteOnboardingRequest(HomeInstitutionId, RequestCoordinatorRole: true)));
+        await Call<AccountService, AuthMeResponse>(s => s.CompleteOnboardingAsync(new CompleteOnboardingRequest(HomeInstitutionId, RequestCoordinatorRole: true), default), actor: pending);
         var rejected = await CreateUser("req.rejected@loom.dev", "Rita Rejected");
-        await Call<IUserService, Application.DTOs.Auth.AuthMeResponse>(s => s.CompleteOnboardingAsync(rejected, new CompleteOnboardingRequest(HomeInstitutionId, RequestCoordinatorRole: true)));
-        await Call<IAdminService, Application.DTOs.Auth.AuthMeResponse>(s => s.RejectCoordinatorRequestAsync(_adminId, rejected));
+        await Call<AccountService, AuthMeResponse>(s => s.CompleteOnboardingAsync(new CompleteOnboardingRequest(HomeInstitutionId, RequestCoordinatorRole: true), default), actor: rejected);
+        await Call<CoordinatorRequestService, AuthMeResponse>(s => s.RejectAsync(rejected, default), actor: _adminId);
 
         await CreateUser("fresh.student@loom.dev", "Filip Fresh");   // not onboarded
         await CreateUser("claim.student@loom.dev", "Klara Claim");   // not onboarded, claims a placeholder
@@ -319,12 +321,12 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
 
     private async Task<int> CreateUser(string email, string name)
     {
-        var user = await Call<IUserSyncService, User>(s => s.SyncUserAsync($"dev:{email}", email, name));
+        var user = await Call<UserSyncService, SyncedUser>(s => s.SyncAsync($"dev:{email}", email, name, default));
         return user.Id;
     }
 
     private Task Onboard(int userId, string? jmbag) =>
-        Call<IUserService, Application.DTOs.Auth.AuthMeResponse>(s => s.CompleteOnboardingAsync(userId, new CompleteOnboardingRequest(HomeInstitutionId, jmbag)));
+        Call<AccountService, AuthMeResponse>(s => s.CompleteOnboardingAsync(new CompleteOnboardingRequest(HomeInstitutionId, jmbag), default), actor: userId);
 
     private async Task<int> Student(string email, string name, string jmbag)
     {
@@ -335,8 +337,8 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
 
     private async Task<int> Placeholder(string name, string jmbag)
     {
-        var created = await Call<ICoordinatorService, Application.DTOs.Coordinator.CoordinatorStudentResponse>(s =>
-            s.CreatePlaceholderStudentAsync(_ana, new Application.DTOs.Coordinator.CreatePlaceholderStudentRequest(name, jmbag, HomeInstitutionId)));
+        var created = await Call<StudentService, CoordinatorStudentResponse>(s =>
+            s.CreatePlaceholderAsync(new PlaceholderStudentRequest(name, jmbag, HomeInstitutionId), default), actor: _ana);
         return created.Id;
     }
 
@@ -371,9 +373,10 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
             s.UpdateLearningAgreementStatusAsync(exchange, _ana, new UpdateLearningAgreementStatusRequest(status.ToString())));
 
     /// <summary>One DI scope per call, like one HTTP request. Any error stops the seed.</summary>
-    private async Task<T> Call<TService, T>(Func<TService, Task<ErrorOr<T>>> call) where TService : notnull
+    private async Task<T> Call<TService, T>(Func<TService, Task<ErrorOr<T>>> call, int? actor = null) where TService : notnull
     {
         await using var scope = services.CreateAsyncScope();
+        if (actor is not null) scope.ServiceProvider.GetRequiredService<CurrentActor>().Set(actor.Value);
         var result = await call(scope.ServiceProvider.GetRequiredService<TService>());
         if (result.IsError)
             throw new InvalidOperationException($"Seed step failed: {result.FirstError.Code} - {result.FirstError.Description}");

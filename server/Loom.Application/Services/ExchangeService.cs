@@ -1,3 +1,4 @@
+using Loom.Application.Features.Users;
 using Loom.Application.Features.Catalog;
 using ErrorOr;
 using Loom.Application.DTOs.Exchange;
@@ -114,7 +115,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         if (request.CoordinatorId.HasValue)
         {
-            var setCoordinator = await db.SetStudentCoordinatorAsync(student, request.CoordinatorId.Value, ct);
+            var setCoordinator = await db.AssignCoordinatorAsync(student, request.CoordinatorId.Value, ct);
             if (setCoordinator.IsError) return setCoordinator.Errors;
         }
 
@@ -219,7 +220,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
 
         if (allowCoordinatorChange)
         {
-            var setCoordinator = await db.SetStudentCoordinatorAsync(student, request.CoordinatorId, ct);
+            var setCoordinator = await db.AssignCoordinatorAsync(student, request.CoordinatorId, ct);
             if (setCoordinator.IsError) return setCoordinator.Errors;
         }
 
