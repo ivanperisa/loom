@@ -5,6 +5,9 @@ import { useI18n } from 'vue-i18n'
 import { authService } from '@/services/auth.service'
 import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import DevLoginPanel from '@/components/dev/DevLoginPanel.vue'
+
+const devLogin = import.meta.env.VITE_DEV_LOGIN === 'true'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -99,6 +102,8 @@ function openAccess() {
             </div>
             <p v-if="accessError" class="mt-2 text-xs text-red-400">{{ t('landing.accessUidError') }}</p>
           </form>
+
+          <DevLoginPanel v-if="devLogin" />
         </article>
       </section>
 
