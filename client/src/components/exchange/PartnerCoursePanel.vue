@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { institutionService } from '@/services/institution.service'
+import { exchangeService } from '@/services/exchange.service'
 import { useExchangeStore } from '@/stores/exchange.store'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
@@ -10,7 +10,6 @@ import { useDebouncedRef } from '@/composables/useDebouncedRef'
 
 const props = withDefaults(
   defineProps<{
-    partnerInstitutionId: string
     exchangeId: string
     variant?: 'available' | 'mapped' | 'all'
   }>(),
@@ -43,8 +42,8 @@ async function submitAddCourse(payload: {
   addingCourse.value = true
   addError.value = null
   try {
-    await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
-    await exchangeStore.fetchPartnerCourses(props.partnerInstitutionId, true)
+    await exchangeService.createPartnerCourse(props.exchangeId, payload)
+    await exchangeStore.fetchPartnerCourses(props.exchangeId, true)
     showAddForm.value = false
   } catch {
     addError.value = t('partnerCourses.saveError')
@@ -54,7 +53,7 @@ async function submitAddCourse(payload: {
 }
 
 watch(
-  () => props.partnerInstitutionId,
+  () => props.exchangeId,
   (id) => { if (id) exchangeStore.fetchPartnerCourses(id) },
   { immediate: true },
 )

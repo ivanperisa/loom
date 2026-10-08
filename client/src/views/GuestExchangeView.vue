@@ -11,7 +11,7 @@ const route = useRoute()
 const { t } = useI18n()
 const exchangeStore = useExchangeStore()
 
-const guid = route.params.guid as string
+const exchangeId = route.params.exchangeId as string
 
 exchangeStore.setGuestMode(true)
 onUnmounted(() => exchangeStore.setGuestMode(false))
@@ -39,7 +39,7 @@ onUnmounted(() => exchangeStore.setGuestMode(false))
 
     <section class="page-container page-container--wide">
       <p class="mb-4 text-center text-xs text-light/40">{{ t('exchangeAccess.readOnlyNotice') }}</p>
-      <ExchangeDetailPanel :exchange-id="guid" :allow-delete="false" />
+      <ExchangeDetailPanel :exchange-id="exchangeId" :allow-delete="false" />
     </section>
   </main>
 </template>

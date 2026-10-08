@@ -9,7 +9,7 @@ import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
 import type { ExchangeSummaryResponse } from '@/types/exchange.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { statusColorClass, statusDotClass } from '@/utils/statusColors'
-import { buildAccessLink } from '@/utils/accessLink'
+import { useCopyAccessLink } from '@/composables/useCopyAccessLink'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import StudentFormModal from '@/components/coordinator/StudentFormModal.vue'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
@@ -249,10 +249,11 @@ function viewExchange(exchangeGuid: string) {
   router.push(`/exchange/${exchangeGuid}`)
 }
 
+const { copyAccessLink: copyLink } = useCopyAccessLink()
+
 async function copyAccessLink(exchangeGuid: string) {
   closeMenu()
-  await navigator.clipboard.writeText(buildAccessLink(exchangeGuid))
-  notifySuccess(t('exchangeAccess.linkCopied'))
+  await copyLink(exchangeGuid)
 }
 
 function openAddModal() {

@@ -6,6 +6,7 @@ import { authService } from '@/services/auth.service'
 import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import DevLoginPanel from '@/components/dev/DevLoginPanel.vue'
+import { parseAccessToken } from '@/utils/accessLink'
 
 const devLogin = import.meta.env.VITE_DEV_LOGIN === 'true'
 
@@ -21,14 +22,13 @@ function login() {
 }
 
 function openAccess() {
-  const value = accessCode.value.trim()
-  const guidMatch = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
-  if (!guidMatch) {
+  const token = parseAccessToken(accessCode.value)
+  if (!token) {
     accessError.value = true
     return
   }
   accessError.value = false
-  router.push(`/access/${guidMatch[0]}`)
+  router.push(`/access/${token}`)
 }
 </script>
 

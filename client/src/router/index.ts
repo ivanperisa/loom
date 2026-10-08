@@ -10,8 +10,14 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
-      path: '/access/:guid',
-      component: () => import('@/views/ExchangeAccessView.vue'),
+      // Opens an access link; works signed in (claim) or not (guest session).
+      path: '/access/:token',
+      component: () => import('@/views/AccessLinkView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/guest/exchange/:exchangeId',
+      component: () => import('@/views/GuestExchangeView.vue'),
       meta: { requiresAuth: false }
     },
     {

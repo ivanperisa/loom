@@ -1,4 +1,5 @@
 import { api } from './api'
+import { exchangeService } from './exchange.service'
 import type { AxiosResponse } from 'axios'
 import type {
   InstitutionResponse,
@@ -6,6 +7,7 @@ import type {
   PartnerCourseResponse,
   PartnerInstitutionAdminResponse,
   PartnerCourseUsage,
+  PartnerCourseRequest,
 } from '@/types/institution.types'
 import type { PagedParams, PagedResponse } from '@/types/paged.types'
 
@@ -34,10 +36,10 @@ export const institutionService = {
   restorePartnerInstitution: (id: string) =>
     api.patch(`/api/institutions/partner/${id}/restore`),
 
-  createPartnerCourseByInstitution: (institutionId: string, data: { code: string; nameHr?: string; url?: string; name: string; ects: number; semester: string; level: string; lecturesH?: number; auditoryH?: number; labH?: number }) =>
+  createPartnerCourseByInstitution: (institutionId: string, data: PartnerCourseRequest) =>
     api.post<PartnerCourseResponse>(`/api/institutions/partner/${institutionId}/courses`, data),
 
-  updatePartnerCourse: (courseId: string, data: { code: string; nameHr?: string; url?: string; name: string; ects: number; semester: string; level: string; lecturesH?: number; auditoryH?: number; labH?: number }) =>
+  updatePartnerCourse: (courseId: string, data: PartnerCourseRequest) =>
     api.put<PartnerCourseResponse>(`/api/institutions/partner/courses/${courseId}`, data),
 
   deletePartnerCourse: (courseId: string) =>
@@ -88,18 +90,17 @@ export function getAllPartnerInstitutions(): Promise<PartnerInstitutionAdminResp
   return allPartnerInstitutions.promise
 }
 
-const partnerCoursesByInstitution = new Map<string, { at: number; promise: Promise<PartnerCourseResponse[]> }>()
+const partnerCoursesByExchange = new Map<string, { at: number; promise: Promise<PartnerCourseResponse[]> }>()
 
-export function getAllPartnerCourses(institutionId: string, force = false): Promise<PartnerCourseResponse[]> {
-  const cached = partnerCoursesByInstitution.get(institutionId)
+/** Every course of the exchange's partner institution (the server picks the institution from the exchange). */
+export function getAllPartnerCourses(exchangeGuid: string, force = false): Promise<PartnerCourseResponse[]> {
+  const cached = partnerCoursesByExchange.get(exchangeGuid)
   if (force || !cached || Date.now() - cached.at > DROPDOWN_TTL_MS) {
     const entry = {
       at: Date.now(),
-      promise: fetchAllPages((page) =>
-        institutionService.getPartnerCoursesByInstitution(institutionId, false, { page, pageSize: PAGE_SIZE }),
-      ),
+      promise: fetchAllPages((page) => exchangeService.getPartnerCourses(exchangeGuid, { page, pageSize: PAGE_SIZE })),
     }
-    partnerCoursesByInstitution.set(institutionId, entry)
+    partnerCoursesByExchange.set(exchangeGuid, entry)
     return entry.promise
   }
   return cached.promise

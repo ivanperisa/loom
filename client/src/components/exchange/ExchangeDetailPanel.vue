@@ -8,14 +8,12 @@ import MappingSchemePanel from '@/components/exchange/MappingSchemePanel.vue'
 import NotesModal from '@/components/exchange/NotesModal.vue'
 import EditExchangeModal from '@/components/exchange/EditExchangeModal.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import { exchangeService } from '@/services/exchange.service'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
 import { useAuthStore } from '@/stores/auth.store'
 import { useConfirm } from '@/composables/useConfirm'
 import { documentStatus } from '@/utils/documentStatus'
-import { buildAccessLink } from '@/utils/accessLink'
-import { useNotification } from '@/composables/useNotification'
+import { useCopyAccessLink } from '@/composables/useCopyAccessLink'
 
 const props = withDefaults(
   defineProps<{
@@ -32,7 +30,6 @@ const exchangeStore = useExchangeStore()
 const { isCoordinator } = useExchangePermissions()
 const authStore = useAuthStore()
 const { confirm } = useConfirm()
-const { notifySuccess, notifyWarning } = useNotification()
 
 const VALID_TABS = ['la', 'recognition', 'mappingScheme'] as const
 type ExchangeTab = (typeof VALID_TABS)[number]
@@ -41,10 +38,10 @@ const activeTab = ref<ExchangeTab>(
 )
 const deleting = ref(false)
 
+const accessLink = useCopyAccessLink()
+
 async function copyAccessLink() {
-  if (!exchangeStore.exchange) return
-  await navigator.clipboard.writeText(buildAccessLink(exchangeStore.exchange.guid))
-  notifySuccess(t('exchangeAccess.linkCopied'))
+  if (exchangeStore.exchange) await accessLink.copyAccessLink(exchangeStore.exchange.guid)
 }
 
 const regenerating = ref(false)
@@ -56,16 +53,8 @@ async function regenerateAccessLink() {
   if (!ok) return
   regenerating.value = true
   try {
-    const res = await exchangeService.regenerateAccessLink(props.exchangeId)
-    notifySuccess(t('exchangeAccess.regenerated'))
-    // The route is keyed by the old guid; move to the new one. Do this regardless of
-    // clipboard outcome, since the guid is already rotated server-side.
-    router.replace(`/exchange/${res.data.guid}`)
-    try {
-      await navigator.clipboard.writeText(buildAccessLink(res.data.guid))
-    } catch {
-      notifyWarning(t('exchangeAccess.copyFailed'))
-    }
+    // The exchange keeps its id; only the link's secret changes, so the page stays where it is.
+    await accessLink.regenerateAccessLink(ex.guid)
   } finally {
     regenerating.value = false
   }
@@ -108,6 +97,11 @@ function handleActionsMenuOutsideClick(e: MouseEvent) {
 }
 onMounted(() => document.addEventListener('click', handleActionsMenuOutsideClick))
 onUnmounted(() => document.removeEventListener('click', handleActionsMenuOutsideClick))
+
+// Only the coordinator hands out the link; guests and others would just get refused.
+const canManageAccessLink = computed(
+  () => !exchangeStore.guestMode && isCoordinator.value && !!exchangeStore.exchange?.studentIsPlaceholder,
+)
 
 const canDelete = computed(
   () =>
@@ -265,7 +259,7 @@ onMounted(async () => {
             + {{ t('exchange.ewpLink') }}
           </button>
           <button
-            v-if="exchangeStore.exchange.studentIsPlaceholder"
+            v-if="canManageAccessLink"
             type="button"
             class="inline-flex items-center gap-1.5 rounded-lg bg-primary-strong px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
             @click="copyAccessLink"
@@ -302,7 +296,7 @@ onMounted(async () => {
                 {{ t('common.edit') }}
               </button>
               <button
-                v-if="exchangeStore.exchange.studentIsPlaceholder"
+                v-if="canManageAccessLink"
                 type="button"
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-text transition hover:bg-primary/10 disabled:opacity-50"
                 :disabled="regenerating"

@@ -1,29 +1,35 @@
 import { api } from './api'
 import type {
+  AccessLinkResponse,
   CreateExchangeRequest,
   ExchangeResponse,
   ExchangeSummaryResponse,
   UpdateCoordinatorMessageRequest,
   UpdateExchangeRequest,
 } from '@/types/exchange.types'
+import type { PartnerCourseRequest, PartnerCourseResponse } from '@/types/institution.types'
+import type { PagedParams, PagedResponse } from '@/types/paged.types'
 
 export const exchangeService = {
   create: (request: CreateExchangeRequest) =>
     api.post<ExchangeResponse>('/api/exchanges', request),
-  update: (exchangeId: string, request: UpdateExchangeRequest, guest: boolean) =>
-    guest
-      ? api.put<ExchangeResponse>(`/api/exchanges/access/${exchangeId}`, request, { suppressErrorToast: true })
-      : api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}`, request, { suppressErrorToast: true }),
+  update: (exchangeId: string, request: UpdateExchangeRequest) =>
+    api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}`, request, { suppressErrorToast: true }),
   getById: (exchangeId: string) =>
     api.get<ExchangeResponse>(`/api/exchanges/${exchangeId}`),
-  getPublic: (exchangeGuid: string) =>
-    api.get<ExchangeResponse>(`/api/exchanges/access/${exchangeGuid}`),
   getMine: () =>
     api.get<ExchangeSummaryResponse[]>('/api/exchanges/mine'),
   deleteExchange: (exchangeId: string) =>
     api.delete(`/api/exchanges/${exchangeId}`),
   updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
     api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
+  /** The live access link of a placeholder student's exchange (created on first use). */
+  getAccessLink: (exchangeGuid: string) =>
+    api.post<AccessLinkResponse>(`/api/exchanges/${exchangeGuid}/access-link`),
   regenerateAccessLink: (exchangeGuid: string) =>
-    api.post<{ guid: string }>(`/api/exchanges/${exchangeGuid}/regenerate-access-link`),
+    api.post<AccessLinkResponse>(`/api/exchanges/${exchangeGuid}/access-link/regenerate`),
+  getPartnerCourses: (exchangeGuid: string, params: PagedParams = {}) =>
+    api.get<PagedResponse<PartnerCourseResponse>>(`/api/exchanges/${exchangeGuid}/partner-courses`, { params }),
+  createPartnerCourse: (exchangeGuid: string, data: PartnerCourseRequest) =>
+    api.post<PartnerCourseResponse>(`/api/exchanges/${exchangeGuid}/partner-courses`, data),
 }

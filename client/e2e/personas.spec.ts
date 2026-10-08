@@ -45,8 +45,22 @@ test("a student cannot open someone else's exchange", async ({ page }) => {
 })
 
 test('the access link opens the placeholder exchange without login', async ({ page }) => {
-  await page.goto('/access/00000000-0000-4000-8000-000000000013')
+  await page.goto('/access/dev-access-link-13')
+  // The token is swapped for a guest session and leaves the address bar.
+  await expect(page).toHaveURL(/\/guest\/exchange\/00000000-0000-4000-8000-000000000013$/)
   await expect(page.getByText('IN2064').first()).toBeVisible()
+})
+
+test('an unknown access link explains itself', async ({ page }) => {
+  await page.goto('/access/not-a-real-link-token')
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await expect(page).toHaveURL(/\/access\//)
+})
+
+test('a signed-in student is offered to claim the placeholder', async ({ page }) => {
+  await loginAs(page, 'claim.student@loom.dev')
+  await page.goto('/access/dev-access-link-14')
+  await expect(page.getByText('Klara Claim')).toBeVisible()
 })
 
 test('the admin panel lists users', async ({ page }) => {

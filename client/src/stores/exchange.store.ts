@@ -277,9 +277,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     loading.value = true
     error.value = null
     try {
-      const res = guestMode.value
-        ? await exchangeService.getPublic(exchangeId)
-        : await exchangeService.getById(exchangeId)
+      const res = await exchangeService.getById(exchangeId)
       exchange.value = res.data
     } catch {
       error.value = t('common.error')
@@ -306,7 +304,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await learningAgreementService.get(exchangeId, guestMode.value)
+      const res = await learningAgreementService.get(exchangeId)
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
       stagedPartnerCourseIds.value = loadStagedPartnerCourses(exchangeId)
@@ -342,7 +340,7 @@ export const useExchangeStore = defineStore('exchange', () => {
           }
         }
       }
-      const res = await learningAgreementService.save(exchangeId, { entries }, guestMode.value)
+      const res = await learningAgreementService.save(exchangeId, { entries })
       serverLearningAgreement.value = res.data
       localSlotStates.value = buildLocalFromServer(res.data)
       isDirty.value = false
@@ -369,7 +367,7 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchangeId: string,
     request: UpdateLearningAgreementStatusRequest,
   ) {
-    const res = await learningAgreementService.updateStatus(exchangeId, request, guestMode.value)
+    const res = await learningAgreementService.updateStatus(exchangeId, request)
     exchange.value = res.data
     await fetchLearningAgreement(exchangeId)
   }
@@ -383,18 +381,18 @@ export const useExchangeStore = defineStore('exchange', () => {
   }
 
   async function updateExchange(exchangeId: string, request: UpdateExchangeRequest) {
-    const res = await exchangeService.update(exchangeId, request, guestMode.value)
+    const res = await exchangeService.update(exchangeId, request)
     exchange.value = res.data
     return res.data
   }
 
   async function updateLaMessage(exchangeId: string, message: string | null) {
-    const res = await learningAgreementService.updateMessage(exchangeId, message, guestMode.value)
+    const res = await learningAgreementService.updateMessage(exchangeId, message)
     serverLearningAgreement.value = res.data
   }
 
   async function updateRecognitionMessage(exchangeId: string, message: string | null) {
-    const res = await recognitionService.updateMessage(exchangeId, message, guestMode.value)
+    const res = await recognitionService.updateMessage(exchangeId, message)
     serverRecognition.value = res.data
   }
 
@@ -402,29 +400,29 @@ export const useExchangeStore = defineStore('exchange', () => {
 
   async function fetchRecognition(exchangeId: string) {
     const [rec, ms] = await Promise.all([
-      recognitionService.getOrCreate(exchangeId, guestMode.value),
-      mappingSchemeService.get(exchangeId, guestMode.value),
+      recognitionService.getOrCreate(exchangeId),
+      mappingSchemeService.get(exchangeId),
     ])
     serverRecognition.value = rec.data
     serverMappingScheme.value = ms.data
   }
 
   async function saveRecognition(exchangeId: string, request: SaveRecognitionRequest) {
-    const res = await recognitionService.saveRecognition(exchangeId, request, guestMode.value)
+    const res = await recognitionService.saveRecognition(exchangeId, request)
     serverRecognition.value = res.data
-    const ms = await mappingSchemeService.get(exchangeId, guestMode.value)
+    const ms = await mappingSchemeService.get(exchangeId)
     serverMappingScheme.value = ms.data
   }
 
   async function fetchMappingScheme(exchangeId: string) {
-    const res = await mappingSchemeService.get(exchangeId, guestMode.value)
+    const res = await mappingSchemeService.get(exchangeId)
     serverMappingScheme.value = res.data
   }
 
   async function saveMappingScheme(exchangeId: string, request: SaveMappingSchemeRequest) {
-    const res = await mappingSchemeService.save(exchangeId, request, guestMode.value)
+    const res = await mappingSchemeService.save(exchangeId, request)
     serverMappingScheme.value = res.data
-    const rec = await recognitionService.getOrCreate(exchangeId, guestMode.value)
+    const rec = await recognitionService.getOrCreate(exchangeId)
     serverRecognition.value = rec.data
   }
 
@@ -432,12 +430,12 @@ export const useExchangeStore = defineStore('exchange', () => {
     exchangeId: string,
     request: UpdateRecognitionStatusRequest,
   ) {
-    const res = await recognitionService.updateRecognitionStatus(exchangeId, request, guestMode.value)
+    const res = await recognitionService.updateRecognitionStatus(exchangeId, request)
     serverRecognition.value = res.data
   }
 
   async function exportMappings(exchangeId: string): Promise<void> {
-    const res = await learningAgreementService.exportMappings(exchangeId, guestMode.value)
+    const res = await learningAgreementService.exportMappings(exchangeId)
     const url = URL.createObjectURL(new Blob([res.data], { type: 'application/json' }))
     const a = document.createElement('a')
     a.href = url
@@ -447,42 +445,42 @@ export const useExchangeStore = defineStore('exchange', () => {
   }
 
   async function importMappings(exchangeId: string, dto: MappingExportDto): Promise<MappingImportResult> {
-    const res = await learningAgreementService.importMappings(exchangeId, dto, guestMode.value)
+    const res = await learningAgreementService.importMappings(exchangeId, dto)
     await fetchLearningAgreement(exchangeId)
     return res.data
   }
 
   async function fetchLaHistory(exchangeId: string): Promise<LaSnapshotSummary[]> {
-    const res = await learningAgreementService.getHistory(exchangeId, guestMode.value)
+    const res = await learningAgreementService.getHistory(exchangeId)
     return res.data
   }
 
   async function fetchSnapshots(exchangeId: string): Promise<SnapshotListItem[]> {
-    const res = await learningAgreementService.getSnapshots(exchangeId, guestMode.value)
+    const res = await learningAgreementService.getSnapshots(exchangeId)
     return res.data
   }
 
   async function restoreSnapshot(exchangeId: string, snapshotId: number): Promise<void> {
-    await learningAgreementService.restoreSnapshot(exchangeId, snapshotId, guestMode.value)
+    await learningAgreementService.restoreSnapshot(exchangeId, snapshotId)
     await fetchLearningAgreement(exchangeId)
   }
 
-  async function fetchPartnerCourses(institutionId: string, force = false): Promise<void> {
-    if (!force && partnerCoursesRequestId === institutionId) return
-    partnerCoursesRequestId = institutionId
+  async function fetchPartnerCourses(exchangeId: string, force = false): Promise<void> {
+    if (!force && partnerCoursesRequestId === exchangeId) return
+    partnerCoursesRequestId = exchangeId
     partnerCoursesLoading.value = true
     try {
-      const items = await getAllPartnerCourses(institutionId, force)
-      if (partnerCoursesRequestId === institutionId) partnerCourses.value = items
+      const items = await getAllPartnerCourses(exchangeId, force)
+      if (partnerCoursesRequestId === exchangeId) partnerCourses.value = items
     } catch {
-      if (partnerCoursesRequestId === institutionId) partnerCourses.value = []
+      if (partnerCoursesRequestId === exchangeId) partnerCourses.value = []
     } finally {
-      if (partnerCoursesRequestId === institutionId) partnerCoursesLoading.value = false
+      if (partnerCoursesRequestId === exchangeId) partnerCoursesLoading.value = false
     }
   }
 
   async function fetchRecognitionHistory(exchangeId: string): Promise<RecognitionSnapshotSummary[]> {
-    const res = await recognitionService.getHistory(exchangeId, guestMode.value)
+    const res = await recognitionService.getHistory(exchangeId)
     return res.data
   }
 

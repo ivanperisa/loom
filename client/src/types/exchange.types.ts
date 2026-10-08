@@ -66,6 +66,22 @@ export interface ExchangeSummaryResponse {
   ewpLink: string | null
 }
 
+export interface AccessLinkResponse {
+  token: string
+  createdAt: string
+}
+
+export interface AccessLinkPreviewResponse {
+  exchangeGuid: string
+  studentName: string
+  partnerInstitutionName: string
+  academicYear: string
+  /** Already allowed in (the exchange's coordinator): go straight to it. */
+  hasAccess: boolean
+  /** A student account that can take the placeholder over. */
+  canClaim: boolean
+}
+
 export interface UpdateCoordinatorMessageRequest {
   message: string | null
 }

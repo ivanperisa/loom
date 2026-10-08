@@ -655,7 +655,6 @@ function cancelEditEcts() {
         </h3>
         <p class="mb-3 text-xs text-light/60">{{ t('partnerCourses.dragHint') }}</p>
         <PartnerCoursePanel
-          :partner-institution-id="exchangeStore.exchange.partnerInstitutionId"
           :exchange-id="exchangeId"
           variant="available"
         />
@@ -667,7 +666,6 @@ function cancelEditEcts() {
         </h3>
         <PartnerCoursePanel
           ref="mappedCoursesPanel"
-          :partner-institution-id="exchangeStore.exchange.partnerInstitutionId"
           :exchange-id="exchangeId"
           variant="mapped"
         />

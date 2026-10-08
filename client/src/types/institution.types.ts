@@ -48,6 +48,19 @@ export interface PartnerCourseResponse {
   isDeleted: boolean
 }
 
+export interface PartnerCourseRequest {
+  code: string
+  name: string
+  nameHr?: string
+  url?: string
+  ects: number
+  semester: string
+  level: string
+  lecturesH?: number
+  auditoryH?: number
+  labH?: number
+}
+
 export interface PartnerCourseUsageGroup {
   programName: string
   profileName: string

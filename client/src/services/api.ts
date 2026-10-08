@@ -3,6 +3,9 @@ import router from '@/router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useNotification } from '@/composables/useNotification'
 import { extractApiError } from '@/utils/apiError'
+import { i18n } from '@/i18n'
+
+let leavingGuestPage = false
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -23,8 +26,16 @@ api.interceptors.response.use(
     const status = error.response?.status
 
     if (status === 401) {
+      // A guest whose link was regenerated or claimed, or whose session expired.
+      const wasGuest = router.currentRoute.value.path.startsWith('/guest/')
       useAuthStore().reset()
-      router.push('/')
+      if (wasGuest && !leavingGuestPage) {
+        leavingGuestPage = true
+        useNotification().notifyError(i18n.global.t('exchangeAccess.sessionEnded'))
+        router.push('/').finally(() => (leavingGuestPage = false))
+      } else if (!wasGuest) {
+        router.push('/')
+      }
       return Promise.reject(error)
     }
 
