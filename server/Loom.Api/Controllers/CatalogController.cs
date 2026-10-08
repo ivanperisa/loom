@@ -49,14 +49,13 @@ public class CatalogController(
 
     // ---- partner courses
 
-    [AllowAnonymous]
     [HttpGet("partner/{institutionId:int}/courses")]
     public async Task<IActionResult> GetPartnerCourses(int institutionId, [FromQuery] PartnerCourseListQuery query, CancellationToken ct) =>
         Ok(await partnerCourses.ListAsync(institutionId, query, ct));
 
-    // TODO(phase 4): anonymous on purpose for the guest flow until guest sessions scope it to the guest's exchange.
-    [AllowAnonymous]
+    /// <summary>Admin catalogue. Students and guests add courses through <c>POST /api/exchanges/{guid}/partner-courses</c>.</summary>
     [HttpPost("partner/{institutionId:int}/courses")]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> CreatePartnerCourse(int institutionId, [FromBody] PartnerCourseRequest request, CancellationToken ct) =>
         Match(await partnerCourses.CreateAsync(institutionId, request, ct),
             value => Created($"/api/institutions/partner/{institutionId}/courses", value));

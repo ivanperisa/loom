@@ -20,10 +20,10 @@ Each folder holds its services, contracts (requests/responses), errors and proje
 | Feature | Covers |
 |---|---|
 | `Catalog` | Home catalogue (cached), partner institutions, partner courses, course merge |
-| `Users` | Login sync, own account (me, onboarding, profile, coordinator request), coordinator assignment |
+| `Users` | Login sync, own account (me, onboarding, profile, coordinator request), claiming a placeholder, coordinator assignment |
 | `Admin` | User list/edit/roles, coordinator requests, coordinator whitelist |
 | `Coordination` | Coordinator directory, a coordinator's students and placeholder students |
-| `Exchanges` | Exchanges (create/edit/delete/list), access links |
+| `Exchanges` | Exchanges (create/edit/delete/list), access links and guest sessions |
 | `Planning` | Learning agreement: document, workflow (Draft ⇄ Approved), versions (history/restore), JSON import/export |
 | `Completion` | Recognition and mapping scheme (after the exchange) |
 
@@ -31,7 +31,9 @@ Each folder holds its services, contracts (requests/responses), errors and proje
 
 ## Conventions
 
-**Who is calling.** Services never take a `requesterId`. They inject `ICurrentActor`, which the API fills in from the cookie (`UserSyncMiddleware`) or, on `/api/exchanges/access/{guid}/…` routes, from the access link (`ExchangeActorAttribute`). The seeder and tests set it explicitly.
+**Who is calling.** Services never take a `requesterId`. They inject `ICurrentActor`, which the API fills in from the login cookie (`UserSyncMiddleware`) or, on `[AllowGuest]` actions, from the guest cookie (`ExchangeActorAttribute`). The seeder and tests set it explicitly.
+
+**Access links (guests).** A placeholder student (no account) works through a link the coordinator sends: `/access/{token}`. The token is 32 random bytes in `exchange.access_link`, separate from the exchange GUID; the GUID is just an id. Opening the link (`POST /api/access/session`) swaps the token for a `loom_guest` cookie that holds only the link id. Every guest request re-checks that link (not revoked, student still a placeholder) and is limited to that one exchange, so regenerating or claiming cuts access at once. Guests can call only actions marked `[AllowGuest]`: the exchange, its documents and its partner courses; never delete, link management or anything outside the exchange. A signed-in student who opens the link can claim the placeholder (`POST /api/access/claim`): its exchanges and JMBAG move to their account. Typing the JMBAG alone gives no access (`JMBAG_RESERVED`).
 
 **Exchange-scoped work** starts with `ExchangeAccess.LoadAsync(guid)`. It is one query: exchange ids + "is the actor its student or assigned coordinator", or `EXCHANGE_NOT_FOUND` / `ACCESS_DENIED`.
 

@@ -17,5 +17,4 @@ public static class ExchangeErrors
         "Cannot change the semester: the learning agreement has courses mapped in a semester the new type does not cover. Remove those courses first.");
     public static Error NotDraft => Error.Conflict("NOT_DRAFT", "Only draft exchanges can be deleted.");
     public static Error OnlyCoordinatorMessage => Error.Forbidden("ACCESS_DENIED", "Only coordinators can update the message.");
-    public static Error StudentRegistered => Error.Validation("STUDENT_REGISTERED", "This student signs in with an account.");
 }

@@ -7,6 +7,10 @@ public static class AuthenticationSetup
 {
     public const string GoogleScheme = "GoogleOidc";
 
+    /// <summary>Separate cookie for someone who opened an access link. Never mixed with the login cookie.</summary>
+    public const string GuestScheme = "Guest";
+    public const string GuestLinkClaim = "access_link";
+
     /// <summary>
     /// Cookie session, signed in through Google (OpenID Connect). Google is optional in Development,
     /// where the dev login is used instead.
@@ -20,25 +24,16 @@ public static class AuthenticationSetup
         var authentication = builder.Services.AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = google.IsConfigured ? GoogleScheme : CookieAuthenticationDefaults.AuthenticationScheme;
+                // API calls without a session get a 401, never a redirect to Google; /auth/login challenges Google itself.
+                options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             })
-            .AddCookie(options =>
+            .AddCookie(options => ConfigureApiCookie(options, builder.Environment))
+            .AddCookie(GuestScheme, options =>
             {
-                options.Cookie.HttpOnly = true;
-                if (builder.Environment.IsDevelopment())
-                {
-                    // Local dev runs over plain http behind the Vite proxy (same origin).
-                    options.Cookie.SameSite = SameSiteMode.Lax;
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-                }
-                else
-                {
-                    options.Cookie.SameSite = SameSiteMode.None;
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                }
-                // An API answers with status codes instead of redirecting to a login page.
-                options.Events.OnRedirectToLogin = context => { context.Response.StatusCode = 401; return Task.CompletedTask; };
-                options.Events.OnRedirectToAccessDenied = context => { context.Response.StatusCode = 403; return Task.CompletedTask; };
+                ConfigureApiCookie(options, builder.Environment);
+                options.Cookie.Name = "loom_guest";
+                options.ExpireTimeSpan = TimeSpan.FromHours(12);
+                options.SlidingExpiration = true;
             });
 
         if (google.IsConfigured)
@@ -66,5 +61,24 @@ public static class AuthenticationSetup
         }
 
         builder.Services.AddAuthorization();
+    }
+
+    private static void ConfigureApiCookie(CookieAuthenticationOptions options, IWebHostEnvironment environment)
+    {
+        options.Cookie.HttpOnly = true;
+        if (environment.IsDevelopment())
+        {
+            // Local dev runs over plain http behind the Vite proxy (same origin).
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        }
+        else
+        {
+            options.Cookie.SameSite = SameSiteMode.None;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        }
+        // An API answers with status codes instead of redirecting to a login page.
+        options.Events.OnRedirectToLogin = context => { context.Response.StatusCode = 401; return Task.CompletedTask; };
+        options.Events.OnRedirectToAccessDenied = context => { context.Response.StatusCode = 403; return Task.CompletedTask; };
     }
 }

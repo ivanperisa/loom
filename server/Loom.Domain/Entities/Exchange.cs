@@ -28,4 +28,5 @@ public class Exchange : AuditableEntity
     public LearningAgreement? LearningAgreement { get; set; }
     public Recognition? Recognition { get; set; }
     public ICollection<ExchangeSnapshot> Snapshots { get; set; } = null!;
+    public ICollection<ExchangeAccessLink> AccessLinks { get; set; } = [];
 }

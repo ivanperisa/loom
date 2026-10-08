@@ -38,6 +38,9 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
     /// <summary>Stable exchange GUIDs, so links in the README keep working after a reset.</summary>
     public static Guid ExchangeGuid(int n) => new($"00000000-0000-4000-8000-{n:D12}");
 
+    /// <summary>Stable access-link tokens for the placeholder exchanges (real ones are random).</summary>
+    public static string AccessToken(int n) => $"dev-access-link-{n:D2}";
+
     public async Task SeedAsync()
     {
         await SeedCatalogAsync();
@@ -165,7 +168,7 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         await Call<CoordinatorRequestService, AuthMeResponse>(s => s.RejectAsync(rejected, default), actor: _adminId);
 
         await CreateUser("fresh.student@loom.dev", "Filip Fresh");   // not onboarded
-        await CreateUser("claim.student@loom.dev", "Klara Claim");   // not onboarded, claims a placeholder
+        await CreateUser("claim.student@loom.dev", "Klara Claim");   // not onboarded, claims a placeholder through its access link
         log.LogInformation("Accounts: admin, 2 coordinators, whitelisted email, coordinator requests, onboarding users");
     }
 
@@ -250,10 +253,12 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         var guest = await Placeholder("Gita Guest", "0036999001");
         var g13 = await NewExchange(13, guest, tum, coordinator: _ana, requester: _ana);
         await SaveLa(g13, guest, AtExchange(SlotElective1, c["IN2064"], 5));
+        await AccessLink(13);
 
-        // 14. Placeholder that claim.student@loom.dev takes over during onboarding (JMBAG 0036999002)
+        // 14. Placeholder that claim.student@loom.dev takes over by opening its access link while signed in
         var claim = await Placeholder("Klara Claim", "0036999002");
         await NewExchange(14, claim, _partners["polimi"], coordinator: _ana, requester: _ana);
+        await AccessLink(14);
 
         log.LogInformation("Exchanges: 14 scenario exchanges");
     }
@@ -332,6 +337,13 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         await Onboard(id, jmbag);
         return id;
     }
+
+    private Task AccessLink(int n) => WithDb(async db =>
+    {
+        var exchangeId = await db.Exchanges.Where(e => e.Guid == ExchangeGuid(n)).Select(e => e.Id).SingleAsync();
+        db.ExchangeAccessLinks.Add(new ExchangeAccessLink { ExchangeId = exchangeId, Token = AccessToken(n), CreatedById = _ana });
+        await db.SaveChangesAsync();
+    });
 
     private async Task<int> Placeholder(string name, string jmbag)
     {

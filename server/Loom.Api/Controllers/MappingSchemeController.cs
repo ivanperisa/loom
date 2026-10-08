@@ -5,10 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-/// <summary>Every action is also reachable through the access link, see <see cref="ExchangeActorAttribute"/>.</summary>
+/// <summary>Guests (access link) can use every action, for their own exchange.</summary>
 [Route("api/exchanges/{exchangeGuid:guid}/mapping-scheme")]
-[Route("api/exchanges/access/{exchangeGuid:guid}/mapping-scheme")]
-[AllowAnonymous]
+[AllowGuest]
 [ExchangeActor]
 public class MappingSchemeController(MappingSchemeService mappingSchemes) : ApiController
 {

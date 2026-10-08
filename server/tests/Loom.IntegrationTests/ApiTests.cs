@@ -11,65 +11,22 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Loom.IntegrationTests;
 
 /// <summary>Through the real HTTP pipeline: authentication, the exchange actor filter, error shapes, health.</summary>
-public class ApiTests(DatabaseFixture fixture) : IntegrationTest(fixture)
+public class ApiTests(DatabaseFixture fixture) : HttpTest(fixture)
 {
     private readonly DatabaseFixture _fixture = fixture;
 
-    private WebApplicationFactory<Program> Factory(string environment = "Development") =>
-        new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
-        {
-            host.UseEnvironment(environment);
-            host.UseSetting("ConnectionStrings:DefaultConnection", _fixture.ConnectionString);
-            host.UseSetting("DevAuth:Enabled", environment == "Development" ? "true" : "false");
-            host.UseSetting("Frontend:BaseUrl", "http://localhost:5173");
-            if (environment != "Development")
-            {
-                host.UseSetting("Google:ClientId", "test-client");
-                host.UseSetting("Google:ClientSecret", "test-secret");
-            }
-        });
-
-    private static async Task<HttpClient> LoggedIn(WebApplicationFactory<Program> factory, string email)
-    {
-        var client = factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/auth/dev/login", new { email }, Ct);
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        return client;
-    }
-
-    private static async Task<string?> ErrorCode(HttpResponseMessage response)
-    {
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
-        return json.RootElement.TryGetProperty("code", out var code) ? code.GetString() : null;
-    }
-
     [Fact]
-    public async Task Exchange_routes_need_a_login_or_a_valid_access_link()
+    public async Task Exchange_routes_need_a_login()
     {
         await using var factory = Factory();
         var (partner, _) = await NewPartner();
-        var student = await NewUser();
-        var registered = await NewExchange(student, partner, coordinator: null);
-        var placeholder = await Db(async db =>
-        {
-            var user = new User { ExternalId = $"ph:{Guid.NewGuid():N}", Email = "", Name = "Placeholder", Role = UserRole.Student, IsOnboarded = true };
-            db.Users.Add(user);
-            await db.SaveChangesAsync(Ct);
-            return user.Id;
-        });
-        var guestExchange = await NewExchange(placeholder, partner, coordinator: null);
+        var exchange = await NewExchange(await NewUser(), partner, coordinator: null);
         var anonymous = factory.CreateClient();
 
-        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync($"/api/exchanges/{registered}/learning-agreement", Ct)).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await anonymous.GetAsync($"/api/exchanges/access/{guestExchange}/learning-agreement", Ct)).StatusCode);
-
-        var denied = await anonymous.GetAsync($"/api/exchanges/access/{registered}/learning-agreement", Ct);
-        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
-        Assert.Equal("ACCESS_DENIED", await ErrorCode(denied));
-
-        var missing = await anonymous.GetAsync($"/api/exchanges/access/{Guid.NewGuid()}", Ct);
-        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
-        Assert.Equal("EXCHANGE_NOT_FOUND", await ErrorCode(missing));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync($"/api/exchanges/{exchange}", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync($"/api/exchanges/{exchange}/learning-agreement", Ct)).StatusCode);
+        // The old guest routes are gone: the exchange GUID is an id, not a secret.
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync($"/api/exchanges/access/{exchange}/learning-agreement", Ct)).StatusCode);
     }
 
     [Fact]
@@ -97,6 +54,15 @@ public class ApiTests(DatabaseFixture fixture) : IntegrationTest(fixture)
         await using var factory = Factory("Production");
         var response = await factory.CreateClient().PostAsJsonAsync("/auth/dev/login", new { email = "admin@loom.dev" }, Ct);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Without_a_session_the_api_answers_401_even_with_google_configured()
+    {
+        await using var factory = Factory("Production");
+        var response = await factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false })
+            .GetAsync("/api/exchanges/mine", Ct);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);   // not a 302 to accounts.google.com
     }
 
     [Fact]

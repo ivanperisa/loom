@@ -60,3 +60,15 @@ public record UpdateExchangeRequest(
     string? EwpLink = null);
 
 public record UpdateCoordinatorMessageRequest(string? Message);
+
+public record AccessLinkResponse(string Token, DateTime CreatedAt);
+
+public record AccessLinkPreviewResponse(
+    Guid ExchangeGuid,
+    string StudentName,
+    string PartnerInstitutionName,
+    string AcademicYear,
+    bool HasAccess,
+    bool CanClaim);
+
+public record AccessTokenRequest(string Token);

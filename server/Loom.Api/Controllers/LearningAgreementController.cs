@@ -7,10 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-/// <summary>Every action is also reachable through the access link (<c>/api/exchanges/access/{guid}/…</c>), see <see cref="ExchangeActorAttribute"/>.</summary>
+/// <summary>Guests (access link) can use every action, for their own exchange.</summary>
 [Route("api/exchanges/{exchangeGuid:guid}/learning-agreement")]
-[Route("api/exchanges/access/{exchangeGuid:guid}/learning-agreement")]
-[AllowAnonymous]
+[AllowGuest]
 [ExchangeActor]
 public class LearningAgreementController(
     LearningAgreementService learningAgreements,

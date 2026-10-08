@@ -29,6 +29,7 @@ public static class DependencyInjection
         // Users, admin, coordination
         services.AddScoped<UserSyncService>();
         services.AddScoped<AccountService>();
+        services.AddScoped<PlaceholderClaimService>();
         services.AddScoped<AdminUserService>();
         services.AddScoped<CoordinatorRequestService>();
         services.AddScoped<CoordinatorWhitelistService>();
@@ -37,7 +38,7 @@ public static class DependencyInjection
 
         // Exchanges
         services.AddScoped<ExchangeService>();
-        services.AddScoped<GuestAccessService>();
+        services.AddScoped<AccessLinkService>();
 
         // Planning (learning agreement)
         services.AddScoped<LaEntryWriter>();

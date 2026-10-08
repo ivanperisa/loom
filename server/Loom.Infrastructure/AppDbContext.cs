@@ -25,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<MappingSchemeEntry> MappingSchemeEntries => Set<MappingSchemeEntry>();
     public DbSet<ExchangeSnapshot> ExchangeSnapshots => Set<ExchangeSnapshot>();
     public DbSet<CoordinatorWhitelist> CoordinatorWhitelist => Set<CoordinatorWhitelist>();
+    public DbSet<ExchangeAccessLink> ExchangeAccessLinks => Set<ExchangeAccessLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

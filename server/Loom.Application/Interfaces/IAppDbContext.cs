@@ -23,6 +23,7 @@ public interface IAppDbContext
     DbSet<MappingSchemeEntry> MappingSchemeEntries { get; }
     DbSet<ExchangeSnapshot> ExchangeSnapshots { get; }
     DbSet<CoordinatorWhitelist> CoordinatorWhitelist { get; }
+    DbSet<ExchangeAccessLink> ExchangeAccessLinks { get; }
 
     DatabaseFacade Database { get; }
 

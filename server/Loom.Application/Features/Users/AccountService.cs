@@ -36,15 +36,8 @@ public sealed class AccountService(IAppDbContext db, ICurrentActor actor)
         else if (!string.IsNullOrWhiteSpace(request.Jmbag))
         {
             if (!Text.IsValidJmbag(request.Jmbag)) return CommonErrors.InvalidJmbag;
-            var placeholder = await db.Users.FirstOrDefaultAsync(u => u.ExternalId == request.Jmbag && u.Jmbag == request.Jmbag, ct);
-            if (placeholder is not null)
-            {
-                // SECURITY (known, phase 4): knowing a JMBAG is not proof of owning it; this will require the access link.
-                await TakeOverPlaceholderAsync(user, placeholder, request.InstitutionId, ct);
-                return await GetMeAsync(ct);
-            }
-
-            if (await db.Users.AnyAsync(u => u.Jmbag == request.Jmbag, ct)) return UserErrors.JmbagTaken;
+            var taken = await JmbagInUseAsync(request.Jmbag, user.Id, ct);
+            if (taken.IsError) return taken.Errors;
             user.Jmbag = request.Jmbag;
         }
 
@@ -67,8 +60,11 @@ public sealed class AccountService(IAppDbContext db, ICurrentActor actor)
 
         var jmbag = request.Jmbag.NullIfBlank();
         if (jmbag is not null && !Text.IsValidJmbag(jmbag)) return CommonErrors.InvalidJmbag;
-        if (jmbag is not null && await db.Users.AnyAsync(u => u.Jmbag == jmbag && u.Id != user.Id, ct))
-            return UserErrors.JmbagTaken;
+        if (jmbag is not null)
+        {
+            var taken = await JmbagInUseAsync(jmbag, user.Id, ct);
+            if (taken.IsError) return taken.Errors;
+        }
 
         user.Jmbag = jmbag;
         user.Name = name;
@@ -94,31 +90,15 @@ public sealed class AccountService(IAppDbContext db, ICurrentActor actor)
         return await GetMeAsync(ct);
     }
 
-    /// <summary>Moves a placeholder's exchanges (and history) to the real account, then deletes the placeholder.</summary>
-    private async Task TakeOverPlaceholderAsync(User user, User placeholder, int institutionId, CancellationToken ct)
+    /// <summary>
+    /// A JMBAG belongs to one user. If a coordinator already created a placeholder with it, the student has to
+    /// open the access link they were sent; typing the JMBAG alone gives no access to anything.
+    /// </summary>
+    private async Task<ErrorOr<Success>> JmbagInUseAsync(string jmbag, int userId, CancellationToken ct)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
-
-        user.CoordinatorId = placeholder.CoordinatorId;
-        foreach (var exchange in await db.Exchanges.Where(e => e.StudentId == placeholder.Id).ToListAsync(ct))
-        {
-            exchange.StudentId = user.Id;
-            exchange.Guid = Guid.NewGuid();   // the old access link must stop working
-        }
-        // Snapshots reference their author without ON DELETE, so they have to move before the placeholder goes.
-        foreach (var snapshot in await db.ExchangeSnapshots.Where(s => s.ChangedById == placeholder.Id).ToListAsync(ct))
-            snapshot.ChangedById = user.Id;
-
-        db.Users.Remove(placeholder);
-        user.InstitutionId = institutionId;
-        user.IsOnboarded = true;
-        await db.SaveChangesAsync(ct);
-
-        // Separate save: the JMBAG is unique and the placeholder must be gone first.
-        user.Jmbag = placeholder.Jmbag;
-        await db.SaveChangesAsync(ct);
-
-        await transaction.CommitAsync(ct);
+        var owner = await db.Users.Where(u => u.Jmbag == jmbag && u.Id != userId).Select(u => new { u.Email }).FirstOrDefaultAsync(ct);
+        if (owner is null) return Result.Success;
+        return owner.Email.Length == 0 ? UserErrors.JmbagReserved : UserErrors.JmbagTaken;
     }
 
     private async Task<ErrorOr<Institution>> HomeInstitutionAsync(int institutionId, CancellationToken ct)

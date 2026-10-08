@@ -26,6 +26,8 @@ public sealed class ExchangeAccess(IAppDbContext db, ICurrentActor actor)
             .Select(e => new { e.Id, e.StudentId, e.CoordinatorId, e.HomeProfileId, e.PartnerInstitutionId })
             .FirstOrDefaultAsync(ct);
         if (exchange is null) return CommonErrors.ExchangeNotFound;
+        // A guest's link opens one exchange, even if the placeholder student has others.
+        if (actor.GuestExchangeId is { } guestExchangeId && guestExchangeId != exchange.Id) return CommonErrors.AccessDenied;
 
         var isStudent = exchange.StudentId == actor.UserId;
         var isCoordinator = exchange.CoordinatorId == actor.UserId;

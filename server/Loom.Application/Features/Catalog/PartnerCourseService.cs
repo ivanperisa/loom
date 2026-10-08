@@ -2,6 +2,7 @@ using ErrorOr;
 using Loom.Application.Common;
 using Loom.Application.Common.Errors;
 using Loom.Application.Common.Querying;
+using Loom.Application.Common.Security;
 using Loom.Application.Interfaces;
 using Loom.Domain.Common;
 using Loom.Domain.Entities;
@@ -10,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Loom.Application.Features.Catalog;
 
-public sealed class PartnerCourseService(IAppDbContext db)
+public sealed class PartnerCourseService(IAppDbContext db, ExchangeAccess access)
 {
     private static readonly ListSpec<PartnerCourse, PartnerCourseResponse> List = ListSpec.For<PartnerCourse>()
         .SearchIn(c => c.Code, c => c.Name, c => c.NameHr)
@@ -38,7 +39,8 @@ public sealed class PartnerCourseService(IAppDbContext db)
 
     public async Task<ErrorOr<PartnerCourseResponse>> CreateAsync(int institutionId, PartnerCourseRequest request, CancellationToken ct)
     {
-        if (!await db.Institutions.AnyAsync(i => i.Id == institutionId, ct)) return CommonErrors.InstitutionNotFound;
+        if (!await db.Institutions.AnyAsync(i => i.Id == institutionId && i.Type == InstitutionType.Partner, ct))
+            return CommonErrors.InstitutionNotFound;
 
         var course = new PartnerCourse { InstitutionId = institutionId };
         var applied = await ApplyAsync(course, request, ct);
@@ -47,6 +49,22 @@ public sealed class PartnerCourseService(IAppDbContext db)
         db.PartnerCourses.Add(course);
         await db.SaveChangesAsync(ct);
         return course.ToResponse();
+    }
+
+    /// <summary>Courses of the exchange's partner institution, for whoever may work on the exchange (guests included).</summary>
+    public async Task<ErrorOr<PagedResponse<PartnerCourseResponse>>> ListForExchangeAsync(Guid exchangeGuid, PartnerCourseListQuery query, CancellationToken ct)
+    {
+        var context = await access.LoadAsync(exchangeGuid, ct);
+        if (context.IsError) return context.Errors;
+        return await ListAsync(context.Value.PartnerInstitutionId, query, ct);
+    }
+
+    /// <summary>Students (and guests) add missing courses while planning. The institution always comes from the exchange.</summary>
+    public async Task<ErrorOr<PartnerCourseResponse>> CreateForExchangeAsync(Guid exchangeGuid, PartnerCourseRequest request, CancellationToken ct)
+    {
+        var context = await access.LoadAsync(exchangeGuid, ct);
+        if (context.IsError) return context.Errors;
+        return await CreateAsync(context.Value.PartnerInstitutionId, request, ct);
     }
 
     public async Task<ErrorOr<PartnerCourseResponse>> UpdateAsync(int courseId, PartnerCourseRequest request, CancellationToken ct)

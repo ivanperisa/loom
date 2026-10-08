@@ -71,7 +71,7 @@ All demo data is created through the real application services (`server/Loom.Dev
 | `req.pending@loom.dev` | Student | Pending coordinator request (approve/reject as admin) |
 | `req.rejected@loom.dev` | Student | Rejected coordinator request banner |
 | `fresh.student@loom.dev` | Student | Not onboarded: onboarding wizard |
-| `claim.student@loom.dev` | Student | Not onboarded: enter JMBAG `0036999002` to take over a placeholder's exchange |
+| `claim.student@loom.dev` | Student | Not onboarded: sign in, then open http://localhost:5173/access/dev-access-link-14 and claim the exchange |
 | `s.draft.empty@loom.dev` | Student | Empty learning agreement: first mapping, drag & drop |
 | `s.draft.rich@loom.dev` | Student | All slot modes, a course split over two slots, an over-filled slot |
 | `s.draft.message@loom.dev` | Student | Draft with a coordinator message |
@@ -84,7 +84,7 @@ All demo data is created through the real application services (`server/Loom.Dev
 | `s.nocoordinator@loom.dev` | Student | Exchange without a coordinator |
 | `student01…40@loom.dev` | Student | Volume for lists; 01–20 have exchanges with Ana |
 
-**Guest access (placeholder student, no login):** http://localhost:5173/access/00000000-0000-4000-8000-000000000013
+**Guest access (placeholder student, no login):** http://localhost:5173/access/dev-access-link-13 (seeded links have readable tokens; real ones are 43 random characters)
 
 **Catalogue:** 60 partner institutions (one soft-deleted, one without courses). *Universidad Politécnica de Madrid* has 150+ courses and near-duplicate codes to try the merge tool on (`ML101`/`ML-101`, `DB200`/`DB 200`/`DB-200`, `SEC300`/`SEC-300`). The TUM course `IN9999` is soft-deleted.
 

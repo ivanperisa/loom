@@ -142,19 +142,6 @@ public sealed class ExchangeService(IAppDbContext db, ICurrentActor actor, Excha
         return await GetByIdAsync(exchange.Id, ct);
     }
 
-    /// <summary>Invalidates the old access link of a placeholder student's exchange.</summary>
-    public async Task<ErrorOr<Guid>> RegenerateAccessLinkAsync(Guid exchangeGuid, CancellationToken ct)
-    {
-        var exchange = await db.Exchanges.Include(e => e.Student).FirstOrDefaultAsync(e => e.Guid == exchangeGuid, ct);
-        if (exchange is null) return CommonErrors.ExchangeNotFound;
-        if (exchange.CoordinatorId != actor.UserId) return CommonErrors.AccessDenied;
-        if (!exchange.Student.IsPlaceholder) return ExchangeErrors.StudentRegistered;
-
-        exchange.Guid = Guid.NewGuid();
-        await db.SaveChangesAsync(ct);
-        return exchange.Guid;
-    }
-
     private async Task<ErrorOr<ExchangeResponse>> GetByIdAsync(int exchangeId, CancellationToken ct)
     {
         var exchange = await db.Exchanges.AsNoTracking().Where(e => e.Id == exchangeId).Select(ExchangeProjections.Detail).FirstOrDefaultAsync(ct);
