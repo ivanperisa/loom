@@ -158,7 +158,7 @@ public class ExchangeService(IAppDbContext db) : IExchangeService
             .Include(r => r.Entries)
             .FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
 
-        if (la?.Status != DocumentStatus.Draft || recognition?.Status != DocumentStatus.Draft)
+        if (la is { Status: not DocumentStatus.Draft } || recognition is { Status: not DocumentStatus.Draft })
             return Error.Conflict("NOT_DRAFT", "Only draft exchanges can be deleted.");
 
         db.ExchangeSnapshots.RemoveRange(
