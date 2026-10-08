@@ -5,6 +5,7 @@ import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 
 interface RecognitionRow {
   id: string
+  partnerCourseId: string | null
   partnerCourseCode: string
   partnerCourseName: string
   partnerCourseNameHr: string | null
@@ -32,6 +33,8 @@ interface GradeData {
 }
 
 interface CourseGroup {
+  /** The partner course id (grades belong to a course); the code only for rows without one. */
+  key: string
   partnerCourseCode: string
   partnerCourseName: string
   partnerCourseNameHr: string | null
@@ -45,13 +48,28 @@ interface CourseGroup {
 const props = defineProps<{
   entries: RecognitionRow[]
   readonly: boolean
+  /** Grades keyed by partner course id. */
   editableGrades?: Record<string, GradeData>
+  /** Results approved: grades are shown, not edited. */
+  locked?: boolean
 }>()
 
 const { t } = useI18n()
 
 function rowAwardedEcts(row: RecognitionRow[]): number {
   return Math.round(row.reduce((sum, e) => sum + e.awardedEcts, 0) * 10) / 10
+}
+
+function canEdit(group: CourseGroup): boolean {
+  return !props.readonly && !props.locked && !!props.editableGrades?.[group.key]
+}
+
+function shownGrade(group: CourseGroup, field: keyof GradeData): string {
+  if (props.readonly || !props.locked) return ''
+  const value = props.editableGrades?.[group.key]?.[field] ?? ''
+  if (field === 'examDate') return formatExamDateDisplay(value)
+  if (field === 'enrollmentStatus') return value === 'Passed' ? t('recognition.enrollment.passed') : value === 'NotPassed' ? t('recognition.enrollment.notPassed') : ''
+  return value
 }
 
 function formatExamDateDisplay(iso: string): string {
@@ -62,10 +80,11 @@ function formatExamDateDisplay(iso: string): string {
 const courseGroups = computed<CourseGroup[]>(() => {
   const map = new Map<string, CourseGroup>()
   for (const entry of props.entries) {
-    const code = entry.partnerCourseCode
-    if (!map.has(code)) {
-      map.set(code, {
-        partnerCourseCode: code,
+    const key = entry.partnerCourseId ?? `code:${entry.partnerCourseCode}`
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        partnerCourseCode: entry.partnerCourseCode,
         partnerCourseName: entry.partnerCourseName,
         partnerCourseNameHr: entry.partnerCourseNameHr,
         partnerCourseUrl: entry.partnerCourseUrl,
@@ -75,7 +94,7 @@ const courseGroups = computed<CourseGroup[]>(() => {
         isNotPassed: false,
       })
     }
-    const group = map.get(code)!
+    const group = map.get(key)!
     if (entry.homeSlotCourseIsvuCode == null && entry.homeSlotCourseGroupIsvuCode != null) {
       const existingRow = group.rows.find(
         (row) =>
@@ -91,7 +110,7 @@ const courseGroups = computed<CourseGroup[]>(() => {
   }
   for (const group of map.values()) {
     if (props.readonly) continue
-    const liveStatus = props.editableGrades?.[group.partnerCourseCode]?.enrollmentStatus
+    const liveStatus = props.editableGrades?.[group.key]?.enrollmentStatus
     group.isNotPassed = liveStatus !== undefined
       ? liveStatus === 'NotPassed'
       : group.rows.flat().some((r) => r.enrollmentStatus === 'NotPassed')
@@ -145,7 +164,7 @@ const courseGroups = computed<CourseGroup[]>(() => {
       </thead>
 
       <tbody>
-        <template v-for="group in courseGroups" :key="group.partnerCourseCode">
+        <template v-for="group in courseGroups" :key="group.key">
           <tr v-for="(row, idx) in group.rows" :key="row[0]!.id">
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td rec-td--center rec-td--bold" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
               <span style="display: inline-flex; align-items: center; justify-content: center; gap: 3px;">
@@ -161,14 +180,15 @@ const courseGroups = computed<CourseGroup[]>(() => {
             <!-- Enrollment status: dropdown when editable, blank when read-only -->
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
               <select
-                v-if="!readonly && editableGrades?.[group.partnerCourseCode]"
-                v-model="editableGrades[group.partnerCourseCode]!.enrollmentStatus"
+                v-if="canEdit(group)"
+                v-model="editableGrades![group.key]!.enrollmentStatus"
                 class="rec-input"
               >
                 <option value="">{{ t('recognition.enrollment.none') }}</option>
                 <option value="Passed">{{ t('recognition.enrollment.passed') }}</option>
                 <option value="NotPassed">{{ t('recognition.enrollment.notPassed') }}</option>
               </select>
+              <span v-else class="rec-locked">{{ shownGrade(group, 'enrollmentStatus') }}</span>
             </td>
 
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td rec-td--center" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#fff' }">
@@ -193,40 +213,44 @@ const courseGroups = computed<CourseGroup[]>(() => {
             <!-- Grade columns: inputs when editable, blank when read-only -->
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#ddd9c3' }">
               <input
-                v-if="!readonly && editableGrades?.[group.partnerCourseCode]"
-                v-model="editableGrades[group.partnerCourseCode]!.originalGrade"
+                v-if="canEdit(group)"
+                v-model="editableGrades![group.key]!.originalGrade"
                 type="text"
                 class="rec-input"
                 placeholder="—"
               />
+              <span v-else class="rec-locked">{{ shownGrade(group, 'originalGrade') }}</span>
             </td>
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#ddd9c3' }">
               <input
-                v-if="!readonly && editableGrades?.[group.partnerCourseCode]"
-                v-model="editableGrades[group.partnerCourseCode]!.ectsGrade"
+                v-if="canEdit(group)"
+                v-model="editableGrades![group.key]!.ectsGrade"
                 type="text"
                 class="rec-input"
                 placeholder="—"
               />
+              <span v-else class="rec-locked">{{ shownGrade(group, 'ectsGrade') }}</span>
             </td>
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#ddd9c3' }">
               <input
-                v-if="!readonly && editableGrades?.[group.partnerCourseCode]"
-                v-model="editableGrades[group.partnerCourseCode]!.hrGrade"
+                v-if="canEdit(group)"
+                v-model="editableGrades![group.key]!.hrGrade"
                 type="text"
                 class="rec-input"
                 placeholder="—"
               />
+              <span v-else class="rec-locked">{{ shownGrade(group, 'hrGrade') }}</span>
             </td>
             <td v-if="idx === 0" :rowspan="group.rows.length" class="rec-td-grade" :style="{ background: group.isNotPassed ? NOT_PASSED_BG : '#ddd9c3' }">
-              <div v-if="!readonly && editableGrades?.[group.partnerCourseCode]" class="rec-date-wrap">
+              <div v-if="canEdit(group)" class="rec-date-wrap">
                 <input
-                  v-model="editableGrades[group.partnerCourseCode]!.examDate"
+                  v-model="editableGrades![group.key]!.examDate"
                   type="date"
                   class="rec-input rec-input--date"
                 />
-                <span class="rec-date-overlay">{{ formatExamDateDisplay(editableGrades[group.partnerCourseCode]!.examDate) }}</span>
+                <span class="rec-date-overlay">{{ formatExamDateDisplay(editableGrades![group.key]!.examDate) }}</span>
               </div>
+              <span v-else class="rec-locked">{{ shownGrade(group, 'examDate') }}</span>
             </td>
           </tr>
         </template>
@@ -290,6 +314,12 @@ const courseGroups = computed<CourseGroup[]>(() => {
   align-items: center;
   pointer-events: none;
   font-family: Calibri, Arial, sans-serif;
+  font-size: 11px;
+  color: #000;
+}
+.rec-locked {
+  display: block;
+  text-align: center;
   font-size: 11px;
   color: #000;
 }

@@ -193,7 +193,7 @@ internal sealed class OfficialWorkbook(OfficialDocumentData data, OfficialText t
     {
         var la = data.LearningAgreement;
         var title = la.VersionNo is int v
-            ? t.Format("laTitleVersion", VersionStore.AmendmentLabel(v) is { } label ? $"{v} ({label})" : $"{v} ({t["original"]})")
+            ? t.Format("laTitleVersion", t.Amendment(v) is { } label ? $"{v} ({label})" : $"{v} ({t["original"]})")
             : t["laTitleDraft"];
         var row = GridSheet(ws, title, la.Grid);
 
@@ -339,7 +339,7 @@ internal sealed class OfficialWorkbook(OfficialDocumentData data, OfficialText t
         {
             row++;
             Cell(ws.Cell(row, 1), t[line.Document]);
-            Cell(ws.Cell(row, 2), line.VersionNo is int v ? (VersionStore.AmendmentLabel(v) is { } label ? $"{v} ({label})" : v.ToString()) : "");
+            Cell(ws.Cell(row, 2), line.VersionNo is int v ? (t.Amendment(v) is { } label ? $"{v} ({label})" : v.ToString()) : "");
             Cell(ws.Cell(row, 3), t[line.Status]);
             Cell(ws.Cell(row, 4), line.ApprovedBy);
             Cell(ws.Cell(row, 5), line.ApprovedAt?.ToString("dd.MM.yyyy. HH:mm") + (line.ApprovedAt is null ? "" : " UTC"));

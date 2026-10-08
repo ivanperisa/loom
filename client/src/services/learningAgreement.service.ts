@@ -1,38 +1,33 @@
 import { api } from './api'
 import type { ExchangeResponse } from '@/types/exchange.types'
+import type { DocumentVersionResponse } from '@/types/documentVersion.types'
 import type {
   LearningAgreementResponse,
   UpdateLearningAgreementStatusRequest,
   SaveLearningAgreementRequest,
-  LaSnapshotSummary,
-  SnapshotListItem,
   MappingExportDto,
-  MappingImportResult,
+  ImportPreviewResponse,
+  ImportResult,
+  RestoreResult,
 } from '@/types/learningAgreement.types'
 
+const base = (exchangeId: string) => `/api/exchanges/${exchangeId}/learning-agreement`
+
 export const learningAgreementService = {
-  get: (exchangeId: string) =>
-    api.get<LearningAgreementResponse>(`/api/exchanges/${exchangeId}/learning-agreement`),
+  get: (exchangeId: string) => api.get<LearningAgreementResponse>(base(exchangeId)),
   save: (exchangeId: string, request: SaveLearningAgreementRequest) =>
-    api.put<LearningAgreementResponse>(`/api/exchanges/${exchangeId}/learning-agreement`, request, {
-      suppressErrorToast: true,
-    }),
+    api.put<LearningAgreementResponse>(base(exchangeId), request, { suppressErrorToast: true }),
   updateStatus: (exchangeId: string, request: UpdateLearningAgreementStatusRequest) =>
-    api.patch<ExchangeResponse>(`/api/exchanges/${exchangeId}/learning-agreement/status`, request),
+    api.patch<ExchangeResponse>(`${base(exchangeId)}/status`, request),
   updateMessage: (exchangeId: string, message: string | null) =>
-    api.patch<LearningAgreementResponse>(`/api/exchanges/${exchangeId}/learning-agreement/message`, { message }),
-  getHistory: (exchangeId: string) =>
-    api.get<LaSnapshotSummary[]>(`/api/exchanges/${exchangeId}/learning-agreement/history`),
-  getSnapshots: (exchangeId: string) =>
-    api.get<SnapshotListItem[]>(`/api/exchanges/${exchangeId}/learning-agreement/snapshots`),
-  restoreSnapshot: (exchangeId: string, snapshotId: number) =>
-    api.post<void>(`/api/exchanges/${exchangeId}/learning-agreement/snapshots/${snapshotId}/restore`, undefined, {
-      suppressErrorToast: true,
-    }),
-  exportMappings: (exchangeId: string) =>
-    api.get<Blob>(`/api/exchanges/${exchangeId}/learning-agreement/export`, { responseType: 'blob' }),
-  importMappings: (exchangeId: string, dto: MappingExportDto) =>
-    api.post<MappingImportResult>(`/api/exchanges/${exchangeId}/learning-agreement/import`, dto, {
-      suppressErrorToast: true,
-    }),
+    api.patch<LearningAgreementResponse>(`${base(exchangeId)}/message`, { message }),
+  /** Approvals (with changes) and backups, newest first. */
+  getVersions: (exchangeId: string) => api.get<DocumentVersionResponse[]>(`${base(exchangeId)}/versions`),
+  restoreVersion: (exchangeId: string, versionId: number) =>
+    api.post<RestoreResult>(`${base(exchangeId)}/versions/${versionId}/restore`, undefined, { suppressErrorToast: true }),
+  exportMappings: (exchangeId: string) => api.get<Blob>(`${base(exchangeId)}/export`, { responseType: 'blob' }),
+  previewImport: (exchangeId: string, file: MappingExportDto) =>
+    api.post<ImportPreviewResponse>(`${base(exchangeId)}/import/preview`, file, { suppressErrorToast: true }),
+  importMappings: (exchangeId: string, file: MappingExportDto) =>
+    api.post<ImportResult>(`${base(exchangeId)}/import`, file, { suppressErrorToast: true }),
 }

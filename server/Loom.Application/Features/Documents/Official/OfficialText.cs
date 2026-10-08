@@ -85,4 +85,7 @@ internal sealed class OfficialText(string lang)
     public string this[string key] => Labels.TryGetValue(key, out var label) ? (IsEnglish ? label.En : label.Hr) : key;
 
     public string Format(string key, object value) => string.Format(this[key], value);
+
+    /// <summary>Amendment n of the LA (version n+1): "I1" in Croatian (izmjena), "A1" in English. Null for the original.</summary>
+    public string? Amendment(int? versionNo) => versionNo is > 1 ? $"{(IsEnglish ? "A" : "I")}{versionNo - 1}" : null;
 }

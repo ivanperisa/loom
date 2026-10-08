@@ -27,6 +27,11 @@ withDefaults(defineProps<{
   flex-shrink: 0;
 }
 
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .action-btn--sm {
   padding: 4px 10px;
   font-size: 11px;

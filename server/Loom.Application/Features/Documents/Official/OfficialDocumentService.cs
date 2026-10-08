@@ -39,15 +39,15 @@ public sealed class OfficialDocumentService(
             results = new ResultsSheet(scheme.Value.Entries.Select(ToLine).ToList(), SchemeGrid(scheme.Value, la.Value));
         }
 
+        var text = new OfficialText(lang == "en" ? "en" : "hr");
         var data = new OfficialDocumentData(
             exchange.Value,
             la.Value.Slots,
-            await LaSheetAsync(exchange.Value.Id, la.Value, ct),
+            await LaSheetAsync(exchange.Value.Id, la.Value, text, ct),
             recognition.Value.Agreed.Select(ToLine).ToList(),
             results,
             Signatures(la.Value, recognition.Value));
 
-        var text = new OfficialText(lang == "en" ? "en" : "hr");
         var content = new OfficialWorkbook(data, text).Build();
         var student = string.Join('_', exchange.Value.StudentName.Split(' ', StringSplitOptions.RemoveEmptyEntries));
         var fileName = $"{(text.IsEnglish ? "Exchange" : "Razmjena")}_{student}_{exchange.Value.AcademicYear.Replace('/', '-')}.xlsx";
@@ -58,7 +58,7 @@ public sealed class OfficialDocumentService(
     /// Components as of the latest approved version v: live in v (added ≤ v, not removed by v), plus those removed in an
     /// earlier amendment, struck through. Before the first approval: the draft.
     /// </summary>
-    private async Task<LaSheet> LaSheetAsync(int exchangeId, LearningAgreementResponse la, CancellationToken ct)
+    private async Task<LaSheet> LaSheetAsync(int exchangeId, LearningAgreementResponse la, OfficialText text, CancellationToken ct)
     {
         int? version = la.SignedCount > 0 ? la.SignedCount : null;
         var entries = await db.LearningAgreementEntries
@@ -85,8 +85,8 @@ public sealed class OfficialDocumentService(
 
             var removed = Removed(entry);
             var note = removed
-                ? $"−{VersionStore.AmendmentLabel(entry.RemovedInVersion)}"
-                : VersionStore.AmendmentLabel(entry.AddedInVersion);
+                ? $"−{text.Amendment(entry.RemovedInVersion)}"
+                : text.Amendment(entry.AddedInVersion);
             slot.Lines.Add(new GridLine(course.Code, course.Name, course.NameHr, entry.AwardedEcts ?? 0, removed, note));
         }
 
@@ -94,9 +94,9 @@ public sealed class OfficialDocumentService(
         foreach (var entry in entries.Where(e => e.PartnerCourse is not null))
         {
             if (entry.AddedInVersion is int added and > 1 && (version is null || added <= version))
-                changes.Add(new ChangeLine(VersionStore.AmendmentLabel(added)!, true, entry.PartnerCourse!.Code, entry.PartnerCourse.Name, entry.AwardedEcts, entry.HomeSlot.Label));
+                changes.Add(new ChangeLine(text.Amendment(added)!, true, entry.PartnerCourse!.Code, entry.PartnerCourse.Name, entry.AwardedEcts, entry.HomeSlot.Label));
             if (Removed(entry))
-                changes.Add(new ChangeLine(VersionStore.AmendmentLabel(entry.RemovedInVersion)!, false, entry.PartnerCourse!.Code, entry.PartnerCourse.Name, entry.AwardedEcts, entry.HomeSlot.Label));
+                changes.Add(new ChangeLine(text.Amendment(entry.RemovedInVersion)!, false, entry.PartnerCourse!.Code, entry.PartnerCourse.Name, entry.AwardedEcts, entry.HomeSlot.Label));
         }
         return new LaSheet(version, grid, changes.OrderBy(c => c.Amendment.Length).ThenBy(c => c.Amendment).ThenBy(c => c.Added).ToList());
     }

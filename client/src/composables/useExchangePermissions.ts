@@ -8,14 +8,17 @@ export function useExchangePermissions() {
   const authStore = useAuthStore()
 
   const isCoordinator = computed(
-    () => exchangeStore.exchange?.coordinatorId === authStore.user?.id,
+    () => !exchangeStore.guestMode && exchangeStore.exchange?.coordinatorId === authStore.user?.id,
   )
   const isApproved = computed(
     () => exchangeStore.serverLearningAgreement?.status === documentStatus.Approved,
   )
+  /** Final recognition started: the LA and table 1 are frozen for good. */
+  const isConcluded = computed(() => exchangeStore.serverLearningAgreement?.isConcluded ?? false)
+  /** The LA can be edited: a draft, before final recognition. */
   const isEditable = computed(
-    () => exchangeStore.serverLearningAgreement?.status === documentStatus.Draft,
+    () => exchangeStore.serverLearningAgreement?.status === documentStatus.Draft && !isConcluded.value,
   )
 
-  return { isCoordinator, isApproved, isEditable }
+  return { isCoordinator, isApproved, isConcluded, isEditable }
 }

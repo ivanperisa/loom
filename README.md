@@ -75,11 +75,11 @@ All demo data is created through the real application services (`server/Loom.Dev
 | `s.draft.empty@loom.dev` | Student | Empty learning agreement: first mapping, drag & drop |
 | `s.draft.rich@loom.dev` | Student | All slot modes, a course split over two slots, an over-filled slot |
 | `s.draft.message@loom.dev` | Student | Draft with a coordinator message |
-| `s.approved@loom.dev` | Student | Approved LA (locked: save, import and restore are refused) |
+| `s.approved@loom.dev` | Student | Approved LA (locked: save, import and restore are refused); ready for **Start final recognition** in the Recognition tab |
 | `s.reopened@loom.dev` | Student | Approved, then reopened by the coordinator and changed |
-| `s.history@loom.dev` | Student | Three approved versions, removed courses, amendment numbers, a restore backup |
-| `s.recognition.draft@loom.dev` | Student | Recognition in progress: grades, mapping scheme moved/split, a failed course |
-| `s.recognition.done@loom.dev` | Student | Recognition approved (results locked), Excel export |
+| `s.history@loom.dev` | Student | Three approved versions (original, A1, A2), removed courses struck through, a backup from a restore |
+| `s.recognition.draft@loom.dev` | Student | Final recognition started: grades, mapping scheme moved/split, a failed course; the coordinator can approve |
+| `s.recognition.done@loom.dev` | Student | Recognition approved (results locked); the official document has all five sheets |
 | `s.multi@loom.dev` | Student | Three exchanges (switcher) |
 | `s.nocoordinator@loom.dev` | Student | Exchange without a coordinator |
 | `student01…40@loom.dev` | Student | Volume for lists; 01–20 have exchanges with Ana |

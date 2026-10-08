@@ -1,20 +1,17 @@
 import { api } from './api'
-import type {
-  RecognitionResponse,
-  SaveRecognitionRequest,
-  UpdateRecognitionStatusRequest,
-  RecognitionSnapshotSummary,
-} from '@/types/recognition.types'
+import type { DocumentVersionResponse } from '@/types/documentVersion.types'
+import type { RecognitionResponse, SaveGradesRequest, UpdateRecognitionStatusRequest } from '@/types/recognition.types'
+
+const base = (exchangeId: string) => `/api/exchanges/${exchangeId}/recognition`
 
 export const recognitionService = {
-  getOrCreate: (exchangeId: string) =>
-    api.get<RecognitionResponse>(`/api/exchanges/${exchangeId}/recognition`),
-  saveRecognition: (exchangeId: string, request: SaveRecognitionRequest) =>
-    api.put<RecognitionResponse>(`/api/exchanges/${exchangeId}/recognition/entries`, request),
-  updateRecognitionStatus: (exchangeId: string, request: UpdateRecognitionStatusRequest) =>
-    api.patch<RecognitionResponse>(`/api/exchanges/${exchangeId}/recognition/status`, request),
+  get: (exchangeId: string) => api.get<RecognitionResponse>(base(exchangeId)),
+  /** "Start final recognition": freezes the LA and table 1 for good. */
+  start: (exchangeId: string) => api.post<RecognitionResponse>(`${base(exchangeId)}/start`),
+  saveGrades: (exchangeId: string, request: SaveGradesRequest) => api.put<RecognitionResponse>(`${base(exchangeId)}/grades`, request),
+  updateStatus: (exchangeId: string, request: UpdateRecognitionStatusRequest) =>
+    api.patch<RecognitionResponse>(`${base(exchangeId)}/status`, request),
   updateMessage: (exchangeId: string, message: string | null) =>
-    api.patch<RecognitionResponse>(`/api/exchanges/${exchangeId}/recognition/message`, { message }),
-  getHistory: (exchangeId: string) =>
-    api.get<RecognitionSnapshotSummary[]>(`/api/exchanges/${exchangeId}/recognition/history`),
+    api.patch<RecognitionResponse>(`${base(exchangeId)}/message`, { message }),
+  getVersions: (exchangeId: string) => api.get<DocumentVersionResponse[]>(`${base(exchangeId)}/versions`),
 }

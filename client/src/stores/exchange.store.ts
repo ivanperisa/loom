@@ -27,20 +27,21 @@ import type {
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import type {
   RecognitionResponse,
-  SaveRecognitionRequest,
+  SaveGradesRequest,
   UpdateRecognitionStatusRequest,
-  RecognitionSnapshotSummary,
 } from '@/types/recognition.types'
+import type { DocumentVersionResponse } from '@/types/documentVersion.types'
 import type {
   MappingSchemeResponse,
   SaveMappingSchemeRequest,
 } from '@/types/mappingScheme.types'
 import type {
-  LaSnapshotSummary,
-  SnapshotListItem,
   MappingExportDto,
-  MappingImportResult,
+  ImportPreviewResponse,
+  ImportResult,
+  RestoreResult,
 } from '@/types/learningAgreement.types'
+import { documentService } from '@/services/document.service'
 
 function buildLocalFromServer(la: LearningAgreementResponse): LocalSlotState[] {
   const map = new Map<string, LocalSlotState>()
@@ -400,18 +401,24 @@ export const useExchangeStore = defineStore('exchange', () => {
 
   async function fetchRecognition(exchangeId: string) {
     const [rec, ms] = await Promise.all([
-      recognitionService.getOrCreate(exchangeId),
+      recognitionService.get(exchangeId),
       mappingSchemeService.get(exchangeId),
     ])
     serverRecognition.value = rec.data
     serverMappingScheme.value = ms.data
   }
 
-  async function saveRecognition(exchangeId: string, request: SaveRecognitionRequest) {
-    const res = await recognitionService.saveRecognition(exchangeId, request)
+  /** "Start final recognition": the LA and table 1 freeze; results and mapping scheme appear. */
+  async function startFinalRecognition(exchangeId: string) {
+    const res = await recognitionService.start(exchangeId)
     serverRecognition.value = res.data
-    const ms = await mappingSchemeService.get(exchangeId)
-    serverMappingScheme.value = ms.data
+    await Promise.all([fetchMappingScheme(exchangeId), fetchLearningAgreement(exchangeId)])
+  }
+
+  async function saveGrades(exchangeId: string, request: SaveGradesRequest) {
+    const res = await recognitionService.saveGrades(exchangeId, request)
+    serverRecognition.value = res.data
+    await fetchMappingScheme(exchangeId)
   }
 
   async function fetchMappingScheme(exchangeId: string) {
@@ -422,47 +429,60 @@ export const useExchangeStore = defineStore('exchange', () => {
   async function saveMappingScheme(exchangeId: string, request: SaveMappingSchemeRequest) {
     const res = await mappingSchemeService.save(exchangeId, request)
     serverMappingScheme.value = res.data
-    const rec = await recognitionService.getOrCreate(exchangeId)
+    const rec = await recognitionService.get(exchangeId)
     serverRecognition.value = rec.data
   }
 
-  async function updateRecognitionStatus(
-    exchangeId: string,
-    request: UpdateRecognitionStatusRequest,
-  ) {
-    const res = await recognitionService.updateRecognitionStatus(exchangeId, request)
+  async function updateRecognitionStatus(exchangeId: string, request: UpdateRecognitionStatusRequest) {
+    const res = await recognitionService.updateStatus(exchangeId, request)
     serverRecognition.value = res.data
   }
 
-  async function exportMappings(exchangeId: string): Promise<void> {
-    const res = await learningAgreementService.exportMappings(exchangeId)
-    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/json' }))
+  function saveBlob(data: Blob, fileName: string) {
+    const url = URL.createObjectURL(data)
     const a = document.createElement('a')
     a.href = url
-    a.download = `la-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = fileName
     a.click()
     URL.revokeObjectURL(url)
   }
 
-  async function importMappings(exchangeId: string, dto: MappingExportDto): Promise<MappingImportResult> {
-    const res = await learningAgreementService.importMappings(exchangeId, dto)
+  /** "Export for import" (JSON). */
+  async function exportMappings(exchangeId: string): Promise<void> {
+    const res = await learningAgreementService.exportMappings(exchangeId)
+    saveBlob(new Blob([res.data], { type: 'application/json' }), `la-export-${new Date().toISOString().slice(0, 10)}.json`)
+  }
+
+  /** The official xlsx, built by the server from what is saved. */
+  async function downloadOfficialDocument(exchangeId: string, lang: string): Promise<void> {
+    const res = await documentService.downloadOfficial(exchangeId, lang)
+    const disposition = String(res.headers['content-disposition'] ?? '')
+    const fileName = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1] ?? /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? 'exchange.xlsx'
+    saveBlob(res.data, decodeURIComponent(fileName))
+  }
+
+  async function previewImport(exchangeId: string, file: MappingExportDto): Promise<ImportPreviewResponse> {
+    return (await learningAgreementService.previewImport(exchangeId, file)).data
+  }
+
+  async function importMappings(exchangeId: string, file: MappingExportDto): Promise<ImportResult> {
+    const res = await learningAgreementService.importMappings(exchangeId, file)
     await fetchLearningAgreement(exchangeId)
     return res.data
   }
 
-  async function fetchLaHistory(exchangeId: string): Promise<LaSnapshotSummary[]> {
-    const res = await learningAgreementService.getHistory(exchangeId)
-    return res.data
+  async function fetchLaVersions(exchangeId: string): Promise<DocumentVersionResponse[]> {
+    return (await learningAgreementService.getVersions(exchangeId)).data
   }
 
-  async function fetchSnapshots(exchangeId: string): Promise<SnapshotListItem[]> {
-    const res = await learningAgreementService.getSnapshots(exchangeId)
-    return res.data
-  }
-
-  async function restoreSnapshot(exchangeId: string, snapshotId: number): Promise<void> {
-    await learningAgreementService.restoreSnapshot(exchangeId, snapshotId)
+  async function restoreLaVersion(exchangeId: string, versionId: number): Promise<RestoreResult> {
+    const res = await learningAgreementService.restoreVersion(exchangeId, versionId)
     await fetchLearningAgreement(exchangeId)
+    return res.data
+  }
+
+  async function fetchRecognitionVersions(exchangeId: string): Promise<DocumentVersionResponse[]> {
+    return (await recognitionService.getVersions(exchangeId)).data
   }
 
   async function fetchPartnerCourses(exchangeId: string, force = false): Promise<void> {
@@ -477,11 +497,6 @@ export const useExchangeStore = defineStore('exchange', () => {
     } finally {
       if (partnerCoursesRequestId === exchangeId) partnerCoursesLoading.value = false
     }
-  }
-
-  async function fetchRecognitionHistory(exchangeId: string): Promise<RecognitionSnapshotSummary[]> {
-    const res = await recognitionService.getHistory(exchangeId)
-    return res.data
   }
 
   return {
@@ -529,16 +544,18 @@ export const useExchangeStore = defineStore('exchange', () => {
     updateExchange,
     updateLaMessage,
     fetchRecognition,
-    saveRecognition,
+    startFinalRecognition,
+    saveGrades,
     fetchMappingScheme,
     saveMappingScheme,
     updateRecognitionStatus,
     updateRecognitionMessage,
     exportMappings,
+    downloadOfficialDocument,
+    previewImport,
     importMappings,
-    fetchLaHistory,
-    fetchSnapshots,
-    restoreSnapshot,
-    fetchRecognitionHistory,
+    fetchLaVersions,
+    restoreLaVersion,
+    fetchRecognitionVersions,
   }
 })

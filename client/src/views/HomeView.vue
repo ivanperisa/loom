@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { userService } from '@/services/user.service'
 import { statusColorClass } from '@/utils/statusColors'
-import { documentStatus } from '@/utils/documentStatus'
+import { coordinatorRequestStatus as coordinatorRequestStatusValues } from '@/utils/coordinatorRequestStatus'
 import { useQuerySync } from '@/composables/useQuerySync'
 
 const router = useRouter()
@@ -92,7 +92,7 @@ async function reRequestCoordinatorRole() {
 
       <!-- Rejected coordinator request banner -->
       <div
-        v-if="coordinatorRequestStatus === documentStatus.Rejected"
+        v-if="coordinatorRequestStatus === coordinatorRequestStatusValues.Rejected"
         class="mt-6 flex items-center justify-between rounded-lg border border-danger-text/35 bg-danger-fill px-4 py-3"
       >
         <span class="text-sm text-danger-text">{{ t('home.coordinatorRequestRejected') }}</span>

@@ -5,7 +5,7 @@ import PartnerCoursePanel from '@/components/exchange/PartnerCoursePanel.vue'
 import DocTableGrid from '@/components/exchange/DocTableGrid.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
-import LearningAgreementHistoryDrawer from '@/components/exchange/LearningAgreementHistoryDrawer.vue'
+import DocumentHistoryDrawer from '@/components/exchange/DocumentHistoryDrawer.vue'
 import ImportPreviewModal from '@/components/exchange/ImportPreviewModal.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
@@ -14,6 +14,7 @@ import AuditInfo from '@/components/common/AuditInfo.vue'
 import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 import { useExchangeStore } from '@/stores/exchange.store'
 import { useExchangePermissions } from '@/composables/useExchangePermissions'
+import { formatDate } from '@/utils/formatDate'
 import { useNotification } from '@/composables/useNotification'
 import type { HomeSlotResponse, LocalSlotMapping, SlotMode, MappingExportDto } from '@/types/learningAgreement.types'
 import type { PartnerCourseResponse } from '@/types/institution.types'
@@ -33,7 +34,7 @@ const props = defineProps<{
 
 const { t, locale } = useI18n()
 const exchangeStore = useExchangeStore()
-const { isCoordinator, isEditable } = useExchangePermissions()
+const { isCoordinator, isEditable, isConcluded } = useExchangePermissions()
 const { theme } = useTheme()
 const { confirm } = useConfirm()
 const { notifyError } = useNotification()
@@ -53,6 +54,16 @@ const importFileInput = ref<HTMLInputElement | null>(null)
 
 async function handleExport() {
   await exchangeStore.exportMappings(props.exchangeId)
+}
+
+const downloadingOfficial = ref(false)
+async function downloadOfficial() {
+  downloadingOfficial.value = true
+  try {
+    await exchangeStore.downloadOfficialDocument(props.exchangeId, locale.value)
+  } finally {
+    downloadingOfficial.value = false
+  }
 }
 
 function handleImportFileChange(e: Event) {
@@ -383,10 +394,11 @@ function cancelEditEcts() {
 <template>
   <div>
     <!-- History drawer + Import modal -->
-    <LearningAgreementHistoryDrawer
+    <DocumentHistoryDrawer
       v-if="showHistory"
       :exchange-id="exchangeId"
-      :guest-mode="exchangeStore.guestMode"
+      document="la"
+      :can-restore="isEditable"
       @close="showHistory = false"
     />
     <ImportPreviewModal
@@ -394,7 +406,6 @@ function cancelEditEcts() {
       :dto="importDto"
       :exchange-id="exchangeId"
       @close="importDto = null"
-      @imported="importDto = null"
     />
     <input
       ref="importFileInput"
@@ -417,11 +428,15 @@ function cancelEditEcts() {
         >{{ t('la.amendmentLabel', { n: amendmentBadge }) }}</span>
         <!-- Export / Import / History -->
         <div style="display: flex; gap: 6px;">
-          <ActionButton @click="handleExport">
+          <ActionButton :disabled="downloadingOfficial" :title="t('documents.officialHint')" @click="downloadOfficial">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            {{ t('documents.official') }}
+          </ActionButton>
+          <ActionButton :title="t('la.actions.exportHint')" @click="handleExport">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             {{ t('la.actions.export') }}
           </ActionButton>
-          <ActionButton @click="importFileInput?.click()">
+          <ActionButton :disabled="!isEditable" :title="isEditable ? '' : t('la.import.lockedHint')" @click="importFileInput?.click()">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             {{ t('la.actions.import') }}
           </ActionButton>
@@ -433,7 +448,7 @@ function cancelEditEcts() {
       </template>
       <template #right>
         <!-- Coordinator actions -->
-        <template v-if="isCoordinator">
+        <template v-if="isCoordinator && !isConcluded">
           <button
             v-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Draft"
             type="button"
@@ -461,6 +476,12 @@ function cancelEditEcts() {
       :signed-at="exchangeStore.serverLearningAgreement?.signedAt"
       :signed-by-name="exchangeStore.serverLearningAgreement?.signedByName"
     />
+    <p v-if="isConcluded" class="la-concluded" role="status">
+      {{ t('la.concluded', {
+        date: formatDate(exchangeStore.serverLearningAgreement?.concludedAt ?? '', locale),
+        name: exchangeStore.serverLearningAgreement?.concludedByName ?? '—',
+      }) }}
+    </p>
     <UnsavedChangesBar
       v-if="isEditable && exchangeStore.isDirty"
       :saving="isSavingLa"
@@ -615,7 +636,7 @@ function cancelEditEcts() {
           <span style="display: inline-block; width: 12px; height: 12px" :style="{ background: modeOutlineColor[mode] }" />
           <span style="font-size: 11px; color: var(--color-primary-light)">{{ t(`slotMode.${mode}`) }}</span>
         </div>
-        <span style="font-size: 11px; color: var(--color-light); opacity: 0.6; margin-left: 8px">
+        <span v-if="isEditable" style="font-size: 11px; color: var(--color-light); opacity: 0.6; margin-left: 8px">
           {{ t('table.clickToChange') }}
         </span>
       </template>
@@ -740,5 +761,15 @@ function cancelEditEcts() {
   color: #cc0000;
   line-height: 1.2;
   pointer-events: none;
+}
+
+.la-concluded {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--color-light);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 </style>

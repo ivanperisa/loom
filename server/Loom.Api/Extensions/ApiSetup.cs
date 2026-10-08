@@ -30,7 +30,8 @@ public static class ApiSetup
 
         var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
         services.AddCors(options => options.AddPolicy(CorsPolicy, policy =>
-            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()
+                .WithExposedHeaders("Content-Disposition")));   // file names of downloads
 
         services.AddRateLimiter(options =>
         {

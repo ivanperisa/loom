@@ -10,6 +10,7 @@ import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 import type { HomeSlotResponse, SlotMode } from '@/types/learningAgreement.types'
 import type { MappingSchemeEntryResponse } from '@/types/mappingScheme.types'
 import { slotMode } from '@/utils/slotMode'
+import { documentStatus } from '@/utils/documentStatus'
 import { slotDisplayName, slotCodeLabel } from '@/utils/slotDisplay'
 import { ectsIndicatorColor } from '@/utils/ectsIndicator'
 import { useDragAutoScroll } from '@/utils/dragAutoScroll'
@@ -47,7 +48,9 @@ function rebuildLocal() {
   localEntries.value = (exchangeStore.serverMappingScheme?.entries ?? []).map((e) => ({ ...e }))
 }
 
-const isActive = computed(() => (exchangeStore.serverMappingScheme?.entries.length ?? 0) > 0)
+const isActive = computed(() => exchangeStore.serverRecognition?.isStarted ?? false)
+// Approved results are locked until the coordinator sends them back to draft.
+const isLocked = computed(() => exchangeStore.serverRecognition?.status === documentStatus.Approved)
 
 const isDirty = computed(() => {
   const server = exchangeStore.serverMappingScheme?.entries ?? []
@@ -112,6 +115,7 @@ const transferSource = computed(() =>
 )
 
 function onDragStart(entry: MappingSchemeEntryResponse) {
+  if (isLocked.value) return
   draggingId.value = entry.id
 }
 function onDragOver(event: DragEvent) {
@@ -203,9 +207,11 @@ function entriesForCourse(partnerCourseCode: string): MappingSchemeEntryResponse
   return localEntries.value.filter((e) => e.partnerCourseCode === partnerCourseCode)
 }
 function markNotPassed(entry: MappingSchemeEntryResponse) {
+  if (isLocked.value) return
   for (const e of entriesForCourse(entry.partnerCourseCode)) e.enrollmentStatus = 'NotPassed'
 }
 function onItemClick(entry: MappingSchemeEntryResponse) {
+  if (isLocked.value) return
   if (isNotPassed(entry)) {
     for (const e of entriesForCourse(entry.partnerCourseCode)) e.enrollmentStatus = 'Passed'
   }
@@ -241,8 +247,8 @@ watch(() => exchangeStore.serverMappingScheme, rebuildLocal, { deep: false })
 
 onMounted(async () => {
   try {
-    if (!exchangeStore.serverMappingScheme) {
-      await exchangeStore.fetchMappingScheme(props.exchangeId)
+    if (!exchangeStore.serverMappingScheme || !exchangeStore.serverRecognition) {
+      await exchangeStore.fetchRecognition(props.exchangeId)
     }
     rebuildLocal()
   } finally {
@@ -271,7 +277,7 @@ onMounted(async () => {
       </div>
 
       <template v-else>
-      <p class="mb-3 text-xs text-light/60">{{ t('mappingScheme.dragHint') }}</p>
+      <p class="mb-3 text-xs text-light/60">{{ isLocked ? t('mappingScheme.lockedApproved') : t('mappingScheme.dragHint') }}</p>
 
       <UnsavedChangesBar v-if="isDirty" :saving="saving" @save="save" @discard="discard" />
 
@@ -312,7 +318,7 @@ onMounted(async () => {
               :key="entry.id"
               class="ms-mapping-item"
               :class="{ 'ms-mapping-notpassed': isNotPassed(entry) }"
-              draggable="true"
+              :draggable="!isLocked"
               @dragstart="onDragStart(entry)"
               @dragend="draggingId = null"
               @click.stop="onItemClick(entry)"
@@ -331,7 +337,7 @@ onMounted(async () => {
                 <span style="color: #555; font-size: 10px">{{ entry.awardedEcts }} ECTS</span>
               </span>
               <button
-                v-if="!isNotPassed(entry)"
+                v-if="!isNotPassed(entry) && !isLocked"
                 type="button"
                 class="ms-x-btn"
                 :title="t('mappingScheme.markNotPassed')"

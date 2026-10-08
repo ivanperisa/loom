@@ -25,7 +25,8 @@ Each folder holds its services, contracts (requests/responses), errors and proje
 | `Coordination` | Coordinator directory, a coordinator's students and placeholder students |
 | `Exchanges` | Exchanges (create/edit/delete/list), access links and guest sessions |
 | `Planning` | Learning agreement: document, workflow (Draft ⇄ Approved), versions (history/restore), JSON import/export |
-| `Completion` | Recognition and mapping scheme (after the exchange) |
+| `Completion` | Start final recognition, recognition (table 1 + table 2) and mapping scheme (after the exchange) |
+| `Documents` | Numbered document versions and their diff (shared by the LA and the recognition), the official xlsx |
 
 `Common` has what features share: list querying, the current actor, exchange access, shared errors, cache tags.
 
@@ -62,6 +63,14 @@ db.PartnerCourses
 **Soft delete** is explicit (`.IncludeDeleted(flag)`), not a global filter. A global filter would silently hide soft-deleted courses that learning agreements still point to.
 
 **Caching** is only for reference data (`HybridCache`, tags in `CacheTags`). `CacheInvalidationInterceptor` clears a tag whenever SaveChanges touches one of its entity types, so services never invalidate by hand. Paged lists are not cached.
+
+**Documents (LA, recognition, mapping scheme).** The flow and its rules:
+
+1. *Learning agreement* (before/during the exchange): a draft anyone on the exchange edits. Only the assigned coordinator approves it or sends it back. Each approval that changed something is the next `document_version` (1 = original, 2 = amendment A1, …); approving unchanged content keeps the number. Components carry `AddedInVersion`/`RemovedInVersion`: an approved component taken out is kept, struck through ("removed in An"), never deleted.
+2. *Start final recognition* (anyone on the exchange, LA approved, after a warning): freezes the LA and table 1 for good and copies the latest approved version into the results (`mapping_scheme_entry`).
+3. *Results* (after the exchange): table 2 (grades, per partner course) and the mapping scheme (placement) are one dataset that may drift from the frozen LA. The coordinator approves them (a recognition version) or reopens them.
+
+Table 1 is computed from the latest approved LA version, never stored. Save, import and restore all go through `LaEntryWriter` (same validation, only in an editable draft, never a status change); import and restore keep a backup when the draft changes. The official xlsx is built on the server (`Documents/Official`) from saved data only.
 
 **Concurrency:** `Exchange`, `LearningAgreement` and `Recognition` carry PostgreSQL's `xmin` as a row version. Two overlapping writes fail with 409 `CONCURRENT_UPDATE` instead of overwriting each other.
 
