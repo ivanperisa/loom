@@ -1,3 +1,4 @@
+using Loom.Application.Helpers;
 using Loom.Application.Interfaces.Services;
 using Loom.Domain.Enums;
 using Microsoft.Extensions.Caching.Memory;
@@ -29,7 +30,7 @@ public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
             return;
         }
 
-        var cacheKey = $"usersync:{externalId}";
+        var cacheKey = UserSyncCache.Key(externalId);
 
         if (!cache.TryGetValue(cacheKey, out CachedUser? cached))
         {

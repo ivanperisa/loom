@@ -10,10 +10,11 @@ using Loom.Application.Mappers;
 using Loom.Domain.Entities;
 using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Loom.Application.Services;
 
-public class AdminService(IAppDbContext db, CachedQuery cache) : IAdminService
+public class AdminService(IAppDbContext db, CachedQuery cache, IMemoryCache memoryCache) : IAdminService
 {
     private static readonly TimeSpan ListTtl = TimeSpan.FromSeconds(30);
 
@@ -146,6 +147,7 @@ public class AdminService(IAppDbContext db, CachedQuery cache) : IAdminService
             await db.SaveChangesAsync(ct);
             cache.BumpVersion("users");
             cache.BumpVersion("coordinators");
+            memoryCache.Remove(UserSyncCache.Key(target.ExternalId));
         }
 
         var saved = await UsersWithIncludes()
