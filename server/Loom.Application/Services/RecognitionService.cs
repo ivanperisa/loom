@@ -1,3 +1,4 @@
+using Loom.Application.Features.Catalog;
 using System.Text.Json;
 using ErrorOr;
 using Loom.Application.DTOs.Recognition;

@@ -1,3 +1,4 @@
+using Loom.Application.Features.Catalog;
 using Loom.Application.DTOs.Exchange;
 using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.DTOs.Recognition;
@@ -77,21 +78,6 @@ public static class ExchangeMapper
         entry.AwardedEcts,
         entry.IsDeleted,
         AmendmentNumber: null
-    );
-
-    public static PartnerCourseResponse ToResponse(this PartnerCourse course) => new(
-        course.Id,
-        course.Code,
-        course.Name,
-        course.NameHr,
-        course.Url,
-        course.Ects,
-        course.LecturesH,
-        course.AuditoryH,
-        course.LabH,
-        course.Semester.ToString(),
-        course.Level.ToString(),
-        course.IsDeleted
     );
 
     public static RecognitionResponse ToResponse(this Recognition recognition) => new(

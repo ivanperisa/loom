@@ -1,3 +1,4 @@
+using Loom.Application.Features.Catalog;
 using ErrorOr;
 using Loom.Application.DTOs.Exchange;
 using Loom.Application.Helpers;

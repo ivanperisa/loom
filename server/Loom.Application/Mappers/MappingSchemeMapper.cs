@@ -1,3 +1,4 @@
+using Loom.Application.Features.Catalog;
 using Loom.Application.DTOs.MappingScheme;
 using Loom.Domain.Entities;
 

@@ -1,3 +1,4 @@
+using Loom.Application.Features.Catalog;
 using Loom.Application.DTOs.Admin;
 using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.Helpers;
@@ -40,8 +41,7 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
             return await db.SaveChangesAsync(Ct);
         });
 
-        await Ok<IInstitutionService, PartnerCourseResponse>(s =>
-            s.MergePartnerCoursesAsync(new Application.DTOs.Institution.MergePartnerCoursesRequest(courses["A"], [courses["C"]]), Ct));
+        await Ok<CourseMergeService, PartnerCourseResponse>(s => s.MergeAsync(new MergePartnerCoursesRequest(courses["A"], [courses["C"]]), Ct));
 
         Assert.True(await Db(db => db.LearningAgreementEntries.AnyAsync(e => e.HomeSlotId == Slot2 && e.PartnerCourseId == courses["A"], Ct)));
         Assert.True(await Db(db => db.MappingSchemeEntries.AnyAsync(e => e.HomeSlotId == Slot3 && e.PartnerCourseId == courses["A"], Ct)));
@@ -56,8 +56,7 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
         var exchange = await NewExchange(student, partner, coordinator: null);
         await SaveLa(exchange, student, AtExchange(Slot1, courses["A"], 3), AtExchange(Slot1, courses["D"], 2));
 
-        var result = await Call<IInstitutionService, PartnerCourseResponse>(s =>
-            s.MergePartnerCoursesAsync(new Application.DTOs.Institution.MergePartnerCoursesRequest(courses["A"], [courses["D"]]), Ct));
+        var result = await Call<CourseMergeService, PartnerCourseResponse>(s => s.MergeAsync(new MergePartnerCoursesRequest(courses["A"], [courses["D"]]), Ct));
 
         Assert.Equal("MERGE_CONFLICT", result.FirstError.Code);
     }

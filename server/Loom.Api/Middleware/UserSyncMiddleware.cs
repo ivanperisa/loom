@@ -1,3 +1,4 @@
+using Loom.Application.Common.Security;
 using Loom.Application.Helpers;
 using Loom.Application.Interfaces.Services;
 using Loom.Domain.Enums;
@@ -11,7 +12,7 @@ public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
     private record CachedUser(int Id, UserRole Role);
 
-    public async Task InvokeAsync(HttpContext context, IUserSyncService userSyncService)
+    public async Task InvokeAsync(HttpContext context, IUserSyncService userSyncService, CurrentActor actor)
     {
         if (context.User.Identity?.IsAuthenticated != true)
         {
@@ -60,6 +61,7 @@ public class UserSyncMiddleware(RequestDelegate next, IMemoryCache cache)
         if (existingRole is not null)
             identity.RemoveClaim(existingRole);
         identity.AddClaim(new Claim(ClaimTypes.Role, cached!.Role.ToString()));
+        actor.Set(cached.Id);
 
         await next(context);
     }

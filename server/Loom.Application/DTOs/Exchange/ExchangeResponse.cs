@@ -1,4 +1,4 @@
-using Loom.Application.DTOs.Institution;
+using Loom.Application.Features.Catalog;
 
 namespace Loom.Application.DTOs.Exchange;
 

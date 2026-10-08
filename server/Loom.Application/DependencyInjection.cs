@@ -1,3 +1,5 @@
+using Loom.Application.Common.Security;
+using Loom.Application.Features.Catalog;
 using Loom.Application.Helpers;
 using Loom.Application.Interfaces.Services;
 using Loom.Application.Services;
@@ -12,10 +14,19 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddSingleton<CachedQuery>();
 
+        services.AddScoped<CurrentActor>();
+        services.AddScoped<ICurrentActor>(sp => sp.GetRequiredService<CurrentActor>());
+        services.AddScoped<ExchangeAccess>();
+
+        // Catalog
+        services.AddScoped<HomeCatalogService>();
+        services.AddScoped<PartnerInstitutionService>();
+        services.AddScoped<PartnerCourseService>();
+        services.AddScoped<CourseMergeService>();
+
         services.AddScoped<UserService>();
         services.AddScoped<IUserService>(sp => sp.GetRequiredService<UserService>());
         services.AddScoped<IUserSyncService>(sp => sp.GetRequiredService<UserService>());
-        services.AddScoped<IInstitutionService, InstitutionService>();
         services.AddScoped<IExchangeService, ExchangeService>();
         services.AddScoped<ILearningAgreementService, LearningAgreementService>();
         services.AddScoped<IRecognitionService, RecognitionService>();
