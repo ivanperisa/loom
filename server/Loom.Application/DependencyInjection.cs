@@ -4,6 +4,7 @@ using Loom.Application.Features.Catalog;
 using Loom.Application.Features.Completion;
 using Loom.Application.Features.Coordination;
 using Loom.Application.Features.Documents;
+using Loom.Application.Features.Documents.Official;
 using Loom.Application.Features.Exchanges;
 using Loom.Application.Features.Planning;
 using Loom.Application.Features.Users;
@@ -43,6 +44,7 @@ public static class DependencyInjection
 
         // Documents (versions shared by the LA and the recognition)
         services.AddScoped<VersionStore>();
+        services.AddScoped<OfficialDocumentService>();
 
         // Planning (learning agreement)
         services.AddScoped<LaEntryWriter>();

@@ -49,6 +49,27 @@ public class ApiTests(DatabaseFixture fixture) : HttpTest(fixture)
     }
 
     [Fact]
+    public async Task The_official_document_is_an_xlsx_with_the_la_and_recognition_sheets()
+    {
+        await using var factory = Factory();
+        var (partner, courses) = await NewPartner();
+        var student = await NewUser();
+        var coordinator = await NewUser(UserRole.Coordinator);
+        var exchange = await NewExchange(student, partner, coordinator);
+        await SaveLa(exchange, student, AtExchange(Slot1, courses["A"], 5));
+        await Approve(exchange, coordinator);
+        var client = await LoggedIn(factory, await Db(db => db.Users.Where(u => u.Id == student).Select(u => u.Email).SingleAsync(Ct)));
+
+        var response = await client.GetAsync($"/api/exchanges/{exchange}/documents/official?lang=en", Ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.Content.Headers.ContentType?.MediaType);
+        using var workbook = new ClosedXML.Excel.XLWorkbook(await response.Content.ReadAsStreamAsync(Ct));
+        Assert.Equal(["Agreed recognition", "Learning agreement", "Signatures"], workbook.Worksheets.Select(w => w.Name));
+        Assert.Equal("Learning agreement, approved version 1 (original agreement)", workbook.Worksheet("Learning agreement").Cell(1, 1).GetString());
+    }
+
+    [Fact]
     public async Task Dev_login_does_not_exist_outside_development()
     {
         await using var factory = Factory("Production");
