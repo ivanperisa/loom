@@ -12,6 +12,8 @@ public class RecognitionConfiguration : IEntityTypeConfiguration<Recognition>
         builder.ToTable("recognition", "exchange", t =>
             t.HasCheckConstraint("recognition_status_check", "status IN ('Draft', 'Submitted', 'Approved', 'Rejected')"));
         builder.HasKey(x => x.Id);
+        // Optimistic concurrency via PostgreSQL's xmin: concurrent writes to the same row fail instead of overwriting.
+        builder.Property<uint>("Version").IsRowVersion();
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(x => x.ExchangeId).HasColumnName("exchange_id");
         builder.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20).HasDefaultValue(DocumentStatus.Draft);

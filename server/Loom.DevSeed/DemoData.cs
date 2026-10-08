@@ -1,8 +1,6 @@
 using ErrorOr;
 using Loom.Application.Features.Planning;
 using Loom.Application.Features.Exchanges;
-using Loom.Application.Features.Planning;
-using Loom.Application.Features.Completion;
 using Loom.Application.Features.Completion;
 using Loom.Application.Features.Admin;
 using Loom.Application.Features.Coordination;

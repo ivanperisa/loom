@@ -12,6 +12,8 @@ public class ExchangeConfiguration : IEntityTypeConfiguration<Exchange>
         builder.ToTable("exchange", "exchange", t =>
             t.HasCheckConstraint("exchange_semester_type_check", "semester_type IN ('Winter', 'Summer', 'Both')"));
         builder.HasKey(x => x.Id);
+        // Optimistic concurrency via PostgreSQL's xmin: concurrent writes to the same row fail instead of overwriting.
+        builder.Property<uint>("Version").IsRowVersion();
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(x => x.Guid).HasColumnName("guid").HasDefaultValueSql("gen_random_uuid()").IsRequired();
         builder.Property(x => x.StudentId).HasColumnName("student_id").IsRequired();

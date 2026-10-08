@@ -1,3 +1,4 @@
+using Loom.Application.Common.Security;
 using Loom.Api.Extensions;
 using Loom.Application.Features.Users;
 using Microsoft.AspNetCore.Authentication;
@@ -8,11 +9,11 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Loom.Api.Controllers;
 
-[ApiController]
 [Route("[controller]")]
 public class AuthController(
-    IConfiguration configuration,
+    FrontendUrls frontend,
     AccountService accounts,
+    ICurrentActor actor,
     IAuthenticationSchemeProvider schemes) : ApiController
 {
     [AllowAnonymous]
@@ -20,11 +21,11 @@ public class AuthController(
     [HttpGet("login")]
     public async Task<IActionResult> Login([FromQuery] string? returnUrl = "/")
     {
-        var frontendTarget = configuration.BuildFrontendUrl(returnUrl);
+        var frontendTarget = frontend.Build(returnUrl);
 
         // Local development without Google credentials: use the dev login on the landing page instead.
-        if (await schemes.GetSchemeAsync("GoogleOidc") is null)
-            return Redirect(configuration.BuildFrontendUrl("/"));
+        if (await schemes.GetSchemeAsync(AuthenticationSetup.GoogleScheme) is null)
+            return Redirect(frontend.Build("/"));
 
         if (User.Identity?.IsAuthenticated == true)
         {
@@ -36,26 +37,17 @@ public class AuthController(
         var authProperties = new AuthenticationProperties { RedirectUri = frontendTarget };
         authProperties.Parameters["prompt"] = "select_account";
 
-        return Challenge(authProperties, "GoogleOidc");
+        return Challenge(authProperties, AuthenticationSetup.GoogleScheme);
     }
 
     [AllowAnonymous]
     [HttpGet("me")]
     public async Task<IActionResult> Me(CancellationToken ct)
     {
-        var userId = TryGetCurrentUserId();
-        if (userId is null)
-        {
-            return Ok(new { IsAuthenticated = false });
-        }
+        if (!actor.IsAuthenticated) return Ok(new { IsAuthenticated = false });
 
-        var result = await accounts.GetAsync(userId.Value, ct);
-        if (result.IsError)
-        {
-            return Ok(new { IsAuthenticated = false });
-        }
-
-        return Ok(result.Value);
+        var result = await accounts.GetAsync(actor.UserId, ct);
+        return result.IsError ? Ok(new { IsAuthenticated = false }) : Ok(result.Value);
     }
 
     [Authorize]
