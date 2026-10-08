@@ -121,6 +121,10 @@ const moveEcts = ref<number>(0)
 const editingMapping = ref<{ homeSlotId: string; localId: string } | null>(null)
 const editingEcts = ref(0)
 const ectsInputRef = ref<HTMLInputElement | null>(null)
+// Function ref: a plain ref inside v-for would collect an array of inputs.
+function setEctsInputRef(el: unknown) {
+  ectsInputRef.value = el instanceof HTMLInputElement ? el : null
+}
 const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(null)
 
 function lineFor(homeSlotId: string) {
@@ -568,7 +572,7 @@ function cancelEditEcts() {
               <span style="font-size: 10px; color: #777">{{ mapping.partnerCourseNameHr ?? '-' }}</span><br />
               <template v-if="editingMapping?.localId === mapping.localId" :key="`edit-${mapping.localId}`">
                 <input
-                  ref="ectsInputRef"
+                  :ref="setEctsInputRef"
                   v-model.number="editingEcts"
                   type="number"
                   min="0.5"

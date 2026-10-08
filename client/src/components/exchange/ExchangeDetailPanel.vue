@@ -162,12 +162,6 @@ async function saveNotes(la: string | null, recognition: string | null) {
   showNotes.value = false
 }
 
-watch(
-  () => exchangeStore.error,
-  (err) => {
-    if (err) router.push('/home')
-  },
-)
 
 watch(activeTab, async (tab) => {
   router.replace({ query: { ...route.query, tab } })
@@ -181,6 +175,11 @@ onMounted(async () => {
     exchangeStore.fetchLearningAgreement(props.exchangeId),
     exchangeStore.fetchRecognition(props.exchangeId),
   ])
+  // Leave only when the exchange itself could not be loaded; guests stay and see the error.
+  const loaded = exchangeStore.exchange?.guid.toLowerCase() === props.exchangeId.toLowerCase()
+  if (!loaded && !exchangeStore.guestMode) {
+    router.replace(authStore.canActAsCoordinator ? '/coordinator' : '/home')
+  }
 })
 </script>
 
