@@ -12,14 +12,20 @@ namespace Loom.Api.Controllers;
 [Route("[controller]")]
 public class AuthController(
     IConfiguration configuration,
-    IUserService userService) : ApiController
+    IUserService userService,
+    IAuthenticationSchemeProvider schemes) : ApiController
 {
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
     [HttpGet("login")]
-    public IActionResult Login([FromQuery] string? returnUrl = "/")
+    public async Task<IActionResult> Login([FromQuery] string? returnUrl = "/")
     {
         var frontendTarget = configuration.BuildFrontendUrl(returnUrl);
+
+        // Local development without Google credentials: use the dev login on the landing page instead.
+        if (await schemes.GetSchemeAsync("GoogleOidc") is null)
+            return Redirect(configuration.BuildFrontendUrl("/"));
+
         if (User.Identity?.IsAuthenticated == true)
         {
             return SignOut(

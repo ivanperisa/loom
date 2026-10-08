@@ -1,12 +1,10 @@
+using Loom.Api.Extensions;
 using Loom.Api.Middleware;
-using Loom.Application.Interfaces;
-using Loom.Application.Interfaces.Services;
-using Loom.Application.Services;
+using Loom.Application;
 using Loom.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using NLog;
 using NLog.Web;
 using System.Text.Json.Serialization;
@@ -28,23 +26,8 @@ try
   builder.Services.AddEndpointsApiExplorer();
   builder.Services.AddSwaggerGen();
 
-  builder.Services.AddDbContext<AppDbContext>(options =>
-      options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-  builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
-
-  builder.Services.AddMemoryCache();
-  builder.Services.AddSingleton<Loom.Application.Helpers.CachedQuery>();
-
-  builder.Services.AddScoped<UserService>();
-  builder.Services.AddScoped<IUserService>(sp => sp.GetRequiredService<UserService>());
-  builder.Services.AddScoped<IUserSyncService>(sp => sp.GetRequiredService<UserService>());
-  builder.Services.AddScoped<IInstitutionService, InstitutionService>();
-  builder.Services.AddScoped<IExchangeService, ExchangeService>();
-  builder.Services.AddScoped<ILearningAgreementService, LearningAgreementService>();
-  builder.Services.AddScoped<IRecognitionService, RecognitionService>();
-  builder.Services.AddScoped<IMappingSchemeService, MappingSchemeService>();
-  builder.Services.AddScoped<ICoordinatorService, CoordinatorService>();
-  builder.Services.AddScoped<IAdminService, AdminService>();
+  builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("DefaultConnection"));
+  builder.Services.AddApplication();
 
   var allowedOrigins = builder.Configuration
       .GetSection("Cors:AllowedOrigins")
@@ -61,17 +44,35 @@ try
       });
   });
 
-  builder.Services.AddAuthentication(options =>
+  var googleClientId = builder.Configuration["Google:ClientId"];
+  var googleClientSecret = builder.Configuration["Google:ClientSecret"];
+  var googleConfigured = !string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret);
+  if (!googleConfigured && !builder.Environment.IsDevelopment())
+    throw new InvalidOperationException(
+        "Google OAuth is not configured. Set Google:ClientId and Google:ClientSecret.");
+
+  var devAuthEnabled = builder.IsDevAuthEnabled();
+
+  var authentication = builder.Services.AddAuthentication(options =>
   {
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = "GoogleOidc";
+    options.DefaultChallengeScheme = googleConfigured ? "GoogleOidc" : CookieAuthenticationDefaults.AuthenticationScheme;
   })
       .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
       {
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        if (builder.Environment.IsDevelopment())
+        {
+          // Local dev runs over plain http behind the Vite proxy (same origin).
+          options.Cookie.SameSite = SameSiteMode.Lax;
+          options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        }
+        else
+        {
+          options.Cookie.SameSite = SameSiteMode.None;
+          options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        }
         options.Events.OnRedirectToLogin = ctx =>
       {
             ctx.Response.StatusCode = 401;
@@ -82,12 +83,15 @@ try
             ctx.Response.StatusCode = 403;
             return Task.CompletedTask;
           };
-      })
-      .AddOpenIdConnect("GoogleOidc", options =>
+      });
+
+  if (googleConfigured)
+  {
+    authentication.AddOpenIdConnect("GoogleOidc", options =>
       {
         options.Authority = "https://accounts.google.com";
-        options.ClientId = builder.Configuration["Google:ClientId"] ?? string.Empty;
-        options.ClientSecret = builder.Configuration["Google:ClientSecret"] ?? string.Empty;
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
         options.ResponseType = "code";
         options.UsePkce = true;
         options.SaveTokens = false; //or increase in nginx conf  proxy_buffer_size 16k;proxy_buffers 8 16k; proxy_busy_buffers_size 32k;
@@ -106,6 +110,7 @@ try
           return Task.CompletedTask;
         };
       });
+  }
 
   builder.Services.AddAuthorization();
 
@@ -120,12 +125,6 @@ try
       });
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
   });
-
-  var googleClientId = builder.Configuration["Google:ClientId"];
-  var googleClientSecret = builder.Configuration["Google:ClientSecret"];
-  if (string.IsNullOrWhiteSpace(googleClientId) || string.IsNullOrWhiteSpace(googleClientSecret))
-    throw new InvalidOperationException(
-        "Google OAuth is not configured. Set Google:ClientId and Google:ClientSecret.");
 
   builder.Services.AddHealthChecks();
 
@@ -173,6 +172,8 @@ try
   app.UseRateLimiter();
 
   app.MapControllers();
+  if (devAuthEnabled)
+    app.MapDevAuth();
 
   app.MapHealthChecks("/healthz");
 

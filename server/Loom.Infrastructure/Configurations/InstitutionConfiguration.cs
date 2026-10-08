@@ -23,6 +23,8 @@ public class InstitutionConfiguration : IEntityTypeConfiguration<Institution>
             .HasConversion<string>()
             .HasMaxLength(10)
             .HasDefaultValue(InstitutionType.Partner)
+            // Without a sentinel, EF would treat Home (the CLR default) as "unset" and the DB default would turn it into Partner.
+            .HasSentinel((InstitutionType)(-1))
             .IsRequired();
         builder.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false).IsRequired();
         builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
