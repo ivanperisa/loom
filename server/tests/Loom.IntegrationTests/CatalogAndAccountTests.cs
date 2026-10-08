@@ -1,3 +1,4 @@
+using Loom.Application.Features.Exchanges;
 using Loom.Application.Features.Catalog;
 using Loom.Application.Features.Admin;
 using Loom.Application.DTOs.LearningAgreement;
@@ -22,7 +23,7 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
         var (partner, _) = await NewPartner();
         var exchange = await NewExchange(student, partner, coordinator: null);
 
-        await Ok<IExchangeService, ErrorOr.Deleted>(s => s.DeleteExchangeAsync(exchange, student, Ct));
+        await Ok<ExchangeService, ErrorOr.Deleted>(s => s.DeleteAsync(exchange, Ct), actor: student);
 
         Assert.False(await Db(db => db.Exchanges.AnyAsync(e => e.Guid == exchange, Ct)));
     }

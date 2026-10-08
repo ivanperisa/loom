@@ -12,12 +12,4 @@ public static class ExchangeLookupHelper
         var id = await db.Exchanges.Where(e => e.Guid == guid).Select(e => e.Id).FirstOrDefaultAsync(ct);
         return id == 0 ? Error.NotFound("EXCHANGE_NOT_FOUND", "Exchange not found.") : id;
     }
-
-    public static IQueryable<Exchange> ExchangeWithFullIncludes(this IAppDbContext db) => db.Exchanges
-        .AsNoTracking()
-        .Include(e => e.Student)
-        .Include(e => e.Coordinator)
-        .Include(e => e.HomeProfile).ThenInclude(hp => hp.Program).ThenInclude(p => p.Institution)
-        .Include(e => e.PartnerInstitution)
-        .Include(e => e.LearningAgreement);
 }

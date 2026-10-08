@@ -1,4 +1,5 @@
-using Loom.Api.Extensions;
+using Loom.Api.Filters;
+using Loom.Application.Common.Security;
 using Loom.Application.DTOs.MappingScheme;
 using Loom.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -6,49 +7,18 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
+/// <summary>Every action is also reachable through the access link, see <see cref="ExchangeActorAttribute"/>.</summary>
 [Route("api/exchanges/{exchangeGuid:guid}/mapping-scheme")]
-[Authorize]
-public class MappingSchemeController(IMappingSchemeService mappingSchemeService, IExchangeService exchangeService) : ApiController
+[Route("api/exchanges/access/{exchangeGuid:guid}/mapping-scheme")]
+[AllowAnonymous]
+[ExchangeActor]
+public class MappingSchemeController(IMappingSchemeService mappingSchemes, ICurrentActor actor) : ApiController
 {
     [HttpGet]
-    public async Task<IActionResult> GetMappingScheme(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await mappingSchemeService.GetMappingSchemeAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> Get(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await mappingSchemes.GetMappingSchemeAsync(exchangeGuid, actor.UserId, ct), Ok);
 
     [HttpPut("entries")]
-    public async Task<IActionResult> SaveMappingScheme(
-        Guid exchangeGuid,
-        [FromBody] SaveMappingSchemeRequest request,
-        CancellationToken ct)
-    {
-        var result = await mappingSchemeService.SaveMappingSchemeAsync(exchangeGuid, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpGet("/api/exchanges/access/{exchangeGuid:guid}/mapping-scheme")]
-    public async Task<IActionResult> GetPublicMappingScheme(Guid exchangeGuid, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await mappingSchemeService.GetMappingSchemeAsync(exchangeGuid, studentIdResult.Value, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpPut("/api/exchanges/access/{exchangeGuid:guid}/mapping-scheme/entries")]
-    public async Task<IActionResult> SavePublicMappingScheme(
-        Guid exchangeGuid,
-        [FromBody] SaveMappingSchemeRequest request,
-        CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await mappingSchemeService.SaveMappingSchemeAsync(exchangeGuid, studentIdResult.Value, request, ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> Save(Guid exchangeGuid, [FromBody] SaveMappingSchemeRequest request, CancellationToken ct) =>
+        Match(await mappingSchemes.SaveMappingSchemeAsync(exchangeGuid, actor.UserId, request, ct), Ok);
 }

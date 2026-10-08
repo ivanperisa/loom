@@ -1,5 +1,4 @@
 using Loom.Application.Features.Catalog;
-using Loom.Application.DTOs.Exchange;
 using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.DTOs.Recognition;
 using Loom.Domain.Entities;
@@ -8,47 +7,6 @@ namespace Loom.Application.Mappers;
 
 public static class ExchangeMapper
 {
-    public static ExchangeResponse ToResponse(this Exchange exchange) => new(
-        exchange.Id,
-        exchange.Guid,
-        exchange.StudentId,
-        exchange.Student.Name,
-        exchange.Student.Jmbag,
-        exchange.HomeProfile.Program.Institution.Name,
-        exchange.HomeProfile.Program.Name,
-        exchange.HomeProfile.ToResponse(),
-        exchange.PartnerInstitutionId,
-        exchange.PartnerInstitution.Name,
-        exchange.CoordinatorId,
-        exchange.Coordinator?.Name,
-        exchange.Student.Mentor,
-        exchange.AcademicYear,
-        exchange.SemesterType.ToString(),
-        exchange.StudySemesters,
-        exchange.CoordinatorMessage,
-        exchange.EwpLink,
-        string.IsNullOrEmpty(exchange.Student.Email),
-        exchange.CreatedAt,
-        exchange.UpdatedAt
-    );
-
-    public static ExchangeSummaryResponse ToSummaryResponse(this Exchange exchange) => new(
-        exchange.Id,
-        exchange.Guid,
-        exchange.StudentId,
-        exchange.Student.Name,
-        exchange.Student.Jmbag,
-        exchange.PartnerInstitution.Name,
-        exchange.HomeProfile.Program.Institution.Name,
-        exchange.HomeProfile.Program.Name,
-        exchange.HomeProfile.Name,
-        exchange.AcademicYear,
-        exchange.SemesterType.ToString(),
-        exchange.LearningAgreement!.Status.ToString(),
-        exchange.Recognition?.Status.ToString(),
-        exchange.EwpLink
-    );
-
     public static HomeSlotResponse ToResponse(this HomeSlot slot) => new(
         slot.Id,
         slot.Semester,

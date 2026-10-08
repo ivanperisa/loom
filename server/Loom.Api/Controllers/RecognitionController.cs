@@ -1,121 +1,36 @@
-using Loom.Api.Extensions;
+using Loom.Api.Filters;
+using Loom.Application.Common.Security;
 using Loom.Application.DTOs.Recognition;
 using Loom.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-
 namespace Loom.Api.Controllers;
 
+/// <summary>Every action is also reachable through the access link, see <see cref="ExchangeActorAttribute"/>.</summary>
 [Route("api/exchanges/{exchangeGuid:guid}/recognition")]
-[Authorize]
-public class RecognitionController(IRecognitionService recognitionService, IExchangeService exchangeService) : ApiController
+[Route("api/exchanges/access/{exchangeGuid:guid}/recognition")]
+[AllowAnonymous]
+[ExchangeActor]
+public class RecognitionController(IRecognitionService recognitions, ICurrentActor actor) : ApiController
 {
     [HttpGet]
-    public async Task<IActionResult> GetOrCreateRecognition(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await recognitionService.GetOrCreateRecognitionAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> Get(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await recognitions.GetOrCreateRecognitionAsync(exchangeGuid, actor.UserId, ct), Ok);
 
     [HttpPut("entries")]
-    public async Task<IActionResult> SaveRecognition(
-        Guid exchangeGuid,
-        [FromBody] SaveRecognitionRequest request,
-        CancellationToken ct)
-    {
-        var result = await recognitionService.SaveRecognitionAsync(exchangeGuid, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> Save(Guid exchangeGuid, [FromBody] SaveRecognitionRequest request, CancellationToken ct) =>
+        Match(await recognitions.SaveRecognitionAsync(exchangeGuid, actor.UserId, request, ct), Ok);
 
     [HttpPatch("status")]
-    public async Task<IActionResult> UpdateStatus(
-        Guid exchangeGuid,
-        [FromBody] UpdateRecognitionStatusRequest request,
-        CancellationToken ct)
-    {
-        var result = await recognitionService.UpdateRecognitionStatusAsync(exchangeGuid, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpGet("/api/exchanges/access/{exchangeGuid:guid}/recognition")]
-    public async Task<IActionResult> GetOrCreatePublic(Guid exchangeGuid, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await recognitionService.GetOrCreateRecognitionAsync(exchangeGuid, studentIdResult.Value, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpPut("/api/exchanges/access/{exchangeGuid:guid}/recognition/entries")]
-    public async Task<IActionResult> SavePublicRecognition(
-        Guid exchangeGuid,
-        [FromBody] SaveRecognitionRequest request,
-        CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await recognitionService.SaveRecognitionAsync(exchangeGuid, studentIdResult.Value, request, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpPatch("/api/exchanges/access/{exchangeGuid:guid}/recognition/status")]
-    public async Task<IActionResult> UpdatePublicStatus(
-        Guid exchangeGuid,
-        [FromBody] UpdateRecognitionStatusRequest request,
-        CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await recognitionService.UpdateRecognitionStatusAsync(exchangeGuid, studentIdResult.Value, request, ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> UpdateStatus(Guid exchangeGuid, [FromBody] UpdateRecognitionStatusRequest request, CancellationToken ct) =>
+        Match(await recognitions.UpdateRecognitionStatusAsync(exchangeGuid, actor.UserId, request, ct), Ok);
 
     [HttpPatch("message")]
-    public async Task<IActionResult> UpdateRecognitionMessage(
-        Guid exchangeGuid,
-        [FromBody] UpdateRecognitionMessageRequest request,
-        CancellationToken ct)
-    {
-        var result = await recognitionService.UpdateRecognitionMessageAsync(exchangeGuid, GetCurrentUserId(), request.Message, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpPatch("/api/exchanges/access/{exchangeGuid:guid}/recognition/message")]
-    public async Task<IActionResult> UpdatePublicRecognitionMessage(
-        Guid exchangeGuid,
-        [FromBody] UpdateRecognitionMessageRequest request,
-        CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await recognitionService.UpdateRecognitionMessageAsync(exchangeGuid, studentIdResult.Value, request.Message, ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> UpdateMessage(Guid exchangeGuid, [FromBody] UpdateRecognitionMessageRequest request, CancellationToken ct) =>
+        Match(await recognitions.UpdateRecognitionMessageAsync(exchangeGuid, actor.UserId, request.Message, ct), Ok);
 
     [HttpGet("history")]
-    public async Task<IActionResult> GetRecognitionHistory(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await recognitionService.GetRecognitionHistoryAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpGet("/api/exchanges/access/{exchangeGuid:guid}/recognition/history")]
-    public async Task<IActionResult> GetPublicRecognitionHistory(Guid exchangeGuid, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await recognitionService.GetRecognitionHistoryAsync(exchangeGuid, studentIdResult.Value, ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> GetHistory(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await recognitions.GetRecognitionHistoryAsync(exchangeGuid, actor.UserId, ct), Ok);
 }

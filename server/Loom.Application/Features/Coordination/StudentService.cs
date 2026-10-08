@@ -3,7 +3,6 @@ using Loom.Application.Common;
 using Loom.Application.Common.Errors;
 using Loom.Application.Common.Querying;
 using Loom.Application.Common.Security;
-using Loom.Application.DTOs.Exchange;
 using Loom.Application.Features.Exchanges;
 using Loom.Application.Interfaces;
 using Loom.Domain.Entities;

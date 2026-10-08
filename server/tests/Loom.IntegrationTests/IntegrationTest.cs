@@ -1,6 +1,7 @@
 using Loom.Application.Common.Security;
 using ErrorOr;
 using Loom.Application.DTOs.Exchange;
+using Loom.Application.Features.Exchanges;
 using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.Interfaces.Services;
 using Loom.Domain.Entities;
@@ -65,8 +66,8 @@ public abstract class IntegrationTest(DatabaseFixture fixture)
 
     protected async Task<Guid> NewExchange(int student, int partnerInstitution, int? coordinator)
     {
-        var created = await Ok<IExchangeService, ExchangeResponse>(s => s.CreateExchangeAsync(student,
-            new CreateExchangeRequest(ProfileId, partnerInstitution, "2025/2026", "Winter", [3], CoordinatorId: coordinator), Ct));
+        var created = await Ok<ExchangeService, ExchangeResponse>(s => s.CreateAsync(
+            new CreateExchangeRequest(ProfileId, partnerInstitution, "2025/2026", "Winter", [3], CoordinatorId: coordinator), Ct), actor: student);
         return created.Guid;
     }
 

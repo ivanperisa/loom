@@ -1,3 +1,4 @@
+using Loom.Application.Features.Exchanges;
 using Loom.Application.Features.Catalog;
 using ErrorOr;
 using Loom.Application.DTOs.Exchange;
@@ -237,9 +238,7 @@ public class LearningAgreementService(IAppDbContext db) : ILearningAgreementServ
 
         await db.SaveChangesAsync(ct);
 
-        var saved = await db.ExchangeWithFullIncludes().FirstOrDefaultAsync(e => e.Id == exchangeId, ct)
-            ?? throw new InvalidOperationException();
-        return saved.ToResponse();
+        return await db.Exchanges.AsNoTracking().Where(e => e.Id == exchangeId).Select(ExchangeProjections.Detail).FirstAsync(ct);
     }
 
     public async Task<ErrorOr<LearningAgreementResponse>> UpdateLearningAgreementMessageAsync(Guid exchangeGuid, int requesterId, string? message, CancellationToken ct = default)

@@ -1,6 +1,5 @@
-using Loom.Api.Extensions;
-using Loom.Application.DTOs.Exchange;
-using Loom.Application.Interfaces.Services;
+using Loom.Api.Filters;
+using Loom.Application.Features.Exchanges;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,74 +7,39 @@ namespace Loom.Api.Controllers;
 
 [Route("api/exchanges")]
 [Authorize]
-public class ExchangeController(IExchangeService exchangeService) : ApiController
+[ExchangeActor]
+public class ExchangeController(ExchangeService exchanges) : ApiController
 {
-    [HttpGet("{exchangeGuid:guid}")]
-    public async Task<IActionResult> GetExchange(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await exchangeService.GetExchangeAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
-
     [AllowAnonymous]
+    [HttpGet("{exchangeGuid:guid}")]
     [HttpGet("access/{exchangeGuid:guid}")]
-    public async Task<IActionResult> GetPublicExchange(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await exchangeService.GetPublicExchangeAsync(exchangeGuid, ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> GetExchange(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await exchanges.GetAsync(exchangeGuid, ct), Ok);
 
     [HttpGet("mine")]
-    public async Task<IActionResult> GetMyExchanges(CancellationToken ct)
-    {
-        var result = await exchangeService.GetMyExchangesAsync(GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> GetMyExchanges(CancellationToken ct) =>
+        Ok(await exchanges.ListMineAsync(ct));
 
     [HttpPost]
-    public async Task<IActionResult> CreateExchange([FromBody] CreateExchangeRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.CreateExchangeAsync(GetCurrentUserId(), request, ct);
-        return Match(result, value => CreatedAtAction(nameof(GetExchange), new { exchangeGuid = value.Guid }, value));
-    }
-
-    [HttpPut("{exchangeGuid:guid}")]
-    public async Task<IActionResult> UpdateExchange(Guid exchangeGuid, [FromBody] UpdateExchangeRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.UpdateExchangeAsync(exchangeGuid, GetCurrentUserId(), request, ct: ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> CreateExchange([FromBody] CreateExchangeRequest request, CancellationToken ct) =>
+        Match(await exchanges.CreateAsync(request, ct),
+            value => CreatedAtAction(nameof(GetExchange), new { exchangeGuid = value.Guid }, value));
 
     [AllowAnonymous]
+    [HttpPut("{exchangeGuid:guid}")]
     [HttpPut("access/{exchangeGuid:guid}")]
-    public async Task<IActionResult> UpdateExchangePublic(Guid exchangeGuid, [FromBody] UpdateExchangeRequest request, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await exchangeService.UpdateExchangeAsync(exchangeGuid, studentIdResult.Value, request, allowCoordinatorChange: false, ct: ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> UpdateExchange(Guid exchangeGuid, [FromBody] UpdateExchangeRequest request, CancellationToken ct) =>
+        Match(await exchanges.UpdateAsync(exchangeGuid, request, ct), Ok);
 
     [HttpDelete("{exchangeGuid:guid}")]
-    public async Task<IActionResult> DeleteExchange(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await exchangeService.DeleteExchangeAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, _ => NoContent());
-    }
+    public async Task<IActionResult> DeleteExchange(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await exchanges.DeleteAsync(exchangeGuid, ct), _ => NoContent());
 
     [HttpPut("{exchangeGuid:guid}/coordinator-message")]
-    public async Task<IActionResult> UpdateCoordinatorMessage(Guid exchangeGuid, [FromBody] UpdateCoordinatorMessageRequest request, CancellationToken ct)
-    {
-        var result = await exchangeService.UpdateCoordinatorMessageAsync(exchangeGuid, GetCurrentUserId(), request.Message, ct);
-        return Match(result, Ok);
-    }
+    public async Task<IActionResult> UpdateCoordinatorMessage(Guid exchangeGuid, [FromBody] UpdateCoordinatorMessageRequest request, CancellationToken ct) =>
+        Match(await exchanges.UpdateCoordinatorMessageAsync(exchangeGuid, request.Message, ct), Ok);
 
     [HttpPost("{exchangeGuid:guid}/regenerate-access-link")]
-    public async Task<IActionResult> RegenerateAccessLink(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await exchangeService.RegenerateAccessLinkAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, guid => Ok(new { guid }));
-    }
-
+    public async Task<IActionResult> RegenerateAccessLink(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await exchanges.RegenerateAccessLinkAsync(exchangeGuid, ct), guid => Ok(new { guid }));
 }

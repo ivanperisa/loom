@@ -1,5 +1,6 @@
 using ErrorOr;
 using Loom.Application.DTOs.Exchange;
+using Loom.Application.Features.Exchanges;
 using Loom.Application.DTOs.LearningAgreement;
 using Loom.Application.DTOs.MappingScheme;
 using Loom.Application.DTOs.Recognition;
@@ -194,8 +195,8 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         var s3 = await Student("s.draft.message@loom.dev", "Marko Message", "0036100003");
         var g3 = await NewExchange(3, s3, tum, coordinator: _ana);
         await SaveLa(g3, s3, AtExchange(SlotElective1, c["IN2121"], 5), AtExchange(SlotElective2, c["IN2346"], 5));
-        await Call<IExchangeService, ExchangeResponse>(s => s.UpdateCoordinatorMessageAsync(g3, _ana,
-            "IN2121 is only offered in summer, please pick a winter course for this slot."));
+        await Call<ExchangeService, ExchangeResponse>(s => s.UpdateCoordinatorMessageAsync(g3,
+            "IN2121 is only offered in summer, please pick a winter course for this slot.", default), actor: _ana);
 
         // 4. Approved
         var s4 = await Student("s.approved@loom.dev", "Ana Approved", "0036100004");
@@ -347,7 +348,7 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
     {
         var request = new CreateExchangeRequest(ProfileId, partnerInstitution, year, semester.ToString(), studySemesters ?? [3],
             CoordinatorId: coordinator, TargetStudentId: requester is null ? null : student);
-        var created = await Call<IExchangeService, ExchangeResponse>(s => s.CreateExchangeAsync(requester ?? student, request));
+        var created = await Call<ExchangeService, ExchangeResponse>(s => s.CreateAsync(request, default), actor: requester ?? student);
 
         var guid = ExchangeGuid(number);
         await WithDb(async db =>
