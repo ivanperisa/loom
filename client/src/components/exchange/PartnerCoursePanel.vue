@@ -175,13 +175,18 @@ function semesterLabel(semester: string) {
             v-for="course in searchResults"
             :key="course.id"
             draggable="true"
-            class="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
+            role="button"
+            tabindex="0"
+            :aria-pressed="draft.armedCourse?.id === course.id"
+            class="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-grab transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing"
             :class="
               draft.draggingCourse?.id === course.id || draft.armedCourse?.id === course.id
                 ? 'border-primary bg-primary/10'
                 : 'border-primary/20 bg-dark-2'
             "
             @click="draft.armCourse(course)"
+            @keydown.enter.self.prevent="draft.armCourse(course)"
+            @keydown.space.self.prevent="draft.armCourse(course)"
             @dragstart="onDragStart(course)"
             @dragend="draft.endDrag()"
           >
@@ -254,6 +259,8 @@ function semesterLabel(semester: string) {
                   : 'border border-success-text/35 bg-success-fill'
             "
             @click="draft.armCourse(course)"
+            @keydown.enter.self.prevent="draft.armCourse(course)"
+            @keydown.space.self.prevent="draft.armCourse(course)"
             @dragstart="onDragStart(course)"
             @dragend="draft.endDrag()"
           >

@@ -93,6 +93,18 @@ test('a student changes the draft, saves it, and the change is kept', async ({ p
   expect(entriesAfter).not.toBe(entriesBefore)
 })
 
+test('a course is placed on a slot by clicking it, then clicking the slot', async ({ page }) => {
+  await loginAs(page, 's.draft.message@loom.dev')
+  await page.goto(exchangeUrl(3))
+  const course = page.locator('[aria-labelledby="la-available-courses"] [draggable="true"]').first()
+  await course.click()
+  await expect(course).toHaveAttribute('aria-pressed', 'true')
+  await page.locator('td[role="button"]').first().click()
+  await page.getByRole('dialog').getByRole('button', { name: /^(confirm|potvrdi)$/i }).click()
+  await expect(page.getByRole('button', { name: /^(save|spremi)$/i })).toBeVisible()
+  await page.getByRole('button', { name: /^(discard|odbaci)/i }).click()
+})
+
 test('discarding the draft brings back the saved learning agreement', async ({ page }) => {
   await loginAs(page, 's.draft.empty@loom.dev')
   await page.goto(exchangeUrl(1))

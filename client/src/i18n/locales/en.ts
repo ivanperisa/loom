@@ -23,6 +23,7 @@ export default {
   },
   common: {
     close: 'Close',
+    remove: 'Remove',
     appName: 'Loom',
     signIn: 'Sign in with Google',
     signOut: 'Sign out',

@@ -23,6 +23,7 @@ export default {
   },
   common: {
     close: 'Zatvori',
+    remove: 'Ukloni',
     appName: 'Loom',
     signIn: 'Prijava putem Googlea',
     signOut: 'Odjava',
