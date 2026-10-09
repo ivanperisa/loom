@@ -212,7 +212,7 @@ const stepKeys = [
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-primary/20 px-8 py-5">
         <h2 id="create-exchange-title" class="text-xl font-semibold text-light">{{ t('createExchange.title') }}</h2>
-        <button
+        <button :aria-label="t('common.close')"
           type="button"
           class="text-light/50 transition hover:text-light"
           @click="emit('close')"

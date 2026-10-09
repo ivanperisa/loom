@@ -1,3 +1,5 @@
+import type { MessageSchema } from '../schema'
+
 export default {
   countries: {
     Austria: 'Austrija',
@@ -23,6 +25,7 @@ export default {
   },
   common: {
     close: 'Zatvori',
+    toggleTheme: 'Promijeni svijetlu/tamnu temu',
     remove: 'Ukloni',
     appName: 'Loom',
     signIn: 'Prijava putem Googlea',
@@ -683,6 +686,7 @@ export default {
       usage: {
         empty: 'Još nije korišten ni u jednoj razmjeni.',
         usedIn: 'Korišteno u',
+        electiveGroup: 'izborna grupa',
       },
     },
   },
@@ -771,4 +775,9 @@ export default {
       VERSION_UNREADABLE: 'Ovu verziju nije moguće vratiti (podaci su u starom ili oštećenom obliku).',
     },
   },
-}
+  notFound: {
+    title: 'Stranica nije pronađena',
+    message: 'Ova stranica ne postoji ili je premještena.',
+    home: 'Na početnu',
+  },
+} satisfies MessageSchema

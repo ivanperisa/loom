@@ -13,6 +13,19 @@ test('landing page lists the dev personas', async ({ page }) => {
   await expect(page.getByRole('button', { name: /admin@loom\.dev/ })).toBeVisible()
 })
 
+test('an unknown address shows the not-found page', async ({ page }) => {
+  await page.goto('/no/such/page')
+  await expect(page.getByText('404')).toBeVisible()
+  await expect(page.getByRole('link', { name: /start page|na početnu/i })).toBeVisible()
+})
+
+test('signing in returns to the page that asked for it', async ({ page }) => {
+  await page.goto(exchangeUrl(6))
+  await expect(page).toHaveURL(/\/\?redirect=/)
+  await page.getByRole('button', { name: /s\.history@loom\.dev/ }).click()
+  await expect(page).toHaveURL(new RegExp(`${exchangeUrl(6)}$`))
+})
+
 test('a new user is sent to onboarding', async ({ page }) => {
   await loginAs(page, 'fresh.student@loom.dev')
   await page.goto('/home')
@@ -172,6 +185,19 @@ test('the admin pages the coordinator whitelist and the partner institutions', a
   await page.goto('/admin?tab=institutions')
   await expect(page.getByRole('heading', { name: /partner institutions|partnerske institucije/i })).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+test('a filter select works with the keyboard alone', async ({ page }) => {
+  await loginAs(page, 'admin@loom.dev')
+  await page.goto('/admin')
+  const roleSelect = page.getByRole('button', { name: /^(all roles|sve uloge)$/i })
+  await roleSelect.focus()
+  await page.keyboard.press('ArrowDown')
+  await expect(page.getByRole('listbox')).toBeVisible()
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('listbox')).toBeHidden()
+  await expect(page).toHaveURL(/users\.role=Student/)
 })
 
 test('the admin panel lists users', async ({ page }) => {

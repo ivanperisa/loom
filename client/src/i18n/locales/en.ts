@@ -23,6 +23,7 @@ export default {
   },
   common: {
     close: 'Close',
+    toggleTheme: 'Switch light/dark theme',
     remove: 'Remove',
     appName: 'Loom',
     signIn: 'Sign in with Google',
@@ -771,5 +772,10 @@ export default {
       VERSION_NOT_FOUND: 'Version not found.',
       VERSION_UNREADABLE: 'This version cannot be restored (its data is in an old or damaged format).',
     },
+  },
+  notFound: {
+    title: 'Page not found',
+    message: 'This page does not exist or has moved.',
+    home: 'Go to the start page',
   },
 }

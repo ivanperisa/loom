@@ -53,8 +53,8 @@ export const useAuthStore = defineStore('auth', () => {
     initPromise = null
   }
 
-  function login() {
-    authService.login()
+  function login(returnUrl?: string) {
+    authService.login(returnUrl)
   }
 
   async function logout() {

@@ -256,6 +256,7 @@ watch(exchangeQuery.error, (error) => {
               class="flex h-8 w-8 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-fill hover:text-light"
               :aria-expanded="showActionsMenu"
               aria-haspopup="true"
+              :aria-label="t('coordinator.table.actions')"
               @click.stop="showActionsMenu = !showActionsMenu"
             >
               &#8942;
@@ -371,7 +372,7 @@ watch(exchangeQuery.error, (error) => {
     <div class="p-6">
       <div class="mb-5 flex items-center justify-between">
         <h2 id="ewp-link-title" class="text-base font-semibold text-light">{{ t('exchange.ewpLink') }}</h2>
-        <button type="button" class="text-light/40 transition hover:text-light" @click="showEwpModal = false">
+        <button :aria-label="t('common.close')" type="button" class="text-light/40 transition hover:text-light" @click="showEwpModal = false">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="2" y1="2" x2="14" y2="14" /><line x1="14" y1="2" x2="2" y2="14" />
           </svg>

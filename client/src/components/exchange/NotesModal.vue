@@ -47,7 +47,7 @@ function save() {
     <div class="p-6">
       <div class="mb-5 flex items-center justify-between">
         <h2 id="notes-modal-title" class="text-base font-semibold text-light">{{ t('exchange.notes') }}</h2>
-        <button
+        <button :aria-label="t('common.close')"
           type="button"
           class="text-light/40 transition hover:text-light"
           @click="tryClose"

@@ -3,8 +3,9 @@ import type { SessionResponse } from '@/types/auth.types'
 
 export const authService = {
   session: () => api.get<SessionResponse>('/api/auth/session'),
-  login: () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/login?returnUrl=/home`
+  /** Google sign-in; the API sends the browser back to `returnUrl` (a path inside the app). */
+  login: (returnUrl = '/home') => {
+    window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/login?returnUrl=${encodeURIComponent(returnUrl)}`
   },
   logout: async (): Promise<void> => {
     await api.post('/api/auth/logout')

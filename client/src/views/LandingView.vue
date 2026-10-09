@@ -1,24 +1,27 @@
 ﻿<script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { authService } from '@/services/auth.service'
 import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import DevLoginPanel from '@/components/dev/DevLoginPanel.vue'
 import { parseAccessToken } from '@/utils/accessLink'
+import { safeRedirect } from '@/utils/redirect'
 
 const devLogin = import.meta.env.VITE_DEV_LOGIN === 'true'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 
 const showAccessForm = ref(false)
 const accessCode = ref('')
 const accessError = ref(false)
 
+/** Back to the page that asked for a sign-in, if there was one. */
 function login() {
-  authService.login()
+  authService.login(safeRedirect(route.query.redirect) ?? '/home')
 }
 
 function openAccess() {

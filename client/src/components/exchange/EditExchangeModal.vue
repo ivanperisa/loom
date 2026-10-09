@@ -87,7 +87,7 @@ async function submit() {
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-primary/20 px-8 py-5">
         <h2 id="edit-exchange-title" class="text-xl font-semibold text-light">{{ t('exchange.editExchange') }}</h2>
-        <button type="button" class="text-light/50 transition hover:text-light" @click="emit('close')">
+        <button :aria-label="t('common.close')" type="button" class="text-light/50 transition hover:text-light" @click="emit('close')">
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path
               fill-rule="evenodd"

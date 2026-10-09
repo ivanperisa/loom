@@ -2,9 +2,10 @@
 // Local development only (VITE_DEV_LOGIN=true): log in as any seeded persona without Google.
 // The API only exposes /api/auth/dev/* when DevAuth is enabled in the Development environment.
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth.store'
+import { safeRedirect } from '@/utils/redirect'
 
 interface DevUser {
   email: string
@@ -14,6 +15,7 @@ interface DevUser {
 }
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const users = ref<DevUser[]>([])
@@ -45,7 +47,7 @@ async function loginAs(email: string) {
   try {
     await api.post('/api/auth/dev/login', { email }, { errorToast: false })
     await authStore.init(true)
-    await router.push('/home')
+    await router.push(safeRedirect(route.query.redirect) ?? '/home')
   } catch {
     error.value = `Could not log in as ${email}.`
   } finally {

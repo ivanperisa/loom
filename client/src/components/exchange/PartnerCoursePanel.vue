@@ -302,6 +302,8 @@ function semesterLabel(semester: string) {
                 "
               >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
               <button
+                type="button"
+                :aria-label="`${t('common.remove')}: ${course.code}`"
                 class="flex items-center justify-center w-5 h-5 rounded text-light/40 hover:text-red-400 hover:bg-red-400/10 transition"
                 @click.stop="draft.removeAllMappingsForCourse(course.id); draft.unstagePartnerCourse(course.id)"
               >

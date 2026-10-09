@@ -74,6 +74,8 @@ function logout() {
             type="button"
             class="rounded-full transition hover:ring-2 hover:ring-primary/40"
             :aria-expanded="dropdownOpen"
+            aria-haspopup="true"
+            :aria-label="displayName"
             @click="toggleDropdown"
           >
             <UserAvatar :name="displayName" :role="authStore.role ?? ''" size="md" />
