@@ -56,11 +56,11 @@ Sve ostalo se samo prenosi.
 
 ## 3. Generiranje skripte za migraciju
 
-Skripta je idempotentna: preskače migracije koje su već primijenjene, pa se smije pokrenuti i više puta. Generira se iz ove grane:
+Skripta je idempotentna: preskače migracije koje su već primijenjene, pa se smije pokrenuti i više puta. Generira se iz ove grane, s `--no-transactions`, da bi se cijela izvršila kao **jedna transakcija** (`psql -1`, korak 5). Ako bilo što padne, baza ostaje točno kakva je bila.
 
 ```sh
 dotnet tool restore
-dotnet ef migrations script --idempotent \
+dotnet ef migrations script --idempotent --no-transactions \
   --project server/Loom.Infrastructure --startup-project server/Loom.Infrastructure \
   -o migrations.sql
 ```
@@ -69,10 +69,10 @@ Bez .NET SDK-a, isto preko Dockera (iz korijena repozitorija):
 
 ```sh
 docker run --rm -v "$PWD":/src -w /src mcr.microsoft.com/dotnet/sdk:10.0 sh -c \
-  'dotnet tool restore && dotnet ef migrations script --idempotent --project server/Loom.Infrastructure --startup-project server/Loom.Infrastructure -o migrations.sql'
+  'dotnet tool restore && dotnet ef migrations script --idempotent --no-transactions --project server/Loom.Infrastructure --startup-project server/Loom.Infrastructure -o migrations.sql'
 ```
 
-Deploy workflow (`deploy-server.yml`) istu skriptu prilaže i kao artefakt `migrations-sql` svakog runa. Za prvi deploy treba je imati **prije** merga, pa je generirati lokalno.
+Deploy workflow (`deploy-server.yml`) prilaže i artefakt `migrations-sql` svakog runa. On je generiran bez `--no-transactions`, pa svaka migracija ima svoju transakciju (ako jedna padne, prethodne ostaju). Za prvi deploy skriptu treba imati **prije** merga, pa je generirati lokalno.
 
 ---
 
@@ -99,7 +99,7 @@ SQL
 
 # 3. Migracija
 psql -d loom_proba -v ON_ERROR_STOP=1 -f database/baseline.sql
-psql -d loom_proba -v ON_ERROR_STOP=1 -f migrations.sql
+psql -d loom_proba -v ON_ERROR_STOP=1 -1 -f migrations.sql
 ```
 
 **Provjera nakon migracije:**
@@ -153,11 +153,12 @@ Planirati kratak prekid rada (oko 10–15 minuta), po mogućnosti kad nitko ne r
    ```sh
    psql -d <prod baza> -v ON_ERROR_STOP=1 -f database/baseline.sql
    ```
-5. **Migracije:**
+5. **Migracije, sve u jednoj transakciji:**
    ```sh
-   psql -d <prod baza> -v ON_ERROR_STOP=1 -f migrations.sql
+   psql -d <prod baza> -v ON_ERROR_STOP=1 -1 -f migrations.sql
    ```
-   Svaka migracija ide u svojoj transakciji. Ako jedna padne, ona se cijela poništi, a prethodne ostaju. Tada vidi korak 7 (povratak).
+   - `-1` znači jednu transakciju, a `ON_ERROR_STOP` zaustavlja izvođenje na prvoj grešci. Tada se poništava **sve** i baza ostaje kakva je bila prije koraka 5.
+   - Nakon greške: pokrenuti stari API i javiti grešku. Povratak iz backupa (poglavlje 6) tada nije potreban.
 6. **Provjera:** isti upiti kao u probi (poglavlje 4). Brojke trebaju odgovarati probi.
 7. **Merge grane u `main`.** Na push u `main` se pokreću oba workflowa:
    - `Loom WebApi` (`deploy-server.yml`): build, publish, tarball na server i `restart_required.txt`.
