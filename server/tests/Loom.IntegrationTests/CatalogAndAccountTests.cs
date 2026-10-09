@@ -3,6 +3,8 @@ using Loom.Application.Features.Exchanges;
 using Loom.Application.Features.Catalog;
 using Loom.Application.Features.Admin;
 using Loom.Application.Features.Planning;
+using Loom.Application.Features.Coordination;
+using Loom.Application.Common.Querying;
 using Loom.Domain.Entities;
 using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +16,30 @@ namespace Loom.IntegrationTests;
 public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(fixture)
 {
     private readonly DatabaseFixture _fixture = fixture;
+
+    [Fact]
+    public async Task A_coordinators_student_list_carries_their_exchanges_and_filters()
+    {
+        var coordinator = await NewUser(UserRole.Coordinator);
+        var student = await NewUser();
+        var (partnerA, _) = await NewPartner();
+        var (partnerB, _) = await NewPartner();
+        var first = await NewExchange(student, partnerA, coordinator);
+        var second = await NewExchange(student, partnerB, coordinator);
+        var partnerBName = await Db(db => db.Institutions.Where(p => p.Id == partnerB).Select(p => p.Name).SingleAsync(Ct));
+
+        var all = await Ok<StudentService, PagedResponse<CoordinatorStudentResponse>>(s => s.ListMineAsync(new StudentListQuery(), Ct), actor: coordinator);
+        var row = Assert.Single(all.Items);
+        Assert.Equal([second, first], row.Exchanges.Select(e => e.Guid));   // newest first
+
+        var filtered = await Ok<StudentService, PagedResponse<CoordinatorStudentResponse>>(
+            s => s.ListMineAsync(new StudentListQuery { PartnerInstitution = partnerBName }, Ct), actor: coordinator);
+        Assert.Equal([second], Assert.Single(filtered.Items).Exchanges.Select(e => e.Guid));
+
+        var filters = await Ok<StudentService, StudentFiltersResponse>(s => s.FiltersAsync(Ct), actor: coordinator);
+        Assert.Equal(["2025/2026"], filters.AcademicYears);
+        Assert.Equal(2, filters.PartnerInstitutions.Count);
+    }
 
     [Fact]
     public async Task Draft_exchange_without_recognition_can_be_deleted()

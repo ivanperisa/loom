@@ -29,7 +29,7 @@ public class CoordinatorController(CoordinatorDirectoryService directory, Studen
     public async Task<IActionResult> DeleteStudent(int studentId, CancellationToken ct) =>
         Match(await students.DeletePlaceholderAsync(studentId, ct), _ => NoContent());
 
-    [HttpGet("students/exchanges")]
-    public async Task<IActionResult> GetMyStudentsExchanges(CancellationToken ct) =>
-        Match(await students.ListMyStudentsExchangesAsync(ct), Ok);
+    [HttpGet("students/filters")]
+    public async Task<IActionResult> GetStudentFilters(CancellationToken ct) =>
+        Match(await students.FiltersAsync(ct), Ok);
 }

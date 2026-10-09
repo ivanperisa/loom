@@ -1,3 +1,4 @@
+using Loom.Application.Common.Querying;
 using Loom.Application.Features.Admin;
 using Loom.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -25,16 +26,16 @@ public class AdminController(
         Match(await users.SetRoleAsync(userId, request.Role, ct), Ok);
 
     [HttpGet("coordinator-requests")]
-    public async Task<IActionResult> GetCoordinatorRequests(CancellationToken ct) =>
-        Ok(await coordinatorRequests.ListPendingAsync(ct));
+    public async Task<IActionResult> GetCoordinatorRequests([FromQuery] ListQuery query, CancellationToken ct) =>
+        Ok(await coordinatorRequests.ListPendingAsync(query, ct));
 
     [HttpPatch("users/{userId:int}/reject-coordinator-request")]
     public async Task<IActionResult> RejectCoordinatorRequest(int userId, CancellationToken ct) =>
         Match(await coordinatorRequests.RejectAsync(userId, ct), Ok);
 
     [HttpGet("coordinator-whitelist")]
-    public async Task<IActionResult> GetCoordinatorWhitelist(CancellationToken ct) =>
-        Ok(await whitelist.ListAsync(ct));
+    public async Task<IActionResult> GetCoordinatorWhitelist([FromQuery] ListQuery query, CancellationToken ct) =>
+        Ok(await whitelist.ListAsync(query, ct));
 
     [HttpPost("coordinator-whitelist")]
     public async Task<IActionResult> AddToCoordinatorWhitelist([FromBody] AddToWhitelistRequest request, CancellationToken ct) =>

@@ -14,12 +14,21 @@ namespace Loom.Application.Features.Coordination;
 /// <summary>A coordinator's students, including placeholder students they create for people without an account.</summary>
 public sealed class StudentService(IAppDbContext db, ICurrentActor actor)
 {
-    private static ListSpec<User, CoordinatorStudentResponse> ListFor(int coordinatorId) => ListSpec.For<User>()
+    /// <summary>Each row carries the student's exchanges this coordinator coordinates (matching the filters), newest first.</summary>
+    private static ListSpec<User, CoordinatorStudentResponse> ListFor(int coordinatorId, string? academicYear, string? partnerInstitution) => ListSpec.For<User>()
         .SearchIn(u => u.Name, u => u.Jmbag)
         .SortBy("name", u => u.Name, isDefault: true)
         .Project(u => new CoordinatorStudentResponse(
             u.Id, u.Name, u.Jmbag, u.Institution != null ? u.Institution.Name : null,
-            u.Email == "", u.InstitutionId, u.CoordinatorId == coordinatorId));
+            u.Email == "", u.InstitutionId, u.CoordinatorId == coordinatorId,
+            u.StudentExchanges
+                .Where(e => e.CoordinatorId == coordinatorId
+                    && (academicYear == null || e.AcademicYear == academicYear)
+                    && (partnerInstitution == null || e.PartnerInstitution.Name == partnerInstitution))
+                .OrderByDescending(e => e.CreatedAt)
+                .AsQueryable()
+                .Select(ExchangeProjections.Summary)
+                .ToList()));
 
     /// <summary>Students assigned to the coordinator or with at least one exchange they coordinate.</summary>
     public async Task<ErrorOr<PagedResponse<CoordinatorStudentResponse>>> ListMineAsync(StudentListQuery query, CancellationToken ct)
@@ -28,30 +37,32 @@ public sealed class StudentService(IAppDbContext db, ICurrentActor actor)
         if (coordinator.IsError) return coordinator.Errors;
         var coordinatorId = coordinator.Value.Id;
 
+        var academicYear = string.IsNullOrWhiteSpace(query.AcademicYear) ? null : query.AcademicYear;
+        var partnerInstitution = string.IsNullOrWhiteSpace(query.PartnerInstitution) ? null : query.PartnerInstitution;
         var coordinated = db.Exchanges
             .Where(e => e.CoordinatorId == coordinatorId)
-            .WhereIf(!string.IsNullOrWhiteSpace(query.AcademicYear), e => e.AcademicYear == query.AcademicYear)
-            .WhereIf(!string.IsNullOrWhiteSpace(query.PartnerInstitution), e => e.PartnerInstitution.Name == query.PartnerInstitution);
-        var filtered = !string.IsNullOrWhiteSpace(query.AcademicYear) || !string.IsNullOrWhiteSpace(query.PartnerInstitution);
+            .WhereIf(academicYear is not null, e => e.AcademicYear == academicYear)
+            .WhereIf(partnerInstitution is not null, e => e.PartnerInstitution.Name == partnerInstitution);
+        var filtered = academicYear is not null || partnerInstitution is not null;
 
         return await db.Users
             .AsNoTracking()
             .Where(u => u.Role == UserRole.Student &&
                 (u.CoordinatorId == coordinatorId || u.StudentExchanges.Any(e => e.CoordinatorId == coordinatorId)))
             .WhereIf(filtered, u => coordinated.Any(e => e.StudentId == u.Id))
-            .ToPageAsync(ListFor(coordinatorId), query, ct);
+            .ToPageAsync(ListFor(coordinatorId, academicYear, partnerInstitution), query, ct);
     }
 
-    public async Task<ErrorOr<List<ExchangeSummaryResponse>>> ListMyStudentsExchangesAsync(CancellationToken ct)
+    /// <summary>The values the student list can be filtered by: years and partner institutions of the coordinator's exchanges.</summary>
+    public async Task<ErrorOr<StudentFiltersResponse>> FiltersAsync(CancellationToken ct)
     {
-        if (!await db.Users.AnyAsync(u => u.Id == actor.UserId, ct)) return CommonErrors.UserNotFound;
+        var coordinator = await CurrentCoordinatorAsync("view students", ct);
+        if (coordinator.IsError) return coordinator.Errors;
 
-        return await db.Exchanges
-            .AsNoTracking()
-            .Where(e => e.CoordinatorId == actor.UserId)
-            .OrderByDescending(e => e.CreatedAt)
-            .Select(ExchangeProjections.Summary)
-            .ToListAsync(ct);
+        var exchanges = db.Exchanges.AsNoTracking().Where(e => e.CoordinatorId == coordinator.Value.Id);
+        var years = await exchanges.Select(e => e.AcademicYear).Distinct().OrderByDescending(y => y).ToListAsync(ct);
+        var institutions = await exchanges.Select(e => e.PartnerInstitution.Name).Distinct().OrderBy(n => n).ToListAsync(ct);
+        return new StudentFiltersResponse(years, institutions);
     }
 
     public async Task<ErrorOr<CoordinatorStudentResponse>> CreatePlaceholderAsync(PlaceholderStudentRequest request, CancellationToken ct)
@@ -77,7 +88,7 @@ public sealed class StudentService(IAppDbContext db, ICurrentActor actor)
         db.Users.Add(placeholder);
         await db.SaveChangesAsync(ct);
 
-        return new CoordinatorStudentResponse(placeholder.Id, placeholder.Name, placeholder.Jmbag, institution.Name, true, institution.Id, true);
+        return new CoordinatorStudentResponse(placeholder.Id, placeholder.Name, placeholder.Jmbag, institution.Name, true, institution.Id, true, []);
     }
 
     public async Task<ErrorOr<CoordinatorStudentResponse>> UpdatePlaceholderAsync(int studentId, PlaceholderStudentRequest request, CancellationToken ct)
@@ -95,7 +106,9 @@ public sealed class StudentService(IAppDbContext db, ICurrentActor actor)
         student.Value.InstitutionId = institution.Id;
         await db.SaveChangesAsync(ct);
 
-        return new CoordinatorStudentResponse(studentId, student.Value.Name, request.Jmbag, institution.Name, true, institution.Id, true);
+        return new CoordinatorStudentResponse(studentId, student.Value.Name, request.Jmbag, institution.Name, true, institution.Id, true,
+            await db.Exchanges.AsNoTracking().Where(e => e.StudentId == studentId && e.CoordinatorId == actor.UserId)
+                .OrderByDescending(e => e.CreatedAt).Select(ExchangeProjections.Summary).ToListAsync(ct));
     }
 
     public async Task<ErrorOr<Deleted>> DeletePlaceholderAsync(int studentId, CancellationToken ct)

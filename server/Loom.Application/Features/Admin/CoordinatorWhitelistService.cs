@@ -1,4 +1,5 @@
 using ErrorOr;
+using Loom.Application.Common.Querying;
 using Loom.Application.Interfaces;
 using Loom.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -8,12 +9,14 @@ namespace Loom.Application.Features.Admin;
 /// <summary>Emails that become coordinators automatically on their first login.</summary>
 public sealed class CoordinatorWhitelistService(IAppDbContext db)
 {
-    public Task<List<CoordinatorWhitelistEntryResponse>> ListAsync(CancellationToken ct) =>
-        db.CoordinatorWhitelist
-            .AsNoTracking()
-            .OrderBy(e => e.Email)
-            .Select(e => new CoordinatorWhitelistEntryResponse(e.Id, e.Email, e.CreatedAt))
-            .ToListAsync(ct);
+    private static readonly ListSpec<CoordinatorWhitelist, CoordinatorWhitelistEntryResponse> List = ListSpec.For<CoordinatorWhitelist>()
+        .SearchIn(e => e.Email)
+        .SortBy("email", e => e.Email, isDefault: true)
+        .SortBy("createdAt", e => e.CreatedAt)
+        .Project(e => new CoordinatorWhitelistEntryResponse(e.Id, e.Email, e.CreatedAt));
+
+    public Task<PagedResponse<CoordinatorWhitelistEntryResponse>> ListAsync(ListQuery query, CancellationToken ct) =>
+        db.CoordinatorWhitelist.AsNoTracking().ToPageAsync(List, query, ct);
 
     public async Task<ErrorOr<CoordinatorWhitelistEntryResponse>> AddAsync(string email, CancellationToken ct)
     {
