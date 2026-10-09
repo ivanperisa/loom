@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import axios from 'axios'
+import { ref, computed } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerInstitutionAdminResponse } from '@/types/institution.types'
@@ -10,8 +10,9 @@ import ShowDeletedToggle from '@/components/common/ShowDeletedToggle.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import SortableHeader from '@/components/common/SortableHeader.vue'
 import { useConfirm } from '@/composables/useConfirm'
-import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { minSearchTerm } from '@/utils/searchTerm'
+import { useListQuery } from '@/composables/useListQuery'
+import { queryKeys } from '@/queries/keys'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { ISO_COUNTRIES } from '@/constants/countries'
 import PartnerInstitutionFormPanel from '@/components/admin/PartnerInstitutionFormPanel.vue'
 import PartnerCourseList from '@/components/admin/PartnerCourseList.vue'
@@ -19,32 +20,26 @@ import PartnerCourseList from '@/components/admin/PartnerCourseList.vue'
 const { t } = useI18n()
 const { confirm } = useConfirm()
 
-const INST_PER_PAGE = 10
-
-const institutions = ref<PartnerInstitutionAdminResponse[]>([])
-const totalCount = ref(0)
-const institutionPage = ref(1)
-const totalInstPages = computed(() => Math.max(1, Math.ceil(totalCount.value / INST_PER_PAGE)))
-const loading = ref(true)
+const queryClient = useQueryClient()
+/** An action that failed (the list itself shows its own load error). */
 const error = ref<string | null>(null)
 
-const institutionSearch = ref('')
-const debouncedInstitutionSearch = useDebouncedRef(institutionSearch, 400)
 const countryFilter = ref<string | null>(null)
 const showDeleted = ref(false)
-const hasDeleted = ref(false)
 
-const sortBy = ref('erasmusCode')
-const sortDir = ref<'asc' | 'desc'>('asc')
+const list = useListQuery<PartnerInstitutionAdminResponse, { country: string | null; includeDeleted: boolean }>({
+  key: queryKeys.partnerInstitutions,
+  fetch: (params, signal) => institutionService.getPartnerInstitutions(params.includeDeleted ?? false, params, signal),
+  filters: { country: countryFilter, includeDeleted: showDeleted },
+  pageSize: 10,
+  defaultSort: 'erasmusCode',
+  syncToUrl: 'institutions',
+})
+const institutions = list.items
+const institutionSearch = list.search
 
-function toggleSort(key: string) {
-  if (sortBy.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortBy.value = key
-    sortDir.value = 'asc'
-  }
-}
+/** Institutions and every partner-institution picker (create exchange) show the change. */
+const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.partnerInstitutions })
 
 const countryOptions = computed(() => [
   { value: null, label: t('admin.institutions.allCountries') },
@@ -65,55 +60,13 @@ const openInstitution = ref<PartnerInstitutionAdminResponse | null>(null)
 const autoOpenCreateCourse = ref(false)
 
 function drillInto(inst: PartnerInstitutionAdminResponse, autoOpenCreate = false) {
-  openInstitution.value = inst
+  openInstitution.value = { ...inst }
   autoOpenCreateCourse.value = autoOpenCreate
 }
 
 function backToInstitutions() {
   openInstitution.value = null
   autoOpenCreateCourse.value = false
-}
-
-onMounted(loadInstitutions)
-
-watch(
-  [institutionPage, debouncedInstitutionSearch, countryFilter, showDeleted, sortBy, sortDir],
-  ([newPage], [oldPage]) => {
-    if (newPage === oldPage && newPage !== 1) {
-      institutionPage.value = 1
-      return
-    }
-    loadInstitutions()
-  },
-)
-
-let loadInstitutionsController: AbortController | null = null
-
-async function loadInstitutions() {
-  loadInstitutionsController?.abort()
-  const controller = new AbortController()
-  loadInstitutionsController = controller
-  loading.value = true
-  error.value = null
-  try {
-    const res = await institutionService.getPartnerInstitutions(showDeleted.value, {
-      page: institutionPage.value,
-      pageSize: INST_PER_PAGE,
-      search: minSearchTerm(debouncedInstitutionSearch.value),
-      country: countryFilter.value,
-      sortBy: sortBy.value,
-      sortDir: sortDir.value,
-    }, controller.signal)
-    institutions.value = res.data.items
-    totalCount.value = res.data.totalCount
-    hasDeleted.value = res.data.hasDeleted
-    if (institutionPage.value > totalInstPages.value) institutionPage.value = totalInstPages.value
-  } catch (err) {
-    if (axios.isCancel(err)) return
-    error.value = t('admin.institutions.saveError')
-  } finally {
-    if (loadInstitutionsController === controller) loading.value = false
-  }
 }
 
 function toggleAddPanel() {
@@ -140,7 +93,7 @@ async function submitInstitutionForm(payload: { name: string; nameHr: string; co
     } else {
       await institutionService.createPartnerInstitution(payload)
     }
-    await loadInstitutions()
+    await refresh()
     closeInstitutionForm()
   } catch {
     error.value = t('admin.institutions.saveError')
@@ -155,7 +108,7 @@ async function deleteInstitution(id: string) {
   error.value = null
   try {
     await institutionService.deletePartnerInstitution(id)
-    await loadInstitutions()
+    await refresh()
   } catch (e: unknown) {
     const err = e as { response?: { status?: number } }
     error.value = err.response?.status === 409 ? t('admin.institutions.hasExchanges') : t('admin.institutions.saveError')
@@ -169,7 +122,7 @@ async function restoreInstitution(id: string) {
   error.value = null
   try {
     await institutionService.restorePartnerInstitution(id)
-    await loadInstitutions()
+    await refresh()
   } catch {
     error.value = t('admin.institutions.saveError')
   } finally {
@@ -179,8 +132,7 @@ async function restoreInstitution(id: string) {
 
 function onCourseCountChanged(delta: number) {
   if (openInstitution.value) openInstitution.value.courseCount += delta
-  const inst = institutions.value.find(i => i.id === openInstitution.value?.id)
-  if (inst) inst.courseCount += delta
+  refresh()
 }
 </script>
 
@@ -244,12 +196,14 @@ function onCourseCountChanged(delta: number) {
         :no-results-label="t('admin.institutions.noResults')"
         class="min-w-[180px] max-w-[260px] flex-none"
       />
-      <ShowDeletedToggle v-if="hasDeleted" v-model="showDeleted" />
+      <ShowDeletedToggle v-if="list.hasDeleted.value || showDeleted" v-model="showDeleted" />
     </div>
 
-    <div v-if="loading && institutions.length === 0" class="space-y-3">
+    <div v-if="list.isPending.value" class="space-y-3">
       <div v-for="i in 4" :key="i" class="h-16 animate-pulse rounded-xl bg-dark-2"></div>
     </div>
+
+    <ErrorAlert v-else-if="list.error.value" :error="list.error.value" @retry="list.refetch()" />
 
     <div v-else-if="institutions.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-6 text-center text-light/60">
       {{ institutionSearch ? t('admin.institutions.noResults') : t('admin.institutions.empty') }}
@@ -259,9 +213,9 @@ function onCourseCountChanged(delta: number) {
       <div class="overflow-x-auto rounded-xl border border-primary/20 bg-dark-2">
         <div class="min-w-[900px]">
           <div class="admin-institution-grid gap-4 border-b border-primary/20 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-light/40">
-            <SortableHeader :label="t('admin.institutions.columns.erasmusCode')" sort-key="erasmusCode" :active-key="sortBy" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader :label="t('admin.institutions.columns.institution')" sort-key="name" :active-key="sortBy" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader :label="t('admin.institutions.columns.country')" sort-key="country" :active-key="sortBy" :dir="sortDir" @sort="toggleSort" />
+            <SortableHeader :label="t('admin.institutions.columns.erasmusCode')" sort-key="erasmusCode" :active-key="list.sortKey.value" :dir="list.sortDir.value" @sort="list.toggleSort" />
+            <SortableHeader :label="t('admin.institutions.columns.institution')" sort-key="name" :active-key="list.sortKey.value" :dir="list.sortDir.value" @sort="list.toggleSort" />
+            <SortableHeader :label="t('admin.institutions.columns.country')" sort-key="country" :active-key="list.sortKey.value" :dir="list.sortDir.value" @sort="list.toggleSort" />
             <span>{{ t('admin.institutions.columns.city') }}</span>
             <span></span>
           </div>
@@ -337,11 +291,11 @@ function onCourseCountChanged(delta: number) {
       </div>
 
       <Pagination
-        :page="institutionPage"
-        :total-pages="totalInstPages"
-        :total="totalCount"
-        :per-page="INST_PER_PAGE"
-        @update:page="institutionPage = $event"
+        :page="list.page.value"
+        :total-pages="list.totalPages.value"
+        :total="list.totalCount.value"
+        :per-page="list.pageSize"
+        @update:page="list.page.value = $event"
       />
     </template>
   </div>

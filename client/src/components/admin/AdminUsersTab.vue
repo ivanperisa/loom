@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import axios from 'axios'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useQueryClient } from '@tanstack/vue-query'
 import { adminService, type CoordinatorRequestResponse, type CoordinatorWhitelistEntryResponse, type UserListResponse } from '@/services/admin.service'
-import { coordinatorService, invalidateCoordinators } from '@/services/coordinator.service'
-import { institutionService } from '@/services/institution.service'
 import { useAuthStore } from '@/stores/auth.store'
 import { userRole } from '@/utils/userRole'
 import { ROLE_CHIP_CLASS } from '@/utils/roleColors'
@@ -13,27 +11,21 @@ import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import SortableHeader from '@/components/common/SortableHeader.vue'
 import UserAvatar from '@/components/common/UserAvatar.vue'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { useConfirm } from '@/composables/useConfirm'
-import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { minSearchTerm } from '@/utils/searchTerm'
+import { useListQuery } from '@/composables/useListQuery'
+import { useCoordinatorsQuery, useHomeInstitutionsQuery } from '@/queries/catalog.queries'
+import { queryKeys } from '@/queries/keys'
+import { describeApiError } from '@/utils/apiError'
 import AdminEditUserModal from '@/components/admin/AdminEditUserModal.vue'
 import AdminChangeRoleModal from '@/components/admin/AdminChangeRoleModal.vue'
-import type { CoordinatorOption } from '@/types/coordinator.types'
-import type { InstitutionResponse } from '@/types/institution.types'
 
 const { t } = useI18n()
 const { confirm } = useConfirm()
 const auth = useAuthStore()
+const queryClient = useQueryClient()
 
-const requests = ref<CoordinatorRequestResponse[]>([])
-const whitelist = ref<CoordinatorWhitelistEntryResponse[]>([])
 const newEmail = ref('')
-const coordinatorsList = ref<CoordinatorOption[]>([])
-const institutionsList = ref<InstitutionResponse[]>([])
-
-const loadingRequests = ref(true)
-const loadingWhitelist = ref(true)
-const loadingUsers = ref(true)
 const actionLoadingId = ref<string | null>(null)
 const whitelistActionEmail = ref<string | null>(null)
 const addingEmail = ref(false)
@@ -42,17 +34,30 @@ const errorMessage = ref<string | null>(null)
 const editingUser = ref<UserListResponse | null>(null)
 const roleChangeUser = ref<UserListResponse | null>(null)
 
-const users = ref<UserListResponse[]>([])
-const usersTotalCount = ref(0)
-const page = ref(1)
-const USERS_PER_PAGE = 10
-const search = ref('')
-const debouncedSearch = useDebouncedRef(search, 400)
+// Users
+
 const roleFilter = ref<string | null>(null)
 const institutionFilter = ref<string | null>(null)
-const statusFilter = ref<string | null>(null)
+const registered = ref<boolean | null>(null)
+/** The select works with names; the API filter is a boolean. */
+const statusFilter = computed({
+  get: () => (registered.value === null ? null : registered.value ? 'registered' : 'unregistered'),
+  set: (value: string | null) => (registered.value = value === null ? null : value === 'registered'),
+})
 
-const totalPages = computed(() => Math.max(1, Math.ceil(usersTotalCount.value / USERS_PER_PAGE)))
+const userList = useListQuery<UserListResponse, { role: string | null; institutionId: string | null; registered: boolean | null }>({
+  key: queryKeys.adminUsers,
+  fetch: (params, signal) => adminService.getAllUsers(params, signal),
+  filters: { role: roleFilter, institutionId: institutionFilter, registered },
+  pageSize: 10,
+  defaultSort: 'name',
+  syncToUrl: 'users',
+})
+const users = userList.items
+const search = userList.search
+
+const institutionsQuery = useHomeInstitutionsQuery()
+const coordinatorsQuery = useCoordinatorsQuery()
 
 const roleOptions = computed(() => [
   { value: null, label: t('admin.users.allRoles') },
@@ -64,7 +69,7 @@ const roleOptions = computed(() => [
 
 const institutionOptions = computed(() => [
   { value: null, label: t('admin.users.allInstitutions') },
-  ...institutionsList.value.map((i) => ({ value: i.id, label: i.name, sublabel: i.city ?? undefined })),
+  ...(institutionsQuery.data.value ?? []).map((i) => ({ value: i.id, label: i.name, sublabel: i.city ?? undefined })),
 ])
 
 const statusOptions = computed(() => [
@@ -72,18 +77,6 @@ const statusOptions = computed(() => [
   { value: 'registered', label: t('admin.users.status.registered') },
   { value: 'unregistered', label: t('admin.users.status.unregistered') },
 ])
-
-const sortBy = ref('name')
-const sortDir = ref<'asc' | 'desc'>('asc')
-
-function toggleSort(key: string) {
-  if (sortBy.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortBy.value = key
-    sortDir.value = 'asc'
-  }
-}
 
 function openEditDialog(user: UserListResponse) {
   editingUser.value = user
@@ -93,96 +86,40 @@ function openRoleDialog(user: UserListResponse) {
   roleChangeUser.value = user
 }
 
-function onUserSaved(updated: UserListResponse) {
-  const idx = users.value.findIndex(u => u.id === updated.id)
-  if (idx !== -1) users.value[idx] = updated
+/** A role or user change can affect every list here and the coordinator pickers. */
+function refreshAfterUserChange() {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.coordinatorRequests }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.coordinators }),
+  ])
+}
+
+function onUserSaved() {
   editingUser.value = null
+  refreshAfterUserChange()
 }
 
-async function onRoleSaved() {
+function onRoleSaved() {
   roleChangeUser.value = null
-  await Promise.all([fetchUsers(), fetchCoordinatorOptions(), fetchRequests()])
+  refreshAfterUserChange()
 }
 
-onMounted(async () => {
-  await Promise.all([fetchRequests(), fetchWhitelist(), fetchCoordinatorOptions(), fetchUsers(), fetchInstitutions()])
+// Coordinator requests
+
+const requestList = useListQuery<CoordinatorRequestResponse>({
+  key: queryKeys.coordinatorRequests,
+  fetch: (params, signal) => adminService.getCoordinatorRequests(params, signal),
+  pageSize: 10,
+  defaultSort: 'name',
+  syncToUrl: 'requests',
 })
-
-watch([page, debouncedSearch, roleFilter, institutionFilter, statusFilter, sortBy, sortDir], ([newPage], [oldPage]) => {
-  if (newPage === oldPage && newPage !== 1) {
-    page.value = 1
-    return
-  }
-  fetchUsers()
-})
-
-let fetchUsersController: AbortController | null = null
-
-async function fetchUsers() {
-  fetchUsersController?.abort()
-  const controller = new AbortController()
-  fetchUsersController = controller
-  loadingUsers.value = true
-  try {
-    const res = await adminService.getAllUsers({
-      page: page.value,
-      pageSize: USERS_PER_PAGE,
-      search: minSearchTerm(debouncedSearch.value),
-      role: roleFilter.value,
-      institutionId: institutionFilter.value,
-      registered: statusFilter.value === null ? null : statusFilter.value === 'registered',
-      sortBy: sortBy.value,
-      sortDir: sortDir.value,
-    }, controller.signal)
-    users.value = res.data.items
-    usersTotalCount.value = res.data.totalCount
-    if (page.value > totalPages.value) page.value = totalPages.value
-  } catch (err) {
-    if (axios.isCancel(err)) return
-    throw err
-  } finally {
-    if (fetchUsersController === controller) loadingUsers.value = false
-  }
-}
-
-async function fetchCoordinatorOptions() {
-  const res = await coordinatorService.getCoordinators()
-  coordinatorsList.value = res.data
-}
-
-async function fetchInstitutions() {
-  try {
-    const res = await institutionService.getHomeInstitutions()
-    institutionsList.value = res.data
-  } catch { /* non-critical */ }
-}
-
-async function fetchRequests() {
-  loadingRequests.value = true
-  try {
-    const res = await adminService.getCoordinatorRequests()
-    requests.value = res.data
-  } finally {
-    loadingRequests.value = false
-  }
-}
-
-async function fetchWhitelist() {
-  loadingWhitelist.value = true
-  try {
-    const res = await adminService.getCoordinatorWhitelist()
-    whitelist.value = res.data
-  } finally {
-    loadingWhitelist.value = false
-  }
-}
 
 async function approve(userId: string) {
   actionLoadingId.value = userId
   try {
     await adminService.setUserRole(userId, userRole.Coordinator)
-    invalidateCoordinators()
-    await Promise.all([fetchRequests(), fetchUsers(), fetchCoordinatorOptions()])
+    await refreshAfterUserChange()
   } finally {
     actionLoadingId.value = null
   }
@@ -192,11 +129,23 @@ async function reject(userId: string) {
   actionLoadingId.value = userId
   try {
     await adminService.rejectCoordinatorRequest(userId)
-    requests.value = requests.value.filter(r => r.id !== userId)
+    await refreshAfterUserChange()
   } finally {
     actionLoadingId.value = null
   }
 }
+
+// Coordinator whitelist
+
+const whitelistList = useListQuery<CoordinatorWhitelistEntryResponse>({
+  key: queryKeys.coordinatorWhitelist,
+  fetch: (params, signal) => adminService.getCoordinatorWhitelist(params, signal),
+  pageSize: 10,
+  defaultSort: 'email',
+  syncToUrl: 'whitelist',
+})
+
+const refreshWhitelist = () => queryClient.invalidateQueries({ queryKey: queryKeys.coordinatorWhitelist })
 
 async function addEmail() {
   errorMessage.value = null
@@ -204,13 +153,11 @@ async function addEmail() {
   if (!email) return
   addingEmail.value = true
   try {
-    const res = await adminService.addToWhitelist(email)
-    whitelist.value.push(res.data)
-    whitelist.value.sort((a, b) => a.email.localeCompare(b.email))
+    await adminService.addToWhitelist(email)
     newEmail.value = ''
+    await refreshWhitelist()
   } catch (e: unknown) {
-    const err = e as { response?: { data?: { detail?: string } } }
-    errorMessage.value = err.response?.data?.detail ?? t('admin.whitelist.addError')
+    errorMessage.value = describeApiError(e).message
   } finally {
     addingEmail.value = false
   }
@@ -221,7 +168,7 @@ async function removeEmail(email: string) {
   whitelistActionEmail.value = email
   try {
     await adminService.removeFromWhitelist(email)
-    whitelist.value = whitelist.value.filter(e => e.email !== email)
+    await refreshWhitelist()
   } finally {
     whitelistActionEmail.value = null
   }
@@ -235,15 +182,16 @@ async function removeEmail(email: string) {
     <section class="rounded-2xl border border-primary/20 bg-dark-2 p-6">
       <h2 class="mb-5 text-base font-semibold text-light">{{ t('admin.requests.title') }}</h2>
 
-      <div v-if="loadingRequests" class="space-y-3">
+      <div v-if="requestList.isPending.value" class="space-y-3">
         <div v-for="i in 2" :key="i" class="h-14 animate-pulse rounded-xl bg-dark"></div>
       </div>
-      <p v-else-if="requests.length === 0" class="text-sm text-light/50">
+      <ErrorAlert v-else-if="requestList.error.value" :error="requestList.error.value" @retry="requestList.refetch()" />
+      <p v-else-if="requestList.items.value.length === 0" class="text-sm text-light/50">
         {{ t('admin.requests.empty') }}
       </p>
       <div v-else class="space-y-2">
         <div
-          v-for="req in requests"
+          v-for="req in requestList.items.value"
           :key="req.id"
           class="flex items-center justify-between rounded-xl bg-dark px-5 py-3"
         >
@@ -267,13 +215,20 @@ async function removeEmail(email: string) {
           </div>
         </div>
       </div>
+      <Pagination
+        :page="requestList.page.value"
+        :total-pages="requestList.totalPages.value"
+        :total="requestList.totalCount.value"
+        :per-page="requestList.pageSize"
+        @update:page="requestList.page.value = $event"
+      />
     </section>
 
     <!-- User management -->
     <section class="rounded-2xl border border-primary/20 bg-dark-2 p-6">
       <div class="mb-5 flex items-baseline gap-2">
         <h2 class="text-base font-semibold text-light">{{ t('admin.users.title') }}</h2>
-        <span class="text-xs text-light/30">({{ usersTotalCount }})</span>
+        <span class="text-xs text-light/30">({{ userList.totalCount.value }})</span>
       </div>
 
       <div class="mb-4 flex flex-wrap gap-3">
@@ -302,9 +257,11 @@ async function removeEmail(email: string) {
         />
       </div>
 
-      <div v-if="loadingUsers && users.length === 0" class="space-y-2">
+      <div v-if="userList.isPending.value" class="space-y-2">
         <div v-for="i in 5" :key="i" class="h-14 animate-pulse rounded-xl bg-dark"></div>
       </div>
+
+      <ErrorAlert v-else-if="userList.error.value" :error="userList.error.value" @retry="userList.refetch()" />
 
       <template v-else>
         <div class="overflow-x-auto rounded-xl border border-primary/20 bg-dark">
@@ -313,16 +270,16 @@ async function removeEmail(email: string) {
               <SortableHeader
                 :label="t('admin.users.columns.user')"
                 sort-key="name"
-                :active-key="sortBy"
-                :dir="sortDir"
-                @sort="toggleSort"
+                :active-key="userList.sortKey.value"
+                :dir="userList.sortDir.value"
+                @sort="userList.toggleSort"
               />
               <SortableHeader
                 :label="t('admin.users.columns.jmbag')"
                 sort-key="jmbag"
-                :active-key="sortBy"
-                :dir="sortDir"
-                @sort="toggleSort"
+                :active-key="userList.sortKey.value"
+                :dir="userList.sortDir.value"
+                @sort="userList.toggleSort"
               />
               <span>{{ t('admin.users.columns.institution') }}</span>
               <span>{{ t('admin.users.columns.mentor') }}</span>
@@ -330,9 +287,9 @@ async function removeEmail(email: string) {
               <SortableHeader
                 :label="t('admin.users.columns.role')"
                 sort-key="role"
-                :active-key="sortBy"
-                :dir="sortDir"
-                @sort="toggleSort"
+                :active-key="userList.sortKey.value"
+                :dir="userList.sortDir.value"
+                @sort="userList.toggleSort"
               />
               <span>{{ t('admin.users.columns.status') }}</span>
               <span></span>
@@ -421,11 +378,11 @@ async function removeEmail(email: string) {
         </div>
 
         <Pagination
-          :page="page"
-          :total-pages="totalPages"
-          :total="usersTotalCount"
-          :per-page="USERS_PER_PAGE"
-          @update:page="page = $event"
+          :page="userList.page.value"
+          :total-pages="userList.totalPages.value"
+          :total="userList.totalCount.value"
+          :per-page="userList.pageSize"
+          @update:page="userList.page.value = $event"
         />
       </template>
     </section>
@@ -455,13 +412,14 @@ async function removeEmail(email: string) {
         {{ errorMessage }}
       </p>
 
-      <div v-if="loadingWhitelist" class="space-y-2">
+      <div v-if="whitelistList.isPending.value" class="space-y-2">
         <div v-for="i in 3" :key="i" class="h-12 animate-pulse rounded-xl bg-dark"></div>
       </div>
-      <p v-else-if="whitelist.length === 0" class="text-sm text-light/50">{{ t('admin.whitelist.empty') }}</p>
+      <ErrorAlert v-else-if="whitelistList.error.value" :error="whitelistList.error.value" @retry="whitelistList.refetch()" />
+      <p v-else-if="whitelistList.items.value.length === 0" class="text-sm text-light/50">{{ t('admin.whitelist.empty') }}</p>
       <div v-else class="divide-y divide-hairline-soft rounded-xl bg-dark">
         <div
-          v-for="entry in whitelist"
+          v-for="entry in whitelistList.items.value"
           :key="entry.id"
           class="flex items-center justify-between px-4 py-3"
         >
@@ -481,14 +439,21 @@ async function removeEmail(email: string) {
           </button>
         </div>
       </div>
+      <Pagination
+        :page="whitelistList.page.value"
+        :total-pages="whitelistList.totalPages.value"
+        :total="whitelistList.totalCount.value"
+        :per-page="whitelistList.pageSize"
+        @update:page="whitelistList.page.value = $event"
+      />
     </section>
 
     <!-- Edit user modal -->
     <AdminEditUserModal
       v-if="editingUser"
       :user="editingUser"
-      :coordinators="coordinatorsList"
-      :institutions="institutionsList"
+      :coordinators="coordinatorsQuery.data.value ?? []"
+      :institutions="institutionsQuery.data.value ?? []"
       @close="editingUser = null"
       @saved="onUserSaved"
     />

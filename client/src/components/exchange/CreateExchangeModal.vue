@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { institutionService, getAllPartnerInstitutions } from '@/services/institution.service'
-import { coordinatorService } from '@/services/coordinator.service'
+import { useCoordinatorsQuery, useHomeProgramsQuery, usePartnerInstitutionOptionsQuery } from '@/queries/catalog.queries'
 import { useCreateExchange } from '@/queries/exchange.queries'
 import { describeApiError } from '@/utils/apiError'
 import { exchangeSemester } from '@/utils/exchangeSemester'
@@ -47,8 +46,9 @@ const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
 // Step 1: Home program & profile
-const homePrograms = ref<HomeProgramResponse[]>([])
-const loadingPrograms = ref(true)
+const programsQuery = useHomeProgramsQuery()
+const homePrograms = computed<HomeProgramResponse[]>(() => programsQuery.data.value ?? [])
+const loadingPrograms = computed(() => programsQuery.isPending.value)
 const selectedProgramId = ref<string | null>(null)
 const selectedProfileId = ref<string | null>(null)
 
@@ -63,8 +63,9 @@ const selectedProfile = computed(
 )
 
 // Step 2: Partner institution
-const partnerInstitutions = ref<PartnerInstitutionAdminResponse[]>([])
-const loadingPartnerInstitutions = ref(true)
+const partnerInstitutionsQuery = usePartnerInstitutionOptionsQuery()
+const partnerInstitutions = computed<PartnerInstitutionAdminResponse[]>(() => partnerInstitutionsQuery.data.value ?? [])
+const loadingPartnerInstitutions = computed(() => partnerInstitutionsQuery.isPending.value)
 const selectedPartnerInstitutionId = ref<string | null>(null)
 const partnerSearch = ref('')
 const selectedCountry = ref<string | null>(null)
@@ -104,7 +105,8 @@ const selectedPartnerInstitution = computed(
 )
 
 // Step 3: Coordinator + Mentor
-const coordinators = ref<CoordinatorOption[]>([])
+const coordinatorsQuery = useCoordinatorsQuery()
+const coordinators = computed<CoordinatorOption[]>(() => coordinatorsQuery.data.value ?? [])
 const selectedCoordinatorId = ref<string | null>(
   props.targetStudentId ? (authStore.user?.id ?? null) : (authStore.user?.coordinatorId ?? null),
 )
@@ -182,21 +184,6 @@ watch(selectedProgramId, () => {
   selectedProfileId.value = null
 })
 
-onMounted(async () => {
-  const [programsRes, partnerRes, coordRes] = await Promise.allSettled([
-    institutionService.getHomePrograms(),
-    getAllPartnerInstitutions(),
-    coordinatorService.getCoordinators(),
-  ])
-
-  if (programsRes.status === 'fulfilled') homePrograms.value = programsRes.value.data
-  loadingPrograms.value = false
-
-  if (partnerRes.status === 'fulfilled') partnerInstitutions.value = partnerRes.value
-  loadingPartnerInstitutions.value = false
-
-  if (coordRes.status === 'fulfilled') coordinators.value = coordRes.value.data
-})
 
 function validateStep(): boolean {
   errorMessage.value = null

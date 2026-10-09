@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { coordinatorService } from '@/services/coordinator.service'
+import { useCoordinatorsQuery } from '@/queries/catalog.queries'
 import { useExchangeContext } from '@/composables/useExchangeContext'
 import { useExchangeMutations } from '@/queries/exchange.queries'
 import { exchangeSemester } from '@/utils/exchangeSemester'
@@ -106,20 +106,13 @@ function setSemesterType(sem: ExchangeSemester) {
   }
 }
 
-const coordinators = ref<CoordinatorOption[]>([])
+const coordinatorsQuery = useCoordinatorsQuery(() => !guest.value)
+const coordinators = computed<CoordinatorOption[]>(() => coordinatorsQuery.data.value ?? [])
 const coordinatorOptions = computed(() => [
   { value: null, label: t('exchange.noCoordinator') },
   ...coordinators.value.map((c) => ({ value: c.id, label: c.name })),
 ])
 
-onMounted(async () => {
-  if (guest.value) return
-  try {
-    coordinators.value = (await coordinatorService.getCoordinators()).data
-  } catch {
-    // non-fatal: coordinator list stays empty, current value still shows via label fallback
-  }
-})
 
 async function submit() {
   errorMessage.value = null

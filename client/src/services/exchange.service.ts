@@ -8,7 +8,7 @@ import type {
   UpdateExchangeRequest,
 } from '@/types/exchange.types'
 import type { PartnerCourseRequest, PartnerCourseResponse } from '@/types/institution.types'
-import type { PagedParams, PagedResponse } from '@/types/paged.types'
+import type { ListParams, PagedResponse } from '@/types/paged.types'
 
 export const exchangeService = {
   create: (request: CreateExchangeRequest) =>
@@ -28,7 +28,7 @@ export const exchangeService = {
     api.post<AccessLinkResponse>(`/api/exchanges/${exchangeGuid}/access-link`),
   regenerateAccessLink: (exchangeGuid: string) =>
     api.post<AccessLinkResponse>(`/api/exchanges/${exchangeGuid}/access-link/regenerate`),
-  getPartnerCourses: (exchangeGuid: string, params: PagedParams = {}, signal?: AbortSignal) =>
+  getPartnerCourses: (exchangeGuid: string, params: Partial<ListParams> = {}, signal?: AbortSignal) =>
     api.get<PagedResponse<PartnerCourseResponse>>(`/api/exchanges/${exchangeGuid}/partner-courses`, { params, signal }),
   createPartnerCourse: (exchangeGuid: string, data: PartnerCourseRequest) =>
     api.post<PartnerCourseResponse>(`/api/exchanges/${exchangeGuid}/partner-courses`, data),

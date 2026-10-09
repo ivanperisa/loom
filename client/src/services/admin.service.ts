@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { PagedParams, PagedResponse } from '@/types/paged.types'
+import type { ListParams, PagedResponse } from '@/types/paged.types'
 
 export interface UserListResponse {
   id: string
@@ -40,18 +40,12 @@ export interface CoordinatorWhitelistEntryResponse {
 
 export const adminService = {
   getAllUsers: (
-    params: PagedParams & {
-      role?: string | null
-      institutionId?: string | null
-      registered?: boolean | null
-      sortBy?: string
-    } = {},
+    params: ListParams & { role?: string | null; institutionId?: string | null; registered?: boolean | null },
     signal?: AbortSignal,
-  ) =>
-    api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params, signal }),
+  ) => api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params, signal }),
 
-  getCoordinatorRequests: () =>
-    api.get<CoordinatorRequestResponse[]>('/api/admin/coordinator-requests'),
+  getCoordinatorRequests: (params: ListParams, signal?: AbortSignal) =>
+    api.get<PagedResponse<CoordinatorRequestResponse>>('/api/admin/coordinator-requests', { params, signal }),
 
   setUserRole: (userId: string, role: string) =>
     api.patch<UserListResponse>(`/api/admin/users/${userId}/role`, { role }),
@@ -59,8 +53,8 @@ export const adminService = {
   rejectCoordinatorRequest: (userId: string) =>
     api.patch(`/api/admin/users/${userId}/reject-coordinator-request`),
 
-  getCoordinatorWhitelist: () =>
-    api.get<CoordinatorWhitelistEntryResponse[]>('/api/admin/coordinator-whitelist'),
+  getCoordinatorWhitelist: (params: ListParams, signal?: AbortSignal) =>
+    api.get<PagedResponse<CoordinatorWhitelistEntryResponse>>('/api/admin/coordinator-whitelist', { params, signal }),
 
   addToWhitelist: (email: string) =>
     api.post<CoordinatorWhitelistEntryResponse>('/api/admin/coordinator-whitelist', { email }),

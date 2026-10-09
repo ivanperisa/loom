@@ -1,9 +1,9 @@
 ﻿<script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { onBeforeRouteUpdate, useRouter } from 'vue-router'
+import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
-import { institutionService } from '@/services/institution.service'
+import { useHomeInstitutionsQuery } from '@/queries/catalog.queries'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import { useTheme } from '@/composables/useTheme'
 import type { InstitutionResponse } from '@/types/institution.types'
@@ -42,8 +42,9 @@ const jmbag = ref('')
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
-const institutions = ref<InstitutionResponse[]>([])
-const loadingInstitutions = ref(true)
+const institutionsQuery = useHomeInstitutionsQuery()
+const institutions = computed<InstitutionResponse[]>(() => institutionsQuery.data.value ?? [])
+const loadingInstitutions = computed(() => institutionsQuery.isPending.value)
 const institutionSearch = ref('')
 
 const filteredInstitutions = computed(() => {
@@ -64,20 +65,6 @@ const isJmbagValid = computed(() => /^\d{10}$/.test(jmbag.value))
 const institutionStep = computed(() => (isCoordinatorOrAdmin.value ? 1 : 2))
 const jmbagStep = computed(() => (isCoordinatorOrAdmin.value ? -1 : 3))
 
-async function fetchInstitutions() {
-  loadingInstitutions.value = true
-  try {
-    const res = await institutionService.getHomeInstitutions()
-    institutions.value = res.data
-  } catch {
-    // keep empty
-  } finally {
-    loadingInstitutions.value = false
-  }
-}
-
-onMounted(fetchInstitutions)
-onBeforeRouteUpdate(fetchInstitutions)
 
 function goNext() {
   errorMessage.value = null

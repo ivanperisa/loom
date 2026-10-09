@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminService, type UserListResponse } from '@/services/admin.service'
-import { invalidateCoordinators } from '@/services/coordinator.service'
 import { userRole } from '@/utils/userRole'
 import BaseModal from '@/components/common/BaseModal.vue'
 import UserAvatar from '@/components/common/UserAvatar.vue'
@@ -33,7 +32,6 @@ async function save() {
   error.value = null
   try {
     const res = await adminService.setUserRole(props.user.id, selected.value)
-    invalidateCoordinators()
     emit('saved', res.data)
   } catch {
     error.value = t('admin.users.changeRoleError')

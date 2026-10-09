@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import axios from 'axios'
-import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { coordinatorService } from '@/services/coordinator.service'
-import { institutionService } from '@/services/institution.service'
 import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
 import type { ExchangeSummaryResponse } from '@/types/exchange.types'
-import type { InstitutionResponse } from '@/types/institution.types'
 import { statusColorClass, statusDotClass } from '@/utils/statusColors'
 import { useCopyAccessLink } from '@/composables/useCopyAccessLink'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
@@ -16,28 +14,40 @@ import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import SortableHeader from '@/components/common/SortableHeader.vue'
 import Pagination from '@/components/common/Pagination.vue'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { useNotification } from '@/composables/useNotification'
 import { useConfirm } from '@/composables/useConfirm'
-import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { minSearchTerm } from '@/utils/searchTerm'
-import type { SortDir } from '@/composables/useSortable'
-import { useQuerySync } from '@/composables/useQuerySync'
+import { useListQuery } from '@/composables/useListQuery'
+import { useHomeInstitutionsQuery } from '@/queries/catalog.queries'
+import { queryKeys } from '@/queries/keys'
+import { isApiError } from '@/utils/apiError'
 
 const router = useRouter()
-const route = useRoute()
 const { t } = useI18n()
 const { notifySuccess, notifyError } = useNotification()
 const { confirm } = useConfirm()
+const queryClient = useQueryClient()
 
-const students = ref<CoordinatorStudentResponse[]>([])
-const studentPage = ref(1)
-const studentSortDir = ref<SortDir>('asc')
-const studentsTotalCount = ref(0)
-const STUDENTS_PER_PAGE = 10
-const totalStudentPages = computed(() => Math.max(1, Math.ceil(studentsTotalCount.value / STUDENTS_PER_PAGE)))
-const exchanges = ref<ExchangeSummaryResponse[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
+const selectedAcademicYear = ref<string | null>(null)
+const selectedPartnerInstitution = ref<string | null>(null)
+
+const studentList = useListQuery<CoordinatorStudentResponse, { academicYear: string | null; partnerInstitution: string | null }>({
+  key: queryKeys.coordinatorStudents,
+  fetch: (params, signal) => coordinatorService.getStudents(params, signal),
+  filters: { academicYear: selectedAcademicYear, partnerInstitution: selectedPartnerInstitution },
+  pageSize: 10,
+  defaultSort: 'name',
+  syncToUrl: true,
+})
+const students = studentList.items
+const studentSearch = studentList.search
+
+const filtersQuery = useQuery({
+  queryKey: [...queryKeys.coordinatorStudents, 'filters'],
+  queryFn: async ({ signal }) => (await coordinatorService.getStudentFilters(signal)).data,
+})
+const homeInstitutionsQuery = useHomeInstitutionsQuery()
+const institutions = computed(() => homeInstitutionsQuery.data.value ?? [])
 
 const openMenuId = ref<string | null>(null)
 const menuPos = ref({ top: 0, left: 0 })
@@ -50,146 +60,51 @@ const ACTIONS_MENU_WIDTH = 200
 const showStudentModal = ref(false)
 const studentModalMode = ref<'create' | 'edit'>('create')
 const editingStudent = ref<CoordinatorStudentResponse | null>(null)
-const institutions = ref<InstitutionResponse[]>([])
 const deletingStudentId = ref<string | null>(null)
 
 // Create exchange modal
 const showCreateExchangeModal = ref(false)
 const createExchangeTargetStudentId = ref<string | null>(null)
 
-const selectedAcademicYear = ref<string | null>(null)
-const selectedPartnerInstitution = ref<string | null>(null)
-const studentSearch = ref<string>(typeof route.query.q === 'string' ? route.query.q : '')
-const debouncedStudentSearch = useDebouncedRef(studentSearch, 400)
-
-useQuerySync({
-  year: selectedAcademicYear,
-  institution: selectedPartnerInstitution,
-  q: debouncedStudentSearch,
-})
-
-const academicYears = computed(() => {
-  const years = new Set(exchanges.value.map((ex) => ex.academicYear))
-  return Array.from(years).sort().reverse()
-})
+const academicYears = computed(() => filtersQuery.data.value?.academicYears ?? [])
 
 const academicYearFilterOptions = computed(() => [
   { value: null, label: t('home.allYears') },
   ...academicYears.value.map((year) => ({ value: year, label: year })),
 ])
 
-const partnerInstitutionOptions = computed(() => {
-  const names = new Set(exchanges.value.map((ex) => ex.partnerInstitutionName))
-  return [
-    { value: null, label: t('coordinator.filters.allInstitutions') },
-    ...Array.from(names)
-      .sort((a, b) => a.localeCompare(b))
-      .map((name) => ({ value: name, label: name })),
-  ]
-})
-
-const filteredExchanges = computed(() =>
-  exchanges.value.filter(
-    (ex) =>
-      (!selectedAcademicYear.value || ex.academicYear === selectedAcademicYear.value) &&
-      (!selectedPartnerInstitution.value || ex.partnerInstitutionName === selectedPartnerInstitution.value),
-  ),
-)
-
-const exchangesByStudent = computed(() => {
-  const map = new Map<string, ExchangeSummaryResponse[]>()
-  for (const ex of filteredExchanges.value) {
-    const list = map.get(ex.studentId) ?? []
-    list.push(ex)
-    map.set(ex.studentId, list)
-  }
-  return map
-})
+const partnerInstitutionOptions = computed(() => [
+  { value: null, label: t('coordinator.filters.allInstitutions') },
+  ...(filtersQuery.data.value?.partnerInstitutions ?? []).map((name) => ({ value: name, label: name })),
+])
 
 const primaryExchangeByStudent = computed(() => {
   const map = new Map<string, ExchangeSummaryResponse>()
-  for (const [studentId, list] of exchangesByStudent.value) {
-    if (list[0]) map.set(studentId, list[0])
+  for (const student of students.value) {
+    if (student.exchanges[0]) map.set(student.id, student.exchanges[0])
   }
   return map
 })
 
 function extraExchangeCount(studentId: string): number {
-  return Math.max((exchangesByStudent.value.get(studentId)?.length ?? 0) - 1, 0)
+  const student = students.value.find((s) => s.id === studentId)
+  return Math.max((student?.exchanges.length ?? 0) - 1, 0)
 }
 
-const openMenuExchanges = computed(() =>
-  openMenuId.value ? (exchangesByStudent.value.get(openMenuId.value) ?? []) : [],
-)
 const openMenuStudent = computed(() => students.value.find((s) => s.id === openMenuId.value) ?? null)
+const openMenuExchanges = computed(() => openMenuStudent.value?.exchanges ?? [])
 const actionsMenuStudent = computed(
   () => students.value.find((s) => s.id === actionsMenuId.value) ?? null,
 )
 
-function toggleStudentSort() {
-  studentSortDir.value = studentSortDir.value === 'asc' ? 'desc' : 'asc'
-  studentPage.value = 1
-  fetchStudents()
-}
-
-async function fetchData() {
+watch([studentList.page, studentList.search, selectedAcademicYear, selectedPartnerInstitution], () => {
   closeMenu()
-  loading.value = true
-  error.value = null
-  try {
-    const [studentsRes, exchangesRes, institutionsRes] = await Promise.allSettled([
-      coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: minSearchTerm(debouncedStudentSearch.value), sortDir: studentSortDir.value, academicYear: selectedAcademicYear.value, partnerInstitution: selectedPartnerInstitution.value }),
-      coordinatorService.getStudentsExchanges(),
-      institutionService.getHomeInstitutions(),
-    ])
-    if (studentsRes.status === 'fulfilled') {
-      students.value = studentsRes.value.data.items
-      studentsTotalCount.value = studentsRes.value.data.totalCount
-    }
-    if (exchangesRes.status === 'fulfilled') exchanges.value = exchangesRes.value.data
-    if (institutionsRes.status === 'fulfilled') institutions.value = institutionsRes.value.data
-  } catch {
-    error.value = t('common.error')
-  } finally {
-    loading.value = false
-  }
-}
-
-let fetchStudentsController: AbortController | null = null
-
-async function fetchStudents() {
-  closeMenu()
-  fetchStudentsController?.abort()
-  const controller = new AbortController()
-  fetchStudentsController = controller
-  try {
-    const res = await coordinatorService.getStudents({ page: studentPage.value, pageSize: STUDENTS_PER_PAGE, search: minSearchTerm(debouncedStudentSearch.value), sortDir: studentSortDir.value, academicYear: selectedAcademicYear.value, partnerInstitution: selectedPartnerInstitution.value }, controller.signal)
-    students.value = res.data.items
-    studentsTotalCount.value = res.data.totalCount
-    if (studentPage.value > totalStudentPages.value) studentPage.value = totalStudentPages.value
-  } catch (err) {
-    if (axios.isCancel(err)) return
-    error.value = t('common.error')
-  }
-}
-
-onMounted(fetchData)
-
-onBeforeRouteUpdate((to) => {
-  const q = typeof to.query.q === 'string' ? to.query.q : ''
-  if (q !== studentSearch.value) studentSearch.value = q
+  closeActionsMenu()
 })
 
-watch(
-  [studentPage, debouncedStudentSearch, selectedAcademicYear, selectedPartnerInstitution],
-  ([newPage, newSearch, newYear, newInstitution], [, oldSearch, oldYear, oldInstitution]) => {
-    if ((newSearch !== oldSearch || newYear !== oldYear || newInstitution !== oldInstitution) && newPage !== 1) {
-      studentPage.value = 1
-      return
-    }
-    fetchStudents()
-  },
-)
+function refreshStudents() {
+  return queryClient.invalidateQueries({ queryKey: queryKeys.coordinatorStudents })
+}
 
 function closeMenu() {
   openMenuId.value = null
@@ -235,11 +150,6 @@ function handleOutsideClick(e: MouseEvent) {
 onMounted(() => document.addEventListener('click', handleOutsideClick))
 onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
 
-watch([debouncedStudentSearch, selectedAcademicYear, selectedPartnerInstitution], () => {
-  closeMenu()
-  closeActionsMenu()
-})
-
 function rowAriaLabel(student: CoordinatorStudentResponse, primary: ExchangeSummaryResponse): string {
   return `${student.name} — ${primary.partnerInstitutionName}`
 }
@@ -269,13 +179,8 @@ function openEditStudent(student: CoordinatorStudentResponse) {
   showStudentModal.value = true
 }
 
-async function onStudentSaved(student: CoordinatorStudentResponse) {
-  if (studentModalMode.value === 'edit') {
-    const idx = students.value.findIndex((s) => s.id === student.id)
-    if (idx !== -1) students.value[idx] = student
-  } else {
-    await fetchStudents()
-  }
+function onStudentSaved() {
+  refreshStudents()
   showStudentModal.value = false
 }
 
@@ -285,11 +190,10 @@ async function deleteStudent(student: CoordinatorStudentResponse) {
   deletingStudentId.value = student.id
   try {
     await coordinatorService.deleteStudent(student.id)
-    await fetchStudents()
+    await refreshStudents()
     notifySuccess(t('coordinator.deleteStudent'))
   } catch (e: unknown) {
-    const err = e as { response?: { status?: number } }
-    notifyError(err?.response?.status === 409 ? t('coordinator.deleteStudentHasExchanges') : t('coordinator.deleteStudentError'))
+    notifyError(isApiError(e, 'HAS_EXCHANGES') ? t('coordinator.deleteStudentHasExchanges') : t('coordinator.deleteStudentError'))
   } finally {
     deletingStudentId.value = null
   }
@@ -346,16 +250,14 @@ function onExchangeCreated(exchangeGuid: string) {
         </div>
       </div>
 
-      <div v-if="loading && students.length === 0" class="space-y-4">
+      <div v-if="studentList.isPending.value" class="space-y-4">
         <div v-for="i in 3" :key="i" class="animate-pulse rounded-xl border border-primary/20 bg-dark-2 p-5">
           <div class="h-5 w-48 rounded bg-primary/20"></div>
           <div class="mt-3 h-4 w-72 rounded bg-primary/20"></div>
         </div>
       </div>
 
-      <div v-else-if="error" class="rounded-xl border border-red-400/30 bg-red-900/20 p-8 text-center">
-        <p class="text-danger-text">{{ error }}</p>
-      </div>
+      <ErrorAlert v-else-if="studentList.error.value" :error="studentList.error.value" @retry="studentList.refetch()" />
 
       <div v-else-if="students.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
         <svg class="mx-auto h-12 w-12 text-light/60" viewBox="0 0 24 24" fill="none">
@@ -370,7 +272,7 @@ function onExchangeCreated(exchangeGuid: string) {
         <div class="min-w-[860px]">
           <!-- Header row -->
           <div class="coord-row-grid gap-4 border-b border-primary/20 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-light/40">
-            <SortableHeader :label="t('coordinator.table.student')" sort-key="student" active-key="student" :dir="studentSortDir" @sort="toggleStudentSort" />
+            <SortableHeader :label="t('coordinator.table.student')" sort-key="name" :active-key="studentList.sortKey.value" :dir="studentList.sortDir.value" @sort="studentList.toggleSort" />
             <span>{{ t('coordinator.table.exchange') }}</span>
             <span class="text-center">{{ t('coordinator.table.period') }}</span>
             <span class="text-center">{{ t('coordinator.table.learningAgreement') }}</span>
@@ -500,11 +402,11 @@ function onExchangeCreated(exchangeGuid: string) {
 
       <!-- Student pagination -->
       <Pagination
-        :page="studentPage"
-        :total-pages="totalStudentPages"
-        :total="studentsTotalCount"
-        :per-page="STUDENTS_PER_PAGE"
-        @update:page="studentPage = $event"
+        :page="studentList.page.value"
+        :total-pages="studentList.totalPages.value"
+        :total="studentList.totalCount.value"
+        :per-page="studentList.pageSize"
+        @update:page="studentList.page.value = $event"
       />
 
       <!-- Exchange switcher menu -->

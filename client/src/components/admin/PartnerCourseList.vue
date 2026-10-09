@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import axios from 'axios'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerCourseResponse } from '@/types/institution.types'
@@ -11,10 +11,9 @@ import PartnerCourseRow from '@/components/admin/PartnerCourseRow.vue'
 import PartnerCourseToolbar from '@/components/admin/PartnerCourseToolbar.vue'
 import MergeCoursesModal from '@/components/admin/MergeCoursesModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
-import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { minSearchTerm } from '@/utils/searchTerm'
-
-const COURSE_PER_PAGE = 10
+import { useListQuery } from '@/composables/useListQuery'
+import { queryKeys } from '@/queries/keys'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 
 const props = defineProps<{ institutionId: string; institutionName: string; institutionNameHr?: string | null; autoOpenCreate?: boolean }>()
 const emit = defineEmits<{ 'count-changed': [delta: number] }>()
@@ -22,33 +21,34 @@ const emit = defineEmits<{ 'count-changed': [delta: number] }>()
 const { t } = useI18n()
 const { confirm } = useConfirm()
 
-const loading = ref(true)
+const queryClient = useQueryClient()
+/** An action that failed (the list itself shows its own load error). */
 const error = ref<string | null>(null)
-const courses = ref<PartnerCourseResponse[]>([])
-const totalCount = ref(0)
-const coursePage = ref(1)
-const totalCoursePages = computed(() => Math.max(1, Math.ceil(totalCount.value / COURSE_PER_PAGE)))
 
-const courseSearch = ref('')
-const debouncedCourseSearch = useDebouncedRef(courseSearch, 400)
 const semesterFilter = ref<string | null>(null)
 const levelFilter = ref<string | null>(null)
 const showDeletedCourses = ref(false)
-const hasDeletedCourses = ref(false)
 
-const sortBy = ref('name')
-const sortDir = ref<'asc' | 'desc'>('asc')
+const list = useListQuery<PartnerCourseResponse, { semester: string | null; level: string | null; includeDeleted: boolean }>({
+  key: queryKeys.partnerInstitutionCourses(props.institutionId),
+  fetch: (params, signal) =>
+    institutionService.getPartnerCoursesByInstitution(props.institutionId, params.includeDeleted ?? false, params, signal),
+  filters: { semester: semesterFilter, level: levelFilter, includeDeleted: showDeletedCourses },
+  pageSize: 10,
+  defaultSort: 'name',
+})
+const courses = list.items
+const courseSearch = list.search
+
+/** This list, and the course lists of exchanges at this partner (they may show the course). */
+const refresh = () =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.partnerInstitutionCourses(props.institutionId) }),
+    queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'exchange' && q.queryKey[2] === 'partner-courses' }),
+  ])
 
 const codeColumnWidth = computed(() => `${(Math.max(3, ...courses.value.map(c => c.code.length)) + 2) * 7.2}px`)
 
-function toggleSort(key: string) {
-  if (sortBy.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortBy.value = key
-    sortDir.value = 'asc'
-  }
-}
 
 const courseModal = ref<{ mode: 'create' | 'edit'; course?: PartnerCourseResponse; initialName?: string } | null>(null)
 const savingCourse = ref(false)
@@ -60,51 +60,12 @@ const selectedForMerge = ref<Set<string>>(new Set())
 const mergeModal = ref<{ courses: PartnerCourseResponse[] } | null>(null)
 const merging = ref(false)
 
-let loadCoursesController: AbortController | null = null
-
-async function loadCourses() {
-  loadCoursesController?.abort()
-  const controller = new AbortController()
-  loadCoursesController = controller
-  loading.value = true
-  try {
-    const res = await institutionService.getPartnerCoursesByInstitution(props.institutionId, showDeletedCourses.value, {
-      page: coursePage.value,
-      pageSize: COURSE_PER_PAGE,
-      search: minSearchTerm(debouncedCourseSearch.value),
-      semester: semesterFilter.value,
-      level: levelFilter.value,
-      sortBy: sortBy.value,
-      sortDir: sortDir.value,
-    }, controller.signal)
-    courses.value = res.data.items
-    totalCount.value = res.data.totalCount
-    hasDeletedCourses.value = res.data.hasDeleted
-    if (coursePage.value > totalCoursePages.value) coursePage.value = totalCoursePages.value
-  } catch (err) {
-    if (axios.isCancel(err)) return
-    throw err
-  } finally {
-    if (loadCoursesController === controller) loading.value = false
-  }
-}
-
 onMounted(() => {
-  loadCourses()
   if (props.autoOpenCreate) openCreate()
 })
 
-watch(
-  [coursePage, debouncedCourseSearch, semesterFilter, levelFilter, showDeletedCourses, sortBy, sortDir],
-  ([newPage], [oldPage, oldSearch, oldSemester, oldLevel, oldShowDeleted]) => {
-    if ((debouncedCourseSearch.value !== oldSearch || semesterFilter.value !== oldSemester || levelFilter.value !== oldLevel || showDeletedCourses.value !== oldShowDeleted) && newPage !== 1) {
-      coursePage.value = 1
-      return
-    }
-    if (newPage !== oldPage) selectedForMerge.value = new Set()
-    loadCourses()
-  },
-)
+// A merge selection only makes sense on the page it was made on.
+watch(list.page, () => (selectedForMerge.value = new Set()))
 
 function openCreate() {
   courseError.value = null
@@ -133,7 +94,7 @@ async function submitCourse(payload: {
       await institutionService.createPartnerCourseByInstitution(props.institutionId, payload)
       emit('count-changed', 1)
     }
-    await loadCourses()
+    await refresh()
     courseModal.value = null
   } catch (e: unknown) {
     const err = e as { response?: { status?: number } }
@@ -149,7 +110,7 @@ async function deleteCourse(courseId: string) {
   error.value = null
   try {
     await institutionService.deletePartnerCourse(courseId)
-    await loadCourses()
+    await refresh()
     emit('count-changed', -1)
   } catch {
     error.value = t('admin.institutions.saveError')
@@ -163,7 +124,7 @@ async function restoreCourse(courseId: string) {
   error.value = null
   try {
     await institutionService.restorePartnerCourse(courseId)
-    await loadCourses()
+    await refresh()
   } catch {
     error.value = t('admin.institutions.saveError')
   } finally {
@@ -202,7 +163,7 @@ async function submitMerge(primaryId: string) {
   error.value = null
   try {
     await institutionService.mergePartnerCourses(primaryId, duplicateIds)
-    await loadCourses()
+    await refresh()
     emit('count-changed', -duplicateIds.length)
     mergeModal.value = null
   } catch {
@@ -229,7 +190,7 @@ async function submitMerge(primaryId: string) {
       :semester="semesterFilter"
       :level="levelFilter"
       :show-deleted="showDeletedCourses"
-      :has-deleted="hasDeletedCourses"
+      :has-deleted="list.hasDeleted.value"
       :merge-selecting="mergeSelecting"
       :can-merge="courses.length > 1"
       :selected-count="selectedForMerge.size"
@@ -242,9 +203,11 @@ async function submitMerge(primaryId: string) {
       @cancel-merge="cancelMergeSelection"
     />
 
-    <div v-if="loading && courses.length === 0" class="space-y-3">
+    <div v-if="list.isPending.value" class="space-y-3">
       <div v-for="i in 4" :key="i" class="h-14 animate-pulse rounded-xl bg-dark-2"></div>
     </div>
+
+    <ErrorAlert v-else-if="list.error.value" :error="list.error.value" @retry="list.refetch()" />
 
     <div v-else-if="courses.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-6 text-center text-light/60">
       {{ courseSearch ? t('admin.institutions.noResults') : t('admin.institutions.noCourses') }}
@@ -255,12 +218,12 @@ async function submitMerge(primaryId: string) {
         <div class="min-w-[980px]" :style="{ '--code-col-width': codeColumnWidth }">
           <div class="admin-course-grid gap-3 border-b border-primary/20 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-light/40" :class="{ 'has-checkbox': mergeSelecting }">
             <span v-if="mergeSelecting"></span>
-            <SortableHeader :label="t('admin.institutions.courseColumns.code')" sort-key="code" :active-key="sortBy" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader :label="t('admin.institutions.courseColumns.name')" sort-key="name" :active-key="sortBy" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader :label="t('admin.institutions.courseColumns.nameHr')" sort-key="nameHr" :active-key="sortBy" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader :label="t('admin.institutions.courseColumns.semester')" sort-key="semester" :active-key="sortBy" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader :label="t('admin.institutions.courseColumns.level')" sort-key="level" :active-key="sortBy" :dir="sortDir" @sort="toggleSort" />
-            <SortableHeader :label="t('admin.institutions.courseColumns.ects')" sort-key="ects" :active-key="sortBy" :dir="sortDir" @sort="toggleSort" />
+            <SortableHeader :label="t('admin.institutions.courseColumns.code')" sort-key="code" :active-key="list.sortKey.value" :dir="list.sortDir.value" @sort="list.toggleSort" />
+            <SortableHeader :label="t('admin.institutions.courseColumns.name')" sort-key="name" :active-key="list.sortKey.value" :dir="list.sortDir.value" @sort="list.toggleSort" />
+            <SortableHeader :label="t('admin.institutions.courseColumns.nameHr')" sort-key="nameHr" :active-key="list.sortKey.value" :dir="list.sortDir.value" @sort="list.toggleSort" />
+            <SortableHeader :label="t('admin.institutions.courseColumns.semester')" sort-key="semester" :active-key="list.sortKey.value" :dir="list.sortDir.value" @sort="list.toggleSort" />
+            <SortableHeader :label="t('admin.institutions.courseColumns.level')" sort-key="level" :active-key="list.sortKey.value" :dir="list.sortDir.value" @sort="list.toggleSort" />
+            <SortableHeader :label="t('admin.institutions.courseColumns.ects')" sort-key="ects" :active-key="list.sortKey.value" :dir="list.sortDir.value" @sort="list.toggleSort" />
             <span></span>
           </div>
 
@@ -282,11 +245,11 @@ async function submitMerge(primaryId: string) {
       </div>
 
       <Pagination
-        :page="coursePage"
-        :total-pages="totalCoursePages"
-        :total="totalCount"
-        :per-page="COURSE_PER_PAGE"
-        @update:page="coursePage = $event"
+        :page="list.page.value"
+        :total-pages="list.totalPages.value"
+        :total="list.totalCount.value"
+        :per-page="list.pageSize"
+        @update:page="list.page.value = $event"
       />
     </template>
 

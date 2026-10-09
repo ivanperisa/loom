@@ -8,19 +8,14 @@ import type {
   PartnerCourseUsage,
   PartnerCourseRequest,
 } from '@/types/institution.types'
-import type { PagedParams, PagedResponse } from '@/types/paged.types'
-
-let homeInstitutionsCache: ReturnType<typeof api.get<InstitutionResponse[]>> | null = null
-let homeProgramsCache: ReturnType<typeof api.get<HomeProgramResponse[]>> | null = null
+import type { ListParams, PagedResponse } from '@/types/paged.types'
 
 export const institutionService = {
-  getHomeInstitutions: () =>
-    (homeInstitutionsCache ??= api.get<InstitutionResponse[]>('/api/institutions/home')),
-  getHomePrograms: () =>
-    (homeProgramsCache ??= api.get<HomeProgramResponse[]>('/api/institutions/home-programs')),
-  getPartnerInstitutions: (includeDeleted = false, params: PagedParams & { country?: string | null } = {}, signal?: AbortSignal) =>
+  getHomeInstitutions: (signal?: AbortSignal) => api.get<InstitutionResponse[]>('/api/institutions/home', { signal }),
+  getHomePrograms: (signal?: AbortSignal) => api.get<HomeProgramResponse[]>('/api/institutions/home-programs', { signal }),
+  getPartnerInstitutions: (includeDeleted = false, params: Partial<ListParams> & { country?: string | null } = {}, signal?: AbortSignal) =>
     api.get<PagedResponse<PartnerInstitutionAdminResponse>>('/api/institutions/partner', { params: { includeDeleted, ...params }, signal }),
-  getPartnerCoursesByInstitution: (institutionId: string, includeDeleted = false, params: PagedParams & { semester?: string | null; level?: string | null } = {}, signal?: AbortSignal) =>
+  getPartnerCoursesByInstitution: (institutionId: string, includeDeleted = false, params: Partial<ListParams> & { semester?: string | null; level?: string | null } = {}, signal?: AbortSignal) =>
     api.get<PagedResponse<PartnerCourseResponse>>(`/api/institutions/partner/${institutionId}/courses`, { params: { includeDeleted, ...params }, signal }),
 
   createPartnerInstitution: (data: { name: string; nameHr: string; country: string; city?: string; erasmusCode?: string }) =>
@@ -57,7 +52,6 @@ export const institutionService = {
     api.get<PartnerCourseUsage>(`/api/institutions/partner/courses/${courseId}/usage`),
 }
 
-const DROPDOWN_TTL_MS = 60_000
 const PAGE_SIZE = 200
 
 /** Loads every page of a paged list (for dropdowns and local filtering of small lists). */
@@ -74,16 +68,4 @@ export async function fetchAllPages<T>(
     for (const res of rest) items.push(...res.data.items)
   }
   return items
-}
-
-let allPartnerInstitutions: { at: number; promise: Promise<PartnerInstitutionAdminResponse[]> } | null = null
-
-export function getAllPartnerInstitutions(): Promise<PartnerInstitutionAdminResponse[]> {
-  if (!allPartnerInstitutions || Date.now() - allPartnerInstitutions.at > DROPDOWN_TTL_MS) {
-    allPartnerInstitutions = {
-      at: Date.now(),
-      promise: fetchAllPages((page, pageSize) => institutionService.getPartnerInstitutions(false, { page, pageSize })),
-    }
-  }
-  return allPartnerInstitutions.promise
 }

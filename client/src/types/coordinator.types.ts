@@ -1,3 +1,5 @@
+import type { ExchangeSummaryResponse } from './exchange.types'
+
 export interface CoordinatorStudentResponse {
   id: string
   name: string
@@ -6,6 +8,13 @@ export interface CoordinatorStudentResponse {
   isPlaceholder: boolean
   institutionId: string | null
   isMyStudent: boolean
+  /** This coordinator's exchanges of the student (matching the list filters), newest first. */
+  exchanges: ExchangeSummaryResponse[]
+}
+
+export interface StudentFiltersResponse {
+  academicYears: string[]
+  partnerInstitutions: string[]
 }
 
 export interface CreatePlaceholderStudentRequest {

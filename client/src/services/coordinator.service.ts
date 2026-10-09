@@ -1,14 +1,12 @@
 import { api } from './api'
-import type { CoordinatorOption, CoordinatorStudentResponse, CreatePlaceholderStudentRequest, UpdateStudentRequest } from '@/types/coordinator.types'
-import type { ExchangeSummaryResponse } from '@/types/exchange.types'
-import type { PagedParams, PagedResponse } from '@/types/paged.types'
+import type { CoordinatorOption, CoordinatorStudentResponse, CreatePlaceholderStudentRequest, StudentFiltersResponse, UpdateStudentRequest } from '@/types/coordinator.types'
+import type { ListParams, PagedResponse } from '@/types/paged.types'
 
-let coordinatorsCache: ReturnType<typeof api.get<CoordinatorOption[]>> | null = null
+export type StudentListParams = ListParams & { academicYear?: string | null; partnerInstitution?: string | null }
 
 export const coordinatorService = {
-  getCoordinators: () =>
-    (coordinatorsCache ??= api.get<CoordinatorOption[]>('/api/coordinators')),
-  getStudents: (params: PagedParams = {}, signal?: AbortSignal) =>
+  getCoordinators: (signal?: AbortSignal) => api.get<CoordinatorOption[]>('/api/coordinators', { signal }),
+  getStudents: (params: StudentListParams, signal?: AbortSignal) =>
     api.get<PagedResponse<CoordinatorStudentResponse>>('/api/coordinator/students', { params, signal }),
   createPlaceholderStudent: (request: CreatePlaceholderStudentRequest) =>
     api.post<CoordinatorStudentResponse>('/api/coordinator/students', request),
@@ -16,10 +14,6 @@ export const coordinatorService = {
     api.put<CoordinatorStudentResponse>(`/api/coordinator/students/${studentId}`, request),
   deleteStudent: (studentId: string) =>
     api.delete(`/api/coordinator/students/${studentId}`, { errorToast: false }),
-  getStudentsExchanges: () =>
-    api.get<ExchangeSummaryResponse[]>('/api/coordinator/students/exchanges'),
-}
-
-export function invalidateCoordinators() {
-  coordinatorsCache = null
+  /** Years and partner institutions the student list can be filtered by. */
+  getStudentFilters: (signal?: AbortSignal) => api.get<StudentFiltersResponse>('/api/coordinator/students/filters', { signal }),
 }
