@@ -4,14 +4,15 @@ import { useI18n } from 'vue-i18n'
 import { useCoordinatorsQuery, useHomeProgramsQuery, usePartnerInstitutionOptionsQuery } from '@/queries/catalog.queries'
 import { useCreateExchange } from '@/queries/exchange.queries'
 import { describeApiError } from '@/utils/apiError'
-import { exchangeSemester } from '@/utils/exchangeSemester'
+import { useExchangePeriod } from '@/composables/useExchangePeriod'
+import StudySemesterPicker from '@/components/exchange/period/StudySemesterPicker.vue'
+import SemesterTypePicker from '@/components/exchange/period/SemesterTypePicker.vue'
 import type {
   HomeProgramResponse,
   HomeProfileResponse,
   PartnerInstitutionAdminResponse,
 } from '@/types/institution.types'
 import type { CoordinatorOption } from '@/types/coordinator.types'
-import type { ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { nWord } from '@/utils/plural'
@@ -122,63 +123,8 @@ const selectedCoordinator = computed(
 )
 
 // Step 3: Details
-function currentAcademicYearStart(): number {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = now.getMonth() + 1
-  return m >= 9 ? y : y - 1
-}
-
-const academicYearOptions = computed(() => {
-  const start = currentAcademicYearStart()
-  return [`${start}/${start + 1}`, `${start + 1}/${start + 2}`]
-})
-const academicYearSelectOptions = computed(() =>
-  academicYearOptions.value.map((year) => ({ value: year, label: year })),
-)
-
-const academicYear = ref(academicYearOptions.value[0] ?? '')
-const semesterType = ref<ExchangeSemester>(exchangeSemester.Winter)
-const studySemesters = ref<number[]>([])
-
-const allowedSemesters = computed<number[]>(() => {
-  if (semesterType.value === exchangeSemester.Winter) return [1, 3]
-  if (semesterType.value === exchangeSemester.Summer) return [2, 4]
-  return []
-})
-
-const bothPairs = [[1, 2], [3, 4]]
-
-function selectPair(pair: number[]) {
-  const sorted = [...pair].sort((a, b) => a - b)
-  const isSame =
-    studySemesters.value.length === sorted.length &&
-    sorted.every((v, i) => studySemesters.value.slice().sort((a, b) => a - b)[i] === v)
-  studySemesters.value = isSame ? [] : [...sorted]
-}
-
-function isPairSelected(pair: number[]): boolean {
-  const sorted = [...pair].sort((a, b) => a - b)
-  return (
-    studySemesters.value.length === sorted.length &&
-    sorted.every((v, i) => studySemesters.value.slice().sort((a, b) => a - b)[i] === v)
-  )
-}
-
-function toggleStudySemester(s: number) {
-  const isBoth = semesterType.value === exchangeSemester.Both
-  if (isBoth) {
-    const idx = studySemesters.value.indexOf(s)
-    if (idx === -1) studySemesters.value.push(s)
-    else studySemesters.value.splice(idx, 1)
-  } else {
-    studySemesters.value = studySemesters.value[0] === s ? [] : [s]
-  }
-}
-
-watch(semesterType, () => {
-  studySemesters.value = []
-})
+const period = useExchangePeriod()
+const { academicYear, semesterType, studySemesters, academicYearSelectOptions } = period
 
 watch(selectedProgramId, () => {
   selectedProfileId.value = null
@@ -207,12 +153,9 @@ function validateStep(): boolean {
   }
 
   if (currentStep.value === 3) {
-    if (!academicYear.value.trim()) {
-      errorMessage.value = t('createExchange.errors.academicYearRequired')
-      return false
-    }
-    if (studySemesters.value.length === 0) {
-      errorMessage.value = t('createExchange.errors.studySemesterRequired')
+    const missing = period.validate()
+    if (missing) {
+      errorMessage.value = t(missing)
       return false
     }
   }
@@ -469,74 +412,10 @@ const stepKeys = [
           </div>
 
           <!-- Semester type -->
-          <div class="col-span-2 sm:col-span-1">
-            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
-              t('exchange.semester')
-            }}</label>
-            <div class="grid grid-cols-3 gap-2">
-              <button
-                v-for="sem in [
-                  exchangeSemester.Winter,
-                  exchangeSemester.Summer,
-                  exchangeSemester.Both,
-                ]"
-                :key="sem"
-                type="button"
-                class="rounded-xl border py-2.5 text-xs font-medium transition"
-                :class="
-                  semesterType === sem
-                    ? 'border-primary bg-primary/10 text-primary-on-tint'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
-                "
-                @click="semesterType = sem"
-              >
-                {{ t(`exchangeSemester.${sem}`) }}
-              </button>
-            </div>
-          </div>
+          <SemesterTypePicker class="col-span-2 sm:col-span-1" :model-value="semesterType" @update:model-value="period.setSemesterType" />
 
           <!-- Study semesters -->
-          <div class="col-span-2">
-            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
-              t('exchange.studySemester')
-            }}</label>
-
-            <!-- Winter / Summer: individual buttons -->
-            <div v-if="semesterType !== exchangeSemester.Both" class="flex gap-2">
-              <button
-                v-for="s in allowedSemesters"
-                :key="s"
-                type="button"
-                class="h-10 w-10 rounded-xl border text-sm font-semibold transition"
-                :class="
-                  studySemesters.includes(s)
-                    ? 'border-primary bg-primary/10 text-primary-on-tint'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
-                "
-                @click="toggleStudySemester(s)"
-              >
-                {{ s }}
-              </button>
-            </div>
-
-            <!-- Both: pair buttons -->
-            <div v-else class="flex gap-3">
-              <button
-                v-for="pair in bothPairs"
-                :key="pair.join()"
-                type="button"
-                class="rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
-                :class="
-                  isPairSelected(pair)
-                    ? 'border-primary bg-primary/10 text-primary-on-tint'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
-                "
-                @click="selectPair(pair)"
-              >
-                {{ pair.join(' + ') }}
-              </button>
-            </div>
-          </div>
+          <StudySemesterPicker v-model="studySemesters" class="col-span-2" :semester-type="semesterType" />
 
           <!-- Coordinator -->
           <div class="col-span-2">

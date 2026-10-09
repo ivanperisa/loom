@@ -122,6 +122,21 @@ test('discarding the draft brings back the saved learning agreement', async ({ p
   await expect(page.getByRole('button', { name: /^(save|spremi)$/i })).toBeHidden()
 })
 
+test('editing the exchange period switches the study semesters with the semester type', async ({ page }) => {
+  await loginAs(page, 's.multi@loom.dev')
+  await page.goto(exchangeUrl(11))
+  await page.locator('[data-menu-anchor] button[aria-haspopup="true"]').click()
+  await page.getByRole('button', { name: /^(edit|uredi)$/i }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('radio', { name: /^(summer|ljetni)$/i }).click()
+  await expect(dialog.getByRole('button', { name: '4', exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: '2', exact: true }).click()
+  await expect(dialog.getByRole('button', { name: '2', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await dialog.getByRole('button', { name: /^(save|spremi)$/i }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText(/(Summer|Ljetni) \(2\)/)).toBeVisible()
+})
+
 test('the learning agreement history lists numbered versions', async ({ page }) => {
   await loginAs(page, 's.history@loom.dev')
   await page.goto(exchangeUrl(6))
