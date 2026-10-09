@@ -6,7 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("api/institutions")]
+/// <summary>Reference data: home institutions and programmes, partner institutions and their courses.</summary>
+[Route("api")]
 [Authorize]
 public class CatalogController(
     HomeCatalogService homeCatalog,
@@ -14,7 +15,7 @@ public class CatalogController(
     PartnerCourseService partnerCourses,
     CourseMergeService courseMerge) : ApiController
 {
-    [HttpGet("home")]
+    [HttpGet("home-institutions")]
     public async Task<ActionResult<List<InstitutionResponse>>> GetHomeInstitutions(CancellationToken ct) =>
         Ok(await homeCatalog.GetHomeInstitutionsAsync(ct));
 
@@ -24,28 +25,28 @@ public class CatalogController(
 
     // ---- partner institutions
 
-    [HttpGet("partner")]
+    [HttpGet("partner-institutions")]
     public async Task<ActionResult<PagedResponse<PartnerInstitutionAdminResponse>>> GetPartnerInstitutions([FromQuery] PartnerInstitutionListQuery query, CancellationToken ct) =>
         Ok(await partnerInstitutions.ListAsync(query, ct));
 
-    [HttpPost("partner")]
+    [HttpPost("partner-institutions")]
     [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType<PartnerInstitutionAdminResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<PartnerInstitutionAdminResponse>> CreatePartnerInstitution([FromBody] PartnerInstitutionRequest request, CancellationToken ct) =>
-        Match(await partnerInstitutions.CreateAsync(request, ct), value => Created("/api/institutions/partner", value));
+        Match(await partnerInstitutions.CreateAsync(request, ct), value => Created($"/api/partner-institutions/{value.Id}", value));
 
-    [HttpPut("partner/{institutionId:int}")]
+    [HttpPut("partner-institutions/{institutionId:int}")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<ActionResult<PartnerInstitutionAdminResponse>> UpdatePartnerInstitution(int institutionId, [FromBody] PartnerInstitutionRequest request, CancellationToken ct) =>
         Match(await partnerInstitutions.UpdateAsync(institutionId, request, ct), Ok);
 
-    [HttpDelete("partner/{institutionId:int}")]
+    [HttpDelete("partner-institutions/{institutionId:int}")]
     [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeletePartnerInstitution(int institutionId, CancellationToken ct) =>
         Match(await partnerInstitutions.DeleteAsync(institutionId, ct), _ => NoContent());
 
-    [HttpPatch("partner/{institutionId:int}/restore")]
+    [HttpPost("partner-institutions/{institutionId:int}/restore")]
     [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RestorePartnerInstitution(int institutionId, CancellationToken ct) =>
@@ -53,41 +54,41 @@ public class CatalogController(
 
     // ---- partner courses
 
-    [HttpGet("partner/{institutionId:int}/courses")]
+    [HttpGet("partner-institutions/{institutionId:int}/courses")]
     public async Task<ActionResult<PagedResponse<PartnerCourseResponse>>> GetPartnerCourses(int institutionId, [FromQuery] PartnerCourseListQuery query, CancellationToken ct) =>
         Ok(await partnerCourses.ListAsync(institutionId, query, ct));
 
     /// <summary>Admin catalogue. Students and guests add courses through <c>POST /api/exchanges/{guid}/partner-courses</c>.</summary>
-    [HttpPost("partner/{institutionId:int}/courses")]
+    [HttpPost("partner-institutions/{institutionId:int}/courses")]
     [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType<PartnerCourseResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<PartnerCourseResponse>> CreatePartnerCourse(int institutionId, [FromBody] PartnerCourseRequest request, CancellationToken ct) =>
         Match(await partnerCourses.CreateAsync(institutionId, request, ct),
-            value => Created($"/api/institutions/partner/{institutionId}/courses", value));
+            value => Created($"/api/partner-courses/{value.Id}", value));
 
-    [HttpPut("partner/courses/{courseId:int}")]
+    [HttpPut("partner-courses/{courseId:int}")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<ActionResult<PartnerCourseResponse>> UpdatePartnerCourse(int courseId, [FromBody] PartnerCourseRequest request, CancellationToken ct) =>
         Match(await partnerCourses.UpdateAsync(courseId, request, ct), Ok);
 
-    [HttpDelete("partner/courses/{courseId:int}")]
+    [HttpDelete("partner-courses/{courseId:int}")]
     [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeletePartnerCourse(int courseId, CancellationToken ct) =>
         Match(await partnerCourses.DeleteAsync(courseId, ct), _ => NoContent());
 
-    [HttpPatch("partner/courses/{courseId:int}/restore")]
+    [HttpPost("partner-courses/{courseId:int}/restore")]
     [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RestorePartnerCourse(int courseId, CancellationToken ct) =>
         Match(await partnerCourses.RestoreAsync(courseId, ct), _ => NoContent());
 
-    [HttpPost("partner/courses/merge")]
+    [HttpPost("partner-courses/merge")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<ActionResult<PartnerCourseResponse>> MergePartnerCourses([FromBody] MergePartnerCoursesRequest request, CancellationToken ct) =>
         Match(await courseMerge.MergeAsync(request, ct), Ok);
 
-    [HttpGet("partner/courses/{courseId:int}/usage")]
+    [HttpGet("partner-courses/{courseId:int}/usage")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<ActionResult<PartnerCourseUsageResponse>> GetPartnerCourseUsage(int courseId, CancellationToken ct) =>
         Match(await partnerCourses.GetUsageAsync(courseId, ct), Ok);

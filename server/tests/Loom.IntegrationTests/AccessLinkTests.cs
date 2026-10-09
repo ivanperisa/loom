@@ -95,7 +95,7 @@ public class AccessLinkTests(DatabaseFixture fixture) : HttpTest(fixture)
         Assert.Equal(HttpStatusCode.Unauthorized, (await guest.DeleteAsync($"/api/exchanges/{s.Exchange}", Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await guest.PostAsync($"/api/exchanges/{s.Exchange}/access-link/regenerate", null, Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await guest.GetAsync("/api/exchanges/mine", Ct)).StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await guest.GetAsync($"/api/institutions/partner/{s.Partner}/courses", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await guest.GetAsync($"/api/partner-institutions/{s.Partner}/courses", Ct)).StatusCode);
     }
 
     [Fact]
@@ -113,8 +113,8 @@ public class AccessLinkTests(DatabaseFixture fixture) : HttpTest(fixture)
         Assert.Equal(s.Partner, await Db(db => db.PartnerCourses.Where(c => c.Id == courseId).Select(c => c.InstitutionId).SingleAsync(Ct)));
 
         // The catalogue endpoint (any institution) is admin-only now; it used to be open to everyone.
-        Assert.Equal(HttpStatusCode.Unauthorized, (await factory.CreateClient().PostAsJsonAsync($"/api/institutions/partner/{s.Partner}/courses", course, Ct)).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await coordinator.PostAsJsonAsync($"/api/institutions/partner/{s.Partner}/courses", course, Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await factory.CreateClient().PostAsJsonAsync($"/api/partner-institutions/{s.Partner}/courses", course, Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await coordinator.PostAsJsonAsync($"/api/partner-institutions/{s.Partner}/courses", course, Ct)).StatusCode);
     }
 
     [Fact]

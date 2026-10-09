@@ -42,6 +42,29 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
     }
 
     [Fact]
+    public async Task A_coordinator_request_is_approved_or_rejected_once()
+    {
+        var admin = await NewUser(UserRole.Admin);
+        var approved = await NewUser();
+        var rejected = await NewUser();
+        await Db(async db =>
+        {
+            foreach (var user in await db.Users.Where(u => u.Id == approved || u.Id == rejected).ToListAsync(Ct))
+                user.CoordinatorRequestStatus = CoordinatorRequestStatus.Pending;
+            return await db.SaveChangesAsync(Ct);
+        });
+
+        Assert.Equal("INVALID_STATUS", (await Call<CoordinatorRequestService, ErrorOr.Success>(s => s.DecideAsync(approved, "Maybe", Ct), admin)).FirstError.Code);
+        await Ok<CoordinatorRequestService, ErrorOr.Success>(s => s.DecideAsync(approved, "Approved", Ct), admin);
+        await Ok<CoordinatorRequestService, ErrorOr.Success>(s => s.DecideAsync(rejected, "Rejected", Ct), admin);
+
+        var users = await Db(db => db.Users.Where(u => u.Id == approved || u.Id == rejected).ToDictionaryAsync(u => u.Id, Ct));
+        Assert.Equal((UserRole.Coordinator, null), (users[approved].Role, users[approved].CoordinatorRequestStatus));
+        Assert.Equal((UserRole.Student, CoordinatorRequestStatus.Rejected), (users[rejected].Role, users[rejected].CoordinatorRequestStatus));
+        Assert.Equal("NO_PENDING_REQUEST", (await Call<CoordinatorRequestService, ErrorOr.Success>(s => s.DecideAsync(rejected, "Approved", Ct), admin)).FirstError.Code);
+    }
+
+    [Fact]
     public async Task Draft_exchange_without_recognition_can_be_deleted()
     {
         var student = await NewUser();

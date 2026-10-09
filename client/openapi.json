@@ -415,7 +415,7 @@
         }
       }
     },
-    "/api/admin/users/{userId}/reject-coordinator-request": {
+    "/api/admin/coordinator-requests/{userId}": {
       "patch": {
         "tags": [
           "Admin"
@@ -431,16 +431,22 @@
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthMeResponse"
-                }
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/DecideCoordinatorRequestRequest"
+                  }
+                ]
               }
             }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
           }
         }
       }
@@ -646,7 +652,7 @@
         }
       }
     },
-    "/api/institutions/home": {
+    "/api/home-institutions": {
       "get": {
         "tags": [
           "Catalog"
@@ -668,7 +674,7 @@
         }
       }
     },
-    "/api/institutions/home-programs": {
+    "/api/home-programs": {
       "get": {
         "tags": [
           "Catalog"
@@ -690,7 +696,7 @@
         }
       }
     },
-    "/api/institutions/partner": {
+    "/api/partner-institutions": {
       "get": {
         "tags": [
           "Catalog"
@@ -830,7 +836,7 @@
         }
       }
     },
-    "/api/institutions/partner/{institutionId}": {
+    "/api/partner-institutions/{institutionId}": {
       "put": {
         "tags": [
           "Catalog"
@@ -894,8 +900,8 @@
         }
       }
     },
-    "/api/institutions/partner/{institutionId}/restore": {
-      "patch": {
+    "/api/partner-institutions/{institutionId}/restore": {
+      "post": {
         "tags": [
           "Catalog"
         ],
@@ -917,7 +923,7 @@
         }
       }
     },
-    "/api/institutions/partner/{institutionId}/courses": {
+    "/api/partner-institutions/{institutionId}/courses": {
       "get": {
         "tags": [
           "Catalog"
@@ -1092,7 +1098,7 @@
         }
       }
     },
-    "/api/institutions/partner/courses/{courseId}": {
+    "/api/partner-courses/{courseId}": {
       "put": {
         "tags": [
           "Catalog"
@@ -1156,8 +1162,8 @@
         }
       }
     },
-    "/api/institutions/partner/courses/{courseId}/restore": {
-      "patch": {
+    "/api/partner-courses/{courseId}/restore": {
+      "post": {
         "tags": [
           "Catalog"
         ],
@@ -1179,7 +1185,7 @@
         }
       }
     },
-    "/api/institutions/partner/courses/merge": {
+    "/api/partner-courses/merge": {
       "post": {
         "tags": [
           "Catalog"
@@ -1211,7 +1217,7 @@
         }
       }
     },
-    "/api/institutions/partner/courses/{courseId}/usage": {
+    "/api/partner-courses/{courseId}/usage": {
       "get": {
         "tags": [
           "Catalog"
@@ -1671,7 +1677,7 @@
       }
     },
     "/api/exchanges/{exchangeGuid}/coordinator-message": {
-      "put": {
+      "patch": {
         "tags": [
           "Exchange"
         ],
@@ -3316,6 +3322,18 @@
           "mentor": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "DecideCoordinatorRequestRequest": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
           }
         },
         "additionalProperties": false

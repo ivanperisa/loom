@@ -37,7 +37,7 @@ public class ExchangeController(ExchangeService exchanges, AccessLinkService acc
     public async Task<IActionResult> DeleteExchange(Guid exchangeGuid, CancellationToken ct) =>
         Match(await exchanges.DeleteAsync(exchangeGuid, ct), _ => NoContent());
 
-    [HttpPut("{exchangeGuid:guid}/coordinator-message")]
+    [HttpPatch("{exchangeGuid:guid}/coordinator-message")]
     public async Task<ActionResult<ExchangeResponse>> UpdateCoordinatorMessage(Guid exchangeGuid, [FromBody] UpdateCoordinatorMessageRequest request, CancellationToken ct) =>
         Match(await exchanges.UpdateCoordinatorMessageAsync(exchangeGuid, request.Message, ct), Ok);
 

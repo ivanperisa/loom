@@ -166,7 +166,7 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         await Call<AccountService, AuthMeResponse>(s => s.CompleteOnboardingAsync(new CompleteOnboardingRequest(HomeInstitutionId, RequestCoordinatorRole: true), default), actor: pending);
         var rejected = await CreateUser("req.rejected@loom.dev", "Rita Rejected");
         await Call<AccountService, AuthMeResponse>(s => s.CompleteOnboardingAsync(new CompleteOnboardingRequest(HomeInstitutionId, RequestCoordinatorRole: true), default), actor: rejected);
-        await Call<CoordinatorRequestService, AuthMeResponse>(s => s.RejectAsync(rejected, default), actor: _adminId);
+        await Call<CoordinatorRequestService, Success>(s => s.DecideAsync(rejected, "Rejected", default), actor: _adminId);
 
         await CreateUser("fresh.student@loom.dev", "Filip Fresh");   // not onboarded
         await CreateUser("claim.student@loom.dev", "Klara Claim");   // not onboarded, claims a placeholder through its access link

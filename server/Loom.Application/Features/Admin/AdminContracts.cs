@@ -32,4 +32,7 @@ public record AdminSetRoleRequest(UserRole Role);
 public record CoordinatorRequestResponse(int Id, string Name, string Email, string? InstitutionName);
 
 public record AddToWhitelistRequest(string Email);
+
+/// <summary>"Approved" (the student becomes a coordinator) or "Rejected".</summary>
+public record DecideCoordinatorRequestRequest(string Status);
 public record CoordinatorWhitelistEntryResponse(int Id, string Email, DateTime CreatedAt);

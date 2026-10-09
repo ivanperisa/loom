@@ -1,6 +1,5 @@
 using Loom.Application.Common.Querying;
 using Loom.Application.Features.Admin;
-using Loom.Application.Features.Users;
 using Loom.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,9 +29,11 @@ public class AdminController(
     public async Task<ActionResult<PagedResponse<CoordinatorRequestResponse>>> GetCoordinatorRequests([FromQuery] ListQuery query, CancellationToken ct) =>
         Ok(await coordinatorRequests.ListPendingAsync(query, ct));
 
-    [HttpPatch("users/{userId:int}/reject-coordinator-request")]
-    public async Task<ActionResult<AuthMeResponse>> RejectCoordinatorRequest(int userId, CancellationToken ct) =>
-        Match(await coordinatorRequests.RejectAsync(userId, ct), Ok);
+    /// <summary>Approve or reject a student's request to become a coordinator.</summary>
+    [HttpPatch("coordinator-requests/{userId:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DecideCoordinatorRequest(int userId, [FromBody] DecideCoordinatorRequestRequest request, CancellationToken ct) =>
+        Match(await coordinatorRequests.DecideAsync(userId, request.Status, ct), _ => NoContent());
 
     [HttpGet("coordinator-whitelist")]
     public async Task<ActionResult<PagedResponse<CoordinatorWhitelistEntryResponse>>> GetCoordinatorWhitelist([FromQuery] ListQuery query, CancellationToken ct) =>
