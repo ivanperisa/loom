@@ -17,15 +17,5 @@ public class LearningAgreement : AuditableEntity
     public User? SignedByUser { get; set; }
     public DateTime? SignedAt { get; set; }
 
-    /// <summary>
-    /// "Start final recognition": from here on the LA and the agreed mapping (recognition table 1) are frozen for good;
-    /// only the results (table 2 and the mapping scheme) change.
-    /// </summary>
-    public DateTime? ConcludedAt { get; set; }
-    public int? ConcludedById { get; set; }
-    public User? ConcludedByUser { get; set; }
-
-    public bool IsConcluded => ConcludedAt is not null;
-
     public ICollection<LearningAgreementEntry> Entries { get; set; } = null!;
 }

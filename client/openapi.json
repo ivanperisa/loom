@@ -3278,6 +3278,23 @@
         },
         "additionalProperties": false
       },
+      "CourseStatusRequest": {
+        "required": [
+          "partnerCourseId"
+        ],
+        "type": "object",
+        "properties": {
+          "partnerCourseId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enrollmentStatus": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateExchangeRequest": {
         "required": [
           "academicYear",
@@ -4441,8 +4458,7 @@
           },
           "partnerCourseId": {
             "type": "integer",
-            "format": "int32",
-            "nullable": true
+            "format": "int32"
           },
           "partnerCourseCode": {
             "type": "string"
@@ -5087,7 +5103,8 @@
         "required": [
           "awardedEcts",
           "homeSlotId",
-          "id"
+          "id",
+          "partnerCourseId"
         ],
         "type": "object",
         "properties": {
@@ -5101,40 +5118,19 @@
           },
           "partnerCourseId": {
             "type": "integer",
-            "format": "int32",
-            "nullable": true
+            "format": "int32"
           },
           "awardedEcts": {
             "type": "number",
             "format": "double"
-          },
-          "enrollmentStatus": {
-            "type": "string",
-            "nullable": true
-          },
-          "originalGrade": {
-            "type": "string",
-            "nullable": true
-          },
-          "ectsGrade": {
-            "type": "string",
-            "nullable": true
-          },
-          "hrGrade": {
-            "type": "string",
-            "nullable": true
-          },
-          "examDate": {
-            "type": "string",
-            "format": "date",
-            "nullable": true
           }
         },
         "additionalProperties": false
       },
       "SaveMappingSchemeRequest": {
         "required": [
-          "entries"
+          "entries",
+          "statuses"
         ],
         "type": "object",
         "properties": {
@@ -5142,6 +5138,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SaveMappingSchemeEntryRequest"
+            }
+          },
+          "statuses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseStatusRequest"
             }
           }
         },

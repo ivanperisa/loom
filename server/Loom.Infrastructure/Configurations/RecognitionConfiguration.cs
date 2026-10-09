@@ -23,6 +23,9 @@ public class RecognitionConfiguration : IEntityTypeConfiguration<Recognition>
         builder.Property(x => x.LastModifiedById).HasColumnName("updated_by");
         builder.Property(x => x.SignedById).HasColumnName("approved_by");
         builder.Property(x => x.SignedAt).HasColumnName("approved_at");
+        builder.Property(x => x.StartedAt).HasColumnName("started_at");
+        builder.Property(x => x.StartedById).HasColumnName("started_by");
+        builder.Ignore(x => x.IsStarted);
 
         builder.HasOne(x => x.Exchange)
             .WithOne(x => x.Recognition)
@@ -37,6 +40,11 @@ public class RecognitionConfiguration : IEntityTypeConfiguration<Recognition>
         builder.HasOne(x => x.SignedByUser)
             .WithMany()
             .HasForeignKey(x => x.SignedById)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.StartedByUser)
+            .WithMany()
+            .HasForeignKey(x => x.StartedById)
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasIndex(x => x.ExchangeId).IsUnique().HasDatabaseName("recognition_exchange_id_key");

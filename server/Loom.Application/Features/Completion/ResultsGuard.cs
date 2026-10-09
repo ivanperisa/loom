@@ -11,11 +11,8 @@ public sealed class ResultsGuard(IAppDbContext db)
 {
     public async Task<ErrorOr<Recognition>> EditableAsync(int exchangeId, CancellationToken ct)
     {
-        var started = await db.LearningAgreements.AnyAsync(l => l.ExchangeId == exchangeId && l.ConcludedAt != null, ct);
-        if (!started) return CompletionErrors.NotStarted;
-
         var recognition = await db.Recognitions.FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
-        if (recognition is null) return CompletionErrors.NotStarted;
+        if (recognition is not { IsStarted: true }) return CompletionErrors.NotStarted;
         if (recognition.Status != DocumentStatus.Draft) return CompletionErrors.Locked;
         return recognition;
     }

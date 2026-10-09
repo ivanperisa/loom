@@ -726,6 +726,8 @@ export default {
       ECTS_REQUIRED: '{slot}: predmet mora imati pozitivan broj ECTS bodova.',
       EMAIL_ALREADY_WHITELISTED: 'Ova adresa je već na popisu.',
       EMAIL_NOT_FOUND: 'Ova adresa nije na popisu.',
+      COURSE_NOT_PLACED: '{course} mora ostati na barem jednom mjestu.',
+      COURSE_TWICE_IN_SLOT: '{course} je dvaput na istom mjestu ({slot}). Spoji ga u jedan unos.',
       ENTRY_NOT_FOUND: 'Ovaj redak više ne postoji. Osvježi stranicu.',
       EXCHANGE_NOT_FOUND: 'Razmjena nije pronađena.',
       FORBIDDEN: 'Nemaš ovlasti za ovo.',

@@ -290,17 +290,13 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         var scheme = await Call<MappingSchemeService, MappingSchemeResponse>(s => s.GetAsync(exchange, default), actor: student);
         var entries = scheme.Entries.Select(e =>
         {
-            var slot = e.HomeSlotId;
-            var ects = e.AwardedEcts;
-            var status = e.EnrollmentStatus?.ToString();
-            if (e.PartnerCourseCode == "IN2121") { slot = SlotFree2; status = "NotPassed"; }
-            if (e.PartnerCourseCode == "IN2003") ects = 3;
-            return new SaveMappingSchemeEntryRequest(e.Id, slot, e.PartnerCourseId, ects, status, e.OriginalGrade, e.EctsGrade, e.HrGrade, e.ExamDate);
+            var slot = e.PartnerCourseCode == "IN2121" ? SlotFree2 : e.HomeSlotId;
+            var ects = e.PartnerCourseCode == "IN2003" ? 3 : e.AwardedEcts;
+            return new SaveMappingSchemeEntryRequest(e.Id, slot, e.PartnerCourseId, ects);
         }).ToList();
-        var algorithms = scheme.Entries.First(e => e.PartnerCourseCode == "IN2003");
-        entries.Add(new SaveMappingSchemeEntryRequest(0, SlotSeminar, algorithms.PartnerCourseId, 2,
-            algorithms.EnrollmentStatus?.ToString(), algorithms.OriginalGrade, algorithms.EctsGrade, algorithms.HrGrade, algorithms.ExamDate));
-        await Call<MappingSchemeService, MappingSchemeResponse>(s => s.SaveAsync(exchange, new SaveMappingSchemeRequest(entries), default), actor: student);
+        entries.Add(new SaveMappingSchemeEntryRequest(0, SlotSeminar, c["IN2003"], 2));
+        List<CourseStatusRequest> statuses = [new(c["IN2121"], "NotPassed")];
+        await Call<MappingSchemeService, MappingSchemeResponse>(s => s.SaveAsync(exchange, new SaveMappingSchemeRequest(entries, statuses), default), actor: student);
 
         if (finish)
             await Call<RecognitionService, RecognitionResponse>(s => s.SetStatusAsync(exchange, new UpdateRecognitionStatusRequest("Approved"), default), actor: _ana);

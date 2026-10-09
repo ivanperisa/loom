@@ -68,9 +68,11 @@ public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess ac
             .Include(l => l.Entries).ThenInclude(e => e.PartnerCourse)
             .Include(l => l.LastModifiedByUser)
             .Include(l => l.SignedByUser)
-            .Include(l => l.ConcludedByUser)
+            .Include(l => l.Exchange).ThenInclude(e => e.Recognition!).ThenInclude(r => r.StartedByUser)
             .FirstOrDefaultAsync(l => l.ExchangeId == exchange.ExchangeId, ct);
 
+        // The LA is concluded (frozen for good) once final recognition starts.
+        var started = learningAgreement?.Exchange.Recognition;
         var entries = learningAgreement?.Entries
             .OrderBy(e => e.HomeSlotId).ThenBy(e => e.Id)
             .Select(e => e.ToResponse())
@@ -87,8 +89,8 @@ public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess ac
             learningAgreement?.SignedAt,
             learningAgreement?.SignedByUser?.Name,
             await versions.ApprovedCountAsync(exchange.ExchangeId, DocumentKind.LearningAgreement, ct),
-            learningAgreement?.IsConcluded ?? false,
-            learningAgreement?.ConcludedAt,
-            learningAgreement?.ConcludedByUser?.Name);
+            started?.IsStarted ?? false,
+            started?.StartedAt,
+            started?.StartedByUser?.Name);
     }
 }

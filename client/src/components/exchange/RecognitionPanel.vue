@@ -58,7 +58,7 @@ function byCourseName<T extends { partnerCourseName: string | null }>(entries: T
 // Table 1: the latest approved LA version (computed by the server, never the draft).
 const agreedEntries = computed(() => byCourseName(recognition.value?.agreed ?? []).map((e) => ({ ...e, enrollmentStatus: null })))
 
-// Table 2: the results (same data as the mapping scheme). Grades belong to a partner course.
+// Table 2: one result per partner course; the mapping scheme's placements carry it.
 const resultEntries = computed(() => byCourseName(mappingSchemeQuery.data.value?.entries ?? []))
 
 const editableGrades = reactive<Record<string, GradeData>>({})
@@ -67,7 +67,7 @@ function initGrades() {
   for (const key of Object.keys(editableGrades)) delete editableGrades[key]
   for (const entry of resultEntries.value) {
     const key = entry.partnerCourseId
-    if (key === null || editableGrades[key]) continue
+    if (editableGrades[key]) continue
     editableGrades[key] = {
       enrollmentStatus: entry.enrollmentStatus ?? '',
       originalGrade: entry.originalGrade ?? '',
@@ -82,7 +82,7 @@ const changedGrades = computed<CourseGradesRequest[]>(() => {
   const seen = new Set<number>()
   const changed: CourseGradesRequest[] = []
   for (const e of resultEntries.value) {
-    if (e.partnerCourseId === null || seen.has(e.partnerCourseId)) continue
+    if (seen.has(e.partnerCourseId)) continue
     seen.add(e.partnerCourseId)
     const g = editableGrades[e.partnerCourseId]
     if (!g) continue

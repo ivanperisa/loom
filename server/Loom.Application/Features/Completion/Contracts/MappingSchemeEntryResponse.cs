@@ -2,10 +2,11 @@ using Loom.Domain.Enums;
 
 namespace Loom.Application.Features.Completion;
 
+/// <summary>A placement (slot + ECTS) with its course's result, which every placement of that course shares.</summary>
 public record MappingSchemeEntryResponse(
     int Id,
     int HomeSlotId,
-    int? PartnerCourseId,
+    int PartnerCourseId,
     string PartnerCourseCode,
     string PartnerCourseName,
     string? PartnerCourseNameHr,

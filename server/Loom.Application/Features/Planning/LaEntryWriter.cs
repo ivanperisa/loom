@@ -18,10 +18,10 @@ public sealed class LaEntryWriter(IAppDbContext db)
     {
         var state = await db.LearningAgreements
             .Where(l => l.ExchangeId == exchangeId)
-            .Select(l => new { l.Status, l.ConcludedAt })
+            .Select(l => new { l.Status, StartedAt = l.Exchange.Recognition == null ? null : l.Exchange.Recognition.StartedAt })
             .FirstOrDefaultAsync(ct);
         if (state is null) return Result.Success;
-        if (state.ConcludedAt is not null) return PlanningErrors.Concluded;
+        if (state.StartedAt is not null) return PlanningErrors.Concluded;
         if (state.Status != DocumentStatus.Draft) return PlanningErrors.Locked;
         return Result.Success;
     }

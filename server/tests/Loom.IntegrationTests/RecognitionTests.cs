@@ -94,7 +94,7 @@ public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture
     }
 
     [Fact]
-    public async Task Grades_need_a_started_recognition_and_apply_to_every_slot_of_the_course()
+    public async Task Grades_need_a_started_recognition_and_are_one_result_per_course()
     {
         var s = await ApprovedExchange();
         Assert.Equal("RECOGNITION_NOT_STARTED", (await SaveGrades(s, Passed(s.Courses["A"]))).FirstError.Code);
@@ -118,13 +118,13 @@ public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture
         var scheme = await Scheme(s);
         var a = scheme.Entries.Single(e => e.PartnerCourseId == s.Courses["A"]);
         SaveMappingSchemeEntryRequest Keep(MappingSchemeEntryResponse e, int? slot = null, decimal? ects = null) =>
-            new(e.Id, slot ?? e.HomeSlotId, e.PartnerCourseId, ects ?? e.AwardedEcts, e.EnrollmentStatus?.ToString(), e.OriginalGrade, e.EctsGrade, e.HrGrade, e.ExamDate);
+            new(e.Id, slot ?? e.HomeSlotId, e.PartnerCourseId, ects ?? e.AwardedEcts);
         var others = scheme.Entries.Where(e => e != a).Select(e => Keep(e)).ToList();
         Task<ErrorOr.ErrorOr<MappingSchemeResponse>> Save(params SaveMappingSchemeEntryRequest[] entries) =>
-            Call<MappingSchemeService, MappingSchemeResponse>(x => x.SaveAsync(s.Exchange, new SaveMappingSchemeRequest([.. others, .. entries]), Ct), actor: s.Student);
+            Call<MappingSchemeService, MappingSchemeResponse>(x => x.SaveAsync(s.Exchange, new SaveMappingSchemeRequest([.. others, .. entries], []), Ct), actor: s.Student);
 
         // Split A (6 ECTS available): 5 in slot 3 + 1 in slot 1 is fine.
-        var split = new SaveMappingSchemeEntryRequest(0, Slot1, a.PartnerCourseId, 1, null, null, null, null, null);
+        var split = new SaveMappingSchemeEntryRequest(0, Slot1, a.PartnerCourseId, 1);
         Assert.False((await Save(Keep(a, slot: Slot3), split)).IsError);
         Assert.Equal(2, (await Scheme(s)).Entries.Count(e => e.PartnerCourseId == s.Courses["A"]));
 
@@ -133,7 +133,29 @@ public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture
         others = refreshed.Where(e => e != a).Select(e => Keep(e)).ToList();
         Assert.Equal("ECTS_EXCEEDED", (await Save(Keep(a, ects: 6))).FirstError.Code);
         Assert.Equal("SLOT_NOT_IN_PROFILE", (await Save(Keep(a, slot: 999_999))).FirstError.Code);
-        Assert.Equal("INVALID_PARTNER_COURSE", (await Save(Keep(a), new SaveMappingSchemeEntryRequest(0, Slot1, s.Courses["D"], 1, null, null, null, null, null))).FirstError.Code);
+        Assert.Equal("INVALID_PARTNER_COURSE", (await Save(Keep(a), new SaveMappingSchemeEntryRequest(0, Slot1, s.Courses["D"], 1))).FirstError.Code);
+        Assert.Equal("COURSE_TWICE_IN_SLOT", (await Save(Keep(a), new SaveMappingSchemeEntryRequest(0, a.HomeSlotId, a.PartnerCourseId, 0))).FirstError.Code);
+        others = others.Where(e => e.PartnerCourseId != s.Courses["A"]).ToList();
+        Assert.Equal("COURSE_NOT_PLACED", (await Save()).FirstError.Code);
+    }
+
+    [Fact]
+    public async Task Moving_a_split_back_folds_it_into_one_placement_with_one_result()
+    {
+        var s = await StartedExchange();
+        await SaveGrades(s, Passed(s.Courses["B"], "B"));
+        var scheme = (await Scheme(s)).Entries;
+        var (b2, b3) = (scheme.Single(e => e.HomeSlotId == Slot2), scheme.Single(e => e.HomeSlotId == Slot3));
+        var a = scheme.Single(e => e.HomeSlotId == Slot1);
+
+        // B leaves slot 3 for slot 2 (one placement of 6), and is marked not passed.
+        var saved = await Ok<MappingSchemeService, MappingSchemeResponse>(x => x.SaveAsync(s.Exchange, new SaveMappingSchemeRequest(
+            [new(a.Id, Slot1, a.PartnerCourseId, a.AwardedEcts), new(b2.Id, Slot2, b2.PartnerCourseId, 6)],
+            [new(s.Courses["B"], "NotPassed")]), Ct), actor: s.Student);
+
+        var b = Assert.Single(saved.Entries, e => e.PartnerCourseId == s.Courses["B"]);
+        Assert.Equal((Slot2, 6m, EnrollmentStatus.NotPassed, "B"), (b.HomeSlotId, b.AwardedEcts, b.EnrollmentStatus, b.EctsGrade));
+        Assert.DoesNotContain(saved.Entries, e => e.Id == b3.Id);
     }
 
     [Fact]
@@ -146,7 +168,7 @@ public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture
         Assert.False((await SetStatus(s, s.Coordinator, "Approved")).IsError);
 
         Assert.Equal("RECOGNITION_LOCKED", (await SaveGrades(s, Passed(s.Courses["A"], "B"))).FirstError.Code);
-        var lockedScheme = await Call<MappingSchemeService, MappingSchemeResponse>(x => x.SaveAsync(s.Exchange, new SaveMappingSchemeRequest([]), Ct), actor: s.Student);
+        var lockedScheme = await Call<MappingSchemeService, MappingSchemeResponse>(x => x.SaveAsync(s.Exchange, new SaveMappingSchemeRequest([], []), Ct), actor: s.Student);
         Assert.Equal("RECOGNITION_LOCKED", lockedScheme.FirstError.Code);
 
         // Reopen without changes and approve again: still one version. Change a grade: version 2 shows it.

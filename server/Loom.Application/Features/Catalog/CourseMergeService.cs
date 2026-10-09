@@ -27,18 +27,18 @@ public sealed class CourseMergeService(IAppDbContext db)
             .Where(e => e.PartnerCourseId != null && mergedIds.Contains(e.PartnerCourseId.Value))
             .GroupBy(e => new { e.LearningAgreementId, e.HomeSlotId })
             .AnyAsync(g => g.Count() > 1, ct);
-        var schemeConflict = await db.MappingSchemeEntries
-            .Where(e => e.PartnerCourseId != null && mergedIds.Contains(e.PartnerCourseId.Value))
-            .GroupBy(e => new { e.ExchangeId, e.HomeSlotId })
+        // …nor give one exchange two results for what is now the same course.
+        var resultsConflict = await db.RecognitionEntries
+            .Where(e => mergedIds.Contains(e.PartnerCourseId))
+            .GroupBy(e => e.RecognitionId)
             .AnyAsync(g => g.Count() > 1, ct);
-        if (laConflict || schemeConflict) return CatalogErrors.MergeConflict;
+        if (laConflict || resultsConflict) return CatalogErrors.MergeConflict;
 
         var laEntries = await db.LearningAgreementEntries
             .Where(e => e.PartnerCourseId != null && duplicateIds.Contains(e.PartnerCourseId.Value)).ToListAsync(ct);
-        var schemeEntries = await db.MappingSchemeEntries
-            .Where(e => e.PartnerCourseId != null && duplicateIds.Contains(e.PartnerCourseId.Value)).ToListAsync(ct);
+        var results = await db.RecognitionEntries.Where(e => duplicateIds.Contains(e.PartnerCourseId)).ToListAsync(ct);
         laEntries.ForEach(e => e.PartnerCourseId = primary.Id);
-        schemeEntries.ForEach(e => e.PartnerCourseId = primary.Id);
+        results.ForEach(e => e.PartnerCourseId = primary.Id);
 
         db.PartnerCourses.RemoveRange(duplicates);
         await db.SaveChangesAsync(ct);

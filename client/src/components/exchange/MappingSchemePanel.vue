@@ -39,7 +39,7 @@ const SEMESTERS = DOC_TABLE_SEMESTERS
 const modes: SlotMode[] = [slotMode.AtHome]
 const modeOutlineColor = DOC_TABLE_MODE_OUTLINE_COLOR
 
-// Editable working copy (homeSlotId + enrollmentStatus only).
+// Editable working copy: placements (slot, ECTS) and each course's status.
 const localEntries = ref<MappingSchemeEntryResponse[]>([])
 
 const laModeBySlot = computed(() => {
@@ -151,7 +151,7 @@ function confirmTransfer() {
     (e) =>
       e.id !== source.id &&
       e.homeSlotId === p.toSlotId &&
-      e.partnerCourseCode === source.partnerCourseCode,
+      e.partnerCourseId === source.partnerCourseId,
   )
 
   if (amount >= source.awardedEcts) {
@@ -209,34 +209,36 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
 function isNotPassed(entry: MappingSchemeEntryResponse): boolean {
   return entry.enrollmentStatus === 'NotPassed'
 }
-function entriesForCourse(partnerCourseCode: string): MappingSchemeEntryResponse[] {
-  return localEntries.value.filter((e) => e.partnerCourseCode === partnerCourseCode)
+function entriesForCourse(partnerCourseId: number): MappingSchemeEntryResponse[] {
+  return localEntries.value.filter((e) => e.partnerCourseId === partnerCourseId)
 }
 function markNotPassed(entry: MappingSchemeEntryResponse) {
   if (isLocked.value) return
-  for (const e of entriesForCourse(entry.partnerCourseCode)) e.enrollmentStatus = 'NotPassed'
+  for (const e of entriesForCourse(entry.partnerCourseId)) e.enrollmentStatus = 'NotPassed'
 }
 function onItemClick(entry: MappingSchemeEntryResponse) {
   if (isLocked.value) return
   if (isNotPassed(entry)) {
-    for (const e of entriesForCourse(entry.partnerCourseCode)) e.enrollmentStatus = 'Passed'
+    for (const e of entriesForCourse(entry.partnerCourseId)) e.enrollmentStatus = 'Passed'
   }
 }
 
 
 function save() {
+  // A status belongs to the course (one result), so send each changed course once.
+  const saved = new Map((mappingScheme.value?.entries ?? []).map((e) => [e.partnerCourseId, e.enrollmentStatus ?? null]))
+  const statuses = new Map<number, string | null>()
+  for (const e of localEntries.value) {
+    if ((saved.get(e.partnerCourseId) ?? null) !== (e.enrollmentStatus ?? null)) statuses.set(e.partnerCourseId, e.enrollmentStatus ?? null)
+  }
   mutations.saveMappingScheme.mutate({
-      entries: localEntries.value.map((e) => ({
-        id: e.id,
-        homeSlotId: e.homeSlotId,
-        partnerCourseId: e.partnerCourseId,
-        awardedEcts: e.awardedEcts,
-        enrollmentStatus: e.enrollmentStatus || null,
-        originalGrade: e.originalGrade,
-        ectsGrade: e.ectsGrade,
-        hrGrade: e.hrGrade,
-        examDate: e.examDate,
-      })),
+    entries: localEntries.value.map((e) => ({
+      id: e.id,
+      homeSlotId: e.homeSlotId,
+      partnerCourseId: e.partnerCourseId,
+      awardedEcts: e.awardedEcts,
+    })),
+    statuses: [...statuses].map(([partnerCourseId, enrollmentStatus]) => ({ partnerCourseId, enrollmentStatus })),
   })
 }
 

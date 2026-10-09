@@ -2577,6 +2577,11 @@ export interface components {
             /** Format: date */
             examDate?: string | null;
         };
+        CourseStatusRequest: {
+            /** Format: int32 */
+            partnerCourseId: number;
+            enrollmentStatus?: string | null;
+        };
         CreateExchangeRequest: {
             /** Format: int32 */
             homeProfileId: number;
@@ -2876,7 +2881,7 @@ export interface components {
             /** Format: int32 */
             homeSlotId: number;
             /** Format: int32 */
-            partnerCourseId: number | null;
+            partnerCourseId: number;
             partnerCourseCode: string;
             partnerCourseName: string;
             partnerCourseNameHr: string | null;
@@ -3057,18 +3062,13 @@ export interface components {
             /** Format: int32 */
             homeSlotId: number;
             /** Format: int32 */
-            partnerCourseId?: number | null;
+            partnerCourseId: number;
             /** Format: double */
             awardedEcts: number;
-            enrollmentStatus?: string | null;
-            originalGrade?: string | null;
-            ectsGrade?: string | null;
-            hrGrade?: string | null;
-            /** Format: date */
-            examDate?: string | null;
         };
         SaveMappingSchemeRequest: {
             entries: components["schemas"]["SaveMappingSchemeEntryRequest"][];
+            statuses: components["schemas"]["CourseStatusRequest"][];
         };
         SessionResponse: {
             isAuthenticated: boolean;

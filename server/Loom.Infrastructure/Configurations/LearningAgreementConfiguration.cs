@@ -23,9 +23,6 @@ public class LearningAgreementConfiguration : IEntityTypeConfiguration<LearningA
         builder.Property(x => x.LastModifiedById).HasColumnName("updated_by");
         builder.Property(x => x.SignedById).HasColumnName("approved_by");
         builder.Property(x => x.SignedAt).HasColumnName("approved_at");
-        builder.Property(x => x.ConcludedAt).HasColumnName("concluded_at");
-        builder.Property(x => x.ConcludedById).HasColumnName("concluded_by");
-        builder.Ignore(x => x.IsConcluded);
 
         builder.HasOne(x => x.Exchange)
             .WithOne(x => x.LearningAgreement)
@@ -40,11 +37,6 @@ public class LearningAgreementConfiguration : IEntityTypeConfiguration<LearningA
         builder.HasOne(x => x.SignedByUser)
             .WithMany()
             .HasForeignKey(x => x.SignedById)
-            .OnDelete(DeleteBehavior.SetNull);
-
-        builder.HasOne(x => x.ConcludedByUser)
-            .WithMany()
-            .HasForeignKey(x => x.ConcludedById)
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasIndex(x => x.ExchangeId).IsUnique().HasDatabaseName("learning_agreement_exchange_id_key");

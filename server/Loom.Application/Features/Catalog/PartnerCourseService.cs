@@ -79,13 +79,14 @@ public sealed class PartnerCourseService(IAppDbContext db, ExchangeAccess access
         return course.ToResponse();
     }
 
-    /// <summary>Soft-deletes courses that learning agreements use, removes the rest.</summary>
+    /// <summary>Soft-deletes courses that learning agreements or results use, removes the rest.</summary>
     public async Task<ErrorOr<Deleted>> DeleteAsync(int courseId, CancellationToken ct)
     {
         var course = await db.PartnerCourses.FindAsync([courseId], ct);
         if (course is null) return CatalogErrors.CourseNotFound;
 
-        if (await db.LearningAgreementEntries.AnyAsync(e => e.PartnerCourseId == courseId, ct))
+        if (await db.LearningAgreementEntries.AnyAsync(e => e.PartnerCourseId == courseId, ct)
+            || await db.RecognitionEntries.AnyAsync(e => e.PartnerCourseId == courseId, ct))
             course.MarkDeleted();
         else
             db.PartnerCourses.Remove(course);

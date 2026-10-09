@@ -724,6 +724,8 @@ export default {
       ECTS_REQUIRED: '{slot}: a mapped course needs a positive number of ECTS.',
       EMAIL_ALREADY_WHITELISTED: 'This email is already on the list.',
       EMAIL_NOT_FOUND: 'This email is not on the list.',
+      COURSE_NOT_PLACED: '{course} must stay in at least one slot.',
+      COURSE_TWICE_IN_SLOT: '{course} is in {slot} twice. Move all of it into one entry.',
       ENTRY_NOT_FOUND: 'This row no longer exists. Reload the page.',
       EXCHANGE_NOT_FOUND: 'Exchange not found.',
       FORBIDDEN: 'You don\'t have permission to do this.',

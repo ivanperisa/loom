@@ -131,7 +131,7 @@ public sealed class OfficialDocumentService(
         e.HomeSlotSemester, e.AwardedEcts);
 
     private static ResultLine ToLine(MappingSchemeEntryResponse e) => new(
-        e.PartnerCourseId ?? 0, e.PartnerCourseCode, e.PartnerCourseName, e.PartnerCourseNameHr, e.PartnerCourseHours, e.PartnerCourseEcts,
+        e.PartnerCourseId, e.PartnerCourseCode, e.PartnerCourseName, e.PartnerCourseNameHr, e.PartnerCourseHours, e.PartnerCourseEcts,
         e.HomeSlotCourseIsvuCode, e.HomeSlotCourseName, e.HomeSlotCourseGroupIsvuCode, e.HomeSlotCourseGroupName, e.HomeSlotColor,
         e.HomeSlotSemester, e.AwardedEcts, e.EnrollmentStatus?.ToString(), e.OriginalGrade, e.EctsGrade, e.HrGrade, e.ExamDate);
 }

@@ -71,8 +71,8 @@ db.PartnerCourses
 **Documents (LA, recognition, mapping scheme).** The flow and its rules:
 
 1. *Learning agreement* (before/during the exchange): a draft anyone on the exchange edits. Only the assigned coordinator approves it or sends it back. Each approval that changed something is the next `document_version` (1 = original, 2 = amendment A1, …); approving unchanged content keeps the number. Components carry `AddedInVersion`/`RemovedInVersion`: an approved component taken out is kept, struck through ("removed in An"), never deleted.
-2. *Start final recognition* (anyone on the exchange, LA approved, after a warning): freezes the LA and table 1 for good and copies the latest approved version into the results (`mapping_scheme_entry`).
-3. *Results* (after the exchange): table 2 (grades, per partner course) and the mapping scheme (placement) are one dataset that may drift from the frozen LA. The coordinator approves them (a recognition version) or reopens them.
+2. *Start final recognition* (anyone on the exchange, LA approved, after a warning): sets `recognition.started_at`, which freezes the LA and table 1 for good, and creates the results from the latest approved version.
+3. *Results* (after the exchange) may drift from the frozen LA. Table 2 is `recognition_entry`: one row per partner course with its status and grades. The mapping scheme is `mapping_scheme_entry`: the placements of each result (home slot + ECTS); a course split over two slots is two placements and still one grade. Every course keeps at least one placement, sits in a slot at most once, and never gets more ECTS than it has. The coordinator approves the results (a recognition version) or reopens them.
 
 Table 1 is computed from the latest approved LA version, never stored. Save, import and restore all go through `LaEntryWriter` (same validation, only in an editable draft, never a status change); import and restore keep a backup when the draft changes. The official xlsx is built on the server (`Documents/Official`) from saved data only.
 

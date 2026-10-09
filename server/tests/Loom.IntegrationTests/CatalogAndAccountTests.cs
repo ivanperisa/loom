@@ -102,7 +102,7 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
     }
 
     [Fact]
-    public async Task Merging_courses_moves_learning_agreement_and_mapping_scheme_links()
+    public async Task Merging_courses_moves_learning_agreement_and_result_links()
     {
         var student = await NewUser();
         var (partner, courses) = await NewPartner();
@@ -111,14 +111,18 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
         await Db(async db =>
         {
             var exchangeId = await db.Exchanges.Where(e => e.Guid == exchange).Select(e => e.Id).SingleAsync(Ct);
-            db.MappingSchemeEntries.Add(new MappingSchemeEntry { ExchangeId = exchangeId, HomeSlotId = Slot3, PartnerCourseId = courses["C"], AwardedEcts = 2 });
+            db.Recognitions.Add(new Recognition
+            {
+                ExchangeId = exchangeId, StartedAt = DateTime.UtcNow,
+                Entries = [new RecognitionEntry { PartnerCourseId = courses["C"], Placements = [new MappingSchemeEntry { HomeSlotId = Slot3, AwardedEcts = 2 }] }],
+            });
             return await db.SaveChangesAsync(Ct);
         });
 
         await Ok<CourseMergeService, PartnerCourseResponse>(s => s.MergeAsync(new MergePartnerCoursesRequest(courses["A"], [courses["C"]]), Ct));
 
         Assert.True(await Db(db => db.LearningAgreementEntries.AnyAsync(e => e.HomeSlotId == Slot2 && e.PartnerCourseId == courses["A"], Ct)));
-        Assert.True(await Db(db => db.MappingSchemeEntries.AnyAsync(e => e.HomeSlotId == Slot3 && e.PartnerCourseId == courses["A"], Ct)));
+        Assert.True(await Db(db => db.MappingSchemeEntries.AnyAsync(e => e.HomeSlotId == Slot3 && e.RecognitionEntry.PartnerCourseId == courses["A"], Ct)));
         Assert.False(await Db(db => db.PartnerCourses.AnyAsync(c => c.Id == courses["C"], Ct)));
     }
 

@@ -8,8 +8,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Loom.Application.Features.Completion;
 
 /// <summary>
-/// The mapping scheme: where each passed course is finally recognised (moving between slots, splitting ECTS, marking a
-/// course not passed). Same data as table 2. May drift from the frozen LA; that is the point of it.
+/// The mapping scheme: where each course's result is finally recognised (moving between slots, splitting ECTS, marking a
+/// course not passed). The placements belong to table 2's results. May drift from the frozen LA; that is the point of it.
 /// </summary>
 public sealed class MappingSchemeService(IAppDbContext db, ExchangeAccess access, ResultsGuard guard, ICurrentActor actor)
 {
@@ -21,8 +21,9 @@ public sealed class MappingSchemeService(IAppDbContext db, ExchangeAccess access
     }
 
     /// <summary>
-    /// Replaces the scheme with the request: existing entries by id (moved, resized, status), new entries (id ≤ 0) as
-    /// splits of a course already in the scheme, missing entries removed. A course never gets more ECTS than it has.
+    /// Replaces the scheme with the request: existing placements by id (moved, resized), new ones (id ≤ 0) as splits of a
+    /// course already in the scheme, missing ones removed. Every course keeps at least one placement, sits in a slot at
+    /// most once and never gets more ECTS than it has.
     /// </summary>
     public async Task<ErrorOr<MappingSchemeResponse>> SaveAsync(Guid exchangeGuid, SaveMappingSchemeRequest request, CancellationToken ct)
     {
@@ -33,52 +34,55 @@ public sealed class MappingSchemeService(IAppDbContext db, ExchangeAccess access
         var recognition = await guard.EditableAsync(exchange.ExchangeId, ct);
         if (recognition.IsError) return recognition.Errors;
 
-        var entries = await db.MappingSchemeEntries.Where(e => e.ExchangeId == exchange.ExchangeId).ToListAsync(ct);
-        var byId = entries.ToDictionary(e => e.Id);
-        var schemeCourses = entries.Where(e => e.PartnerCourseId != null).Select(e => e.PartnerCourseId!.Value).ToHashSet();
+        var results = await db.RecognitionEntries
+            .Include(r => r.PartnerCourse)
+            .Include(r => r.Placements)
+            .Where(r => r.RecognitionId == recognition.Value.Id)
+            .ToDictionaryAsync(r => r.PartnerCourseId, ct);
+        var placements = results.Values.SelectMany(r => r.Placements).ToDictionary(p => p.Id);
         var profileSlots = await db.HomeSlots.Where(s => s.ProfileId == exchange.HomeProfileId).Select(s => s.Id).ToHashSetAsync(ct);
 
+        foreach (var item in request.Statuses)
+        {
+            if (!RecognitionService.TryParseStatus(item.EnrollmentStatus, out var status)) return CompletionErrors.InvalidEnrollmentStatus(item.EnrollmentStatus);
+            if (!results.TryGetValue(item.PartnerCourseId, out var result)) return CompletionErrors.CourseNotInScheme(item.PartnerCourseId);
+            result.EnrollmentStatus = status;
+        }
+
         var keep = new HashSet<int>();
-        var resulting = new List<MappingSchemeEntry>();
+        var resulting = new List<(RecognitionEntry Result, MappingSchemeEntry Placement)>();
         foreach (var item in request.Entries)
         {
             if (item.AwardedEcts < 0) return CompletionErrors.NegativeEcts;
             if (!profileSlots.Contains(item.HomeSlotId)) return CompletionErrors.SlotNotInProfile(item.HomeSlotId);
-            if (!RecognitionService.TryParseStatus(item.EnrollmentStatus, out var status)) return CompletionErrors.InvalidEnrollmentStatus(item.EnrollmentStatus);
-            var grades = RecognitionService.ValidateGrades(item.OriginalGrade, item.EctsGrade, item.HrGrade);
-            if (grades.IsError) return grades.Errors;
 
-            MappingSchemeEntry entry;
+            MappingSchemeEntry placement;
             if (item.Id > 0)
             {
-                if (!byId.TryGetValue(item.Id, out entry!)) return CompletionErrors.EntryNotFound(item.Id);
-                keep.Add(entry.Id);
+                if (!placements.TryGetValue(item.Id, out placement!)) return CompletionErrors.EntryNotFound(item.Id);
+                keep.Add(placement.Id);
             }
             else
             {
-                if (item.PartnerCourseId is not int courseId || !schemeCourses.Contains(courseId)) return CompletionErrors.CourseNotInScheme(item.PartnerCourseId ?? 0);
-                entry = new MappingSchemeEntry { ExchangeId = exchange.ExchangeId, PartnerCourseId = courseId };
-                db.MappingSchemeEntries.Add(entry);
+                if (!results.TryGetValue(item.PartnerCourseId, out var owner)) return CompletionErrors.CourseNotInScheme(item.PartnerCourseId);
+                placement = new MappingSchemeEntry { RecognitionEntry = owner };
+                owner.Placements.Add(placement);
             }
-            entry.HomeSlotId = item.HomeSlotId;
-            entry.AwardedEcts = item.AwardedEcts;
-            entry.EnrollmentStatus = status;
-            entry.OriginalGrade = item.OriginalGrade.NullIfBlank();
-            entry.EctsGrade = item.EctsGrade.NullIfBlank();
-            entry.HrGrade = item.HrGrade.NullIfBlank();
-            entry.ExamDate = item.ExamDate;
-            resulting.Add(entry);
+            placement.HomeSlotId = item.HomeSlotId;
+            placement.AwardedEcts = item.AwardedEcts;
+            resulting.Add((placement.RecognitionEntry, placement));
         }
 
-        var courseIds = resulting.Where(e => e.PartnerCourseId != null).Select(e => e.PartnerCourseId!.Value).Distinct().ToList();
-        var available = await db.PartnerCourses.Where(c => courseIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Ects, ct);
-        foreach (var course in resulting.Where(e => e.PartnerCourseId != null).GroupBy(e => e.PartnerCourseId!.Value))
+        foreach (var result in results.Values)
         {
-            var max = available.GetValueOrDefault(course.Key);
-            if (course.Sum(e => e.AwardedEcts ?? 0) > max) return CompletionErrors.EctsExceeded(course.Key, max);
+            var course = resulting.Where(r => r.Result == result).Select(r => r.Placement).ToList();
+            if (course.Count == 0) return CompletionErrors.CourseNotPlaced(result.PartnerCourseId);
+            if (course.GroupBy(p => p.HomeSlotId).FirstOrDefault(g => g.Count() > 1) is { } twice)
+                return CompletionErrors.CourseTwiceInSlot(result.PartnerCourseId, twice.Key);
+            if (course.Sum(p => p.AwardedEcts) > result.PartnerCourse.Ects) return CompletionErrors.EctsExceeded(result.PartnerCourseId, result.PartnerCourse.Ects);
         }
 
-        foreach (var entry in entries.Where(e => !keep.Contains(e.Id))) db.MappingSchemeEntries.Remove(entry);
+        foreach (var placement in placements.Values.Where(p => !keep.Contains(p.Id))) db.MappingSchemeEntries.Remove(placement);
         recognition.Value.LastModifiedById = actor.UserId;
         recognition.Value.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
@@ -89,11 +93,11 @@ public sealed class MappingSchemeService(IAppDbContext db, ExchangeAccess access
     {
         var entries = await db.MappingSchemeEntries
             .AsNoTracking()
-            .Include(e => e.PartnerCourse)
+            .Include(e => e.RecognitionEntry).ThenInclude(r => r.PartnerCourse)
             .Include(e => e.HomeSlot).ThenInclude(s => s.SlotType)
             .Include(e => e.HomeSlot).ThenInclude(s => s.Course)
             .Include(e => e.HomeSlot).ThenInclude(s => s.CourseGroup)
-            .Where(e => e.ExchangeId == exchangeId)
+            .Where(e => e.RecognitionEntry.Recognition.ExchangeId == exchangeId)
             .OrderBy(e => e.Id)
             .ToListAsync(ct);
         return entries.ToResponse(exchangeId);

@@ -27,7 +27,7 @@ public sealed class LearningAgreementWorkflow(IAppDbContext db, ExchangeAccess a
 
         var learningAgreement = await db.LearningAgreements.FirstOrDefaultAsync(l => l.ExchangeId == exchangeId, ct);
         if (learningAgreement is null) return PlanningErrors.NotFound;
-        if (learningAgreement.IsConcluded) return PlanningErrors.Concluded;
+        if (await db.Recognitions.AnyAsync(r => r.ExchangeId == exchangeId && r.StartedAt != null, ct)) return PlanningErrors.Concluded;
         if (learningAgreement.Status == status) return PlanningErrors.StatusUnchanged(status);
 
         var exchange = await db.Exchanges.FirstAsync(e => e.Id == exchangeId, ct);

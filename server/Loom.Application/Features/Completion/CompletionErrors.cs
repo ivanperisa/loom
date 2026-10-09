@@ -14,6 +14,8 @@ public static class CompletionErrors
     public static Error InvalidEnrollmentStatus(string? value) => Error.Validation("INVALID_ENROLLMENT_STATUS", $"Invalid course status: {value}.");
     public static Error GradeTooLong(string field, int max) => Error.Validation("INVALID_GRADE", $"{field} can be at most {max} characters.", new Dictionary<string, object> { ["max"] = max });
     public static Error CourseNotInScheme(int courseId) => Error.Validation("INVALID_PARTNER_COURSE", $"Course {courseId} is not part of the mapping scheme.", new Dictionary<string, object> { ["courseId"] = courseId });
+    public static Error CourseNotPlaced(int courseId) => Error.Validation("COURSE_NOT_PLACED", $"Course {courseId} must stay in at least one slot.", new Dictionary<string, object> { ["courseId"] = courseId });
+    public static Error CourseTwiceInSlot(int courseId, int slotId) => Error.Validation("COURSE_TWICE_IN_SLOT", $"Course {courseId} is placed in slot {slotId} more than once.", new Dictionary<string, object> { ["courseId"] = courseId, ["slotId"] = slotId });
     public static Error EntryNotFound(int id) => Error.NotFound("ENTRY_NOT_FOUND", $"Mapping scheme entry {id} not found.", new Dictionary<string, object> { ["id"] = id });
     public static Error NegativeEcts => Error.Validation("INVALID_ECTS", "Awarded ECTS cannot be negative.");
     public static Error EctsExceeded(int courseId, decimal available) => Error.Validation("ECTS_EXCEEDED", $"Awarded ECTS for course {courseId} exceeds available {available}.", new Dictionary<string, object> { ["courseId"] = courseId, ["available"] = available });

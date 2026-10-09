@@ -81,7 +81,8 @@ public class MigrationTests(DatabaseFixture fixture) : IntegrationTest(fixture)
         };
         var planned = NewOldExchange();
         var graded = NewOldExchange();
-        db.Exchanges.AddRange(planned, graded);
+        var split = NewOldExchange();
+        db.Exchanges.AddRange(planned, graded, split);
         await db.SaveChangesAsync(Ct);
 
         static string Snapshot(params (int Slot, int Course)[] rows) => JsonSerializer.Serialize(new
@@ -107,6 +108,16 @@ public class MigrationTests(DatabaseFixture fixture) : IntegrationTest(fixture)
             JOIN exchange.learning_agreement_entry le ON le.learning_agreement_id = la.id AND le.partner_course_id = {a}
             WHERE r.exchange_id = {graded.Id};
             """, Ct);
+        // Split: results already in the mapping scheme, course A over two slots with the grade on one row only, two rows
+        // of A in slot 215, and a row whose course was deleted.
+        await db.Database.ExecuteSqlAsync($"""
+            INSERT INTO exchange.learning_agreement (exchange_id, status) VALUES ({split.Id}, 'Approved');
+            INSERT INTO exchange.mapping_scheme_entry (exchange_id, home_slot_id, partner_course_id, awarded_ects, enrollment_status, original_grade, ects_grade) VALUES
+                ({split.Id}, 214, {a}, 3, 'Passed', '2.0', 'B'),
+                ({split.Id}, 215, {a}, 2, NULL, NULL, NULL),
+                ({split.Id}, 215, {a}, 1, NULL, NULL, NULL),
+                ({split.Id}, 216, NULL, 5, 'Passed', '1.0', 'A');
+            """, Ct);
 
         await db.Database.MigrateAsync(Ct);
         db.ChangeTracker.Clear();
@@ -130,10 +141,20 @@ public class MigrationTests(DatabaseFixture fixture) : IntegrationTest(fixture)
         Assert.Equal(DocumentStatus.Draft, await db.LearningAgreements.Where(l => l.ExchangeId == planned.Id).Select(l => l.Status).SingleAsync(Ct));
 
         // Graded: the grades moved into the results, which means final recognition had started.
-        var results = await db.MappingSchemeEntries.Where(e => e.ExchangeId == graded.Id).ToListAsync(Ct);
-        Assert.Equal(2, results.Count);
-        Assert.Equal((EnrollmentStatus.Passed, "1.3", "A"), results.Where(e => e.PartnerCourseId == a).Select(e => (e.EnrollmentStatus!.Value, e.OriginalGrade, e.EctsGrade)).Single());
-        Assert.NotNull(await db.LearningAgreements.Where(l => l.ExchangeId == graded.Id).Select(l => l.ConcludedAt).SingleAsync(Ct));
-        Assert.Equal(DocumentStatus.Draft, await db.Recognitions.Where(r => r.ExchangeId == graded.Id).Select(r => r.Status).SingleAsync(Ct));
+        var graded_ = await ResultsAsync(graded.Id);
+        Assert.Equal([a, b], graded_.Select(r => r.PartnerCourseId).Order());
+        Assert.Equal((EnrollmentStatus.Passed, "1.3", "A"), graded_.Where(r => r.PartnerCourseId == a).Select(r => (r.EnrollmentStatus!.Value, r.OriginalGrade, r.EctsGrade)).Single());
+        var gradedRecognition = await db.Recognitions.SingleAsync(r => r.ExchangeId == graded.Id, Ct);
+        Assert.NotNull(gradedRecognition.StartedAt);
+        Assert.Equal(DocumentStatus.Draft, gradedRecognition.Status);
+
+        // Split: one result for A with its grade, placed in 214 (3) and 215 (2 + 1 folded); the course-less row is gone.
+        var splitResult = Assert.Single(await ResultsAsync(split.Id));
+        Assert.Equal((a, EnrollmentStatus.Passed, "2.0", "B"), (splitResult.PartnerCourseId, splitResult.EnrollmentStatus!.Value, splitResult.OriginalGrade, splitResult.EctsGrade));
+        Assert.Equal([(214, 3m), (215, 3m)], splitResult.Placements.OrderBy(p => p.HomeSlotId).Select(p => (p.HomeSlotId, p.AwardedEcts)));
+        Assert.NotNull(await db.Recognitions.Where(r => r.ExchangeId == split.Id).Select(r => r.StartedAt).SingleAsync(Ct));
+
+        Task<List<RecognitionEntry>> ResultsAsync(int exchangeId) =>
+            db.RecognitionEntries.Include(r => r.Placements).Where(r => r.Recognition.ExchangeId == exchangeId).ToListAsync(Ct);
     }
 }
