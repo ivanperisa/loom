@@ -19,6 +19,8 @@ docker compose up
 
 Open http://localhost:5173 and pick a persona under **Dev login** (no Google account needed).
 
+Real Google login works too: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`, add `http://localhost:5173/signin-oidc` as an authorized redirect URI of that OAuth client in Google Cloud Console, then `docker compose up -d api` to reload them.
+
 | What | Where |
 |---|---|
 | Web app | http://localhost:5173 |

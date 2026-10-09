@@ -43,10 +43,12 @@ export default defineConfig(({ mode }) => {
     server: {
       https: useHttps ? {} : undefined,
       hmr: useHttps ? { protocol: 'wss', host: 'localhost' } : undefined,
+      // Keep the browser's Host (localhost:5173): the API builds Google's redirect address from it, and
+      // Google must come back here (through this proxy) so the cookies land on the app's own origin.
       proxy: proxyTarget
         ? {
-            '/api': proxyTarget,
-            '/signin-oidc': proxyTarget,
+            '/api': { target: proxyTarget, changeOrigin: false, xfwd: true },
+            '/signin-oidc': { target: proxyTarget, changeOrigin: false, xfwd: true },
           }
         : undefined,
       // Bind mounts on Windows/macOS do not always deliver file events into containers.

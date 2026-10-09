@@ -15,6 +15,9 @@ const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
 
+/** The API sends a failed or cancelled Google sign-in back here. */
+const loginFailed = route.query.loginFailed !== undefined
+
 const showAccessForm = ref(false)
 const accessCode = ref('')
 const accessError = ref(false)
@@ -49,6 +52,9 @@ function openAccess() {
         <article
           class="landing-card relative w-full max-w-xl bg-dark p-8 pb-12 lg:translate-x-[80px] lg:rounded-[0_30px_30px_0]"
         >
+          <p v-if="loginFailed" role="alert" class="mb-4 rounded-lg border border-danger/30 bg-danger-fill px-3 py-2 text-sm text-danger-text">
+            {{ t('common.signInFailed') }}
+          </p>
           <button
             v-if="!showAccessForm"
             type="button"

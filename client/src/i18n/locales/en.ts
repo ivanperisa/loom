@@ -26,6 +26,7 @@ export default {
     toggleTheme: 'Switch light/dark theme',
     remove: 'Remove',
     appName: 'Loom',
+    signInFailed: 'Signing in did not finish. Please try again.',
     signIn: 'Sign in with Google',
     signOut: 'Sign out',
     lightTheme: 'Light theme',

@@ -28,6 +28,7 @@ export default {
     toggleTheme: 'Promijeni svijetlu/tamnu temu',
     remove: 'Ukloni',
     appName: 'Loom',
+    signInFailed: 'Prijava nije dovršena. Pokušaj ponovno.',
     signIn: 'Prijava putem Googlea',
     signOut: 'Odjava',
     lightTheme: 'Svijetla tema',

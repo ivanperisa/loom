@@ -50,6 +50,24 @@ public static class AuthenticationSetup
                 options.Scope.Add("openid");
                 options.Scope.Add("profile");
                 options.Scope.Add("email");
+                if (builder.Environment.IsDevelopment())
+                {
+                    // Local dev runs over plain http: Google returns with a top-level GET (not a cross-site form POST),
+                    // so the correlation and nonce cookies can be SameSite=Lax without Secure.
+                    options.ResponseMode = "query";
+                    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+                    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    options.NonceCookie.SameSite = SameSiteMode.Lax;
+                    options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                }
+                // A failed or cancelled sign-in (stale tab, back button, "deny") returns to the start page instead of a 500.
+                options.Events.OnRemoteFailure = context =>
+                {
+                    var frontend = context.HttpContext.RequestServices.GetRequiredService<FrontendUrls>();
+                    context.Response.Redirect(frontend.Build("/?loginFailed=1"));
+                    context.HandleResponse();
+                    return Task.CompletedTask;
+                };
                 options.Events.OnRedirectToIdentityProvider = context =>
                 {
                     context.ProtocolMessage.Prompt = context.Properties.Parameters.TryGetValue("prompt", out var prompt)
