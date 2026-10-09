@@ -19,8 +19,9 @@ export const adminService = {
   setUserRole: (userId: number, role: string) =>
     api.patch<UserListResponse>(`/api/admin/users/${userId}/role`, { role }),
 
-  rejectCoordinatorRequest: (userId: number) =>
-    api.patch(`/api/admin/users/${userId}/reject-coordinator-request`),
+  /** Approving makes the student a coordinator; rejecting lets them ask again later. */
+  decideCoordinatorRequest: (userId: number, status: 'Approved' | 'Rejected') =>
+    api.patch(`/api/admin/coordinator-requests/${userId}`, { status }),
 
   getCoordinatorWhitelist: (params: ListParams, signal?: AbortSignal) =>
     api.get<PagedResponse<CoordinatorWhitelistEntryResponse>>('/api/admin/coordinator-whitelist', { params, signal }),

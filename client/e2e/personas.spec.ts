@@ -187,6 +187,16 @@ test('the admin pages the coordinator whitelist and the partner institutions', a
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
+test('the admin approves a coordinator request', async ({ page }) => {
+  await loginAs(page, 'admin@loom.dev')
+  await page.goto('/admin')
+  // The seed has exactly one pending request (req.pending@loom.dev).
+  await page.getByRole('button', { name: /^(approve|odobri)$/i }).click()
+  // The request leaves the list and the user shows up as a coordinator.
+  await expect(page.getByText('req.pending@loom.dev').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /^(approve|odobri)$/i })).toHaveCount(0)
+})
+
 test('a filter select works with the keyboard alone', async ({ page }) => {
   await loginAs(page, 'admin@loom.dev')
   await page.goto('/admin')

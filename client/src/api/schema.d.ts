@@ -315,7 +315,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/users/{userId}/reject-coordinator-request": {
+    "/api/admin/coordinator-requests/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -337,16 +337,18 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["DecideCoordinatorRequestRequest"];
+                };
+            };
             responses: {
-                /** @description OK */
-                200: {
+                /** @description No Content */
+                204: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "application/json": components["schemas"]["AuthMeResponse"];
-                    };
+                    content?: never;
                 };
             };
         };
@@ -559,7 +561,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/institutions/home": {
+    "/api/home-institutions": {
         parameters: {
             query?: never;
             header?: never;
@@ -594,7 +596,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/institutions/home-programs": {
+    "/api/home-programs": {
         parameters: {
             query?: never;
             header?: never;
@@ -629,7 +631,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/institutions/partner": {
+    "/api/partner-institutions": {
         parameters: {
             query?: never;
             header?: never;
@@ -700,7 +702,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/institutions/partner/{institutionId}": {
+    "/api/partner-institutions/{institutionId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -760,7 +762,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/institutions/partner/{institutionId}/restore": {
+    "/api/partner-institutions/{institutionId}/restore": {
         parameters: {
             query?: never;
             header?: never;
@@ -769,11 +771,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: {
+        post: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -793,9 +791,13 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
-    "/api/institutions/partner/{institutionId}/courses": {
+    "/api/partner-institutions/{institutionId}/courses": {
         parameters: {
             query?: never;
             header?: never;
@@ -871,7 +873,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/institutions/partner/courses/{courseId}": {
+    "/api/partner-courses/{courseId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -931,7 +933,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/institutions/partner/courses/{courseId}/restore": {
+    "/api/partner-courses/{courseId}/restore": {
         parameters: {
             query?: never;
             header?: never;
@@ -940,11 +942,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: {
+        post: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -964,9 +962,13 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
-    "/api/institutions/partner/courses/merge": {
+    "/api/partner-courses/merge": {
         parameters: {
             query?: never;
             header?: never;
@@ -1005,7 +1007,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/institutions/partner/courses/{courseId}/usage": {
+    "/api/partner-courses/{courseId}/usage": {
         parameters: {
             query?: never;
             header?: never;
@@ -1445,7 +1447,12 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: {
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -1471,11 +1478,6 @@ export interface paths {
                 };
             };
         };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/exchanges/{exchangeGuid}/access-link": {
@@ -2588,6 +2590,9 @@ export interface components {
             /** Format: int32 */
             targetStudentId?: number | null;
             mentor?: string | null;
+        };
+        DecideCoordinatorRequestRequest: {
+            status: string;
         };
         DocumentChange: {
             type: string;

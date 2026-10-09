@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminService, type CoordinatorRequestResponse } from '@/services/admin.service'
-import { userRole } from '@/utils/userRole'
 import Pagination from '@/components/common/Pagination.vue'
 import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { useListQuery } from '@/composables/useListQuery'
@@ -25,8 +24,7 @@ const requestList = useListQuery<CoordinatorRequestResponse>({
 async function decide(userId: number, approve: boolean) {
   actionLoadingId.value = userId
   try {
-    if (approve) await adminService.setUserRole(userId, userRole.Coordinator)
-    else await adminService.rejectCoordinatorRequest(userId)
+    await adminService.decideCoordinatorRequest(userId, approve ? 'Approved' : 'Rejected')
     await refreshAfterUserChange()
   } finally {
     actionLoadingId.value = null

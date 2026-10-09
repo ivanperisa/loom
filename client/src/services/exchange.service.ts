@@ -22,7 +22,7 @@ export const exchangeService = {
   deleteExchange: (exchangeId: string) =>
     api.delete(`/api/exchanges/${exchangeId}`),
   updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
-    api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
+    api.patch<ExchangeResponse>(`/api/exchanges/${exchangeId}/coordinator-message`, request),
   /** The live access link of a placeholder student's exchange (created on first use). */
   getAccessLink: (exchangeGuid: string) =>
     api.post<AccessLinkResponse>(`/api/exchanges/${exchangeGuid}/access-link`),

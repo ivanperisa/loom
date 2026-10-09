@@ -11,45 +11,45 @@ import type {
 import type { ListParams, PagedResponse } from '@/types/paged.types'
 
 export const institutionService = {
-  getHomeInstitutions: (signal?: AbortSignal) => api.get<InstitutionResponse[]>('/api/institutions/home', { signal }),
-  getHomePrograms: (signal?: AbortSignal) => api.get<HomeProgramResponse[]>('/api/institutions/home-programs', { signal }),
+  getHomeInstitutions: (signal?: AbortSignal) => api.get<InstitutionResponse[]>('/api/home-institutions', { signal }),
+  getHomePrograms: (signal?: AbortSignal) => api.get<HomeProgramResponse[]>('/api/home-programs', { signal }),
   getPartnerInstitutions: (includeDeleted = false, params: Partial<ListParams> & { country?: string | null } = {}, signal?: AbortSignal) =>
-    api.get<PagedResponse<PartnerInstitutionAdminResponse>>('/api/institutions/partner', { params: { includeDeleted, ...params }, signal }),
+    api.get<PagedResponse<PartnerInstitutionAdminResponse>>('/api/partner-institutions', { params: { includeDeleted, ...params }, signal }),
   getPartnerCoursesByInstitution: (institutionId: number, includeDeleted = false, params: Partial<ListParams> & { semester?: string | null; level?: string | null } = {}, signal?: AbortSignal) =>
-    api.get<PagedResponse<PartnerCourseResponse>>(`/api/institutions/partner/${institutionId}/courses`, { params: { includeDeleted, ...params }, signal }),
+    api.get<PagedResponse<PartnerCourseResponse>>(`/api/partner-institutions/${institutionId}/courses`, { params: { includeDeleted, ...params }, signal }),
 
   createPartnerInstitution: (data: { name: string; nameHr: string; country: string; city?: string; erasmusCode?: string }) =>
-    api.post<PartnerInstitutionAdminResponse>('/api/institutions/partner', data),
+    api.post<PartnerInstitutionAdminResponse>('/api/partner-institutions', data),
 
   updatePartnerInstitution: (id: number, data: { name: string; nameHr?: string; country: string; city?: string; erasmusCode?: string }) =>
-    api.put<PartnerInstitutionAdminResponse>(`/api/institutions/partner/${id}`, data),
+    api.put<PartnerInstitutionAdminResponse>(`/api/partner-institutions/${id}`, data),
 
   deletePartnerInstitution: (id: number) =>
-    api.delete(`/api/institutions/partner/${id}`),
+    api.delete(`/api/partner-institutions/${id}`),
 
   restorePartnerInstitution: (id: number) =>
-    api.patch(`/api/institutions/partner/${id}/restore`),
+    api.post(`/api/partner-institutions/${id}/restore`),
 
   createPartnerCourseByInstitution: (institutionId: number, data: PartnerCourseRequest) =>
-    api.post<PartnerCourseResponse>(`/api/institutions/partner/${institutionId}/courses`, data),
+    api.post<PartnerCourseResponse>(`/api/partner-institutions/${institutionId}/courses`, data),
 
   updatePartnerCourse: (courseId: number, data: PartnerCourseRequest) =>
-    api.put<PartnerCourseResponse>(`/api/institutions/partner/courses/${courseId}`, data),
+    api.put<PartnerCourseResponse>(`/api/partner-courses/${courseId}`, data),
 
   deletePartnerCourse: (courseId: number) =>
-    api.delete(`/api/institutions/partner/courses/${courseId}`),
+    api.delete(`/api/partner-courses/${courseId}`),
 
   restorePartnerCourse: (courseId: number) =>
-    api.patch(`/api/institutions/partner/courses/${courseId}/restore`),
+    api.post(`/api/partner-courses/${courseId}/restore`),
 
   mergePartnerCourses: (primaryCourseId: number, duplicateCourseIds: number[]) =>
-    api.post<PartnerCourseResponse>('/api/institutions/partner/courses/merge', {
+    api.post<PartnerCourseResponse>('/api/partner-courses/merge', {
       primaryCourseId,
       duplicateCourseIds,
     }),
 
   getPartnerCourseUsage: (courseId: number) =>
-    api.get<PartnerCourseUsage>(`/api/institutions/partner/courses/${courseId}/usage`),
+    api.get<PartnerCourseUsage>(`/api/partner-courses/${courseId}/usage`),
 }
 
 const PAGE_SIZE = 200
