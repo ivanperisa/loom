@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { authService } from '@/services/auth.service'
 import { userService } from '@/services/user.service'
 import router from '@/router'
+import { queryClient } from '@/queries/queryClient'
 import type { AuthMeResponse, UserRole } from '@/types/auth.types'
 import type { CompleteOnboardingRequest, UpdateProfileRequest } from '@/types/onboarding.types'
 import { userRole } from '../utils/userRole'
@@ -61,6 +62,7 @@ export const useAuthStore = defineStore('auth', () => {
       await authService.logout()
     } finally {
       reset()
+      queryClient.clear()
       router.push('/')
     }
   }

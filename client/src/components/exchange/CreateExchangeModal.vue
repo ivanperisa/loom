@@ -3,7 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { institutionService, getAllPartnerInstitutions } from '@/services/institution.service'
 import { coordinatorService } from '@/services/coordinator.service'
-import { useExchangeStore } from '@/stores/exchange.store'
+import { useCreateExchange } from '@/queries/exchange.queries'
+import { describeApiError } from '@/utils/apiError'
 import { exchangeSemester } from '@/utils/exchangeSemester'
 import type {
   HomeProgramResponse,
@@ -29,7 +30,7 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
-const exchangeStore = useExchangeStore()
+const createExchange = useCreateExchange()
 const authStore = useAuthStore()
 
 function localizedName(item: { name: string; nameHr?: string | null }): string {
@@ -246,7 +247,7 @@ async function submitExchange() {
   errorMessage.value = null
   isSubmitting.value = true
   try {
-    const result = await exchangeStore.createExchange({
+    const result = await createExchange.mutateAsync({
       homeProfileId: selectedProfileId.value!,
       partnerInstitutionId: selectedPartnerInstitutionId.value!,
       academicYear: academicYear.value.trim(),
@@ -256,13 +257,9 @@ async function submitExchange() {
       targetStudentId: props.targetStudentId,
       mentor: mentorInput.value.trim() || null,
     })
-    if (result) {
-      emit('created', result.guid)
-    } else {
-      errorMessage.value = exchangeStore.error ?? t('errors.unexpected')
-    }
-  } catch {
-    errorMessage.value = t('errors.unexpected')
+    emit('created', result.guid)
+  } catch (e) {
+    errorMessage.value = describeApiError(e).message
   } finally {
     isSubmitting.value = false
   }

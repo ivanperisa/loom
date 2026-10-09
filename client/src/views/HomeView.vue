@@ -1,11 +1,12 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import { useAuthStore } from '@/stores/auth.store'
-import { useExchangeStore } from '@/stores/exchange.store'
+import { useMyExchangesQuery } from '@/queries/exchange.queries'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { userService } from '@/services/user.service'
 import { statusColorClass } from '@/utils/statusColors'
 import { coordinatorRequestStatus as coordinatorRequestStatusValues } from '@/utils/coordinatorRequestStatus'
@@ -13,7 +14,8 @@ import { useQuerySync } from '@/composables/useQuerySync'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const exchangeStore = useExchangeStore()
+const exchangesQuery = useMyExchangesQuery()
+const summaries = computed(() => exchangesQuery.data.value ?? [])
 const { t } = useI18n()
 
 const showCreateModal = ref(false)
@@ -22,14 +24,14 @@ const requestingCoordinator = ref(false)
 const displayName = computed(() => authStore.name?.trim() || t('common.user'))
 const coordinatorRequestStatus = computed(() => authStore.user?.coordinatorRequestStatus ?? null)
 
-const loading = ref(true)
+const loading = computed(() => exchangesQuery.isPending.value)
 
 const selectedAcademicYear = ref<string | null>(null)
 
 useQuerySync({ year: selectedAcademicYear })
 
 const academicYears = computed(() => {
-  const years = new Set(exchangeStore.summaries.map((ex) => ex.academicYear))
+  const years = new Set(summaries.value.map((ex) => ex.academicYear))
   return Array.from(years).sort().reverse()
 })
 
@@ -39,21 +41,14 @@ const academicYearFilterOptions = computed(() => [
 ])
 
 const filteredSummaries = computed(() => {
-  if (!selectedAcademicYear.value) return exchangeStore.summaries
-  return exchangeStore.summaries.filter((ex) => ex.academicYear === selectedAcademicYear.value)
+  if (!selectedAcademicYear.value) return summaries.value
+  return summaries.value.filter((ex) => ex.academicYear === selectedAcademicYear.value)
 })
 
 const soleExchange = computed(() =>
   filteredSummaries.value.length === 1 ? filteredSummaries.value[0] : null,
 )
 
-async function fetchData() {
-  loading.value = true
-  await exchangeStore.fetchMySummaries()
-  loading.value = false
-}
-
-onMounted(fetchData)
 
 function openCreateModal() {
   showCreateModal.value = true
@@ -118,6 +113,8 @@ async function reRequestCoordinatorRole() {
           <div class="h-10 w-36 rounded bg-primary/20"></div>
         </div>
       </div>
+
+      <ErrorAlert v-else-if="exchangesQuery.error.value" class="mt-8" :error="exchangesQuery.error.value" @retry="exchangesQuery.refetch()" />
 
       <template v-else>
         <!-- Header with title + create button -->

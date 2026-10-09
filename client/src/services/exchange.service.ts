@@ -14,11 +14,11 @@ export const exchangeService = {
   create: (request: CreateExchangeRequest) =>
     api.post<ExchangeResponse>('/api/exchanges', request),
   update: (exchangeId: string, request: UpdateExchangeRequest) =>
-    api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}`, request, { suppressErrorToast: true }),
-  getById: (exchangeId: string) =>
-    api.get<ExchangeResponse>(`/api/exchanges/${exchangeId}`),
-  getMine: () =>
-    api.get<ExchangeSummaryResponse[]>('/api/exchanges/mine'),
+    api.put<ExchangeResponse>(`/api/exchanges/${exchangeId}`, request, { errorToast: false }),
+  getById: (exchangeId: string, signal?: AbortSignal) =>
+    api.get<ExchangeResponse>(`/api/exchanges/${exchangeId}`, { signal }),
+  getMine: (signal?: AbortSignal) =>
+    api.get<ExchangeSummaryResponse[]>('/api/exchanges/mine', { signal }),
   deleteExchange: (exchangeId: string) =>
     api.delete(`/api/exchanges/${exchangeId}`),
   updateCoordinatorMessage: (exchangeId: string, request: UpdateCoordinatorMessageRequest) =>
@@ -28,8 +28,8 @@ export const exchangeService = {
     api.post<AccessLinkResponse>(`/api/exchanges/${exchangeGuid}/access-link`),
   regenerateAccessLink: (exchangeGuid: string) =>
     api.post<AccessLinkResponse>(`/api/exchanges/${exchangeGuid}/access-link/regenerate`),
-  getPartnerCourses: (exchangeGuid: string, params: PagedParams = {}) =>
-    api.get<PagedResponse<PartnerCourseResponse>>(`/api/exchanges/${exchangeGuid}/partner-courses`, { params }),
+  getPartnerCourses: (exchangeGuid: string, params: PagedParams = {}, signal?: AbortSignal) =>
+    api.get<PagedResponse<PartnerCourseResponse>>(`/api/exchanges/${exchangeGuid}/partner-courses`, { params, signal }),
   createPartnerCourse: (exchangeGuid: string, data: PartnerCourseRequest) =>
     api.post<PartnerCourseResponse>(`/api/exchanges/${exchangeGuid}/partner-courses`, data),
 }

@@ -5,11 +5,11 @@ import type { AccessLinkPreviewResponse } from '@/types/exchange.types'
 export const accessService = {
   /** Without a login: swaps the token for a guest cookie scoped to one exchange. */
   openSession: (token: string) =>
-    api.post<{ exchangeGuid: string }>('/api/access/session', { token }, { suppressErrorToast: true }),
+    api.post<{ exchangeGuid: string }>('/api/access/session', { token }, { errorToast: false }),
   closeSession: () => api.delete('/api/access/session'),
   /** Signed in: is this exchange already mine to open, or can I claim it? */
   preview: (token: string) =>
-    api.post<AccessLinkPreviewResponse>('/api/access/preview', { token }, { suppressErrorToast: true }),
+    api.post<AccessLinkPreviewResponse>('/api/access/preview', { token }, { errorToast: false }),
   claim: (token: string) =>
-    api.post<{ exchangeGuid: string }>('/api/access/claim', { token }, { suppressErrorToast: true }),
+    api.post<{ exchangeGuid: string }>('/api/access/claim', { token }, { errorToast: false }),
 }

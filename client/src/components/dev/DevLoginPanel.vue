@@ -31,7 +31,7 @@ const visible = computed(() => {
 
 onMounted(async () => {
   try {
-    const res = await api.get<DevUser[]>('/api/auth/dev/users', { suppressErrorToast: true })
+    const res = await api.get<DevUser[]>('/api/auth/dev/users', { errorToast: false })
     users.value = res.data
   } catch {
     error.value = 'Dev login is not available (is DevAuth enabled on the API?).'
@@ -43,7 +43,7 @@ async function loginAs(email: string) {
   busy.value = true
   error.value = null
   try {
-    await api.post('/api/auth/dev/login', { email }, { suppressErrorToast: true })
+    await api.post('/api/auth/dev/login', { email }, { errorToast: false })
     await authStore.init(true)
     await router.push('/home')
   } catch {

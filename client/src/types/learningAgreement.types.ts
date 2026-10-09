@@ -157,6 +157,7 @@ export interface ImportPreviewResponse {
   canApply: boolean
   blockingCode: string | null
   blockingMessage: string | null
+  blockingParams: Record<string, unknown> | null
   contextWarnings: ImportContextWarning[]
   added: ImportRow[]
   removed: ImportRow[]

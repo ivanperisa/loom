@@ -12,8 +12,10 @@ import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
 import PanelHeaderBar from '@/components/common/PanelHeaderBar.vue'
 import AuditInfo from '@/components/common/AuditInfo.vue'
 import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
-import { useExchangeStore } from '@/stores/exchange.store'
-import { useExchangePermissions } from '@/composables/useExchangePermissions'
+import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useLearningAgreementMutations, useOfficialDocument } from '@/queries/exchange.queries'
+import { describeApiError } from '@/utils/apiError'
 import { formatDate } from '@/utils/formatDate'
 import { useNotification } from '@/composables/useNotification'
 import type { HomeSlotResponse, LocalSlotMapping, SlotMode, MappingExportDto } from '@/types/learningAgreement.types'
@@ -33,37 +35,41 @@ const props = defineProps<{
 }>()
 
 const { t, locale } = useI18n()
-const exchangeStore = useExchangeStore()
-const { isCoordinator, isEditable, isConcluded } = useExchangePermissions()
+const draft = useLaDraftStore()
+const { exchange, learningAgreement, isCoordinator, isEditable, isConcluded } = useExchangeContext()
+const laMutations = useLearningAgreementMutations(() => props.exchangeId)
+const officialDocument = useOfficialDocument(() => props.exchangeId)
+
+// The draft follows the saved LA, unless it holds unsaved changes for this exchange.
+watch(
+  learningAgreement,
+  (la) => {
+    if (la && draft.canReload(props.exchangeId)) draft.load(props.exchangeId, la)
+  },
+  { immediate: true },
+)
+const slots = computed(() => learningAgreement.value?.slots ?? [])
 const { theme } = useTheme()
 const { confirm } = useConfirm()
 const { notifyError } = useNotification()
 useDragAutoScroll()
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') exchangeStore.disarm()
+  if (e.key === 'Escape') draft.disarm()
 }
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
-const isSavingLa = ref(false)
-const saveError = ref<string | null>(null)
 const showHistory = ref(false)
 const importDto = ref<MappingExportDto | null>(null)
 const importFileInput = ref<HTMLInputElement | null>(null)
 
-async function handleExport() {
-  await exchangeStore.exportMappings(props.exchangeId)
+function handleExport() {
+  laMutations.exportFile.mutate()
 }
 
-const downloadingOfficial = ref(false)
-async function downloadOfficial() {
-  downloadingOfficial.value = true
-  try {
-    await exchangeStore.downloadOfficialDocument(props.exchangeId, locale.value)
-  } finally {
-    downloadingOfficial.value = false
-  }
+function downloadOfficial() {
+  officialDocument.mutate(locale.value)
 }
 
 function handleImportFileChange(e: Event) {
@@ -81,42 +87,43 @@ function handleImportFileChange(e: Event) {
   ;(e.target as HTMLInputElement).value = ''
 }
 
+function courseLabel(id: number) {
+  const mapping = draft.slotStates.flatMap((s) => s.mappings).find((m) => Number(m.partnerCourseId) === id)
+  return mapping ? `${mapping.partnerCourseCode} (${mapping.partnerCourseName})` : undefined
+}
+
+function slotLabel(id: number) {
+  const slot = slots.value.find((s) => Number(s.id) === id)
+  return slot ? `${slotCodeLabel(slot)} ${slotDisplayName(slot, locale.value)}`.trim() : undefined
+}
+
 async function saveLa() {
-  isSavingLa.value = true
-  saveError.value = null
   try {
-    await exchangeStore.saveLearningAgreement(props.exchangeId)
-  } catch {
-    saveError.value = t('la.saveError')
-  } finally {
-    isSavingLa.value = false
+    draft.load(props.exchangeId, await laMutations.save.mutateAsync(draft.toRequest()))
+  } catch (error) {
+    const { title, message } = describeApiError(error, { course: courseLabel, slot: slotLabel })
+    notifyError(title, message)
   }
 }
 
-async function discardLa() {
-  await exchangeStore.fetchLearningAgreement(props.exchangeId)
+function discardLa() {
+  if (learningAgreement.value) draft.load(props.exchangeId, learningAgreement.value)
 }
 
-async function backToDraft() {
-  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
-    status: documentStatus.Draft,
-  })
-  await exchangeStore.fetchExchange(props.exchangeId)
+function backToDraft() {
+  laMutations.setStatus.mutate({ status: documentStatus.Draft })
 }
 
-async function signExchange() {
-  await exchangeStore.updateLearningAgreementStatus(props.exchangeId, {
-    status: documentStatus.Approved,
-  })
-  await exchangeStore.fetchExchange(props.exchangeId)
+function signExchange() {
+  laMutations.setStatus.mutate({ status: documentStatus.Approved })
 }
 
 const SEMESTERS = DOC_TABLE_SEMESTERS
 const modes: SlotMode[] = [slotMode.AtHome]
 const modeOutlineColor = DOC_TABLE_MODE_OUTLINE_COLOR
 
-const isDragging = computed(() => !!exchangeStore.draggingCourse || !!exchangeStore.draggingSlotMapping)
-const isArmed = computed(() => !!exchangeStore.armedCourse)
+const isDragging = computed(() => !!draft.draggingCourse || !!draft.draggingSlotMapping)
+const isArmed = computed(() => !!draft.armedCourse)
 const dragOverSlotId = ref<string | null>(null)
 const pendingDrop = ref<{ slot: HomeSlotResponse; course: PartnerCourseResponse } | null>(null)
 const pendingEcts = ref<number>(0)
@@ -139,7 +146,7 @@ function setEctsInputRef(el: unknown) {
 const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(null)
 
 function lineFor(homeSlotId: string) {
-  return exchangeStore.localSlotStates.find((s) => s.homeSlotId === homeSlotId)
+  return draft.slotStates.find((s) => s.homeSlotId === homeSlotId)
 }
 
 function sortedMappingsFor(homeSlotId: string) {
@@ -150,37 +157,37 @@ function sortedMappingsFor(homeSlotId: string) {
 
 const totalAwardedEcts = computed(() => {
   let sum = 0
-  for (const state of exchangeStore.localSlotStates) {
+  for (const state of draft.slotStates) {
     for (const m of state.mappings) sum += m.awardedEcts
   }
   return Math.round(sum * 10) / 10
 })
 
 const amendmentBadge = computed<number | null>(() => {
-  const la = exchangeStore.serverLearningAgreement
+  const la = learningAgreement.value
   if (!la || la.signedCount < 1) return null
   const n = la.status === documentStatus.Approved ? la.signedCount - 1 : la.signedCount
   return n >= 1 ? n : null
 })
 
 function mappingAmendment(amendmentNumber: number | null | undefined): number | null {
-  const n = amendmentNumber ?? (exchangeStore.serverLearningAgreement?.signedCount ?? 0)
+  const n = amendmentNumber ?? (learningAgreement.value?.signedCount ?? 0)
   return n >= 1 ? n : null
 }
 
 function deletedEntriesForSlot(slotId: string) {
-  const serverEntries = (exchangeStore.serverLearningAgreement?.entries ?? []).filter(
+  const serverEntries = (learningAgreement.value?.entries ?? []).filter(
     (e) => e.homeSlotId === slotId && e.partnerCourseId !== null,
   )
   const localIds = new Set((lineFor(slotId)?.mappings ?? []).map((m) => m.partnerCourseId))
-  const wasSigned = (exchangeStore.serverLearningAgreement?.signedCount ?? 0) > 0
+  const wasSigned = (learningAgreement.value?.signedCount ?? 0) > 0
   return serverEntries.filter((e) =>
     !localIds.has(e.partnerCourseId!) && (e.isDeleted || wasSigned),
   )
 }
 
 function slotsForSemester(sem: number): HomeSlotResponse[] {
-  return exchangeStore.slots
+  return slots.value
     .filter((s) => s.semester === sem)
     .sort((a, b) => a.slotPosition - b.slotPosition)
 }
@@ -203,7 +210,7 @@ function ectsColor(slot: HomeSlotResponse): string {
 
 function alreadyMappedEcts(courseId: string): number {
   let sum = 0
-  for (const state of exchangeStore.localSlotStates) {
+  for (const state of draft.slotStates) {
     for (const m of state.mappings) {
       if (m.partnerCourseId === courseId) sum += m.awardedEcts
     }
@@ -275,7 +282,7 @@ function onDragLeave() {
 function onDrop(event: DragEvent, slot: HomeSlotResponse) {
   event.preventDefault()
   dragOverSlotId.value = null
-  const slotDrag = exchangeStore.draggingSlotMapping
+  const slotDrag = draft.draggingSlotMapping
   if (slotDrag) {
     if (slotDrag.fromSlotId !== slot.id) {
       const mapping = lineFor(slotDrag.fromSlotId)?.mappings.find((m) => m.localId === slotDrag.localId)
@@ -291,13 +298,13 @@ function onDrop(event: DragEvent, slot: HomeSlotResponse) {
         moveEcts.value = mapping.awardedEcts
       }
     }
-    exchangeStore.endDrag()
+    draft.endDrag()
     return
   }
-  const course = exchangeStore.draggingCourse
+  const course = draft.draggingCourse
   if (!course) return
   placeCourse(slot, course)
-  exchangeStore.endDrag()
+  draft.endDrag()
 }
 
 function placeCourse(slot: HomeSlotResponse, course: PartnerCourseResponse) {
@@ -308,7 +315,7 @@ function confirmMove() {
   const p = pendingMove.value
   if (!p) return
   if (moveEcts.value > p.max) return
-  exchangeStore.localMoveSlotMapping(p.fromSlotId, p.toSlotId, p.localId, Math.max(moveEcts.value, 0.5))
+  draft.moveMapping(p.fromSlotId, p.toSlotId, p.localId, Math.max(moveEcts.value, 0.5))
   pendingMove.value = null
 }
 
@@ -321,7 +328,7 @@ function confirmDrop() {
   if (pendingEcts.value > remainingEcts.value) return
   const { slot, course } = pendingDrop.value
   if (lineFor(slot.id)?.mode !== slotMode.AtExchange) {
-    exchangeStore.localSetSlotMode(slot.id, slotMode.AtExchange)
+    draft.setSlotMode(slot.id, slotMode.AtExchange)
   }
   const mapping: LocalSlotMapping = {
     localId: crypto.randomUUID(),
@@ -332,7 +339,7 @@ function confirmDrop() {
     partnerCourseUrl: course.url ?? null,
     awardedEcts: Math.max(pendingEcts.value, 0.5),
   }
-  exchangeStore.localAddSlotMapping(slot.id, mapping)
+  draft.addMapping(slot.id, mapping)
   pendingDrop.value = null
 }
 
@@ -342,10 +349,10 @@ function cancelDrop() {
 
 async function cycleMode(slot: HomeSlotResponse) {
   if (!isEditable.value || isThesisSlot(slot)) return
-  const armed = exchangeStore.armedCourse
+  const armed = draft.armedCourse
   if (armed) {
     placeCourse(slot, armed)
-    exchangeStore.disarm()
+    draft.disarm()
     return
   }
   const state = lineFor(slot.id)
@@ -354,19 +361,19 @@ async function cycleMode(slot: HomeSlotResponse) {
     if (!ok) return
   }
   if (!state) {
-    exchangeStore.localSetSlotMode(slot.id, slotMode.AtHome)
+    draft.setSlotMode(slot.id, slotMode.AtHome)
   } else {
-    exchangeStore.localRemoveSlotState(slot.id)
+    draft.removeSlotState(slot.id)
   }
 }
 
 function removeMapping(homeSlotId: string, localId: string) {
   const partnerCourseId = lineFor(homeSlotId)?.mappings.find((m) => m.localId === localId)?.partnerCourseId
-  exchangeStore.localRemoveSlotMapping(homeSlotId, localId)
-  if (partnerCourseId) exchangeStore.unstagePartnerCourse(partnerCourseId)
+  draft.removeMapping(homeSlotId, localId)
+  if (partnerCourseId) draft.unstagePartnerCourse(partnerCourseId)
   const state = lineFor(homeSlotId)
   if (state && state.mode === slotMode.AtExchange && state.mappings.length === 0) {
-    exchangeStore.localRemoveSlotState(homeSlotId)
+    draft.removeSlotState(homeSlotId)
   }
 }
 
@@ -382,7 +389,7 @@ function saveEditEcts() {
   const captured = editingMapping.value
   editingMapping.value = null
   const val = Math.max(0.5, editingEcts.value)
-  exchangeStore.localUpdateMappingEcts(captured.homeSlotId, captured.localId, val)
+  draft.updateMappingEcts(captured.homeSlotId, captured.localId, val)
 }
 
 function cancelEditEcts() {
@@ -419,8 +426,8 @@ function cancelEditEcts() {
     <PanelHeaderBar :home-profile-name="homeProfileName">
       <template #left>
         <StatusBadge
-          v-if="exchangeStore.serverLearningAgreement"
-          :status="exchangeStore.serverLearningAgreement.status"
+          v-if="learningAgreement"
+          :status="learningAgreement.status"
         />
         <span
           v-if="amendmentBadge !== null"
@@ -428,7 +435,7 @@ function cancelEditEcts() {
         >{{ t('la.amendmentLabel', { n: amendmentBadge }) }}</span>
         <!-- Export / Import / History -->
         <div style="display: flex; gap: 6px;">
-          <ActionButton :disabled="downloadingOfficial" :title="t('documents.officialHint')" @click="downloadOfficial">
+          <ActionButton :disabled="officialDocument.isPending.value" :title="t('documents.officialHint')" @click="downloadOfficial">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             {{ t('documents.official') }}
           </ActionButton>
@@ -450,7 +457,7 @@ function cancelEditEcts() {
         <!-- Coordinator actions -->
         <template v-if="isCoordinator && !isConcluded">
           <button
-            v-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Draft"
+            v-if="learningAgreement?.status === documentStatus.Draft"
             type="button"
             class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500"
             @click="signExchange"
@@ -458,7 +465,7 @@ function cancelEditEcts() {
             {{ t('exchange.actions.sign') }}
           </button>
           <button
-            v-else-if="exchangeStore.serverLearningAgreement?.status === documentStatus.Approved"
+            v-else-if="learningAgreement?.status === documentStatus.Approved"
             type="button"
             class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-muted transition hover:bg-slate-700/40"
             @click="backToDraft"
@@ -471,46 +478,46 @@ function cancelEditEcts() {
 
     <!-- Audit info -->
     <AuditInfo
-      :last-modified-at="exchangeStore.serverLearningAgreement?.lastModifiedAt"
-      :last-modified-by-name="exchangeStore.serverLearningAgreement?.lastModifiedByName"
-      :signed-at="exchangeStore.serverLearningAgreement?.signedAt"
-      :signed-by-name="exchangeStore.serverLearningAgreement?.signedByName"
+      :last-modified-at="learningAgreement?.lastModifiedAt"
+      :last-modified-by-name="learningAgreement?.lastModifiedByName"
+      :signed-at="learningAgreement?.signedAt"
+      :signed-by-name="learningAgreement?.signedByName"
     />
     <p v-if="isConcluded" class="la-concluded" role="status">
       {{ t('la.concluded', {
-        date: formatDate(exchangeStore.serverLearningAgreement?.concludedAt ?? '', locale),
-        name: exchangeStore.serverLearningAgreement?.concludedByName ?? '—',
+        date: formatDate(learningAgreement?.concludedAt ?? '', locale),
+        name: learningAgreement?.concludedByName ?? '—',
       }) }}
     </p>
     <UnsavedChangesBar
-      v-if="isEditable && exchangeStore.isDirty"
-      :saving="isSavingLa"
+      v-if="isEditable && draft.isDirty"
+      :saving="laMutations.save.isPending.value"
       @save="saveLa"
       @discard="discardLa"
     />
 
     <!-- Armed course banner -->
     <div
-      v-if="exchangeStore.armedCourse"
+      v-if="draft.armedCourse"
       class="sticky top-0 z-10 mb-2 flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-dark-2 px-4 py-2"
     >
       <span class="flex flex-wrap items-baseline gap-x-2">
-        <span class="text-xs font-bold text-light">{{ exchangeStore.armedCourse.code }}</span>
-        <span class="text-sm font-medium text-light">{{ exchangeStore.armedCourse.name }}</span>
-        <span v-if="exchangeStore.armedCourse.nameHr" class="text-xs text-light/60">{{ exchangeStore.armedCourse.nameHr }}</span>
+        <span class="text-xs font-bold text-light">{{ draft.armedCourse.code }}</span>
+        <span class="text-sm font-medium text-light">{{ draft.armedCourse.name }}</span>
+        <span v-if="draft.armedCourse.nameHr" class="text-xs text-light/60">{{ draft.armedCourse.nameHr }}</span>
         <span class="text-xs text-light/60">- {{ t('partnerCourses.armedHint') }}</span>
       </span>
       <button
         type="button"
         class="shrink-0 rounded-lg border border-primary/20 px-3 py-1 text-xs font-medium text-light/60 transition hover:border-primary hover:text-primary-text"
-        @click="exchangeStore.disarm()"
+        @click="draft.disarm()"
       >
         {{ t('partnerCourses.armedCancel') }}
       </button>
     </div>
 
     <!-- Table -->
-    <DocTableGrid v-if="exchangeStore.serverLearningAgreement">
+    <DocTableGrid v-if="learningAgreement">
       <tr v-for="sem in SEMESTERS" :key="sem" :style="{ height: sem === 4 ? '50px' : '90px' }">
         <td style="border: 1px solid #aaa; background: #f2f2f2; text-align: center; font-size: 14px; font-weight: bold; color: #000; padding: 4px 2px; vertical-align: middle;">
           {{ sem }}
@@ -577,8 +584,8 @@ function cancelEditEcts() {
             class="la-mapping-item"
             :draggable="isEditable"
             @click.stop
-            @dragstart.stop="isEditable && exchangeStore.startSlotDrag(slot.id, mapping.localId)"
-            @dragend.stop="exchangeStore.endDrag()"
+            @dragstart.stop="isEditable && draft.startSlotDrag(slot.id, mapping.localId)"
+            @dragend.stop="draft.endDrag()"
           >
             <span
               v-if="mappingAmendment(mapping.amendmentNumber) !== null"
@@ -669,7 +676,7 @@ function cancelEditEcts() {
     />
 
     <!-- Course panels (editable only) -->
-    <div v-if="isEditable && exchangeStore.exchange" class="mt-6 flex gap-6 items-start">
+    <div v-if="isEditable && exchange" class="mt-6 flex gap-6 items-start">
       <div class="min-w-0 basis-[60%] rounded-xl border border-primary/20 bg-dark-2 p-4">
         <h3 class="mb-2 text-sm font-semibold text-primary-text">
           {{ t('partnerCourses.availableCourses') }}

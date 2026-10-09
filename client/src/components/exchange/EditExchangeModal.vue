@@ -2,10 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { coordinatorService } from '@/services/coordinator.service'
-import { useExchangeStore } from '@/stores/exchange.store'
-import { useExchangePermissions } from '@/composables/useExchangePermissions'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useExchangeMutations } from '@/queries/exchange.queries'
 import { exchangeSemester } from '@/utils/exchangeSemester'
-import { extractApiError } from '@/utils/apiError'
+import { describeApiError } from '@/utils/apiError'
 import { useNotification } from '@/composables/useNotification'
 import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { ExchangeResponse, ExchangeSemester } from '@/types/exchange.types'
@@ -23,9 +23,9 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const exchangeStore = useExchangeStore()
+const { guest, isApproved } = useExchangeContext()
+const exchangeMutations = useExchangeMutations(() => props.exchange.guid)
 const { notifyError } = useNotification()
-const { isApproved } = useExchangePermissions()
 
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
@@ -113,7 +113,7 @@ const coordinatorOptions = computed(() => [
 ])
 
 onMounted(async () => {
-  if (exchangeStore.guestMode) return
+  if (guest.value) return
   try {
     coordinators.value = (await coordinatorService.getCoordinators()).data
   } catch {
@@ -134,7 +134,7 @@ async function submit() {
 
   isSubmitting.value = true
   try {
-    await exchangeStore.updateExchange(props.exchange.guid, {
+    await exchangeMutations.update.mutateAsync({
       academicYear: academicYear.value.trim(),
       semesterType: semesterType.value,
       studySemesters: studySemesters.value,
@@ -144,7 +144,7 @@ async function submit() {
     })
     emit('saved')
   } catch (e) {
-    const { title, message } = extractApiError(e)
+    const { title, message } = describeApiError(e)
     errorMessage.value = message ?? title
     notifyError(title, message)
   } finally {
@@ -271,7 +271,7 @@ async function submit() {
         </div>
 
         <!-- Coordinator -->
-        <div v-if="!exchangeStore.guestMode">
+        <div v-if="!guest">
           <label class="mb-2 block text-sm font-semibold text-primary-text">{{
             t('createExchange.selectCoordinator')
           }}</label>

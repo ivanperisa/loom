@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, watch } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useExchangeStore } from '@/stores/exchange.store'
-import { useExchangePermissions } from '@/composables/useExchangePermissions'
+import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useMappingSchemeQuery, useOfficialDocument, useRecognitionMutations } from '@/queries/exchange.queries'
 import { useConfirm } from '@/composables/useConfirm'
 import { useNotification } from '@/composables/useNotification'
-import { extractApiError } from '@/utils/apiError'
 import { formatDate } from '@/utils/formatDate'
 import { documentStatus } from '@/utils/documentStatus'
 import type { CourseGradesRequest } from '@/types/recognition.types'
@@ -16,6 +16,7 @@ import ActionButton from '@/components/common/ActionButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import PanelHeaderBar from '@/components/common/PanelHeaderBar.vue'
 import AuditInfo from '@/components/common/AuditInfo.vue'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 
 const props = defineProps<{
   exchangeId: string
@@ -23,16 +24,21 @@ const props = defineProps<{
 }>()
 
 const { t, locale } = useI18n()
-const exchangeStore = useExchangeStore()
-const { isCoordinator } = useExchangePermissions()
+const draft = useLaDraftStore()
+const { recognition, recognitionQuery, isCoordinator } = useExchangeContext()
+const mappingSchemeQuery = useMappingSchemeQuery(() => props.exchangeId)
+const mutations = useRecognitionMutations(() => props.exchangeId)
+const officialDocument = useOfficialDocument(() => props.exchangeId)
+/** Unsaved LA changes would be left out of the frozen version, so starting waits for them. */
+const laHasUnsavedChanges = computed(() => draft.exchangeId === props.exchangeId && draft.isDirty)
 const { confirm } = useConfirm()
-const { notifySuccess, notifyError } = useNotification()
+const { notifySuccess } = useNotification()
 
-const loading = ref(true)
-const isSaving = ref(false)
-const starting = ref(false)
+const loading = computed(() => recognitionQuery.isPending.value || mappingSchemeQuery.isPending.value)
+const loadError = computed(() => recognitionQuery.error.value ?? mappingSchemeQuery.error.value)
+const isSaving = computed(() => mutations.saveGrades.isPending.value)
+const starting = computed(() => mutations.start.isPending.value)
 const showHistory = ref(false)
-const downloadingOfficial = ref(false)
 
 interface GradeData {
   enrollmentStatus: string
@@ -42,7 +48,6 @@ interface GradeData {
   examDate: string
 }
 
-const recognition = computed(() => exchangeStore.serverRecognition)
 const isStarted = computed(() => recognition.value?.isStarted ?? false)
 const isApproved = computed(() => recognition.value?.status === documentStatus.Approved)
 
@@ -54,7 +59,7 @@ function byCourseName<T extends { partnerCourseName: string | null }>(entries: T
 const agreedEntries = computed(() => byCourseName(recognition.value?.agreed ?? []).map((e) => ({ ...e, enrollmentStatus: null })))
 
 // Table 2: the results (same data as the mapping scheme). Grades belong to a partner course.
-const resultEntries = computed(() => byCourseName(exchangeStore.serverMappingScheme?.entries ?? []))
+const resultEntries = computed(() => byCourseName(mappingSchemeQuery.data.value?.entries ?? []))
 
 const editableGrades = reactive<Record<string, GradeData>>({})
 
@@ -101,25 +106,11 @@ const changedGrades = computed<CourseGradesRequest[]>(() => {
   return changed
 })
 
-watch(() => exchangeStore.serverMappingScheme, initGrades)
+// Saved grades replace the edits (after load, save, start, or a change to the mapping scheme).
+watch(() => mappingSchemeQuery.data.value, initGrades, { immediate: true })
 
-onMounted(async () => {
-  try {
-    await exchangeStore.fetchRecognition(props.exchangeId)
-    initGrades()
-  } finally {
-    loading.value = false
-  }
-})
-
-async function saveAll() {
-  isSaving.value = true
-  try {
-    await exchangeStore.saveGrades(props.exchangeId, { entries: changedGrades.value })
-    initGrades()
-  } finally {
-    isSaving.value = false
-  }
+function saveAll() {
+  mutations.saveGrades.mutate({ entries: changedGrades.value })
 }
 
 async function startFinalRecognition() {
@@ -130,30 +121,20 @@ async function startFinalRecognition() {
     variant: 'danger',
   })
   if (!ok) return
-  starting.value = true
   try {
-    await exchangeStore.startFinalRecognition(props.exchangeId)
-    initGrades()
+    await mutations.start.mutateAsync()
     notifySuccess(t('recognition.start.done'))
-  } catch (error) {
-    const { title, message } = extractApiError(error)
-    notifyError(t('recognition.start.failed'), message ?? title)
-  } finally {
-    starting.value = false
+  } catch {
+    // The toast already says why.
   }
 }
 
-async function setStatus(status: typeof documentStatus.Draft | typeof documentStatus.Approved) {
-  await exchangeStore.updateRecognitionStatus(props.exchangeId, { status })
+function setStatus(status: typeof documentStatus.Draft | typeof documentStatus.Approved) {
+  mutations.setStatus.mutate({ status })
 }
 
-async function downloadOfficial() {
-  downloadingOfficial.value = true
-  try {
-    await exchangeStore.downloadOfficialDocument(props.exchangeId, locale.value)
-  } finally {
-    downloadingOfficial.value = false
-  }
+function downloadOfficial() {
+  officialDocument.mutate(locale.value)
 }
 </script>
 
@@ -171,12 +152,14 @@ async function downloadOfficial() {
       <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded bg-primary/20"></div>
     </div>
 
+    <ErrorAlert v-else-if="loadError" :error="loadError" @retry="recognitionQuery.refetch(); mappingSchemeQuery.refetch()" />
+
     <template v-else-if="recognition">
       <PanelHeaderBar :home-profile-name="homeProfileName">
         <template #left>
           <StatusBadge v-if="isStarted" :status="recognition.status" />
           <div style="display: flex; gap: 6px;">
-            <ActionButton :disabled="downloadingOfficial" :title="t('documents.officialHint')" @click="downloadOfficial">
+            <ActionButton :disabled="officialDocument.isPending.value" :title="t('documents.officialHint')" @click="downloadOfficial">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               {{ t('documents.official') }}
             </ActionButton>
@@ -245,13 +228,13 @@ async function downloadOfficial() {
           <button
             type="button"
             class="rounded-lg bg-primary-strong px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:cursor-not-allowed disabled:opacity-50"
-            :disabled="!recognition.canStart || starting || exchangeStore.isDirty"
+            :disabled="!recognition.canStart || starting || laHasUnsavedChanges"
             @click="startFinalRecognition"
           >
             {{ t('recognition.start.button') }}
           </button>
           <span v-if="!recognition.canStart" class="text-xs text-light/60">{{ t('recognition.start.needsApproval') }}</span>
-          <span v-else-if="exchangeStore.isDirty" class="text-xs text-light/60">{{ t('recognition.start.unsavedLa') }}</span>
+          <span v-else-if="laHasUnsavedChanges" class="text-xs text-light/60">{{ t('recognition.start.unsavedLa') }}</span>
         </div>
       </section>
 

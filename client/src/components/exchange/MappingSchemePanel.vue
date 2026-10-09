@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useExchangeStore } from '@/stores/exchange.store'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useMappingSchemeQuery, useRecognitionMutations } from '@/queries/exchange.queries'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { useTheme } from '@/composables/useTheme'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
@@ -22,12 +24,16 @@ const props = defineProps<{
 }>()
 
 const { t, locale } = useI18n()
-const exchangeStore = useExchangeStore()
+const { learningAgreement, recognition, recognitionQuery } = useExchangeContext()
+const mappingSchemeQuery = useMappingSchemeQuery(() => props.exchangeId)
+const mutations = useRecognitionMutations(() => props.exchangeId)
+const mappingScheme = mappingSchemeQuery.data
 const { theme } = useTheme()
 useDragAutoScroll()
 
-const loading = ref(true)
-const saving = ref(false)
+const loading = computed(() => recognitionQuery.isPending.value || mappingSchemeQuery.isPending.value)
+const loadError = computed(() => recognitionQuery.error.value ?? mappingSchemeQuery.error.value)
+const saving = computed(() => mutations.saveMappingScheme.isPending.value)
 
 const SEMESTERS = DOC_TABLE_SEMESTERS
 const modes: SlotMode[] = [slotMode.AtHome]
@@ -38,22 +44,22 @@ const localEntries = ref<MappingSchemeEntryResponse[]>([])
 
 const laModeBySlot = computed(() => {
   const m = new Map<string, SlotMode>()
-  for (const e of exchangeStore.serverLearningAgreement?.entries ?? []) {
+  for (const e of learningAgreement.value?.entries ?? []) {
     if (!e.isDeleted) m.set(e.homeSlotId, e.mode)
   }
   return m
 })
 
 function rebuildLocal() {
-  localEntries.value = (exchangeStore.serverMappingScheme?.entries ?? []).map((e) => ({ ...e }))
+  localEntries.value = (mappingScheme.value?.entries ?? []).map((e) => ({ ...e }))
 }
 
-const isActive = computed(() => exchangeStore.serverRecognition?.isStarted ?? false)
+const isActive = computed(() => recognition.value?.isStarted ?? false)
 // Approved results are locked until the coordinator sends them back to draft.
-const isLocked = computed(() => exchangeStore.serverRecognition?.status === documentStatus.Approved)
+const isLocked = computed(() => recognition.value?.status === documentStatus.Approved)
 
 const isDirty = computed(() => {
-  const server = exchangeStore.serverMappingScheme?.entries ?? []
+  const server = mappingScheme.value?.entries ?? []
   if (server.length !== localEntries.value.length) return true
   const byId = new Map(server.map((e) => [e.id, e]))
   return localEntries.value.some((e) => {
@@ -68,7 +74,7 @@ const isDirty = computed(() => {
 })
 
 function slotsForSemester(sem: number): HomeSlotResponse[] {
-  return exchangeStore.slots
+  return (learningAgreement.value?.slots ?? [])
     .filter((s) => s.semester === sem)
     .sort((a, b) => a.slotPosition - b.slotPosition)
 }
@@ -218,10 +224,8 @@ function onItemClick(entry: MappingSchemeEntryResponse) {
 }
 
 
-async function save() {
-  saving.value = true
-  try {
-    await exchangeStore.saveMappingScheme(props.exchangeId, {
+function save() {
+  mutations.saveMappingScheme.mutate({
       entries: localEntries.value.map((e) => ({
         id: Number(e.id),
         homeSlotId: Number(e.homeSlotId),
@@ -233,28 +237,15 @@ async function save() {
         hrGrade: e.hrGrade,
         examDate: e.examDate,
       })),
-    })
-  } finally {
-    saving.value = false
-  }
+  })
 }
 
 function discard() {
   rebuildLocal()
 }
 
-watch(() => exchangeStore.serverMappingScheme, rebuildLocal, { deep: false })
-
-onMounted(async () => {
-  try {
-    if (!exchangeStore.serverMappingScheme || !exchangeStore.serverRecognition) {
-      await exchangeStore.fetchRecognition(props.exchangeId)
-    }
-    rebuildLocal()
-  } finally {
-    loading.value = false
-  }
-})
+// Saved data replaces the local copy (after load and after each save).
+watch(mappingScheme, rebuildLocal, { immediate: true })
 </script>
 
 <template>
@@ -262,6 +253,8 @@ onMounted(async () => {
     <div v-if="loading" class="space-y-3">
       <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded bg-primary/20"></div>
     </div>
+
+    <ErrorAlert v-else-if="loadError" :error="loadError" @retry="recognitionQuery.refetch(); mappingSchemeQuery.refetch()" />
 
     <template v-else>
       <div class="relative mb-4 flex min-h-[38px] items-center justify-center">

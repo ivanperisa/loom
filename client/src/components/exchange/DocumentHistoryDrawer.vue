@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useExchangeStore } from '@/stores/exchange.store'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useDocumentVersionsQuery, useLearningAgreementMutations } from '@/queries/exchange.queries'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useNotification } from '@/composables/useNotification'
-import { extractApiError } from '@/utils/apiError'
+import { describeApiError } from '@/utils/apiError'
 import { formatDate } from '@/utils/formatDate'
 import ActionButton from '@/components/common/ActionButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -20,30 +23,22 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const { t, locale } = useI18n()
-const exchangeStore = useExchangeStore()
+const { learningAgreement } = useExchangeContext()
+const draft = useLaDraftStore()
+const versionsQuery = useDocumentVersionsQuery(() => props.exchangeId, props.document)
+const laMutations = useLearningAgreementMutations(() => props.exchangeId)
 const { confirm } = useConfirm()
 const { notifySuccess, notifyWarning, notifyError } = useNotification()
 
 const activeTab = ref<'approvals' | 'backups'>('approvals')
-const versions = ref<DocumentVersionResponse[]>([])
+const versions = computed(() => versionsQuery.data.value ?? [])
 const expandedIds = ref<Set<number>>(new Set())
-const loading = ref(false)
+const loading = computed(() => versionsQuery.isPending.value)
 
 const approvals = computed(() => versions.value.filter((v) => v.kind === 'Approved'))
 const backups = computed(() => versions.value.filter((v) => v.kind === 'Backup'))
 const isLa = computed(() => props.document === 'la')
 
-async function load() {
-  loading.value = true
-  try {
-    versions.value = isLa.value
-      ? await exchangeStore.fetchLaVersions(props.exchangeId)
-      : await exchangeStore.fetchRecognitionVersions(props.exchangeId)
-  } finally {
-    loading.value = false
-  }
-}
-onMounted(load)
 
 function toggleExpand(id: number) {
   if (expandedIds.value.has(id)) expandedIds.value.delete(id)
@@ -80,7 +75,9 @@ async function restore(version: DocumentVersionResponse) {
   })
   if (!ok) return
   try {
-    const result = await exchangeStore.restoreLaVersion(props.exchangeId, version.id)
+    const result = await laMutations.restore.mutateAsync(version.id)
+    // The restored draft replaces whatever was being edited.
+    if (learningAgreement.value) draft.load(props.exchangeId, learningAgreement.value)
     if (result.missing.length === 0) {
       notifySuccess(t('history.restoreSuccess'))
     } else {
@@ -91,7 +88,7 @@ async function restore(version: DocumentVersionResponse) {
     }
     emit('close')
   } catch (error) {
-    const { title, message } = extractApiError(error)
+    const { title, message } = describeApiError(error)
     notifyError(t('history.restoreError'), message ?? title)
   }
 }
@@ -132,6 +129,7 @@ async function restore(version: DocumentVersionResponse) {
 
       <div class="drawer-body">
         <div v-if="loading" class="drawer-empty">{{ t('common.loading') }}</div>
+        <ErrorAlert v-else-if="versionsQuery.error.value" :error="versionsQuery.error.value" @retry="versionsQuery.refetch()" />
 
         <template v-else-if="activeTab === 'approvals'">
           <p v-if="approvals.length === 0" class="drawer-empty">{{ t('history.empty') }}</p>

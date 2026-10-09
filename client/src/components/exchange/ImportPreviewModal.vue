@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useExchangeStore } from '@/stores/exchange.store'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useLearningAgreementMutations } from '@/queries/exchange.queries'
 import { useNotification } from '@/composables/useNotification'
-import { extractApiError } from '@/utils/apiError'
+import { describeApiError, describeCode } from '@/utils/apiError'
 import ActionButton from '@/components/common/ActionButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { ImportPreviewResponse, ImportRow, MappingExportDto } from '@/types/learningAgreement.types'
@@ -16,7 +18,9 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
-const exchangeStore = useExchangeStore()
+const { learningAgreement } = useExchangeContext()
+const draft = useLaDraftStore()
+const laMutations = useLearningAgreementMutations(() => props.exchangeId)
 const { notifySuccess, notifyError } = useNotification()
 
 const preview = ref<ImportPreviewResponse | null>(null)
@@ -26,9 +30,9 @@ const applying = ref(false)
 // The server matches the file to this exchange (slots by id, courses by id or code) and runs the save validation.
 onMounted(async () => {
   try {
-    preview.value = await exchangeStore.previewImport(props.exchangeId, props.dto)
+    preview.value = await laMutations.previewImport.mutateAsync(props.dto)
   } catch (error) {
-    const { title, message } = extractApiError(error)
+    const { title, message } = describeApiError(error)
     loadError.value = message ?? title
   }
 })
@@ -46,11 +50,13 @@ function rowLabel(row: ImportRow): string {
 async function apply() {
   applying.value = true
   try {
-    const result = await exchangeStore.importMappings(props.exchangeId, props.dto)
+    const result = await laMutations.importFile.mutateAsync(props.dto)
+    // The imported draft replaces whatever was being edited.
+    if (learningAgreement.value) draft.load(props.exchangeId, learningAgreement.value)
     notifySuccess(t('la.import.successTitle'), t('la.import.successMessage', { added: result.added, removed: result.removed, changed: result.changed }))
     emit('close')
   } catch (error) {
-    const { title, message } = extractApiError(error)
+    const { title, message } = describeApiError(error)
     notifyError(t('la.import.errorTitle'), message ?? title)
   } finally {
     applying.value = false
@@ -103,7 +109,7 @@ async function apply() {
           <div class="import-mismatch__hint">{{ t('la.import.mismatchHint') }}</div>
         </div>
 
-        <p v-if="!preview.canApply" class="import-blocked">{{ preview.blockingMessage }}</p>
+        <p v-if="!preview.canApply" class="import-blocked">{{ describeCode(preview.blockingCode, preview.blockingParams ?? {}, preview.blockingMessage) }}</p>
 
         <div class="import-table-wrap">
           <table class="import-table">

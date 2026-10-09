@@ -15,7 +15,7 @@ export const coordinatorService = {
   updateStudent: (studentId: string, request: UpdateStudentRequest) =>
     api.put<CoordinatorStudentResponse>(`/api/coordinator/students/${studentId}`, request),
   deleteStudent: (studentId: string) =>
-    api.delete(`/api/coordinator/students/${studentId}`, { suppressErrorToast: true }),
+    api.delete(`/api/coordinator/students/${studentId}`, { errorToast: false }),
   getStudentsExchanges: () =>
     api.get<ExchangeSummaryResponse[]>('/api/coordinator/students/exchanges'),
 }

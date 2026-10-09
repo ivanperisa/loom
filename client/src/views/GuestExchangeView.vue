@@ -1,20 +1,14 @@
 <script setup lang="ts">
-import { onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useExchangeStore } from '@/stores/exchange.store'
 import ExchangeDetailPanel from '@/components/exchange/ExchangeDetailPanel.vue'
 import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 
 const route = useRoute()
 const { t } = useI18n()
-const exchangeStore = useExchangeStore()
 
 const exchangeId = route.params.exchangeId as string
-
-exchangeStore.setGuestMode(true)
-onUnmounted(() => exchangeStore.setGuestMode(false))
 </script>
 
 <template>
@@ -39,7 +33,7 @@ onUnmounted(() => exchangeStore.setGuestMode(false))
 
     <section class="page-container page-container--wide">
       <p class="mb-4 text-center text-xs text-light/40">{{ t('exchangeAccess.readOnlyNotice') }}</p>
-      <ExchangeDetailPanel :exchange-id="exchangeId" :allow-delete="false" />
+      <ExchangeDetailPanel :exchange-id="exchangeId" guest />
     </section>
   </main>
 </template>
