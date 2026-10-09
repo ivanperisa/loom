@@ -37,13 +37,18 @@ public sealed class ListSpec<TEntity, TResponse> where TEntity : EntityBase
         var like = typeof(DbFunctionsExtensions).GetMethod(nameof(DbFunctionsExtensions.Like),
             [typeof(DbFunctions), typeof(string), typeof(string), typeof(string)])!;
         var toLower = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes)!;
+        var unaccent = typeof(TextSearch).GetMethod(nameof(TextSearch.Unaccent))!;
+
+        // The pattern goes in as a SQL parameter (a captured value, not a constant), so one compiled query serves
+        // every search term. Both sides are lower-cased and unaccented: "cakovec" finds "Čakovec".
+        var searchTerm = Expression.Call(unaccent, Expression.Property(Expression.Constant(new SearchTerm(pattern)), nameof(SearchTerm.Pattern)));
 
         Expression? any = null;
         foreach (var field in _searchFields)
         {
             var value = new ReplaceParameter(field.Parameters[0], row).Visit(field.Body);
-            var match = Expression.Call(like, Expression.Constant(EF.Functions), Expression.Call(value, toLower),
-                Expression.Constant(pattern), Expression.Constant("\\"));
+            var match = Expression.Call(like, Expression.Constant(EF.Functions),
+                Expression.Call(unaccent, Expression.Call(value, toLower)), searchTerm, Expression.Constant("\\"));
             any = any is null ? match : Expression.OrElse(any, match);
         }
         return query.Where(Expression.Lambda<Func<TEntity, bool>>(any!, row));
@@ -58,6 +63,8 @@ public sealed class ListSpec<TEntity, TResponse> where TEntity : EntityBase
 
     private static string EscapeLike(string value) =>
         value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+
+    private sealed record SearchTerm(string Pattern);
 
     private sealed class ReplaceParameter(ParameterExpression from, ParameterExpression to) : ExpressionVisitor
     {

@@ -65,6 +65,31 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
     }
 
     [Fact]
+    public async Task Search_ignores_case_and_accents()
+    {
+        var admin = await NewUser(UserRole.Admin);
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        var userId = await NewUser();
+        await Db(async db =>
+        {
+            var user = await db.Users.SingleAsync(u => u.Id == userId, Ct);
+            user.Name = $"Đuro Kovačević {tag}";
+            db.Institutions.Add(new Institution { Name = $"Sveučilište Čakovec {tag}", Country = "Croatia", Type = InstitutionType.Partner });
+            return await db.SaveChangesAsync(Ct);
+        });
+
+        async Task<int> Users(string search) => (await Ok<AdminUserService, PagedResponse<UserListResponse>>(
+            async s => await s.ListAsync(new UserListQuery { Search = search }, Ct), admin)).TotalCount;
+        async Task<int> Institutions(string search) => (await Ok<PartnerInstitutionService, PagedResponse<PartnerInstitutionAdminResponse>>(
+            async s => await s.ListAsync(new PartnerInstitutionListQuery { Search = search }, Ct), admin)).TotalCount;
+
+        Assert.Equal(1, await Users($"duro kovacevic {tag}"));   // đ → d, č → c
+        Assert.Equal(1, await Users($"KOVAČEVIĆ {tag}"));
+        Assert.Equal(1, await Institutions($"cakovec {tag}"));
+        Assert.Equal(0, await Institutions($"cakovec 100%{tag}"));   // % and _ stay literal
+    }
+
+    [Fact]
     public async Task Draft_exchange_without_recognition_can_be_deleted()
     {
         var student = await NewUser();

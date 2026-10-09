@@ -542,7 +542,7 @@ export default {
       title: 'User Management',
       pending: 'Request pending',
       empty: 'No users found.',
-      searchPlaceholder: 'Search by name, email, JMBAG or institution...',
+      searchPlaceholder: 'Search by name, email or JMBAG...',
       allRoles: 'All roles',
       allInstitutions: 'All institutions',
       allStatuses: 'All statuses',

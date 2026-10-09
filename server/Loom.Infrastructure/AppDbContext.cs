@@ -1,3 +1,4 @@
+using Loom.Application.Common.Querying;
 using Loom.Application.Interfaces;
 using Loom.Domain.Common;
 using Loom.Domain.Entities;
@@ -29,6 +30,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        modelBuilder.HasDbFunction(typeof(TextSearch).GetMethod(nameof(TextSearch.Unaccent))!)
+            .HasName("f_unaccent").HasSchema("public");
         modelBuilder.UseSerialColumns();
         ApplyPostgresNaming(modelBuilder);
         base.OnModelCreating(modelBuilder);

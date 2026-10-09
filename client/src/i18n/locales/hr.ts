@@ -544,7 +544,7 @@ export default {
       title: 'Upravljanje korisnicima',
       pending: 'Zahtjev na čekanju',
       empty: 'Nema pronađenih korisnika.',
-      searchPlaceholder: 'Pretraži po imenu, emailu, JMBAG-u ili instituciji...',
+      searchPlaceholder: 'Pretraži po imenu, emailu ili JMBAG-u...',
       allRoles: 'Sve uloge',
       allInstitutions: 'Sve institucije',
       allStatuses: 'Svi statusi',

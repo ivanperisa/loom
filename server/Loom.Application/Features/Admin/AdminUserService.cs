@@ -23,7 +23,8 @@ public sealed class AdminUserService(IAppDbContext db, ICurrentActor actor, IMem
         u.CoordinatorId, u.Coordinator != null ? u.Coordinator.Name : null);
 
     private static readonly ListSpec<User, UserListResponse> List = ListSpec.For<User>()
-        .SearchIn(u => u.Name, u => u.Email, u => u.Jmbag, u => u.Institution!.Name)
+        // Indexed columns only (trigram indexes): institutions have their own filter.
+        .SearchIn(u => u.Name, u => u.Email, u => u.Jmbag)
         .SortBy("name", u => u.Name, isDefault: true)
         .SortBy("role", u => u.Role)
         .SortBy("jmbag", u => u.Jmbag)
