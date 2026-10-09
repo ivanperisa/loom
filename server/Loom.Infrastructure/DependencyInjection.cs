@@ -7,13 +7,13 @@ namespace Loom.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, string? connectionString)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, string? connectionString, bool disableJit = true)
     {
         services.AddHybridCache();
         services.AddSingleton<CacheInvalidationInterceptor>();
 
         services.AddDbContext<AppDbContext>((sp, options) => options
-            .UseNpgsql(WithoutJit(connectionString))
+            .UseNpgsql(disableJit ? WithoutJit(connectionString) : connectionString)
             .AddInterceptors(sp.GetRequiredService<CacheInvalidationInterceptor>()));
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         return services;
@@ -23,7 +23,7 @@ public static class DependencyInjection
     /// PostgreSQL's JIT compiles any query whose estimated cost passes a threshold. Our queries are short and
     /// indexed, so compiling costs more than it saves (15 ms per call, hundreds of ms the first time). Turned off
     /// for this app's connections only; the server setting is untouched. An explicit "jit" in the connection
-    /// string wins.
+    /// string wins; <c>Database:DisableJit=false</c> skips it (PgBouncer in transaction mode rejects startup options).
     /// </summary>
     public static string? WithoutJit(string? connectionString)
     {

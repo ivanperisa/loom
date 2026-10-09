@@ -14,7 +14,9 @@ try
     builder.AddLoomAuthentication();
     var devAuthEnabled = builder.IsDevAuthEnabled();
 
-    builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("DefaultConnection"));
+    builder.Services.AddInfrastructure(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        disableJit: builder.Configuration.GetValue("Database:DisableJit", true));
     builder.Services.AddApplication();
 
     var app = builder.Build();

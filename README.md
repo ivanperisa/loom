@@ -159,7 +159,7 @@ The first migration (`Initial`) describes the schema that production already has
 ### Database requirements
 
 - PostgreSQL 13 or newer. The `AccentInsensitiveSearch` migration creates the `unaccent` and `pg_trgm` extensions; both are "trusted" extensions, so the database owner can create them without superuser rights. If the owner lacks the `CREATE` privilege on the database, an admin runs `CREATE EXTENSION unaccent; CREATE EXTENSION pg_trgm;` once beforehand.
-- The API turns off PostgreSQL's JIT for its own connections (`-c jit=off` in the connection options). For these short queries JIT costs more than it saves (measured: 15 ms per call, hundreds of ms on first use). It is a client-side option, so the server setting stays as it is. One exception: PgBouncer in transaction mode rejects startup options. In that case add `Options=` (empty) or `jit=on` to the connection string, which skips it.
+- The API turns off PostgreSQL's JIT for its own connections (`-c jit=off` in the connection options). For these short queries JIT costs more than it saves (measured: 15 ms per call, hundreds of ms on first use). It is a client-side option, so the server setting stays as it is. One exception: PgBouncer in transaction mode rejects startup options. Behind PgBouncer, set `Database__DisableJit=false` and turn JIT off for the app's role instead (`ALTER ROLE loom SET jit = off`).
 
 ### Backups
 
