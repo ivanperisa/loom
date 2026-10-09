@@ -9,6 +9,7 @@ public record ImportPreviewResponse(
     /// <summary>Why it cannot be applied (an error code such as LA_LOCKED or ECTS_EXCEEDED), with a message.</summary>
     string? BlockingCode,
     string? BlockingMessage,
+    Dictionary<string, object>? BlockingParams,
     List<ImportContextWarning> ContextWarnings,
     List<ImportRow> Added,
     List<ImportRow> Removed,

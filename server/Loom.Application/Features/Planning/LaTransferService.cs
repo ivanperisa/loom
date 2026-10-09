@@ -150,7 +150,7 @@ public sealed class LaTransferService(
             .ToList();
 
         var preview = new ImportPreviewResponse(
-            error is null, error?.Code, error?.Description, await ContextWarningsAsync(exchange, file, ct),
+            error is null, error?.Code, error?.Description, error?.Metadata, await ContextWarningsAsync(exchange, file, ct),
             added, removed, changed, unchanged, skipped);
         return new ImportPlan(preview, request, error);
     }

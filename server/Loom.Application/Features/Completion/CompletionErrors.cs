@@ -12,10 +12,10 @@ public static class CompletionErrors
     public static Error StatusUnchanged(object status) => Error.Conflict("STATUS_UNCHANGED", $"Recognition is already {status}.");
     public static Error NotAssignedCoordinator => Error.Forbidden("FORBIDDEN", "Only the assigned coordinator can approve or reopen the recognition.");
     public static Error InvalidEnrollmentStatus(string? value) => Error.Validation("INVALID_ENROLLMENT_STATUS", $"Invalid course status: {value}.");
-    public static Error GradeTooLong(string field, int max) => Error.Validation("INVALID_GRADE", $"{field} can be at most {max} characters.");
-    public static Error CourseNotInScheme(int courseId) => Error.Validation("INVALID_PARTNER_COURSE", $"Course {courseId} is not part of the mapping scheme.");
-    public static Error EntryNotFound(int id) => Error.NotFound("ENTRY_NOT_FOUND", $"Mapping scheme entry {id} not found.");
+    public static Error GradeTooLong(string field, int max) => Error.Validation("INVALID_GRADE", $"{field} can be at most {max} characters.", new Dictionary<string, object> { ["max"] = max });
+    public static Error CourseNotInScheme(int courseId) => Error.Validation("INVALID_PARTNER_COURSE", $"Course {courseId} is not part of the mapping scheme.", new Dictionary<string, object> { ["courseId"] = courseId });
+    public static Error EntryNotFound(int id) => Error.NotFound("ENTRY_NOT_FOUND", $"Mapping scheme entry {id} not found.", new Dictionary<string, object> { ["id"] = id });
     public static Error NegativeEcts => Error.Validation("INVALID_ECTS", "Awarded ECTS cannot be negative.");
-    public static Error EctsExceeded(int courseId, decimal available) => Error.Validation("ECTS_EXCEEDED", $"Awarded ECTS for course {courseId} exceeds available {available}.");
-    public static Error SlotNotInProfile(int slotId) => Error.Validation("SLOT_NOT_IN_PROFILE", $"Home slot {slotId} does not belong to this profile.");
+    public static Error EctsExceeded(int courseId, decimal available) => Error.Validation("ECTS_EXCEEDED", $"Awarded ECTS for course {courseId} exceeds available {available}.", new Dictionary<string, object> { ["courseId"] = courseId, ["available"] = available });
+    public static Error SlotNotInProfile(int slotId) => Error.Validation("SLOT_NOT_IN_PROFILE", $"Home slot {slotId} does not belong to this profile.", new Dictionary<string, object> { ["slotId"] = slotId });
 }

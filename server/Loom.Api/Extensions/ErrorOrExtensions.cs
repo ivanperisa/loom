@@ -39,6 +39,10 @@ public static class ErrorOrExtensions
             ["code"] = primaryError.Code
         };
 
+        // Values the client needs to word the message itself (course id, available ECTS, ...).
+        if (primaryError.Metadata is { Count: > 0 } metadata)
+            extensions["params"] = metadata;
+
         if (errorList.Count > 1)
         {
             extensions["errors"] = errorList.Select(e => new
