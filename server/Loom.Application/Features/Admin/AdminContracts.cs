@@ -15,7 +15,7 @@ public record UserListResponse(
     int Id,
     string Name,
     string Email,
-    string Role,
+    UserRole Role,
     string? InstitutionName,
     string? InstitutionCity,
     int? InstitutionId,

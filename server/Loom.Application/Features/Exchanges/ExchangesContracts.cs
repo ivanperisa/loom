@@ -1,3 +1,4 @@
+using Loom.Domain.Enums;
 using Loom.Application.Features.Catalog;
 
 namespace Loom.Application.Features.Exchanges;
@@ -17,7 +18,7 @@ public record ExchangeResponse(
     string? CoordinatorName,
     string? Mentor,
     string AcademicYear,
-    string SemesterType,
+    ExchangeSemester SemesterType,
     List<int> StudySemesters,
     string? CoordinatorMessage,
     string? EwpLink,
@@ -36,9 +37,9 @@ public record ExchangeSummaryResponse(
     string HomeProgramName,
     string HomeProfileName,
     string AcademicYear,
-    string SemesterType,
-    string LearningAgreementStatus,
-    string? RecognitionStatus,
+    ExchangeSemester SemesterType,
+    DocumentStatus LearningAgreementStatus,
+    DocumentStatus? RecognitionStatus,
     string? EwpLink);
 
 public record CreateExchangeRequest(
@@ -72,3 +73,6 @@ public record AccessLinkPreviewResponse(
     bool CanClaim);
 
 public record AccessTokenRequest(string Token);
+
+/// <summary>The exchange a guest session opens.</summary>
+public record AccessSessionResponse(Guid ExchangeGuid);

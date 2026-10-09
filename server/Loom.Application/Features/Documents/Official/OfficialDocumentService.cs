@@ -107,22 +107,22 @@ public sealed class OfficialDocumentService(
         var grid = la.Entries
             .Where(e => !e.IsDeleted)
             .GroupBy(e => e.HomeSlotId)
-            .ToDictionary(g => g.Key, g => new GridSlot(g.First().Mode, []));
+            .ToDictionary(g => g.Key, g => new GridSlot(g.First().Mode.ToString(), []));
         foreach (var entry in scheme.Entries)
         {
             if (!grid.TryGetValue(entry.HomeSlotId, out var slot) || slot.Mode != nameof(SlotMode.AtExchange))
                 grid[entry.HomeSlotId] = slot = new GridSlot(nameof(SlotMode.AtExchange), slot?.Lines ?? []);
             slot.Lines.Add(new GridLine(entry.PartnerCourseCode, entry.PartnerCourseName, entry.PartnerCourseNameHr, entry.AwardedEcts,
-                entry.EnrollmentStatus == nameof(EnrollmentStatus.NotPassed), null));
+                entry.EnrollmentStatus == EnrollmentStatus.NotPassed, null));
         }
         return grid;
     }
 
     private static List<SignatureLine> Signatures(LearningAgreementResponse la, RecognitionResponse recognition) =>
     [
-        new("la", la.SignedCount > 0 ? la.SignedCount : null, la.Status, la.SignedByName, la.SignedAt),
+        new("la", la.SignedCount > 0 ? la.SignedCount : null, la.Status.ToString(), la.SignedByName, la.SignedAt),
         new("recognition", recognition.ApprovedVersionCount > 0 ? recognition.ApprovedVersionCount : null,
-            recognition.IsStarted ? recognition.Status : "notStarted", recognition.SignedByName, recognition.SignedAt),
+            recognition.IsStarted ? recognition.Status.ToString() : "notStarted", recognition.SignedByName, recognition.SignedAt),
     ];
 
     private static ResultLine ToLine(AgreedEntryResponse e) => new(
@@ -133,5 +133,5 @@ public sealed class OfficialDocumentService(
     private static ResultLine ToLine(MappingSchemeEntryResponse e) => new(
         e.PartnerCourseId ?? 0, e.PartnerCourseCode, e.PartnerCourseName, e.PartnerCourseNameHr, e.PartnerCourseHours, e.PartnerCourseEcts,
         e.HomeSlotCourseIsvuCode, e.HomeSlotCourseName, e.HomeSlotCourseGroupIsvuCode, e.HomeSlotCourseGroupName, e.HomeSlotColor,
-        e.HomeSlotSemester, e.AwardedEcts, e.EnrollmentStatus, e.OriginalGrade, e.EctsGrade, e.HrGrade, e.ExamDate);
+        e.HomeSlotSemester, e.AwardedEcts, e.EnrollmentStatus?.ToString(), e.OriginalGrade, e.EctsGrade, e.HrGrade, e.ExamDate);
 }

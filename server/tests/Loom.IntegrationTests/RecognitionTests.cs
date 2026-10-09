@@ -104,7 +104,7 @@ public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture
 
         var b = (await Scheme(s)).Entries.Where(e => e.PartnerCourseId == s.Courses["B"]).ToList();
         Assert.Equal(2, b.Count);
-        Assert.All(b, e => Assert.Equal(("Passed", "B"), (e.EnrollmentStatus, e.EctsGrade)));
+        Assert.All(b, e => Assert.Equal((EnrollmentStatus.Passed, "B"), (e.EnrollmentStatus, e.EctsGrade)));
 
         Assert.Equal("INVALID_ENROLLMENT_STATUS", (await SaveGrades(s, new CourseGradesRequest(s.Courses["A"], "Maybe", null, null, null, null))).FirstError.Code);
         Assert.Equal("INVALID_PARTNER_COURSE", (await SaveGrades(s, Passed(s.Courses["D"]))).FirstError.Code);
@@ -118,7 +118,7 @@ public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture
         var scheme = await Scheme(s);
         var a = scheme.Entries.Single(e => e.PartnerCourseId == s.Courses["A"]);
         SaveMappingSchemeEntryRequest Keep(MappingSchemeEntryResponse e, int? slot = null, decimal? ects = null) =>
-            new(e.Id, slot ?? e.HomeSlotId, e.PartnerCourseId, ects ?? e.AwardedEcts, e.EnrollmentStatus, e.OriginalGrade, e.EctsGrade, e.HrGrade, e.ExamDate);
+            new(e.Id, slot ?? e.HomeSlotId, e.PartnerCourseId, ects ?? e.AwardedEcts, e.EnrollmentStatus?.ToString(), e.OriginalGrade, e.EctsGrade, e.HrGrade, e.ExamDate);
         var others = scheme.Entries.Where(e => e != a).Select(e => Keep(e)).ToList();
         Task<ErrorOr.ErrorOr<MappingSchemeResponse>> Save(params SaveMappingSchemeEntryRequest[] entries) =>
             Call<MappingSchemeService, MappingSchemeResponse>(x => x.SaveAsync(s.Exchange, new SaveMappingSchemeRequest([.. others, .. entries]), Ct), actor: s.Student);

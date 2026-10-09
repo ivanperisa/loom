@@ -2,7 +2,9 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Loom.Api.Errors;
 using Loom.Api.Middleware;
+using Loom.Api.OpenApi;
 using Loom.Api.Options;
+using Loom.Application.Common.Querying;
 using Loom.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
@@ -23,7 +25,15 @@ public static class ApiSetup
         services.AddProblemDetails();
         services.AddExceptionHandler<ApiExceptionHandler>();
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+        // The document is the client's contract: client/openapi.json → TypeScript types (see ApiContractTests).
+        services.AddSwaggerGen(options =>
+        {
+            options.SupportNonNullableReferenceTypes();
+            options.NonNullableReferenceTypesAsRequired();
+            options.UseAllOfToExtendReferenceSchemas();   // keeps "nullable" on enum and object references
+            options.CustomSchemaIds(SchemaId);
+            options.SchemaFilter<ResponsePropertiesRequiredFilter>();
+        });
 
         services.AddOptions<FrontendOptions>().BindConfiguration(FrontendOptions.Section).ValidateDataAnnotations().ValidateOnStart();
         services.AddSingleton<FrontendUrls>();
@@ -91,4 +101,12 @@ public static class ApiSetup
         app.MapHealthChecks("/healthz", new() { Predicate = _ => false });                       // process is up
         app.MapHealthChecks("/healthz/ready", new() { Predicate = c => c.Tags.Contains("ready") }); // and the database answers
     }
+
+    /// <summary>Readable, stable schema names: <c>PagedResponse&lt;UserListResponse&gt;</c> → <c>UserListResponsePage</c>.</summary>
+    private static string SchemaId(Type type) =>
+        type.IsGenericType && type.GetGenericTypeDefinition() == typeof(PagedResponse<>)
+            ? $"{SchemaId(type.GetGenericArguments()[0])}Page"
+            : type.IsGenericType
+                ? $"{type.Name[..type.Name.IndexOf('`')]}Of{string.Concat(type.GetGenericArguments().Select(SchemaId))}"
+                : type.Name;
 }

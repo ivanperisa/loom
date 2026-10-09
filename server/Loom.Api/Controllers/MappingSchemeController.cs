@@ -12,10 +12,10 @@ namespace Loom.Api.Controllers;
 public class MappingSchemeController(MappingSchemeService mappingSchemes) : ApiController
 {
     [HttpGet]
-    public async Task<IActionResult> Get(Guid exchangeGuid, CancellationToken ct) =>
+    public async Task<ActionResult<MappingSchemeResponse>> Get(Guid exchangeGuid, CancellationToken ct) =>
         Match(await mappingSchemes.GetAsync(exchangeGuid, ct), Ok);
 
     [HttpPut("entries")]
-    public async Task<IActionResult> Save(Guid exchangeGuid, [FromBody] SaveMappingSchemeRequest request, CancellationToken ct) =>
+    public async Task<ActionResult<MappingSchemeResponse>> Save(Guid exchangeGuid, [FromBody] SaveMappingSchemeRequest request, CancellationToken ct) =>
         Match(await mappingSchemes.SaveAsync(exchangeGuid, request, ct), Ok);
 }

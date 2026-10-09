@@ -5,7 +5,7 @@ namespace Loom.Application.Features.Catalog;
 
 // ---- home institution (FER) catalogue
 public record InstitutionResponse(int Id, string Name, string? NameHr, string? Country, string? City, string? ErasmusCode);
-public record HomeProgramResponse(int Id, string Name, string? NameEn, string Level, int DurationSemesters, List<HomeProfileResponse> Profiles);
+public record HomeProgramResponse(int Id, string Name, string? NameEn, StudyProgramLevel Level, int DurationSemesters, List<HomeProfileResponse> Profiles);
 public record HomeProfileResponse(int Id, string Name, string? NameEn);
 
 // ---- partner institutions
@@ -50,8 +50,8 @@ public record PartnerCourseResponse(
     int? LecturesH,
     int? AuditoryH,
     int? LabH,
-    string Semester,
-    string Level,
+    ExchangeSemester Semester,
+    StudyProgramLevel Level,
     bool IsDeleted);
 
 public record MergePartnerCoursesRequest(int PrimaryCourseId, List<int> DuplicateCourseIds);

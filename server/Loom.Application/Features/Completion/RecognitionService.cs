@@ -184,7 +184,7 @@ public sealed class RecognitionService(
             var changes = payload is null ? null : DocumentDiff.Compare(CompletionMappers.DiffRows(previous), CompletionMappers.DiffRows(payload));
             if (payload is not null) previous = payload;
             result.Add(new DocumentVersionResponse(
-                version.Id, version.Kind.ToString(), version.VersionNo, null, version.CreatedAt, version.CreatedBy?.Name,
+                version.Id, version.Kind, version.VersionNo, null, version.CreatedAt, version.CreatedBy?.Name,
                 payload?.Entries.Count ?? 0, changes));
         }
         result.Reverse();
@@ -225,7 +225,7 @@ public sealed class RecognitionService(
 
         return new RecognitionResponse(
             exchangeId,
-            (recognition?.Status ?? DocumentStatus.Draft).ToString(),
+            recognition?.Status ?? DocumentStatus.Draft,
             recognition?.Message,
             isStarted,
             learningAgreement?.ConcludedAt,

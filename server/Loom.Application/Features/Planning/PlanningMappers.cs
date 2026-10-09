@@ -24,7 +24,7 @@ public static class PlanningMappers
     public static LearningAgreementEntryResponse ToResponse(this LearningAgreementEntry entry) => new(
         entry.Id,
         entry.HomeSlotId,
-        entry.Mode.ToString(),
+        entry.Mode,
         entry.PartnerCourseId,
         entry.PartnerCourse?.Code,
         entry.PartnerCourse?.Name,

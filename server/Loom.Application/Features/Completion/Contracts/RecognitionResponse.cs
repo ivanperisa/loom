@@ -1,3 +1,5 @@
+using Loom.Domain.Enums;
+
 namespace Loom.Application.Features.Completion;
 
 /// <summary>
@@ -6,7 +8,7 @@ namespace Loom.Application.Features.Completion;
 /// </summary>
 public record RecognitionResponse(
     int ExchangeId,
-    string Status,
+    DocumentStatus Status,
     string? Message,
     /// <summary>"Start final recognition" was pressed: table 2 and the mapping scheme exist and can be edited.</summary>
     bool IsStarted,

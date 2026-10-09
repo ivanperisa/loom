@@ -1,8 +1,10 @@
+using Loom.Domain.Enums;
+
 namespace Loom.Application.Features.Planning;
 
 public record LearningAgreementResponse(
     int ExchangeId,
-    string Status,
+    DocumentStatus Status,
     string? Message,
     List<HomeSlotResponse> Slots,
     List<LearningAgreementEntryResponse> Entries,

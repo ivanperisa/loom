@@ -5,7 +5,7 @@ namespace Loom.Api.Extensions;
 
 public static class ErrorOrExtensions
 {
-    public static IActionResult ToProblemDetails(this IEnumerable<Error> errors, ControllerBase controller)
+    public static ActionResult ToProblemDetails(this IEnumerable<Error> errors, ControllerBase controller)
     {
         var errorList = errors.ToList();
         var primaryError = errorList.First();

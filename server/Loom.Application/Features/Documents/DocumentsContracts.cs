@@ -1,9 +1,11 @@
+using Loom.Domain.Enums;
+
 namespace Loom.Application.Features.Documents;
 
 /// <summary>One entry of a version list: an approval (with what changed since the previous one) or a backup.</summary>
 public record DocumentVersionResponse(
     int Id,
-    string Kind,
+    VersionKind Kind,
     int? VersionNo,
     /// <summary>"A1", "A2", … for amendments; null for the original approval and for backups.</summary>
     string? AmendmentLabel,

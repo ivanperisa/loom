@@ -16,7 +16,7 @@ namespace Loom.Application.Features.Admin;
 public sealed class AdminUserService(IAppDbContext db, ICurrentActor actor, IMemoryCache memoryCache)
 {
     private static readonly Expression<Func<User, UserListResponse>> Projection = u => new UserListResponse(
-        u.Id, u.Name, u.Email, u.Role.ToString(),
+        u.Id, u.Name, u.Email, u.Role,
         u.Institution != null ? u.Institution.Name : null,
         u.Institution != null ? u.Institution.City : null,
         u.InstitutionId, u.CoordinatorRequestStatus, u.IsOnboarded, u.Jmbag, u.Mentor,

@@ -164,12 +164,12 @@ public class LearningAgreementTests(DatabaseFixture fixture) : IntegrationTest(f
         Assert.Equal(1, result.Entries);
         Assert.Equal(("CourseNotFound", "B"), (Assert.Single(result.Missing).Reason, result.Missing[0].PartnerCourseCode));
         Assert.Equal([s.Courses["A"]], (await GetLa(s)).Entries.Where(e => !e.IsDeleted).Select(e => e.PartnerCourseId!.Value));
-        var backup = Assert.Single(await Versions(s), v => v.Kind == nameof(VersionKind.Backup));
+        var backup = Assert.Single(await Versions(s), v => v.Kind == VersionKind.Backup);
         Assert.Equal(1, backup.EntryCount);   // the draft with C
 
         // Restoring the same content again changes nothing and takes no second backup.
         await Ok<LaVersionService, RestoreResult>(x => x.RestoreAsync(s.Exchange, v1.Id, Ct), actor: s.Student);
-        Assert.Single(await Versions(s), v => v.Kind == nameof(VersionKind.Backup));
+        Assert.Single(await Versions(s), v => v.Kind == VersionKind.Backup);
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class LearningAgreementTests(DatabaseFixture fixture) : IntegrationTest(f
         Assert.Equal((1, 1, 1), (applied.Added, applied.Removed, applied.Changed));
         var live = (await GetLa(target)).Entries.Where(e => !e.IsDeleted).Select(e => e.PartnerCourseCode).Order();
         Assert.Equal(["A", "B"], live);
-        Assert.Single(await Versions(target), v => v.Kind == nameof(VersionKind.Backup));
+        Assert.Single(await Versions(target), v => v.Kind == VersionKind.Backup);
     }
 
     [Fact]

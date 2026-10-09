@@ -78,7 +78,7 @@ public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess ac
 
         return new LearningAgreementResponse(
             exchange.ExchangeId,
-            (learningAgreement?.Status ?? DocumentStatus.Draft).ToString(),
+            learningAgreement?.Status ?? DocumentStatus.Draft,
             learningAgreement?.Message,
             slots.Select(s => s.ToResponse()).ToList(),
             entries,

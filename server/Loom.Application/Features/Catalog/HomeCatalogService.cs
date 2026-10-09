@@ -27,7 +27,7 @@ public sealed class HomeCatalogService(IAppDbContext db, HybridCache cache)
             await db.HomePrograms
                 .AsNoTracking()
                 .OrderBy(p => p.Name)
-                .Select(p => new HomeProgramResponse(p.Id, p.Name, p.NameEn, p.Level.ToString(), p.DurationSemesters,
+                .Select(p => new HomeProgramResponse(p.Id, p.Name, p.NameEn, p.Level, p.DurationSemesters,
                     p.Profiles.OrderBy(x => x.Id).Select(x => new HomeProfileResponse(x.Id, x.Name, x.NameEn)).ToList()))
                 .ToListAsync(token),
             CacheOptions, Tags, ct);

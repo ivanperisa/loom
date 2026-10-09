@@ -11,6 +11,7 @@ public class DocumentController(OfficialDocumentService documents) : ApiControll
 {
     /// <summary>The official document (xlsx): LA with amendments, agreed recognition, results and mapping scheme, signatures.</summary>
     [HttpGet("official")]
+    [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
     public async Task<IActionResult> Official(Guid exchangeGuid, [FromQuery] string? lang, CancellationToken ct) =>
         Match(await documents.BuildAsync(exchangeGuid, lang, ct), file => File(
             file.Content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", file.FileName));

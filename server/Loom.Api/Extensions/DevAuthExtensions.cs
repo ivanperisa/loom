@@ -24,7 +24,7 @@ public static class DevAuthExtensions
 
     public static IEndpointRouteBuilder MapDevAuth(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/auth/dev").AllowAnonymous();
+        var group = app.MapGroup("/api/auth/dev").AllowAnonymous().ExcludeFromDescription();
 
         group.MapGet("/users", async (IAppDbContext db, CancellationToken ct) =>
             await db.Users

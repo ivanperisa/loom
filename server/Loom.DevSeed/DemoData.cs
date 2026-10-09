@@ -292,14 +292,14 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         {
             var slot = e.HomeSlotId;
             var ects = e.AwardedEcts;
-            var status = e.EnrollmentStatus;
+            var status = e.EnrollmentStatus?.ToString();
             if (e.PartnerCourseCode == "IN2121") { slot = SlotFree2; status = "NotPassed"; }
             if (e.PartnerCourseCode == "IN2003") ects = 3;
             return new SaveMappingSchemeEntryRequest(e.Id, slot, e.PartnerCourseId, ects, status, e.OriginalGrade, e.EctsGrade, e.HrGrade, e.ExamDate);
         }).ToList();
         var algorithms = scheme.Entries.First(e => e.PartnerCourseCode == "IN2003");
         entries.Add(new SaveMappingSchemeEntryRequest(0, SlotSeminar, algorithms.PartnerCourseId, 2,
-            algorithms.EnrollmentStatus, algorithms.OriginalGrade, algorithms.EctsGrade, algorithms.HrGrade, algorithms.ExamDate));
+            algorithms.EnrollmentStatus?.ToString(), algorithms.OriginalGrade, algorithms.EctsGrade, algorithms.HrGrade, algorithms.ExamDate));
         await Call<MappingSchemeService, MappingSchemeResponse>(s => s.SaveAsync(exchange, new SaveMappingSchemeRequest(entries), default), actor: student);
 
         if (finish)

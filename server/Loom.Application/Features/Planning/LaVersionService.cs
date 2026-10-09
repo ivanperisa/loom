@@ -36,7 +36,7 @@ public sealed class LaVersionService(
                 previous = payload;
             }
             result.Add(new DocumentVersionResponse(
-                version.Id, version.Kind.ToString(), version.VersionNo, VersionStore.AmendmentLabel(version.VersionNo),
+                version.Id, version.Kind, version.VersionNo, VersionStore.AmendmentLabel(version.VersionNo),
                 version.CreatedAt, version.CreatedBy?.Name, payload.Entries.Count(e => e.PartnerCourseId is not null), changes));
         }
         result.Reverse();

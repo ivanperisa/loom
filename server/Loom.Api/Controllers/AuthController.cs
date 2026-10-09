@@ -53,6 +53,7 @@ public class AuthController(
 
     [Authorize]
     [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

@@ -21,7 +21,7 @@ public static class ExchangeProjections
         e.Coordinator != null ? e.Coordinator.Name : null,
         e.Student.Mentor,
         e.AcademicYear,
-        e.SemesterType.ToString(),
+        e.SemesterType,
         e.StudySemesters,
         e.CoordinatorMessage,
         e.EwpLink,
@@ -41,8 +41,8 @@ public static class ExchangeProjections
         e.HomeProfile.Program.Name,
         e.HomeProfile.Name,
         e.AcademicYear,
-        e.SemesterType.ToString(),
-        e.LearningAgreement!.Status.ToString(),
-        e.Recognition != null ? e.Recognition.Status.ToString() : null,
+        e.SemesterType,
+        e.LearningAgreement!.Status,
+        e.Recognition != null ? e.Recognition.Status : null,
         e.EwpLink);
 }

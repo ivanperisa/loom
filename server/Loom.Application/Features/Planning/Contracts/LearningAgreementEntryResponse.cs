@@ -1,9 +1,11 @@
+using Loom.Domain.Enums;
+
 namespace Loom.Application.Features.Planning;
 
 public record LearningAgreementEntryResponse(
     int Id,
     int HomeSlotId,
-    string Mode,
+    SlotMode Mode,
     int? PartnerCourseId,
     string? PartnerCourseCode,
     string? PartnerCourseName,

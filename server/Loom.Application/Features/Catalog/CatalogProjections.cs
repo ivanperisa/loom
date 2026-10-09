@@ -8,7 +8,7 @@ public static class CatalogProjections
 {
     public static readonly Expression<Func<PartnerCourse, PartnerCourseResponse>> PartnerCourse = c => new PartnerCourseResponse(
         c.Id, c.Code, c.Name, c.NameHr, c.Url, c.Ects, c.LecturesH, c.AuditoryH, c.LabH,
-        c.Semester.ToString(), c.Level.ToString(), c.IsDeleted);
+        c.Semester, c.Level, c.IsDeleted);
 
     public static readonly Expression<Func<Institution, PartnerInstitutionAdminResponse>> PartnerInstitution = i => new PartnerInstitutionAdminResponse(
         i.Id, i.Name, i.NameHr, i.Country, i.City, i.ErasmusCode, i.PartnerCourses.Count, i.IsDeleted);

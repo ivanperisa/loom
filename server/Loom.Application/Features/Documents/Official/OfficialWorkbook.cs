@@ -60,7 +60,7 @@ internal sealed class OfficialWorkbook(OfficialDocumentData data, OfficialText t
         Cell(ws.Cell(8, 1), $"{t["profileLabel"]} {ex.HomeProfile.Name}", bold: true, size: 18, borders: false);
         Info(9, t["faculty"], "");
         Info(10, t["academicYear"], ex.AcademicYear);
-        Info(11, t["exchSemester"], t[ex.SemesterType]);
+        Info(11, t["exchSemester"], t[ex.SemesterType.ToString()]);
         Info(12, t["mentor"], ex.Mentor);
         Cell(ws.Cell(14, 1), sectionTitle, italic: true, color: Red, borders: false);
 

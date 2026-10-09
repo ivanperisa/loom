@@ -9,18 +9,18 @@ namespace Loom.Api.Controllers;
 public class UserController(AccountService accounts) : ApiController
 {
     [HttpGet("me")]
-    public async Task<IActionResult> GetMe(CancellationToken ct) =>
+    public async Task<ActionResult<AuthMeResponse>> GetMe(CancellationToken ct) =>
         Match(await accounts.GetMeAsync(ct), Ok);
 
     [HttpPost("me/onboarding")]
-    public async Task<IActionResult> CompleteOnboarding([FromBody] CompleteOnboardingRequest request, CancellationToken ct) =>
+    public async Task<ActionResult<AuthMeResponse>> CompleteOnboarding([FromBody] CompleteOnboardingRequest request, CancellationToken ct) =>
         Match(await accounts.CompleteOnboardingAsync(request, ct), Ok);
 
     [HttpPost("me/coordinator-request")]
-    public async Task<IActionResult> RequestCoordinatorRole(CancellationToken ct) =>
+    public async Task<ActionResult<AuthMeResponse>> RequestCoordinatorRole(CancellationToken ct) =>
         Match(await accounts.RequestCoordinatorRoleAsync(ct), Ok);
 
     [HttpPut("me")]
-    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken ct) =>
+    public async Task<ActionResult<AuthMeResponse>> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken ct) =>
         Match(await accounts.UpdateProfileAsync(request, ct), Ok);
 }

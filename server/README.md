@@ -38,7 +38,9 @@ Each folder holds its services, contracts (requests/responses), errors and proje
 
 **Exchange-scoped work** starts with `ExchangeAccess.LoadAsync(guid)`. It is one query: exchange ids + "is the actor its student or assigned coordinator", or `EXCHANGE_NOT_FOUND` / `ACCESS_DENIED`.
 
-**Errors** are `ErrorOr` results, never exceptions. Each feature has a `*Errors` class; the `code` is part of the API contract (the client maps it). Controllers just `Match(result, Ok)`. Unexpected exceptions go to `ApiExceptionHandler`. It maps DB conflicts to 409 and never leaks messages.
+**Errors** are `ErrorOr` results, never exceptions. Each feature has a `*Errors` class; the `code` is part of the API contract (the client translates it, `apiErrors.codes.*`). Values the message needs (a course id, available ECTS) go in the error's metadata and reach the client as `params`. Controllers just `Match(result, Ok)`. Unexpected exceptions go to `ApiExceptionHandler`. It maps DB conflicts to 409 and never leaks messages.
+
+**Responses** use enums for statuses, modes and roles (serialized as strings), so the contract has exact types; requests take strings and parse them with a feature error (`INVALID_STATUS`, `INVALID_MODE`).
 
 **Reads** are `IQueryable` → `Where` → `Select(projection)`, with no tracking and no `Include` when a projection does. Projections are `Expression<Func<…>>` fields in the feature (`CatalogProjections`, `ExchangeProjections`, …).
 
@@ -78,6 +80,7 @@ Table 1 is computed from the latest approved LA version, never stored. Save, imp
 
 1. Add the use case to the feature's service, or a new service registered in `DependencyInjection.cs`. Request/response records go in the feature's contracts file; error codes go in its `*Errors` class.
 2. Exchange-scoped? Start with `ExchangeAccess.LoadAsync`. A list? Give it a `ListSpec`.
-3. Add a thin controller action (`Match(await service.X(...), Ok)`).
+3. Add a thin controller action returning `Task<ActionResult<TResponse>>` (`Match(await service.X(...), Ok)`), so the OpenAPI document knows the response type. No body: `IActionResult` with `[ProducesResponseType(204)]`.
 4. Add an integration test (`tests/Loom.IntegrationTests`); for auth/routing, an HTTP test in `ApiTests`.
-5. Changed an entity or configuration? Add a migration (see `../README.md`).
+5. Refresh the contract and the client types (`LOOM_UPDATE_OPENAPI=1 dotnet test --filter ApiContract`, then `pnpm api:types`; see `../README.md`).
+6. Changed an entity or configuration? Add a migration (see `../README.md`).

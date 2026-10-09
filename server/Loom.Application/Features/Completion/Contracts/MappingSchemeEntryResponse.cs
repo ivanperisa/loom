@@ -1,3 +1,5 @@
+using Loom.Domain.Enums;
+
 namespace Loom.Application.Features.Completion;
 
 public record MappingSchemeEntryResponse(
@@ -17,7 +19,7 @@ public record MappingSchemeEntryResponse(
     string HomeSlotColor,
     int HomeSlotSemester,
     decimal AwardedEcts,
-    string? EnrollmentStatus,
+    EnrollmentStatus? EnrollmentStatus,
     string? OriginalGrade,
     string? EctsGrade,
     string? HrGrade,

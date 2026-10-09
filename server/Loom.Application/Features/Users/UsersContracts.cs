@@ -8,7 +8,7 @@ public record AuthMeResponse(
     string Name,
     string? Jmbag,
     string? Mentor,
-    string Role,
+    UserRole Role,
     bool IsOnboarded,
     int? InstitutionId,
     string? InstitutionName,

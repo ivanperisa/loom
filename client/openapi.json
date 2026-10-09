@@ -1,0 +1,5481 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Loom.Api",
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/access/session": {
+      "post": {
+        "tags": [
+          "Access"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AccessTokenRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessSessionResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Access"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/access/preview": {
+      "post": {
+        "tags": [
+          "Access"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AccessTokenRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessLinkPreviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/access/claim": {
+      "post": {
+        "tags": [
+          "Access"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AccessTokenRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "Role",
+            "in": "query",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/UserRole"
+                }
+              ]
+            }
+          },
+          {
+            "name": "InstitutionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Registered",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortDir",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SafePage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SafePageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SearchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponsePage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{userId}": {
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AdminUpdateUserRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{userId}/role": {
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AdminSetRoleRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/coordinator-requests": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortDir",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SafePage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SafePageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SearchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoordinatorRequestResponsePage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{userId}/reject-coordinator-request": {
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/coordinator-whitelist": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortDir",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SafePage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SafePageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SearchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoordinatorWhitelistEntryResponsePage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AddToWhitelistRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoordinatorWhitelistEntryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/coordinator-whitelist/{email}": {
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "parameters": [
+          {
+            "name": "returnUrl",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "/"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/institutions/home": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstitutionResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/institutions/home-programs": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HomeProgramResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/institutions/partner": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "Country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "IncludeDeleted",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortDir",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SafePage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SafePageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SearchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerInstitutionAdminResponsePage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PartnerInstitutionRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerInstitutionAdminResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/institutions/partner/{institutionId}": {
+      "put": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "institutionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PartnerInstitutionRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerInstitutionAdminResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "institutionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/institutions/partner/{institutionId}/restore": {
+      "patch": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "institutionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/institutions/partner/{institutionId}/courses": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "institutionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Semester",
+            "in": "query",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ExchangeSemester"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Level",
+            "in": "query",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/StudyProgramLevel"
+                }
+              ]
+            }
+          },
+          {
+            "name": "IncludeDeleted",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortDir",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SafePage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SafePageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SearchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerCourseResponsePage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "institutionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PartnerCourseRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerCourseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/institutions/partner/courses/{courseId}": {
+      "put": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PartnerCourseRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerCourseResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/institutions/partner/courses/{courseId}/restore": {
+      "patch": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/institutions/partner/courses/merge": {
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MergePartnerCoursesRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerCourseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/institutions/partner/courses/{courseId}/usage": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerCourseUsageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/coordinators": {
+      "get": {
+        "tags": [
+          "Coordinator"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoordinatorOptionResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/coordinator/students": {
+      "get": {
+        "tags": [
+          "Coordinator"
+        ],
+        "parameters": [
+          {
+            "name": "AcademicYear",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PartnerInstitution",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortDir",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SafePage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SafePageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SearchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoordinatorStudentResponsePage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Coordinator"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PlaceholderStudentRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoordinatorStudentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/coordinator/students/{studentId}": {
+      "put": {
+        "tags": [
+          "Coordinator"
+        ],
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PlaceholderStudentRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoordinatorStudentResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Coordinator"
+        ],
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/coordinator/students/filters": {
+      "get": {
+        "tags": [
+          "Coordinator"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentFiltersResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/documents/official": {
+      "get": {
+        "tags": [
+          "Document"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}": {
+      "get": {
+        "tags": [
+          "Exchange"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Exchange"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateExchangeRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Exchange"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/exchanges/mine": {
+      "get": {
+        "tags": [
+          "Exchange"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExchangeSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges": {
+      "post": {
+        "tags": [
+          "Exchange"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateExchangeRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/coordinator-message": {
+      "put": {
+        "tags": [
+          "Exchange"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateCoordinatorMessageRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/access-link": {
+      "post": {
+        "tags": [
+          "Exchange"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessLinkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/access-link/regenerate": {
+      "post": {
+        "tags": [
+          "Exchange"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessLinkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/partner-courses": {
+      "get": {
+        "tags": [
+          "Exchange"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Semester",
+            "in": "query",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ExchangeSemester"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Level",
+            "in": "query",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/StudyProgramLevel"
+                }
+              ]
+            }
+          },
+          {
+            "name": "IncludeDeleted",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SortDir",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SafePage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SafePageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SearchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerCourseResponsePage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Exchange"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PartnerCourseRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerCourseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/learning-agreement": {
+      "get": {
+        "tags": [
+          "LearningAgreement"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningAgreementResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "LearningAgreement"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/SaveLearningAgreementRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningAgreementResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/learning-agreement/message": {
+      "patch": {
+        "tags": [
+          "LearningAgreement"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateLaMessageRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningAgreementResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/learning-agreement/status": {
+      "patch": {
+        "tags": [
+          "LearningAgreement"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateLearningAgreementStatusRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/learning-agreement/versions": {
+      "get": {
+        "tags": [
+          "LearningAgreement"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentVersionResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/learning-agreement/versions/{versionId}/restore": {
+      "post": {
+        "tags": [
+          "LearningAgreement"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/learning-agreement/export": {
+      "get": {
+        "tags": [
+          "LearningAgreement"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingExportDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/learning-agreement/import/preview": {
+      "post": {
+        "tags": [
+          "LearningAgreement"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MappingExportDto"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/learning-agreement/import": {
+      "post": {
+        "tags": [
+          "LearningAgreement"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MappingExportDto"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/mapping-scheme": {
+      "get": {
+        "tags": [
+          "MappingScheme"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingSchemeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/mapping-scheme/entries": {
+      "put": {
+        "tags": [
+          "MappingScheme"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/SaveMappingSchemeRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingSchemeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/recognition": {
+      "get": {
+        "tags": [
+          "Recognition"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/recognition/start": {
+      "post": {
+        "tags": [
+          "Recognition"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/recognition/grades": {
+      "put": {
+        "tags": [
+          "Recognition"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/SaveGradesRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/recognition/status": {
+      "patch": {
+        "tags": [
+          "Recognition"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateRecognitionStatusRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/recognition/message": {
+      "patch": {
+        "tags": [
+          "Recognition"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateRecognitionMessageRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exchanges/{exchangeGuid}/recognition/versions": {
+      "get": {
+        "tags": [
+          "Recognition"
+        ],
+        "parameters": [
+          {
+            "name": "exchangeGuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentVersionResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "User"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateProfileRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/me/onboarding": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/CompleteOnboardingRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/me/coordinator-request": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccessLinkPreviewResponse": {
+        "required": [
+          "academicYear",
+          "canClaim",
+          "exchangeGuid",
+          "hasAccess",
+          "partnerInstitutionName",
+          "studentName"
+        ],
+        "type": "object",
+        "properties": {
+          "exchangeGuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentName": {
+            "type": "string"
+          },
+          "partnerInstitutionName": {
+            "type": "string"
+          },
+          "academicYear": {
+            "type": "string"
+          },
+          "hasAccess": {
+            "type": "boolean"
+          },
+          "canClaim": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AccessLinkResponse": {
+        "required": [
+          "createdAt",
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AccessSessionResponse": {
+        "required": [
+          "exchangeGuid"
+        ],
+        "type": "object",
+        "properties": {
+          "exchangeGuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AccessTokenRequest": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AddToWhitelistRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminSetRoleRequest": {
+        "required": [
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminUpdateUserRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "jmbag": {
+            "type": "string",
+            "nullable": true
+          },
+          "mentor": {
+            "type": "string",
+            "nullable": true
+          },
+          "coordinatorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "institutionId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AgreedEntryResponse": {
+        "required": [
+          "awardedEcts",
+          "homeSlotColor",
+          "homeSlotCourseGroupIsvuCode",
+          "homeSlotCourseGroupName",
+          "homeSlotCourseIsvuCode",
+          "homeSlotCourseName",
+          "homeSlotId",
+          "homeSlotSemester",
+          "id",
+          "partnerCourseCode",
+          "partnerCourseEcts",
+          "partnerCourseHours",
+          "partnerCourseId",
+          "partnerCourseName",
+          "partnerCourseNameHr",
+          "partnerCourseUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "partnerCourseId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "partnerCourseCode": {
+            "type": "string"
+          },
+          "partnerCourseName": {
+            "type": "string"
+          },
+          "partnerCourseNameHr": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseHours": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseEcts": {
+            "type": "number",
+            "format": "double"
+          },
+          "homeSlotCourseIsvuCode": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "homeSlotCourseName": {
+            "type": "string"
+          },
+          "homeSlotCourseGroupIsvuCode": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "homeSlotCourseGroupName": {
+            "type": "string"
+          },
+          "homeSlotColor": {
+            "type": "string"
+          },
+          "homeSlotSemester": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "awardedEcts": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AuthMeResponse": {
+        "required": [
+          "coordinatorId",
+          "coordinatorName",
+          "coordinatorRequestStatus",
+          "email",
+          "id",
+          "institutionId",
+          "institutionName",
+          "isOnboarded",
+          "jmbag",
+          "mentor",
+          "name",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "jmbag": {
+            "type": "string",
+            "nullable": true
+          },
+          "mentor": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "isOnboarded": {
+            "type": "boolean"
+          },
+          "institutionId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "institutionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "coordinatorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "coordinatorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "coordinatorRequestStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CoordinatorRequestStatus"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClaimResponse": {
+        "required": [
+          "exchangeGuid"
+        ],
+        "type": "object",
+        "properties": {
+          "exchangeGuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompleteOnboardingRequest": {
+        "required": [
+          "institutionId",
+          "requestCoordinatorRole"
+        ],
+        "type": "object",
+        "properties": {
+          "institutionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "jmbag": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestCoordinatorRole": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CoordinatorOptionResponse": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CoordinatorRequestResponse": {
+        "required": [
+          "email",
+          "id",
+          "institutionName",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "institutionName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CoordinatorRequestResponsePage": {
+        "required": [
+          "hasDeleted",
+          "items",
+          "page",
+          "pageSize",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoordinatorRequestResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CoordinatorRequestStatus": {
+        "enum": [
+          "Pending",
+          "Rejected"
+        ],
+        "type": "string"
+      },
+      "CoordinatorStudentResponse": {
+        "required": [
+          "exchanges",
+          "id",
+          "institutionId",
+          "institutionName",
+          "isMyStudent",
+          "isPlaceholder",
+          "jmbag",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "jmbag": {
+            "type": "string",
+            "nullable": true
+          },
+          "institutionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPlaceholder": {
+            "type": "boolean"
+          },
+          "institutionId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "isMyStudent": {
+            "type": "boolean"
+          },
+          "exchanges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeSummaryResponse"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "CoordinatorStudentResponsePage": {
+        "required": [
+          "hasDeleted",
+          "items",
+          "page",
+          "pageSize",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoordinatorStudentResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CoordinatorWhitelistEntryResponse": {
+        "required": [
+          "createdAt",
+          "email",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "email": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CoordinatorWhitelistEntryResponsePage": {
+        "required": [
+          "hasDeleted",
+          "items",
+          "page",
+          "pageSize",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoordinatorWhitelistEntryResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CourseGradesRequest": {
+        "required": [
+          "partnerCourseId"
+        ],
+        "type": "object",
+        "properties": {
+          "partnerCourseId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enrollmentStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "ectsGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "hrGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "examDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateExchangeRequest": {
+        "required": [
+          "academicYear",
+          "homeProfileId",
+          "partnerInstitutionId",
+          "semesterType",
+          "studySemesters"
+        ],
+        "type": "object",
+        "properties": {
+          "homeProfileId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "partnerInstitutionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "academicYear": {
+            "type": "string"
+          },
+          "semesterType": {
+            "type": "string"
+          },
+          "studySemesters": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "coordinatorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "targetStudentId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "mentor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "DocumentChange": {
+        "required": [
+          "fields",
+          "homeSlotId",
+          "homeSlotLabel",
+          "partnerCourseCode",
+          "partnerCourseId",
+          "partnerCourseName",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeSlotLabel": {
+            "type": "string"
+          },
+          "partnerCourseId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partnerCourseCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseName": {
+            "type": "string",
+            "nullable": true
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "DocumentStatus": {
+        "enum": [
+          "Draft",
+          "Approved"
+        ],
+        "type": "string"
+      },
+      "DocumentVersionResponse": {
+        "required": [
+          "amendmentLabel",
+          "changes",
+          "createdAt",
+          "createdByName",
+          "entryCount",
+          "id",
+          "kind",
+          "versionNo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VersionKind"
+              }
+            ]
+          },
+          "versionNo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "amendmentLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "entryCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentChange"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "EnrollmentStatus": {
+        "enum": [
+          "Passed",
+          "NotPassed"
+        ],
+        "type": "string"
+      },
+      "ExchangeResponse": {
+        "required": [
+          "academicYear",
+          "coordinatorId",
+          "coordinatorMessage",
+          "coordinatorName",
+          "createdAt",
+          "ewpLink",
+          "guid",
+          "homeInstitutionName",
+          "homeProfile",
+          "homeProgramName",
+          "id",
+          "mentor",
+          "partnerInstitutionId",
+          "partnerInstitutionName",
+          "semesterType",
+          "studentId",
+          "studentIsPlaceholder",
+          "studentJmbag",
+          "studentName",
+          "studySemesters",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "guid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "studentName": {
+            "type": "string"
+          },
+          "studentJmbag": {
+            "type": "string",
+            "nullable": true
+          },
+          "homeInstitutionName": {
+            "type": "string"
+          },
+          "homeProgramName": {
+            "type": "string"
+          },
+          "homeProfile": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HomeProfileResponse"
+              }
+            ]
+          },
+          "partnerInstitutionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "partnerInstitutionName": {
+            "type": "string"
+          },
+          "coordinatorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "coordinatorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "mentor": {
+            "type": "string",
+            "nullable": true
+          },
+          "academicYear": {
+            "type": "string"
+          },
+          "semesterType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExchangeSemester"
+              }
+            ]
+          },
+          "studySemesters": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "coordinatorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "ewpLink": {
+            "type": "string",
+            "nullable": true
+          },
+          "studentIsPlaceholder": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExchangeSemester": {
+        "enum": [
+          "Winter",
+          "Summer",
+          "Both"
+        ],
+        "type": "string"
+      },
+      "ExchangeSummaryResponse": {
+        "required": [
+          "academicYear",
+          "ewpLink",
+          "guid",
+          "homeInstitutionName",
+          "homeProfileName",
+          "homeProgramName",
+          "id",
+          "learningAgreementStatus",
+          "partnerInstitutionName",
+          "recognitionStatus",
+          "semesterType",
+          "studentId",
+          "studentJmbag",
+          "studentName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "guid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "studentName": {
+            "type": "string"
+          },
+          "studentJmbag": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerInstitutionName": {
+            "type": "string"
+          },
+          "homeInstitutionName": {
+            "type": "string"
+          },
+          "homeProgramName": {
+            "type": "string"
+          },
+          "homeProfileName": {
+            "type": "string"
+          },
+          "academicYear": {
+            "type": "string"
+          },
+          "semesterType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExchangeSemester"
+              }
+            ]
+          },
+          "learningAgreementStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentStatus"
+              }
+            ]
+          },
+          "recognitionStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentStatus"
+              }
+            ],
+            "nullable": true
+          },
+          "ewpLink": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "FieldChange": {
+        "required": [
+          "after",
+          "before",
+          "field"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string",
+            "nullable": true
+          },
+          "after": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "HomeProfileResponse": {
+        "required": [
+          "id",
+          "name",
+          "nameEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "HomeProgramResponse": {
+        "required": [
+          "durationSemesters",
+          "id",
+          "level",
+          "name",
+          "nameEn",
+          "profiles"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "level": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudyProgramLevel"
+              }
+            ]
+          },
+          "durationSemesters": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "profiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomeProfileResponse"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "HomeSlotResponse": {
+        "required": [
+          "color",
+          "courseGroupIsvuCode",
+          "courseGroupName",
+          "courseGroupNameEn",
+          "courseIsvuCode",
+          "courseName",
+          "courseNameEn",
+          "courseTypeId",
+          "courseTypeName",
+          "courseTypeNameEn",
+          "ects",
+          "id",
+          "semester",
+          "slotPosition"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "semester": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "slotPosition": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ects": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "courseTypeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "courseTypeName": {
+            "type": "string"
+          },
+          "courseTypeNameEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "color": {
+            "type": "string"
+          },
+          "courseIsvuCode": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "courseName": {
+            "type": "string",
+            "nullable": true
+          },
+          "courseNameEn": {
+            "type": "string",
+            "nullable": true
+          },
+          "courseGroupIsvuCode": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "courseGroupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "courseGroupNameEn": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportContextWarning": {
+        "required": [
+          "field",
+          "fromFile",
+          "inExchange"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "fromFile": {
+            "type": "string"
+          },
+          "inExchange": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportPreviewResponse": {
+        "required": [
+          "added",
+          "blockingCode",
+          "blockingMessage",
+          "blockingParams",
+          "canApply",
+          "changed",
+          "contextWarnings",
+          "removed",
+          "skipped",
+          "unchanged"
+        ],
+        "type": "object",
+        "properties": {
+          "canApply": {
+            "type": "boolean"
+          },
+          "blockingCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "blockingMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "blockingParams": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          },
+          "contextWarnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportContextWarning"
+            }
+          },
+          "added": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportRow"
+            }
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportRow"
+            }
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportRow"
+            }
+          },
+          "unchanged": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportSkip"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportResult": {
+        "required": [
+          "added",
+          "changed",
+          "removed",
+          "skipped"
+        ],
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "removed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "changed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportSkip"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportRow": {
+        "required": [
+          "awardedEcts",
+          "homeSlotId",
+          "homeSlotLabel",
+          "mode",
+          "partnerCourseCode",
+          "partnerCourseId",
+          "partnerCourseName",
+          "previousEcts",
+          "previousMode"
+        ],
+        "type": "object",
+        "properties": {
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeSlotLabel": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "partnerCourseId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partnerCourseCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseName": {
+            "type": "string",
+            "nullable": true
+          },
+          "awardedEcts": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "previousEcts": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "previousMode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImportSkip": {
+        "required": [
+          "homeSlotId",
+          "homeSlotLabel",
+          "partnerCourseCode",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeSlotLabel": {
+            "type": "string"
+          },
+          "partnerCourseCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "InstitutionResponse": {
+        "required": [
+          "city",
+          "country",
+          "erasmusCode",
+          "id",
+          "name",
+          "nameHr"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameHr": {
+            "type": "string",
+            "nullable": true
+          },
+          "country": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "erasmusCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LearningAgreementEntryResponse": {
+        "required": [
+          "amendmentNumber",
+          "awardedEcts",
+          "homeSlotId",
+          "id",
+          "isDeleted",
+          "mode",
+          "partnerCourseCode",
+          "partnerCourseId",
+          "partnerCourseName",
+          "partnerCourseNameHr",
+          "partnerCourseUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mode": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SlotMode"
+              }
+            ]
+          },
+          "partnerCourseId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partnerCourseCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseName": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseNameHr": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "awardedEcts": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "isDeleted": {
+            "type": "boolean"
+          },
+          "amendmentNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LearningAgreementEntryUpsertDto": {
+        "required": [
+          "awardedEcts",
+          "homeSlotId",
+          "mode",
+          "partnerCourseId"
+        ],
+        "type": "object",
+        "properties": {
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "partnerCourseId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "awardedEcts": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LearningAgreementResponse": {
+        "required": [
+          "concludedAt",
+          "concludedByName",
+          "entries",
+          "exchangeId",
+          "isConcluded",
+          "lastModifiedAt",
+          "lastModifiedByName",
+          "message",
+          "signedAt",
+          "signedByName",
+          "signedCount",
+          "slots",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "exchangeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentStatus"
+              }
+            ]
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomeSlotResponse"
+            }
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningAgreementEntryResponse"
+            }
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifiedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "signedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "signedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "signedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isConcluded": {
+            "type": "boolean"
+          },
+          "concludedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "concludedByName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MappingExportCourse": {
+        "required": [
+          "code",
+          "ects",
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ects": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MappingExportDto": {
+        "required": [
+          "exportedAt",
+          "exportedByName",
+          "format",
+          "home",
+          "institution",
+          "mappings",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "exportedByName": {
+            "type": "string"
+          },
+          "institution": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MappingExportInstitution"
+              }
+            ]
+          },
+          "home": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MappingExportHomeContext"
+              }
+            ]
+          },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MappingExportEntry"
+            }
+          },
+          "format": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MappingExportEntry": {
+        "required": [
+          "awardedEcts",
+          "homeSlotEcts",
+          "homeSlotId",
+          "homeSlotLabel",
+          "homeSlotSemester",
+          "mode",
+          "partnerCourse"
+        ],
+        "type": "object",
+        "properties": {
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeSlotLabel": {
+            "type": "string"
+          },
+          "homeSlotSemester": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeSlotEcts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "partnerCourse": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MappingExportCourse"
+              }
+            ],
+            "nullable": true
+          },
+          "awardedEcts": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MappingExportHomeContext": {
+        "required": [
+          "institutionName",
+          "profileId",
+          "profileName",
+          "programName"
+        ],
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "profileName": {
+            "type": "string"
+          },
+          "programName": {
+            "type": "string"
+          },
+          "institutionName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MappingExportInstitution": {
+        "required": [
+          "erasmusCode",
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "erasmusCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MappingSchemeEntryResponse": {
+        "required": [
+          "awardedEcts",
+          "ectsGrade",
+          "enrollmentStatus",
+          "examDate",
+          "homeSlotColor",
+          "homeSlotCourseGroupIsvuCode",
+          "homeSlotCourseGroupName",
+          "homeSlotCourseIsvuCode",
+          "homeSlotCourseName",
+          "homeSlotId",
+          "homeSlotSemester",
+          "hrGrade",
+          "id",
+          "originalGrade",
+          "partnerCourseCode",
+          "partnerCourseEcts",
+          "partnerCourseHours",
+          "partnerCourseId",
+          "partnerCourseName",
+          "partnerCourseNameHr",
+          "partnerCourseUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "partnerCourseId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partnerCourseCode": {
+            "type": "string"
+          },
+          "partnerCourseName": {
+            "type": "string"
+          },
+          "partnerCourseNameHr": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseHours": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseEcts": {
+            "type": "number",
+            "format": "double"
+          },
+          "homeSlotCourseIsvuCode": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "homeSlotCourseName": {
+            "type": "string"
+          },
+          "homeSlotCourseGroupIsvuCode": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "homeSlotCourseGroupName": {
+            "type": "string"
+          },
+          "homeSlotColor": {
+            "type": "string"
+          },
+          "homeSlotSemester": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "awardedEcts": {
+            "type": "number",
+            "format": "double"
+          },
+          "enrollmentStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EnrollmentStatus"
+              }
+            ],
+            "nullable": true
+          },
+          "originalGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "ectsGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "hrGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "examDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MappingSchemeResponse": {
+        "required": [
+          "entries",
+          "exchangeId"
+        ],
+        "type": "object",
+        "properties": {
+          "exchangeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MappingSchemeEntryResponse"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "MergePartnerCoursesRequest": {
+        "required": [
+          "duplicateCourseIds",
+          "primaryCourseId"
+        ],
+        "type": "object",
+        "properties": {
+          "primaryCourseId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "duplicateCourseIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PartnerCourseRequest": {
+        "required": [
+          "code",
+          "ects",
+          "level",
+          "name",
+          "semester"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameHr": {
+            "type": "string",
+            "nullable": true
+          },
+          "ects": {
+            "type": "number",
+            "format": "double"
+          },
+          "semester": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "lecturesH": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "auditoryH": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "labH": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PartnerCourseResponse": {
+        "required": [
+          "auditoryH",
+          "code",
+          "ects",
+          "id",
+          "isDeleted",
+          "labH",
+          "lecturesH",
+          "level",
+          "name",
+          "nameHr",
+          "semester",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameHr": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "ects": {
+            "type": "number",
+            "format": "double"
+          },
+          "lecturesH": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "auditoryH": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "labH": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "semester": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExchangeSemester"
+              }
+            ]
+          },
+          "level": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StudyProgramLevel"
+              }
+            ]
+          },
+          "isDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PartnerCourseResponsePage": {
+        "required": [
+          "hasDeleted",
+          "items",
+          "page",
+          "pageSize",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartnerCourseResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PartnerCourseUsageGroup": {
+        "required": [
+          "academicYears",
+          "exchangeCount",
+          "isCourseGroup",
+          "profileName",
+          "programName",
+          "recognizedAsIsvuCode",
+          "recognizedAsName",
+          "totalAwardedEcts"
+        ],
+        "type": "object",
+        "properties": {
+          "programName": {
+            "type": "string"
+          },
+          "profileName": {
+            "type": "string"
+          },
+          "recognizedAsIsvuCode": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "recognizedAsName": {
+            "type": "string"
+          },
+          "isCourseGroup": {
+            "type": "boolean"
+          },
+          "exchangeCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalAwardedEcts": {
+            "type": "number",
+            "format": "double"
+          },
+          "academicYears": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PartnerCourseUsageResponse": {
+        "required": [
+          "exchangeCount",
+          "groups"
+        ],
+        "type": "object",
+        "properties": {
+          "exchangeCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartnerCourseUsageGroup"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PartnerInstitutionAdminResponse": {
+        "required": [
+          "city",
+          "country",
+          "courseCount",
+          "erasmusCode",
+          "id",
+          "isDeleted",
+          "name",
+          "nameHr"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameHr": {
+            "type": "string",
+            "nullable": true
+          },
+          "country": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "erasmusCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "courseCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PartnerInstitutionAdminResponsePage": {
+        "required": [
+          "hasDeleted",
+          "items",
+          "page",
+          "pageSize",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartnerInstitutionAdminResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PartnerInstitutionRequest": {
+        "required": [
+          "country",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "nameHr": {
+            "type": "string",
+            "nullable": true
+          },
+          "country": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "erasmusCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlaceholderStudentRequest": {
+        "required": [
+          "institutionId",
+          "jmbag",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "jmbag": {
+            "type": "string"
+          },
+          "institutionId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RecognitionResponse": {
+        "required": [
+          "agreed",
+          "agreedVersionNo",
+          "approvedVersionCount",
+          "canStart",
+          "exchangeId",
+          "isStarted",
+          "lastModifiedAt",
+          "lastModifiedByName",
+          "message",
+          "signedAt",
+          "signedByName",
+          "startedAt",
+          "startedByName",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "exchangeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentStatus"
+              }
+            ]
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "isStarted": {
+            "type": "boolean"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "startedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "canStart": {
+            "type": "boolean"
+          },
+          "agreedVersionNo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "agreed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgreedEntryResponse"
+            }
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifiedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "signedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "signedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "approvedVersionCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RestoreMissing": {
+        "required": [
+          "homeSlotId",
+          "homeSlotLabel",
+          "partnerCourseCode",
+          "partnerCourseName",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeSlotLabel": {
+            "type": "string"
+          },
+          "partnerCourseCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "partnerCourseName": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RestoreResult": {
+        "required": [
+          "entries",
+          "missing"
+        ],
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RestoreMissing"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SaveGradesRequest": {
+        "required": [
+          "entries"
+        ],
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseGradesRequest"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SaveLearningAgreementRequest": {
+        "required": [
+          "entries"
+        ],
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearningAgreementEntryUpsertDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SaveMappingSchemeEntryRequest": {
+        "required": [
+          "awardedEcts",
+          "homeSlotId",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeSlotId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "partnerCourseId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "awardedEcts": {
+            "type": "number",
+            "format": "double"
+          },
+          "enrollmentStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "ectsGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "hrGrade": {
+            "type": "string",
+            "nullable": true
+          },
+          "examDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SaveMappingSchemeRequest": {
+        "required": [
+          "entries"
+        ],
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaveMappingSchemeEntryRequest"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SessionResponse": {
+        "required": [
+          "isAuthenticated",
+          "user"
+        ],
+        "type": "object",
+        "properties": {
+          "isAuthenticated": {
+            "type": "boolean"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthMeResponse"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlotMode": {
+        "enum": [
+          "AtHome",
+          "AtExchange",
+          "AfterExchange"
+        ],
+        "type": "string"
+      },
+      "StudentFiltersResponse": {
+        "required": [
+          "academicYears",
+          "partnerInstitutions"
+        ],
+        "type": "object",
+        "properties": {
+          "academicYears": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "partnerInstitutions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "StudyProgramLevel": {
+        "enum": [
+          "Undergraduate",
+          "Graduate",
+          "Postgraduate"
+        ],
+        "type": "string"
+      },
+      "UpdateCoordinatorMessageRequest": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateExchangeRequest": {
+        "required": [
+          "academicYear",
+          "semesterType",
+          "studySemesters"
+        ],
+        "type": "object",
+        "properties": {
+          "academicYear": {
+            "type": "string"
+          },
+          "semesterType": {
+            "type": "string"
+          },
+          "studySemesters": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "coordinatorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "mentor": {
+            "type": "string",
+            "nullable": true
+          },
+          "ewpLink": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateLaMessageRequest": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateLearningAgreementStatusRequest": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateProfileRequest": {
+        "required": [
+          "institutionId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "jmbag": {
+            "type": "string",
+            "nullable": true
+          },
+          "institutionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mentor": {
+            "type": "string",
+            "nullable": true
+          },
+          "coordinatorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateRecognitionMessageRequest": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateRecognitionStatusRequest": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserListResponse": {
+        "required": [
+          "coordinatorId",
+          "coordinatorName",
+          "coordinatorRequestStatus",
+          "email",
+          "id",
+          "institutionCity",
+          "institutionId",
+          "institutionName",
+          "isOnboarded",
+          "jmbag",
+          "mentor",
+          "name",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "institutionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "institutionCity": {
+            "type": "string",
+            "nullable": true
+          },
+          "institutionId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "coordinatorRequestStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CoordinatorRequestStatus"
+              }
+            ],
+            "nullable": true
+          },
+          "isOnboarded": {
+            "type": "boolean"
+          },
+          "jmbag": {
+            "type": "string",
+            "nullable": true
+          },
+          "mentor": {
+            "type": "string",
+            "nullable": true
+          },
+          "coordinatorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "coordinatorName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserListResponsePage": {
+        "required": [
+          "hasDeleted",
+          "items",
+          "page",
+          "pageSize",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserListResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserRole": {
+        "enum": [
+          "Student",
+          "Coordinator",
+          "Admin"
+        ],
+        "type": "string"
+      },
+      "VersionKind": {
+        "enum": [
+          "Approved",
+          "Backup"
+        ],
+        "type": "string"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Access"
+    },
+    {
+      "name": "Admin"
+    },
+    {
+      "name": "Auth"
+    },
+    {
+      "name": "Catalog"
+    },
+    {
+      "name": "Coordinator"
+    },
+    {
+      "name": "Document"
+    },
+    {
+      "name": "Exchange"
+    },
+    {
+      "name": "LearningAgreement"
+    },
+    {
+      "name": "MappingScheme"
+    },
+    {
+      "name": "Recognition"
+    },
+    {
+      "name": "User"
+    }
+  ]
+}

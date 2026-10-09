@@ -28,7 +28,7 @@ public static class CompletionMappers
             slot.SlotType.Color,
             slot.Semester,
             entry.AwardedEcts ?? 0,
-            entry.EnrollmentStatus?.ToString(),
+            entry.EnrollmentStatus,
             entry.OriginalGrade,
             entry.EctsGrade,
             entry.HrGrade,
