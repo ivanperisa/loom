@@ -15,40 +15,40 @@ export const institutionService = {
   getHomePrograms: (signal?: AbortSignal) => api.get<HomeProgramResponse[]>('/api/institutions/home-programs', { signal }),
   getPartnerInstitutions: (includeDeleted = false, params: Partial<ListParams> & { country?: string | null } = {}, signal?: AbortSignal) =>
     api.get<PagedResponse<PartnerInstitutionAdminResponse>>('/api/institutions/partner', { params: { includeDeleted, ...params }, signal }),
-  getPartnerCoursesByInstitution: (institutionId: string, includeDeleted = false, params: Partial<ListParams> & { semester?: string | null; level?: string | null } = {}, signal?: AbortSignal) =>
+  getPartnerCoursesByInstitution: (institutionId: number, includeDeleted = false, params: Partial<ListParams> & { semester?: string | null; level?: string | null } = {}, signal?: AbortSignal) =>
     api.get<PagedResponse<PartnerCourseResponse>>(`/api/institutions/partner/${institutionId}/courses`, { params: { includeDeleted, ...params }, signal }),
 
   createPartnerInstitution: (data: { name: string; nameHr: string; country: string; city?: string; erasmusCode?: string }) =>
     api.post<PartnerInstitutionAdminResponse>('/api/institutions/partner', data),
 
-  updatePartnerInstitution: (id: string, data: { name: string; nameHr?: string; country: string; city?: string; erasmusCode?: string }) =>
+  updatePartnerInstitution: (id: number, data: { name: string; nameHr?: string; country: string; city?: string; erasmusCode?: string }) =>
     api.put<PartnerInstitutionAdminResponse>(`/api/institutions/partner/${id}`, data),
 
-  deletePartnerInstitution: (id: string) =>
+  deletePartnerInstitution: (id: number) =>
     api.delete(`/api/institutions/partner/${id}`),
 
-  restorePartnerInstitution: (id: string) =>
+  restorePartnerInstitution: (id: number) =>
     api.patch(`/api/institutions/partner/${id}/restore`),
 
-  createPartnerCourseByInstitution: (institutionId: string, data: PartnerCourseRequest) =>
+  createPartnerCourseByInstitution: (institutionId: number, data: PartnerCourseRequest) =>
     api.post<PartnerCourseResponse>(`/api/institutions/partner/${institutionId}/courses`, data),
 
-  updatePartnerCourse: (courseId: string, data: PartnerCourseRequest) =>
+  updatePartnerCourse: (courseId: number, data: PartnerCourseRequest) =>
     api.put<PartnerCourseResponse>(`/api/institutions/partner/courses/${courseId}`, data),
 
-  deletePartnerCourse: (courseId: string) =>
+  deletePartnerCourse: (courseId: number) =>
     api.delete(`/api/institutions/partner/courses/${courseId}`),
 
-  restorePartnerCourse: (courseId: string) =>
+  restorePartnerCourse: (courseId: number) =>
     api.patch(`/api/institutions/partner/courses/${courseId}/restore`),
 
-  mergePartnerCourses: (primaryCourseId: string, duplicateCourseIds: string[]) =>
+  mergePartnerCourses: (primaryCourseId: number, duplicateCourseIds: number[]) =>
     api.post<PartnerCourseResponse>('/api/institutions/partner/courses/merge', {
       primaryCourseId,
       duplicateCourseIds,
     }),
 
-  getPartnerCourseUsage: (courseId: string) =>
+  getPartnerCourseUsage: (courseId: number) =>
     api.get<PartnerCourseUsage>(`/api/institutions/partner/courses/${courseId}/usage`),
 }
 

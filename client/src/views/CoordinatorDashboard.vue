@@ -49,22 +49,22 @@ const filtersQuery = useQuery({
 const homeInstitutionsQuery = useHomeInstitutionsQuery()
 const institutions = computed(() => homeInstitutionsQuery.data.value ?? [])
 
-const openMenuId = ref<string | null>(null)
+const openMenuId = ref<number | null>(null)
 const menuPos = ref({ top: 0, left: 0 })
 const MENU_WIDTH = 380
 
-const actionsMenuId = ref<string | null>(null)
+const actionsMenuId = ref<number | null>(null)
 const actionsMenuPos = ref({ top: 0, left: 0 })
 const ACTIONS_MENU_WIDTH = 200
 
 const showStudentModal = ref(false)
 const studentModalMode = ref<'create' | 'edit'>('create')
 const editingStudent = ref<CoordinatorStudentResponse | null>(null)
-const deletingStudentId = ref<string | null>(null)
+const deletingStudentId = ref<number | null>(null)
 
 // Create exchange modal
 const showCreateExchangeModal = ref(false)
-const createExchangeTargetStudentId = ref<string | null>(null)
+const createExchangeTargetStudentId = ref<number | null>(null)
 
 const academicYears = computed(() => filtersQuery.data.value?.academicYears ?? [])
 
@@ -79,14 +79,14 @@ const partnerInstitutionOptions = computed(() => [
 ])
 
 const primaryExchangeByStudent = computed(() => {
-  const map = new Map<string, ExchangeSummaryResponse>()
+  const map = new Map<number, ExchangeSummaryResponse>()
   for (const student of students.value) {
     if (student.exchanges[0]) map.set(student.id, student.exchanges[0])
   }
   return map
 })
 
-function extraExchangeCount(studentId: string): number {
+function extraExchangeCount(studentId: number): number {
   const student = students.value.find((s) => s.id === studentId)
   return Math.max((student?.exchanges.length ?? 0) - 1, 0)
 }
@@ -114,7 +114,7 @@ function closeActionsMenu() {
   actionsMenuId.value = null
 }
 
-function toggleMenu(studentId: string, event: MouseEvent) {
+function toggleMenu(studentId: number, event: MouseEvent) {
   if (openMenuId.value === studentId) {
     closeMenu()
     return
@@ -127,7 +127,7 @@ function toggleMenu(studentId: string, event: MouseEvent) {
   openMenuId.value = studentId
 }
 
-function toggleActionsMenu(studentId: string, event: MouseEvent) {
+function toggleActionsMenu(studentId: number, event: MouseEvent) {
   if (actionsMenuId.value === studentId) {
     closeActionsMenu()
     return
@@ -199,7 +199,7 @@ async function deleteStudent(student: CoordinatorStudentResponse) {
   }
 }
 
-function openCreateExchange(studentId: string) {
+function openCreateExchange(studentId: number) {
   closeMenu()
   closeActionsMenu()
   createExchangeTargetStudentId.value = studentId

@@ -12,14 +12,13 @@ export const queryKeys = {
   versions: (guid: string, document: 'la' | 'recognition') => [...queryKeys.exchange(guid), 'versions', document] as const,
 
   myExchanges: ['exchanges', 'mine'] as const,
-  studentsExchanges: ['coordinator', 'students', 'exchanges'] as const,
   coordinatorStudents: ['coordinator', 'students'] as const,
   coordinators: ['coordinators'] as const,
 
   homeInstitutions: ['catalog', 'home'] as const,
   homePrograms: ['catalog', 'home-programs'] as const,
   partnerInstitutions: ['catalog', 'partner'] as const,
-  partnerInstitutionCourses: (institutionId: string) => ['catalog', 'partner', institutionId, 'courses'] as const,
+  partnerInstitutionCourses: (institutionId: number) => ['catalog', 'partner', institutionId, 'courses'] as const,
 
   adminUsers: ['admin', 'users'] as const,
   coordinatorRequests: ['admin', 'coordinator-requests'] as const,

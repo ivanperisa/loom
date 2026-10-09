@@ -43,7 +43,7 @@ const modeOutlineColor = DOC_TABLE_MODE_OUTLINE_COLOR
 const localEntries = ref<MappingSchemeEntryResponse[]>([])
 
 const laModeBySlot = computed(() => {
-  const m = new Map<string, SlotMode>()
+  const m = new Map<number, SlotMode>()
   for (const e of learningAgreement.value?.entries ?? []) {
     if (!e.isDeleted) m.set(e.homeSlotId, e.mode)
   }
@@ -79,7 +79,7 @@ function slotsForSemester(sem: number): HomeSlotResponse[] {
     .sort((a, b) => a.slotPosition - b.slotPosition)
 }
 
-function entriesForSlot(slotId: string): MappingSchemeEntryResponse[] {
+function entriesForSlot(slotId: number): MappingSchemeEntryResponse[] {
   return localEntries.value.filter((e) => e.homeSlotId === slotId)
 }
 
@@ -103,8 +103,8 @@ function ectsColor(slot: HomeSlotResponse): string {
 }
 
 // Drag & drop — drops open a dialog to choose how many ECTS move to the target slot.
-const draggingId = ref<string | null>(null)
-const dragOverSlotId = ref<string | null>(null)
+const draggingId = ref<number | null>(null)
+const dragOverSlotId = ref<number | null>(null)
 const isDragging = computed(() => draggingId.value !== null)
 
 let tempId = -1
@@ -112,7 +112,7 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10
 }
 
-const pendingTransfer = ref<{ entryId: string; toSlotId: string; max: number } | null>(null)
+const pendingTransfer = ref<{ entryId: number; toSlotId: number; max: number } | null>(null)
 const transferEcts = ref(0)
 const transferSource = computed(() =>
   pendingTransfer.value
@@ -150,7 +150,7 @@ function confirmTransfer() {
   const target = localEntries.value.find(
     (e) =>
       e.id !== source.id &&
-      String(e.homeSlotId) === String(p.toSlotId) &&
+      e.homeSlotId === p.toSlotId &&
       e.partnerCourseCode === source.partnerCourseCode,
   )
 
@@ -166,7 +166,7 @@ function confirmTransfer() {
     if (target) {
       target.awardedEcts = round1(target.awardedEcts + amount)
     } else {
-      localEntries.value.push({ ...source, id: String(tempId--), homeSlotId: p.toSlotId, awardedEcts: amount })
+      localEntries.value.push({ ...source, id: tempId--, homeSlotId: p.toSlotId, awardedEcts: amount })
     }
   }
 }
@@ -227,9 +227,9 @@ function onItemClick(entry: MappingSchemeEntryResponse) {
 function save() {
   mutations.saveMappingScheme.mutate({
       entries: localEntries.value.map((e) => ({
-        id: Number(e.id),
-        homeSlotId: Number(e.homeSlotId),
-        partnerCourseId: e.partnerCourseId === null ? null : Number(e.partnerCourseId),
+        id: e.id,
+        homeSlotId: e.homeSlotId,
+        partnerCourseId: e.partnerCourseId,
         awardedEcts: e.awardedEcts,
         enrollmentStatus: e.enrollmentStatus || null,
         originalGrade: e.originalGrade,

@@ -34,7 +34,7 @@ const isSubmitting = ref(false)
 const academicYear = ref(props.exchange.academicYear)
 const semesterType = ref<ExchangeSemester>(props.exchange.semesterType)
 const studySemesters = ref<number[]>([...props.exchange.studySemesters])
-const selectedCoordinatorId = ref<string | null>(props.exchange.coordinatorId)
+const selectedCoordinatorId = ref<number | null>(props.exchange.coordinatorId)
 const mentorInput = ref(props.exchange.mentor ?? '')
 const ewpLinkInput = ref(props.exchange.ewpLink ?? '')
 

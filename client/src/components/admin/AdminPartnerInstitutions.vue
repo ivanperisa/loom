@@ -48,8 +48,8 @@ const countryOptions = computed(() => [
 
 const showAddInstitution = ref(false)
 const addingInstitution = ref(false)
-const editingInstitutionId = ref<string | null>(null)
-const deletingInstitution = ref<string | null>(null)
+const editingInstitutionId = ref<number | null>(null)
+const deletingInstitution = ref<number | null>(null)
 
 const editingInstitution = computed(() =>
   editingInstitutionId.value ? institutions.value.find(i => i.id === editingInstitutionId.value) : undefined,
@@ -102,7 +102,7 @@ async function submitInstitutionForm(payload: { name: string; nameHr: string; co
   }
 }
 
-async function deleteInstitution(id: string) {
+async function deleteInstitution(id: number) {
   if (!await confirm({ title: t('admin.institutions.deleteConfirm') })) return
   deletingInstitution.value = id
   error.value = null
@@ -117,7 +117,7 @@ async function deleteInstitution(id: string) {
   }
 }
 
-async function restoreInstitution(id: string) {
+async function restoreInstitution(id: number) {
   deletingInstitution.value = id
   error.value = null
   try {

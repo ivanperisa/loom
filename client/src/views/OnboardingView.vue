@@ -37,7 +37,7 @@ const steps = computed(() => {
 const totalSteps = computed(() => steps.value.length)
 
 const currentStep = ref(1)
-const selectedInstitutionId = ref<string | null>(null)
+const selectedInstitutionId = ref<number | null>(null)
 const jmbag = ref('')
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
@@ -124,7 +124,7 @@ async function finishOnboarding() {
     await authStore.completeOnboarding({
       institutionId: selectedInstitutionId.value!,
       jmbag: isRequestingCoordinator || isCoordinatorOrAdmin.value ? undefined : jmbag.value.trim(),
-      requestCoordinatorRole: isRequestingCoordinator || undefined,
+      requestCoordinatorRole: isRequestingCoordinator,
     })
     await router.push('/home')
   } catch {

@@ -10,9 +10,9 @@ export const coordinatorService = {
     api.get<PagedResponse<CoordinatorStudentResponse>>('/api/coordinator/students', { params, signal }),
   createPlaceholderStudent: (request: CreatePlaceholderStudentRequest) =>
     api.post<CoordinatorStudentResponse>('/api/coordinator/students', request),
-  updateStudent: (studentId: string, request: UpdateStudentRequest) =>
+  updateStudent: (studentId: number, request: UpdateStudentRequest) =>
     api.put<CoordinatorStudentResponse>(`/api/coordinator/students/${studentId}`, request),
-  deleteStudent: (studentId: string) =>
+  deleteStudent: (studentId: number) =>
     api.delete(`/api/coordinator/students/${studentId}`, { errorToast: false }),
   /** Years and partner institutions the student list can be filtered by. */
   getStudentFilters: (signal?: AbortSignal) => api.get<StudentFiltersResponse>('/api/coordinator/students/filters', { signal }),

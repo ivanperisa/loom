@@ -28,8 +28,8 @@ const form = ref({
   name: props.user.name,
   jmbag: props.user.jmbag ?? '',
   mentor: props.user.mentor ?? '',
-  coordinatorId: props.user.coordinatorId as string | null,
-  institutionId: props.user.institutionId as string | null,
+  coordinatorId: props.user.coordinatorId,
+  institutionId: props.user.institutionId,
 })
 
 const saving = ref(false)

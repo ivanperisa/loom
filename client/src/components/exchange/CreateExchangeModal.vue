@@ -18,7 +18,7 @@ import { nWord } from '@/utils/plural'
 import { useAuthStore } from '@/stores/auth.store'
 
 const props = withDefaults(defineProps<{
-  targetStudentId?: string | null
+  targetStudentId?: number | null
 }>(), {
   targetStudentId: null,
 })
@@ -49,8 +49,8 @@ const isSubmitting = ref(false)
 const programsQuery = useHomeProgramsQuery()
 const homePrograms = computed<HomeProgramResponse[]>(() => programsQuery.data.value ?? [])
 const loadingPrograms = computed(() => programsQuery.isPending.value)
-const selectedProgramId = ref<string | null>(null)
-const selectedProfileId = ref<string | null>(null)
+const selectedProgramId = ref<number | null>(null)
+const selectedProfileId = ref<number | null>(null)
 
 const selectedProgram = computed(
   () => homePrograms.value.find((p) => p.id === selectedProgramId.value) ?? null,
@@ -66,7 +66,7 @@ const selectedProfile = computed(
 const partnerInstitutionsQuery = usePartnerInstitutionOptionsQuery()
 const partnerInstitutions = computed<PartnerInstitutionAdminResponse[]>(() => partnerInstitutionsQuery.data.value ?? [])
 const loadingPartnerInstitutions = computed(() => partnerInstitutionsQuery.isPending.value)
-const selectedPartnerInstitutionId = ref<string | null>(null)
+const selectedPartnerInstitutionId = ref<number | null>(null)
 const partnerSearch = ref('')
 const selectedCountry = ref<string | null>(null)
 
@@ -107,7 +107,7 @@ const selectedPartnerInstitution = computed(
 // Step 3: Coordinator + Mentor
 const coordinatorsQuery = useCoordinatorsQuery()
 const coordinators = computed<CoordinatorOption[]>(() => coordinatorsQuery.data.value ?? [])
-const selectedCoordinatorId = ref<string | null>(
+const selectedCoordinatorId = ref<number | null>(
   props.targetStudentId ? (authStore.user?.id ?? null) : (authStore.user?.coordinatorId ?? null),
 )
 const mentorInput = ref(authStore.user?.mentor ?? '')

@@ -7,7 +7,7 @@ import { minSearchTerm } from '@/utils/searchTerm'
 import type { ListParams, PagedResponse } from '@/types/paged.types'
 
 export type SortDir = 'asc' | 'desc'
-type FilterValue = string | boolean | null
+type FilterValue = string | number | boolean | null
 
 export interface ListQueryOptions<TItem, TFilters extends Record<string, FilterValue>> {
   /** Base query key; params are appended, and invalidating this key refreshes every page. */
@@ -98,7 +98,9 @@ export function useListQuery<TItem, TFilters extends Record<string, FilterValue>
     sort.value = read('sort') ?? sort.value
     for (const [name, filter] of Object.entries(filters)) {
       const value = read(name)
-      if (value !== null) filter.value = typeof filter.value === 'boolean' ? value === 'true' : value
+      if (value === null) continue
+      // The address bar only holds text; give the filter back its own type.
+      filter.value = value === 'true' || value === 'false' ? value === 'true' : /^\d+$/.test(value) ? Number(value) : value
     }
 
     watch(

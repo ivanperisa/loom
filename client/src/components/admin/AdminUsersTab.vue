@@ -26,7 +26,7 @@ const auth = useAuthStore()
 const queryClient = useQueryClient()
 
 const newEmail = ref('')
-const actionLoadingId = ref<string | null>(null)
+const actionLoadingId = ref<number | null>(null)
 const whitelistActionEmail = ref<string | null>(null)
 const addingEmail = ref(false)
 const errorMessage = ref<string | null>(null)
@@ -37,7 +37,7 @@ const roleChangeUser = ref<UserListResponse | null>(null)
 // Users
 
 const roleFilter = ref<string | null>(null)
-const institutionFilter = ref<string | null>(null)
+const institutionFilter = ref<number | null>(null)
 const registered = ref<boolean | null>(null)
 /** The select works with names; the API filter is a boolean. */
 const statusFilter = computed({
@@ -45,7 +45,7 @@ const statusFilter = computed({
   set: (value: string | null) => (registered.value = value === null ? null : value === 'registered'),
 })
 
-const userList = useListQuery<UserListResponse, { role: string | null; institutionId: string | null; registered: boolean | null }>({
+const userList = useListQuery<UserListResponse, { role: string | null; institutionId: number | null; registered: boolean | null }>({
   key: queryKeys.adminUsers,
   fetch: (params, signal) => adminService.getAllUsers(params, signal),
   filters: { role: roleFilter, institutionId: institutionFilter, registered },
@@ -115,7 +115,7 @@ const requestList = useListQuery<CoordinatorRequestResponse>({
   syncToUrl: 'requests',
 })
 
-async function approve(userId: string) {
+async function approve(userId: number) {
   actionLoadingId.value = userId
   try {
     await adminService.setUserRole(userId, userRole.Coordinator)
@@ -125,7 +125,7 @@ async function approve(userId: string) {
   }
 }
 
-async function reject(userId: string) {
+async function reject(userId: number) {
   actionLoadingId.value = userId
   try {
     await adminService.rejectCoordinatorRequest(userId)

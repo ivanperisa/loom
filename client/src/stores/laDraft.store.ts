@@ -13,7 +13,7 @@ import type { PartnerCourseResponse } from '@/types/institution.types'
 const round1 = (n: number) => Math.round(n * 10) / 10
 
 function slotStatesFrom(la: LearningAgreementResponse): LocalSlotState[] {
-  const map = new Map<string, LocalSlotState>()
+  const map = new Map<number, LocalSlotState>()
   for (const entry of la.entries) {
     if (entry.isDeleted) continue
     let state = map.get(entry.homeSlotId)
@@ -23,7 +23,7 @@ function slotStatesFrom(la: LearningAgreementResponse): LocalSlotState[] {
     }
     if (entry.partnerCourseId !== null) {
       state.mappings.push({
-        localId: entry.id,
+        localId: String(entry.id),
         partnerCourseId: entry.partnerCourseId,
         partnerCourseCode: entry.partnerCourseCode ?? '',
         partnerCourseName: entry.partnerCourseName ?? '',
@@ -41,10 +41,10 @@ function stagedKey(exchangeId: string) {
   return `loom.stagedPartnerCourses.${exchangeId}`
 }
 
-function readStaged(exchangeId: string): Set<string> {
+function readStaged(exchangeId: string): Set<number> {
   try {
     const raw = localStorage.getItem(stagedKey(exchangeId))
-    return raw ? new Set(JSON.parse(raw)) : new Set()
+    return raw ? new Set((JSON.parse(raw) as unknown[]).map(Number).filter(Number.isFinite)) : new Set()
   } catch {
     return new Set()
   }
@@ -60,9 +60,9 @@ export const useLaDraftStore = defineStore('laDraft', () => {
   const slotStates = ref<LocalSlotState[]>([])
   const isDirty = ref(false)
   const draggingCourse = ref<PartnerCourseResponse | null>(null)
-  const draggingSlotMapping = ref<{ fromSlotId: string; localId: string } | null>(null)
+  const draggingSlotMapping = ref<{ fromSlotId: number; localId: string } | null>(null)
   const armedCourse = ref<PartnerCourseResponse | null>(null)
-  const stagedPartnerCourseIds = ref<Set<string>>(new Set())
+  const stagedPartnerCourseIds = ref<Set<number>>(new Set())
 
   /** Starts over from the saved LA (first load, after a save, or on discard). */
   function load(id: string, la: LearningAgreementResponse) {
@@ -95,7 +95,7 @@ export const useLaDraftStore = defineStore('laDraft', () => {
     return { entries }
   }
 
-  const stateFor = (homeSlotId: string) => slotStates.value.find((s) => s.homeSlotId === homeSlotId)
+  const stateFor = (homeSlotId: number) => slotStates.value.find((s) => s.homeSlotId === homeSlotId)
 
   // Drag and drop
 
@@ -105,7 +105,7 @@ export const useLaDraftStore = defineStore('laDraft', () => {
     armedCourse.value = null
   }
 
-  function startSlotDrag(fromSlotId: string, localId: string) {
+  function startSlotDrag(fromSlotId: number, localId: string) {
     draggingSlotMapping.value = { fromSlotId, localId }
     draggingCourse.value = null
     armedCourse.value = null
@@ -132,12 +132,12 @@ export const useLaDraftStore = defineStore('laDraft', () => {
     if (exchangeId.value) localStorage.setItem(stagedKey(exchangeId.value), JSON.stringify([...stagedPartnerCourseIds.value]))
   }
 
-  function stagePartnerCourse(id: string) {
+  function stagePartnerCourse(id: number) {
     stagedPartnerCourseIds.value = new Set([...stagedPartnerCourseIds.value, id])
     saveStaged()
   }
 
-  function unstagePartnerCourse(id: string) {
+  function unstagePartnerCourse(id: number) {
     const next = new Set(stagedPartnerCourseIds.value)
     next.delete(id)
     stagedPartnerCourseIds.value = next
@@ -146,7 +146,7 @@ export const useLaDraftStore = defineStore('laDraft', () => {
 
   // Edits
 
-  function setSlotMode(homeSlotId: string, mode: SlotMode) {
+  function setSlotMode(homeSlotId: number, mode: SlotMode) {
     const existing = stateFor(homeSlotId)
     if (existing) {
       existing.mode = mode
@@ -157,12 +157,12 @@ export const useLaDraftStore = defineStore('laDraft', () => {
     isDirty.value = true
   }
 
-  function removeSlotState(homeSlotId: string) {
+  function removeSlotState(homeSlotId: number) {
     slotStates.value = slotStates.value.filter((s) => s.homeSlotId !== homeSlotId)
     isDirty.value = true
   }
 
-  function addMapping(homeSlotId: string, mapping: LocalSlotMapping) {
+  function addMapping(homeSlotId: number, mapping: LocalSlotMapping) {
     const state = stateFor(homeSlotId)
     if (!state) return
     // Merge into an existing mapping for the same partner course instead of duplicating it.
@@ -172,21 +172,21 @@ export const useLaDraftStore = defineStore('laDraft', () => {
     isDirty.value = true
   }
 
-  function removeMapping(homeSlotId: string, localId: string) {
+  function removeMapping(homeSlotId: number, localId: string) {
     const state = stateFor(homeSlotId)
     if (!state) return
     state.mappings = state.mappings.filter((m) => m.localId !== localId)
     isDirty.value = true
   }
 
-  function removeAllMappingsForCourse(partnerCourseId: string) {
+  function removeAllMappingsForCourse(partnerCourseId: number) {
     for (const state of slotStates.value) {
       state.mappings = state.mappings.filter((m) => m.partnerCourseId !== partnerCourseId)
     }
     isDirty.value = true
   }
 
-  function updateMappingEcts(homeSlotId: string, localId: string, ects: number) {
+  function updateMappingEcts(homeSlotId: number, localId: string, ects: number) {
     const mapping = stateFor(homeSlotId)?.mappings.find((m) => m.localId === localId)
     if (!mapping) return
     mapping.awardedEcts = ects
@@ -194,7 +194,7 @@ export const useLaDraftStore = defineStore('laDraft', () => {
   }
 
   /** Moves all or part (`amount` ECTS) of a mapping to another slot. */
-  function moveMapping(fromSlotId: string, toSlotId: string, localId: string, amount?: number) {
+  function moveMapping(fromSlotId: number, toSlotId: number, localId: string, amount?: number) {
     const from = stateFor(fromSlotId)
     const index = from?.mappings.findIndex((m) => m.localId === localId) ?? -1
     if (!from || index === -1) return

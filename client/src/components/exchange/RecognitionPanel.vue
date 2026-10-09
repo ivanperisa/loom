@@ -79,7 +79,7 @@ function initGrades() {
 }
 
 const changedGrades = computed<CourseGradesRequest[]>(() => {
-  const seen = new Set<string>()
+  const seen = new Set<number>()
   const changed: CourseGradesRequest[] = []
   for (const e of resultEntries.value) {
     if (e.partnerCourseId === null || seen.has(e.partnerCourseId)) continue
@@ -94,7 +94,7 @@ const changedGrades = computed<CourseGradesRequest[]>(() => {
       (e.examDate ?? '') !== g.examDate
     if (differs) {
       changed.push({
-        partnerCourseId: Number(e.partnerCourseId),
+        partnerCourseId: e.partnerCourseId,
         enrollmentStatus: g.enrollmentStatus || null,
         originalGrade: g.originalGrade || null,
         ectsGrade: g.ectsGrade || null,

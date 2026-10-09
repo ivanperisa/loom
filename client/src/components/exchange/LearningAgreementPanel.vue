@@ -88,12 +88,12 @@ function handleImportFileChange(e: Event) {
 }
 
 function courseLabel(id: number) {
-  const mapping = draft.slotStates.flatMap((s) => s.mappings).find((m) => Number(m.partnerCourseId) === id)
+  const mapping = draft.slotStates.flatMap((s) => s.mappings).find((m) => m.partnerCourseId === id)
   return mapping ? `${mapping.partnerCourseCode} (${mapping.partnerCourseName})` : undefined
 }
 
 function slotLabel(id: number) {
-  const slot = slots.value.find((s) => Number(s.id) === id)
+  const slot = slots.value.find((s) => s.id === id)
   return slot ? `${slotCodeLabel(slot)} ${slotDisplayName(slot, locale.value)}`.trim() : undefined
 }
 
@@ -124,19 +124,19 @@ const modeOutlineColor = DOC_TABLE_MODE_OUTLINE_COLOR
 
 const isDragging = computed(() => !!draft.draggingCourse || !!draft.draggingSlotMapping)
 const isArmed = computed(() => !!draft.armedCourse)
-const dragOverSlotId = ref<string | null>(null)
+const dragOverSlotId = ref<number | null>(null)
 const pendingDrop = ref<{ slot: HomeSlotResponse; course: PartnerCourseResponse } | null>(null)
 const pendingEcts = ref<number>(0)
 const pendingMove = ref<{
-  fromSlotId: string
-  toSlotId: string
+  fromSlotId: number
+  toSlotId: number
   localId: string
   max: number
   courseCode: string
   courseName: string
 } | null>(null)
 const moveEcts = ref<number>(0)
-const editingMapping = ref<{ homeSlotId: string; localId: string } | null>(null)
+const editingMapping = ref<{ homeSlotId: number; localId: string } | null>(null)
 const editingEcts = ref(0)
 const ectsInputRef = ref<HTMLInputElement | null>(null)
 // Function ref: a plain ref inside v-for would collect an array of inputs.
@@ -145,11 +145,11 @@ function setEctsInputRef(el: unknown) {
 }
 const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(null)
 
-function lineFor(homeSlotId: string) {
+function lineFor(homeSlotId: number) {
   return draft.slotStates.find((s) => s.homeSlotId === homeSlotId)
 }
 
-function sortedMappingsFor(homeSlotId: string) {
+function sortedMappingsFor(homeSlotId: number) {
   return (lineFor(homeSlotId)?.mappings ?? [])
     .slice()
     .sort((a, b) => a.partnerCourseName.localeCompare(b.partnerCourseName))
@@ -175,7 +175,7 @@ function mappingAmendment(amendmentNumber: number | null | undefined): number | 
   return n >= 1 ? n : null
 }
 
-function deletedEntriesForSlot(slotId: string) {
+function deletedEntriesForSlot(slotId: number) {
   const serverEntries = (learningAgreement.value?.entries ?? []).filter(
     (e) => e.homeSlotId === slotId && e.partnerCourseId !== null,
   )
@@ -208,7 +208,7 @@ function ectsColor(slot: HomeSlotResponse): string {
   return ectsIndicatorColor(mappedEcts(slot), slot.ects, theme.value === 'light')
 }
 
-function alreadyMappedEcts(courseId: string): number {
+function alreadyMappedEcts(courseId: number): number {
   let sum = 0
   for (const state of draft.slotStates) {
     for (const m of state.mappings) {
@@ -367,7 +367,7 @@ async function cycleMode(slot: HomeSlotResponse) {
   }
 }
 
-function removeMapping(homeSlotId: string, localId: string) {
+function removeMapping(homeSlotId: number, localId: string) {
   const partnerCourseId = lineFor(homeSlotId)?.mappings.find((m) => m.localId === localId)?.partnerCourseId
   draft.removeMapping(homeSlotId, localId)
   if (partnerCourseId) draft.unstagePartnerCourse(partnerCourseId)
@@ -377,7 +377,7 @@ function removeMapping(homeSlotId: string, localId: string) {
   }
 }
 
-function startEditEcts(homeSlotId: string, mapping: LocalSlotMapping) {
+function startEditEcts(homeSlotId: number, mapping: LocalSlotMapping) {
   if (!isEditable.value) return
   editingMapping.value = { homeSlotId, localId: mapping.localId }
   editingEcts.value = mapping.awardedEcts

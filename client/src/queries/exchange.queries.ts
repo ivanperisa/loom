@@ -103,7 +103,7 @@ export function useExchangeMutations(guid: Guid) {
     onSuccess: (data) => {
       setExchange(client, id(), data)
       client.invalidateQueries({ queryKey: queryKeys.myExchanges })
-      client.invalidateQueries({ queryKey: queryKeys.studentsExchanges })
+      client.invalidateQueries({ queryKey: queryKeys.coordinatorStudents })
       return invalidateExchange(client, id())
     },
   })
@@ -113,7 +113,7 @@ export function useExchangeMutations(guid: Guid) {
     onSuccess: () => {
       client.removeQueries({ queryKey: queryKeys.exchange(id()) })
       client.invalidateQueries({ queryKey: queryKeys.myExchanges })
-      client.invalidateQueries({ queryKey: queryKeys.studentsExchanges })
+      client.invalidateQueries({ queryKey: queryKeys.coordinatorStudents })
     },
   })
 
@@ -127,7 +127,7 @@ export function useCreateExchange() {
     onSuccess: (data) => {
       setExchange(client, data.guid, data)
       client.invalidateQueries({ queryKey: queryKeys.myExchanges })
-      client.invalidateQueries({ queryKey: queryKeys.studentsExchanges })
+      client.invalidateQueries({ queryKey: queryKeys.coordinatorStudents })
     },
   })
 }
@@ -150,7 +150,7 @@ export function useLearningAgreementMutations(guid: Guid) {
     onSuccess: (data) => {
       setExchange(client, id(), data)
       client.invalidateQueries({ queryKey: queryKeys.myExchanges })
-      client.invalidateQueries({ queryKey: queryKeys.studentsExchanges })
+      client.invalidateQueries({ queryKey: queryKeys.coordinatorStudents })
       return invalidateExchange(client, id())
     },
   })

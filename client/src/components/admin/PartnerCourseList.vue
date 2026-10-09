@@ -15,7 +15,7 @@ import { useListQuery } from '@/composables/useListQuery'
 import { queryKeys } from '@/queries/keys'
 import ErrorAlert from '@/components/common/ErrorAlert.vue'
 
-const props = defineProps<{ institutionId: string; institutionName: string; institutionNameHr?: string | null; autoOpenCreate?: boolean }>()
+const props = defineProps<{ institutionId: number; institutionName: string; institutionNameHr?: string | null; autoOpenCreate?: boolean }>()
 const emit = defineEmits<{ 'count-changed': [delta: number] }>()
 
 const { t } = useI18n()
@@ -53,10 +53,10 @@ const codeColumnWidth = computed(() => `${(Math.max(3, ...courses.value.map(c =>
 const courseModal = ref<{ mode: 'create' | 'edit'; course?: PartnerCourseResponse; initialName?: string } | null>(null)
 const savingCourse = ref(false)
 const courseError = ref<string | null>(null)
-const deletingCourse = ref<string | null>(null)
+const deletingCourse = ref<number | null>(null)
 
 const mergeSelecting = ref(false)
-const selectedForMerge = ref<Set<string>>(new Set())
+const selectedForMerge = ref<Set<number>>(new Set())
 const mergeModal = ref<{ courses: PartnerCourseResponse[] } | null>(null)
 const merging = ref(false)
 
@@ -104,7 +104,7 @@ async function submitCourse(payload: {
   }
 }
 
-async function deleteCourse(courseId: string) {
+async function deleteCourse(courseId: number) {
   if (!await confirm({ title: t('admin.institutions.deleteCourseConfirm') })) return
   deletingCourse.value = courseId
   error.value = null
@@ -119,7 +119,7 @@ async function deleteCourse(courseId: string) {
   }
 }
 
-async function restoreCourse(courseId: string) {
+async function restoreCourse(courseId: number) {
   deletingCourse.value = courseId
   error.value = null
   try {
@@ -142,7 +142,7 @@ function cancelMergeSelection() {
   selectedForMerge.value = new Set()
 }
 
-function toggleCourseForMerge(courseId: string) {
+function toggleCourseForMerge(courseId: number) {
   const set = selectedForMerge.value
   if (set.has(courseId)) set.delete(courseId)
   else set.add(courseId)
@@ -156,7 +156,7 @@ function openMergeModalFromSelection() {
   cancelMergeSelection()
 }
 
-async function submitMerge(primaryId: string) {
+async function submitMerge(primaryId: number) {
   if (!mergeModal.value) return
   const duplicateIds = mergeModal.value.courses.filter(c => c.id !== primaryId).map(c => c.id)
   merging.value = true

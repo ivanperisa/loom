@@ -4,8 +4,8 @@ import { useI18n } from 'vue-i18n'
 import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 
 interface RecognitionRow {
-  id: string
-  partnerCourseId: string | null
+  id: string | number
+  partnerCourseId: number | null
   partnerCourseCode: string
   partnerCourseName: string
   partnerCourseNameHr: string | null
@@ -80,7 +80,7 @@ function formatExamDateDisplay(iso: string): string {
 const courseGroups = computed<CourseGroup[]>(() => {
   const map = new Map<string, CourseGroup>()
   for (const entry of props.entries) {
-    const key = entry.partnerCourseId ?? `code:${entry.partnerCourseCode}`
+    const key = entry.partnerCourseId !== null ? String(entry.partnerCourseId) : `code:${entry.partnerCourseCode}`
     if (!map.has(key)) {
       map.set(key, {
         key,

@@ -1,78 +1,12 @@
-export interface InstitutionResponse {
-  id: string
-  name: string
-  nameHr: string | null
-  country: string | null
-  city: string | null
-  erasmusCode: string | null
-}
+import type { Schemas } from '@/api'
 
-export interface HomeProfileResponse {
-  id: string
-  name: string
-  nameEn: string | null
-}
-
-export interface HomeProgramResponse {
-  id: string
-  name: string
-  nameEn: string | null
-  level: string
-  durationSemesters: number
-  profiles: HomeProfileResponse[]
-}
-
-export interface PartnerInstitutionAdminResponse {
-  id: string
-  name: string
-  nameHr: string | null
-  country: string
-  city: string | null
-  erasmusCode: string | null
-  courseCount: number
-  isDeleted: boolean
-}
-
-export interface PartnerCourseResponse {
-  id: string
-  code: string
-  name: string
-  nameHr: string | null
-  url: string | null
-  ects: number
-  lecturesH: number | null
-  auditoryH: number | null
-  labH: number | null
-  semester: string
-  level: string
-  isDeleted: boolean
-}
-
-export interface PartnerCourseRequest {
-  code: string
-  name: string
-  nameHr?: string
-  url?: string
-  ects: number
-  semester: string
-  level: string
-  lecturesH?: number
-  auditoryH?: number
-  labH?: number
-}
-
-export interface PartnerCourseUsageGroup {
-  programName: string
-  profileName: string
-  recognizedAsIsvuCode: number | null
-  recognizedAsName: string
-  isCourseGroup: boolean
-  exchangeCount: number
-  totalAwardedEcts: number
-  academicYears: string[]
-}
-
-export interface PartnerCourseUsage {
-  exchangeCount: number
-  groups: PartnerCourseUsageGroup[]
-}
+export type InstitutionResponse = Schemas['InstitutionResponse']
+export type HomeProfileResponse = Schemas['HomeProfileResponse']
+export type HomeProgramResponse = Schemas['HomeProgramResponse']
+export type PartnerInstitutionAdminResponse = Schemas['PartnerInstitutionAdminResponse']
+export type PartnerCourseResponse = Schemas['PartnerCourseResponse']
+export type PartnerCourseRequest = Schemas['PartnerCourseRequest']
+export type PartnerCourseUsageGroup = Schemas['PartnerCourseUsageGroup']
+export type PartnerCourseUsage = Schemas['PartnerCourseUsageResponse']
+export type PartnerInstitutionRequest = Schemas['PartnerInstitutionRequest']
+export type StudyProgramLevel = Schemas['StudyProgramLevel']

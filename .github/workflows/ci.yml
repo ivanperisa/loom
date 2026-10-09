@@ -67,5 +67,9 @@ jobs:
       - name: Lint
         run: pnpm lint:check
 
+      # src/api/schema.d.ts must match openapi.json (which the server tests keep in sync with the API).
+      - name: API types are generated
+        run: pnpm api:types && git diff --exit-code -- src/api/schema.d.ts
+
       - name: Type-check and build
         run: pnpm build

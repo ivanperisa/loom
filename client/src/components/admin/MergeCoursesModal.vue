@@ -5,7 +5,7 @@ import type { PartnerCourseResponse } from '@/types/institution.types'
 import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps<{ courses: PartnerCourseResponse[]; saving: boolean }>()
-const emit = defineEmits<{ submit: [primaryId: string]; close: [] }>()
+const emit = defineEmits<{ submit: [primaryId: number]; close: [] }>()
 
 const { t } = useI18n()
 

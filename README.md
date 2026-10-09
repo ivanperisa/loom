@@ -108,7 +108,18 @@ cd client && pnpm lint:check && pnpm type-check
 cd client && pnpm exec playwright install chromium && pnpm e2e   # browser smoke tests against `docker compose up`
 ```
 
-The integration tests also check that every model change has a migration, and run the full demo seed once.
+The integration tests also check that every model change has a migration, run the full demo seed once, and check that `client/openapi.json` matches the API.
+
+## API contract (server → client types)
+
+The client's API types are generated, not written by hand:
+
+```sh
+LOOM_UPDATE_OPENAPI=1 dotnet test Loom.slnx --filter ApiContract   # API changed → refresh client/openapi.json
+cd client && pnpm api:types                                         # openapi.json → src/api/schema.d.ts
+```
+
+Commit both files. CI fails when either is stale. `client/src/types/*.ts` only gives the generated types their familiar names (`ExchangeResponse = Schemas['ExchangeResponse']`); client-only types (the LA draft, list params) live there too.
 
 ## Database migrations
 

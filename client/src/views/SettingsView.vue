@@ -30,9 +30,9 @@ const coordinatorOptions = computed(() => [
 
 const name = ref('')
 const jmbag = ref('')
-const institutionId = ref('')
+const institutionId = ref<number | null>(null)
 const mentor = ref('')
-const coordinatorId = ref<string | null>(null)
+const coordinatorId = ref<number | null>(null)
 const saving = ref(false)
 const success = ref(false)
 const errorMsg = ref<string | null>(null)
@@ -42,7 +42,7 @@ const isStudent = computed(() => authStore.role === userRole.Student)
 const isDirty = computed(() =>
   name.value !== (authStore.user?.name ?? '') ||
   jmbag.value !== (authStore.user?.jmbag ?? '') ||
-  institutionId.value !== (authStore.user?.institutionId ?? '') ||
+  institutionId.value !== (authStore.user?.institutionId ?? null) ||
   mentor.value !== (authStore.user?.mentor ?? '') ||
   coordinatorId.value !== (authStore.user?.coordinatorId ?? null),
 )
@@ -58,7 +58,7 @@ onBeforeRouteUpdate(fetchData)
 function resetForm() {
   name.value = authStore.user?.name ?? ''
   jmbag.value = authStore.user?.jmbag ?? ''
-  institutionId.value = authStore.user?.institutionId ?? ''
+  institutionId.value = authStore.user?.institutionId ?? null
   mentor.value = authStore.user?.mentor ?? ''
   coordinatorId.value = authStore.user?.coordinatorId ?? null
 }
@@ -71,7 +71,7 @@ async function save() {
     await authStore.updateProfile({
       name: name.value.trim(),
       jmbag: jmbag.value.trim() || null,
-      institutionId: institutionId.value,
+      institutionId: institutionId.value!,
       mentor: mentor.value.trim() || null,
       coordinatorId: coordinatorId.value || null,
     })

@@ -1,8 +1,8 @@
-<script setup lang="ts" generic="T extends string | null">
+<script setup lang="ts" generic="T extends string | number | null">
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 
 export interface SelectOption {
-  value: string | null
+  value: string | number | null
   label: string
   sublabel?: string
 }
@@ -95,7 +95,7 @@ function toggle() {
   else openDropdown()
 }
 
-function select(value: string | null) {
+function select(value: string | number | null) {
   emit('update:modelValue', value as T)
   closeDropdown()
   search.value = ''

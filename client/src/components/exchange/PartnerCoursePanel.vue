@@ -67,7 +67,7 @@ const visibleCourses = computed(() => {
 })
 
 const mappedEctsMap = computed(() => {
-  const map = new Map<string, number>()
+  const map = new Map<number, number>()
   for (const state of draft.slotStates) {
     for (const m of state.mappings) {
       map.set(m.partnerCourseId, (map.get(m.partnerCourseId) ?? 0) + m.awardedEcts)
@@ -76,7 +76,7 @@ const mappedEctsMap = computed(() => {
   return map
 })
 
-function mappedEcts(courseId: string): number {
+function mappedEcts(courseId: number): number {
   return mappedEctsMap.value.get(courseId) ?? 0
 }
 

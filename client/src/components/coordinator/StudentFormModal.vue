@@ -23,7 +23,7 @@ const { t } = useI18n()
 
 const name = ref(props.student?.name ?? '')
 const jmbag = ref(props.student?.jmbag ?? '')
-const institutionId = ref<string | null>(props.student?.institutionId ?? null)
+const institutionId = ref<number | null>(props.student?.institutionId ?? null)
 const error = ref<string | null>(null)
 const submitting = ref(false)
 
