@@ -55,8 +55,8 @@ api.interceptors.response.use(
           /* keep the generic message */
         }
       }
-      const { title, message } = describeApiError(error)
-      useNotification().notifyError(title, message)
+      const { title, message, reference } = describeApiError(error)
+      useNotification().notifyError(title, reference ? `${message} ${i18n.global.t('apiErrors.reference', { id: reference })}` : message)
     }
 
     return Promise.reject(error)

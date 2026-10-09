@@ -7,6 +7,7 @@ interface ProblemDetails {
   detail?: string
   status?: number
   code?: string
+  traceId?: string
   params?: Record<string, unknown>
   errors?: { code: string; description: string }[] | Record<string, string[]>
 }
@@ -19,10 +20,18 @@ export interface ApiError {
   params: Record<string, unknown>
   /** The server's own (English) description, used only when the code has no translation. */
   detail: string | null
+  /** The request's id in the server logs (the trace part of the W3C trace id). */
+  reference: string | null
+}
+
+/** "00-<trace>-<span>-00" → "<trace>": the part that is the same in every server log line of the request. */
+function referenceOf(traceId: string | undefined): string | null {
+  if (!traceId) return null
+  return traceId.split('-')[1] ?? traceId
 }
 
 export function toApiError(error: unknown): ApiError {
-  if (!axios.isAxiosError(error)) return { status: null, code: null, params: {}, detail: null }
+  if (!axios.isAxiosError(error)) return { status: null, code: null, params: {}, detail: null, reference: null }
   const data = error.response?.data as ProblemDetails | undefined
   const body = data && typeof data === 'object' && !(data instanceof Blob) ? data : undefined
   return {
@@ -30,6 +39,7 @@ export function toApiError(error: unknown): ApiError {
     code: body?.code ?? null,
     params: body?.params ?? {},
     detail: body?.detail ?? null,
+    reference: referenceOf(body?.traceId),
   }
 }
 
@@ -56,12 +66,15 @@ export function describeCode(code: string | null, params: Record<string, unknown
   return detail ?? t('apiErrors.unknown')
 }
 
-/** Title + message for a toast or an alert. */
-export function describeApiError(error: unknown, options: DescribeOptions = {}): { title: string; message: string } {
+/**
+ * Title + message for a toast or an alert. For server faults (5xx) `reference` is the id to quote when reporting
+ * the problem: it finds the request in the server logs.
+ */
+export function describeApiError(error: unknown, options: DescribeOptions = {}): { title: string; message: string; reference: string | null } {
   const t = i18n.global.t
-  const { status, code, params, detail } = toApiError(error)
+  const { status, code, params, detail, reference } = toApiError(error)
   if (status === null && axios.isAxiosError(error)) {
-    return { title: t('apiErrors.title.network'), message: t('apiErrors.network') }
+    return { title: t('apiErrors.title.network'), message: t('apiErrors.network'), reference: null }
   }
   const title =
     status === 400 ? t('apiErrors.title.validation')
@@ -70,7 +83,7 @@ export function describeApiError(error: unknown, options: DescribeOptions = {}):
     : status === 409 ? t('apiErrors.title.conflict')
     : status !== null && status >= 500 ? t('apiErrors.title.server')
     : t('apiErrors.title.unknown')
-  return { title, message: describeCode(code, params, detail, options) }
+  return { title, message: describeCode(code, params, detail, options), reference: status !== null && status >= 500 ? reference : null }
 }
 
 export function isApiError(error: unknown, code: string): boolean {

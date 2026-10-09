@@ -702,6 +702,7 @@ export default {
     },
     network: 'Poslužitelj nije dostupan. Provjeri vezu i pokušaj ponovno.',
     unknown: 'Nešto je pošlo po zlu. Pokušaj ponovno.',
+    reference: 'Oznaka greške: {id}',
     retry: 'Pokušaj ponovno',
     course: 'predmet {id}',
     slot: 'mjesto {id}',

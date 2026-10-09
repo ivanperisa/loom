@@ -56,6 +56,25 @@ public static class ApiSetup
         });
 
         services.AddHealthChecks().AddDbContextCheck<AppDbContext>(tags: ["ready"]);
+
+        AddErrorTracking(builder);
+    }
+
+    /// <summary>
+    /// Optional: unhandled exceptions and logged errors go to Sentry (or a self-hosted GlitchTip, same protocol)
+    /// when <c>Sentry:Dsn</c> is set, e.g. <c>Sentry__Dsn=https://key@glitchtip.example/1</c>. Without a DSN nothing is
+    /// registered. No personal data: no cookies, headers, request bodies or user emails are sent.
+    /// </summary>
+    private static void AddErrorTracking(WebApplicationBuilder builder)
+    {
+        if (string.IsNullOrWhiteSpace(builder.Configuration["Sentry:Dsn"])) return;
+        builder.WebHost.UseSentry(options =>
+        {
+            options.Environment = builder.Environment.EnvironmentName;
+            options.SendDefaultPii = false;
+            options.MaxRequestBodySize = Sentry.Extensibility.RequestSize.None;
+            options.TracesSampleRate = 0;
+        });
     }
 
     public static void UseLoomApi(this WebApplication app, bool devAuthEnabled)

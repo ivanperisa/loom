@@ -16,6 +16,9 @@ const described = computed(() => describeApiError(props.error))
   <div role="alert" class="rounded-xl border border-danger/30 bg-danger-fill p-6 text-center">
     <p class="font-semibold text-danger-text">{{ described.title }}</p>
     <p class="mt-1 text-sm text-muted">{{ described.message }}</p>
+    <p v-if="described.reference" class="mt-2 select-all font-mono text-xs text-faint">
+      {{ t('apiErrors.reference', { id: described.reference }) }}
+    </p>
     <ActionButton v-if="retryable !== false" class="mx-auto mt-4" @click="$emit('retry')">
       {{ t('apiErrors.retry') }}
     </ActionButton>

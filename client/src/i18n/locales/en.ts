@@ -700,6 +700,7 @@ export default {
     },
     network: 'Can\'t reach the server. Check your connection and try again.',
     unknown: 'Something went wrong. Try again.',
+    reference: 'Reference: {id}',
     retry: 'Try again',
     course: 'course {id}',
     slot: 'slot {id}',

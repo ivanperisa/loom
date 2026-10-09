@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@sentry/vue':
+        specifier: ^9.47.2
+        version: 9.47.2(pinia@3.0.4(typescript@5.9.3)(vue@3.5.29(typescript@5.9.3)))(vue@3.5.29(typescript@5.9.3))
       '@tanstack/vue-query':
         specifier: ^5.104.1
         version: 5.104.1(vue@3.5.29(typescript@5.9.3))
@@ -777,6 +780,40 @@ packages:
     resolution: {integrity: sha512-2HRCml6OztYXyJXAvdDXPKcawukWY2GpR5/nxKp4iBgiO3wcoEGkAaqctIbZcNB6KlUQBIqt8VYkNSj2397EfA==}
     cpu: [x64]
     os: [win32]
+
+  '@sentry-internal/browser-utils@9.47.2':
+    resolution: {integrity: sha512-LKRDMpyCZ+tUmhWYN6kaYlO/4X5pF5k5q5UcsoJtDQc/1vXZ6fM5AaGHseAnDTzie/Rblm46S/gEo84bVvblFg==}
+    engines: {node: '>=18'}
+
+  '@sentry-internal/feedback@9.47.2':
+    resolution: {integrity: sha512-daa2anVNapDNT6IATGM7yJgM+azDTcY9UHknlxKVQVRiRYnir8pUnQa6gYErYqUJeAHrZedE+eEk4M5RG/t3hA==}
+    engines: {node: '>=18'}
+
+  '@sentry-internal/replay-canvas@9.47.2':
+    resolution: {integrity: sha512-MWkpf0TSGmc0+uQlylrhCMreFFKMonRPNnyqcGbyI7CDmPRrL5TDYSS2bUF4BmA5d5N1vYF934/tkpONKjM71Q==}
+    engines: {node: '>=18'}
+
+  '@sentry-internal/replay@9.47.2':
+    resolution: {integrity: sha512-8SKV9tB/bY1c4QtsWrOZfWHwFffCr8s03Nl1e6vmlqEfLX5AGoeHsQneXbm7xmqUahr25QyyGAgUDZZrfefrgw==}
+    engines: {node: '>=18'}
+
+  '@sentry/browser@9.47.2':
+    resolution: {integrity: sha512-dqs+whBtZwXElSkU4JFgRSsERJmHX/EhC9TeevFvkv6aTtx//7qOhuhhIzA/FO7Td8OAKt6TmbLjGOmXhDk9Mg==}
+    engines: {node: '>=18'}
+
+  '@sentry/core@9.47.2':
+    resolution: {integrity: sha512-WYEP2ZHkTQMP7Gg5frzrQy1475TnK5Qv8wgvHiTlNerYaEBCNpAeWjUltTgfCQ8Hbv1iq4inca7Kqmmyv9gLnQ==}
+    engines: {node: '>=18'}
+
+  '@sentry/vue@9.47.2':
+    resolution: {integrity: sha512-RegVTvx6YC6JY0H/0BA7RIH59zdSGioNRrBpvOkcyLV601vscqfqmP6tCSYbwHcy53n4yTTIQZurcdbxTyPzOQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      pinia: 2.x || 3.x
+      vue: 2.x || 3.x
+    peerDependenciesMeta:
+      pinia:
+        optional: true
 
   '@tailwindcss/node@4.2.1':
     resolution: {integrity: sha512-jlx6sLk4EOwO6hHe1oCGm1Q4AN/s0rSrTTPBGPM0/RQ6Uylwq17FuU8IeJJKEjtc6K6O07zsvP+gDO6MMWo7pg==}
@@ -3098,6 +3135,42 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.59.0':
     optional: true
+
+  '@sentry-internal/browser-utils@9.47.2':
+    dependencies:
+      '@sentry/core': 9.47.2
+
+  '@sentry-internal/feedback@9.47.2':
+    dependencies:
+      '@sentry/core': 9.47.2
+
+  '@sentry-internal/replay-canvas@9.47.2':
+    dependencies:
+      '@sentry-internal/replay': 9.47.2
+      '@sentry/core': 9.47.2
+
+  '@sentry-internal/replay@9.47.2':
+    dependencies:
+      '@sentry-internal/browser-utils': 9.47.2
+      '@sentry/core': 9.47.2
+
+  '@sentry/browser@9.47.2':
+    dependencies:
+      '@sentry-internal/browser-utils': 9.47.2
+      '@sentry-internal/feedback': 9.47.2
+      '@sentry-internal/replay': 9.47.2
+      '@sentry-internal/replay-canvas': 9.47.2
+      '@sentry/core': 9.47.2
+
+  '@sentry/core@9.47.2': {}
+
+  '@sentry/vue@9.47.2(pinia@3.0.4(typescript@5.9.3)(vue@3.5.29(typescript@5.9.3)))(vue@3.5.29(typescript@5.9.3))':
+    dependencies:
+      '@sentry/browser': 9.47.2
+      '@sentry/core': 9.47.2
+      vue: 3.5.29(typescript@5.9.3)
+    optionalDependencies:
+      pinia: 3.0.4(typescript@5.9.3)(vue@3.5.29(typescript@5.9.3))
 
   '@tailwindcss/node@4.2.1':
     dependencies:
