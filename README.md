@@ -150,6 +150,8 @@ dotnet ef migrations script --idempotent --project server/Loom.Infrastructure --
 
 ### Production baseline (one time)
 
+Step-by-step guide for the first deploy from `main` (Croatian, with a rehearsal on a copy and a rollback plan): [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
 The first migration (`Initial`) describes the schema that production already has (the old `schema.sql`), including constraint and index names. Before the first migration-based deploy:
 
 1. Back up: `database/backup/backup.sh` (see below).
