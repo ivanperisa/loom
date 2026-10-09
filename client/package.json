@@ -8,6 +8,7 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
+    "test:unit": "vitest run",
     "type-check": "vue-tsc --build",
     "api:types": "openapi-typescript openapi.json -o src/api/schema.d.ts",
     "lint": "run-s lint:*",
@@ -40,6 +41,7 @@
     "eslint-plugin-oxlint": "~1.50.0",
     "eslint-plugin-vue": "~10.8.0",
     "jiti": "^2.6.1",
+    "jsdom": "^26.1.0",
     "npm-run-all2": "^8.0.4",
     "openapi-typescript": "^7.13.0",
     "oxlint": "~1.50.0",
@@ -48,6 +50,7 @@
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.6",
+    "vitest": "^3.2.7",
     "vue-tsc": "^3.2.5"
   },
   "engines": {

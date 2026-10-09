@@ -71,5 +71,8 @@ jobs:
       - name: API types are generated
         run: pnpm api:types && git diff --exit-code -- src/api/schema.d.ts
 
+      - name: Unit tests
+        run: pnpm test:unit
+
       - name: Type-check and build
         run: pnpm build

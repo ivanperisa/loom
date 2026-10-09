@@ -104,7 +104,7 @@ Exchange links are `http://localhost:5173/exchange/00000000-0000-4000-8000-00000
 
 ```sh
 dotnet test Loom.slnx          # integration tests: real PostgreSQL via Testcontainers (needs Docker)
-cd client && pnpm lint:check && pnpm type-check
+cd client && pnpm lint:check && pnpm type-check && pnpm test:unit   # unit tests: Vitest (composables, LA draft, error texts, i18n keys)
 cd client && pnpm exec playwright install chromium && pnpm e2e   # browser smoke tests against `docker compose up`
 ```
 
