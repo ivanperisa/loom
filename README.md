@@ -35,6 +35,7 @@ docker compose up -d                      # start in the background
 docker compose logs -f api                # follow API logs
 docker compose run --rm seed --reset      # wipe the database, migrate and reseed
 docker compose run --rm seed --migrate-only   # only apply new migrations
+docker compose restart web api            # after pulling new client/server packages (installs them)
 docker compose down                       # stop (data is kept)
 docker compose down -v                    # stop and delete all data and caches
 ```
