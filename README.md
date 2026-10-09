@@ -149,7 +149,49 @@ dotnet ef migrations script --idempotent --project server/Loom.Infrastructure --
 
 The first migration (`Initial`) describes the schema that production already has (the old `schema.sql`), including constraint and index names. Before the first migration-based deploy:
 
-1. Back up: `pg_dump -Fc ...`.
+1. Back up: `database/backup/backup.sh` (see below).
 2. Optionally verify that production matches, by running `database/verify-schema.sql` against production and against a fresh local database, then diffing the two outputs.
 3. Run `database/baseline.sql` once. It marks `Initial` as already applied.
 4. Apply the remaining migrations: `migrations.sql` from above, or an EF migration bundle.
+
+## Running in production
+
+### Database requirements
+
+- PostgreSQL 13 or newer. The `AccentInsensitiveSearch` migration creates the `unaccent` and `pg_trgm` extensions; both are "trusted" extensions, so the database owner can create them without superuser rights. If the owner lacks the `CREATE` privilege on the database, an admin runs `CREATE EXTENSION unaccent; CREATE EXTENSION pg_trgm;` once beforehand.
+- The API turns off PostgreSQL's JIT for its own connections (`-c jit=off` in the connection options). For these short queries JIT costs more than it saves (measured: 15 ms per call, hundreds of ms on first use). It is a client-side option, so the server setting stays as it is. One exception: PgBouncer in transaction mode rejects startup options. In that case add `Options=` (empty) or `jit=on` to the connection string, which skips it.
+
+### Backups
+
+`database/backup/backup.sh` writes a compressed `pg_dump`, checks that `pg_restore` can read it, and rotates old ones: the last 14 daily and 8 weekly (Sunday) dumps, configurable with `KEEP_DAILY` and `KEEP_WEEKLY`.
+
+```sh
+PGHOST=db.example PGUSER=loom PGDATABASE=loom ./database/backup/backup.sh /var/backups/loom   # password in ~/.pgpass
+./database/backup/restore.sh /var/backups/loom/daily/loom-<time>.dump loom_check               # into a NEW database, never over the live one
+```
+
+- **Nightly:** `loom-backup.service` and `loom-backup.timer` (same folder) are a systemd example for 02:30 every night.
+- **Before every deploy that applies migrations:** run `backup.sh` first.
+- **Off-site:** copy the backup folder to another machine. A backup on the database server is lost together with it.
+- **Test restores:** restore into a scratch database now and then. A backup that has never been restored is a hope, not a backup.
+
+### Logs
+
+The API writes to the console (journald, `docker logs`) and to `logs/loom-<date>.log` next to the app, with errors also in `logs/loom-errors-<date>.log`. Files are kept 30 days, the error files 90. Every line carries the request's trace id. When a server error reaches a user, they see "Reference: <id>", which finds the request:
+
+```sh
+grep <id> logs/loom-*.log
+```
+
+### Error tracking (optional)
+
+Errors can be sent to Sentry or to a self-hosted [GlitchTip](https://glitchtip.com) (same protocol). It stays off until a DSN is set:
+
+- API: `Sentry__Dsn=https://<key>@<host>/<project>` (environment variable or `Sentry:Dsn` in appsettings)
+- Client: the `VITE_SENTRY_DSN` variable in the GitHub environment, used at build time. Without it, the SDK isn't even downloaded.
+
+No personal data is sent: no cookies, headers, request bodies or emails. Access-link tokens are removed from URLs before anything leaves the browser.
+
+### Performance
+
+Checked on generated data (20k students, 24k partner courses, 20k exchanges, 120k LA entries): every page's requests answer in 10–50 ms once warm, and the official xlsx takes about 200 ms. `QueryBudgetTests` fail if a page starts running a query per row. To look at the client bundle, run `pnpm build:analyze` in `client/`.

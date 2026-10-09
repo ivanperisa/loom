@@ -1,0 +1,12 @@
+# Example systemd unit for nightly backups (adjust paths and the environment file).
+#   sudo cp loom-backup.service loom-backup.timer /etc/systemd/system/
+#   sudo systemctl enable --now loom-backup.timer
+# /etc/loom/backup.env holds PGHOST, PGPORT, PGUSER, PGDATABASE (password in the service user's ~/.pgpass).
+[Unit]
+Description=Loom database backup
+
+[Service]
+Type=oneshot
+User=loom
+EnvironmentFile=/etc/loom/backup.env
+ExecStart=/var/www/apps/loom/database/backup/backup.sh /var/backups/loom
