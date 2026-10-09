@@ -9,6 +9,7 @@ import NotesModal from '@/components/exchange/NotesModal.vue'
 import EditExchangeModal from '@/components/exchange/EditExchangeModal.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ErrorAlert from '@/components/common/ErrorAlert.vue'
+import TabBar, { tabId, tabPanelId } from '@/components/common/TabBar.vue'
 import { provideExchangeContext } from '@/composables/useExchangeContext'
 import { useExchangeMutations, useLearningAgreementMutations, useRecognitionMutations } from '@/queries/exchange.queries'
 import { useAuthStore } from '@/stores/auth.store'
@@ -46,6 +47,11 @@ const activeTab = ref<ExchangeTab>(
   VALID_TABS.includes(route.query.tab as ExchangeTab) ? (route.query.tab as ExchangeTab) : 'la',
 )
 watch(activeTab, (tab) => router.replace({ query: { ...route.query, tab } }))
+const tabs = computed(() => [
+  { key: 'la' as const, label: t('exchange.tabs.learningAgreement') },
+  { key: 'recognition' as const, label: t('exchange.tabs.recognition') },
+  { key: 'mappingScheme' as const, label: t('exchange.tabs.mappingScheme') },
+])
 
 const accessLink = useCopyAccessLink()
 
@@ -301,44 +307,7 @@ watch(exchangeQuery.error, (error) => {
 
     <!-- Tabs -->
     <div class="mt-4 flex items-center justify-between border-b border-primary/20">
-      <div class="flex">
-        <button
-          type="button"
-          class="px-4 py-2.5 text-sm font-semibold transition"
-          :class="
-            activeTab === 'la'
-              ? 'border-b-2 border-primary text-primary-active-text'
-              : 'text-light/60 hover:text-primary-text'
-          "
-          @click="activeTab = 'la'"
-        >
-          {{ t('exchange.tabs.learningAgreement') }}
-        </button>
-        <button
-          type="button"
-          class="px-4 py-2.5 text-sm font-semibold transition"
-          :class="
-            activeTab === 'recognition'
-              ? 'border-b-2 border-primary text-primary-active-text'
-              : 'text-light/60 hover:text-primary-text'
-          "
-          @click="activeTab = 'recognition'"
-        >
-          {{ t('exchange.tabs.recognition') }}
-        </button>
-        <button
-          type="button"
-          class="px-4 py-2.5 text-sm font-semibold transition"
-          :class="
-            activeTab === 'mappingScheme'
-              ? 'border-b-2 border-primary text-primary-active-text'
-              : 'text-light/60 hover:text-primary-text'
-          "
-          @click="activeTab = 'mappingScheme'"
-        >
-          {{ t('exchange.tabs.mappingScheme') }}
-        </button>
-      </div>
+      <TabBar v-model="activeTab" id-prefix="exchange" :tabs="tabs" />
       <button
         v-if="learningAgreement"
         type="button"
@@ -354,7 +323,7 @@ watch(exchangeQuery.error, (error) => {
     </div>
 
     <!-- Tab content -->
-    <div class="mt-4">
+    <div :id="tabPanelId('exchange', activeTab)" class="mt-4" role="tabpanel" :aria-labelledby="tabId('exchange', activeTab)">
       <template v-if="activeTab === 'la'">
         <LearningAgreementPanel
           :exchange-id="exchangeId"
