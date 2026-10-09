@@ -5,11 +5,13 @@ import { useI18n } from 'vue-i18n'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { coordinatorService } from '@/services/coordinator.service'
 import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
-import type { ExchangeSummaryResponse } from '@/types/exchange.types'
-import { statusColorClass, statusDotClass } from '@/utils/statusColors'
 import { useCopyAccessLink } from '@/composables/useCopyAccessLink'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import StudentFormModal from '@/components/coordinator/StudentFormModal.vue'
+import StudentRow from '@/components/coordinator/StudentRow.vue'
+import ExchangeSwitcherMenu from '@/components/coordinator/ExchangeSwitcherMenu.vue'
+import StudentActionsMenu from '@/components/coordinator/StudentActionsMenu.vue'
+import { usePopoverMenu } from '@/composables/usePopoverMenu'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import SortableHeader from '@/components/common/SortableHeader.vue'
@@ -49,13 +51,8 @@ const filtersQuery = useQuery({
 const homeInstitutionsQuery = useHomeInstitutionsQuery()
 const institutions = computed(() => homeInstitutionsQuery.data.value ?? [])
 
-const openMenuId = ref<number | null>(null)
-const menuPos = ref({ top: 0, left: 0 })
-const MENU_WIDTH = 380
-
-const actionsMenuId = ref<number | null>(null)
-const actionsMenuPos = ref({ top: 0, left: 0 })
-const ACTIONS_MENU_WIDTH = 200
+const exchangesMenu = usePopoverMenu<number>(380)
+const actionsMenu = usePopoverMenu<number>(200)
 
 const showStudentModal = ref(false)
 const studentModalMode = ref<'create' | 'edit'>('create')
@@ -78,24 +75,8 @@ const partnerInstitutionOptions = computed(() => [
   ...(filtersQuery.data.value?.partnerInstitutions ?? []).map((name) => ({ value: name, label: name })),
 ])
 
-const primaryExchangeByStudent = computed(() => {
-  const map = new Map<number, ExchangeSummaryResponse>()
-  for (const student of students.value) {
-    if (student.exchanges[0]) map.set(student.id, student.exchanges[0])
-  }
-  return map
-})
-
-function extraExchangeCount(studentId: number): number {
-  const student = students.value.find((s) => s.id === studentId)
-  return Math.max((student?.exchanges.length ?? 0) - 1, 0)
-}
-
-const openMenuStudent = computed(() => students.value.find((s) => s.id === openMenuId.value) ?? null)
-const openMenuExchanges = computed(() => openMenuStudent.value?.exchanges ?? [])
-const actionsMenuStudent = computed(
-  () => students.value.find((s) => s.id === actionsMenuId.value) ?? null,
-)
+const openMenuStudent = computed(() => students.value.find((s) => s.id === exchangesMenu.openId.value) ?? null)
+const actionsMenuStudent = computed(() => students.value.find((s) => s.id === actionsMenu.openId.value) ?? null)
 
 watch([studentList.page, studentList.search, selectedAcademicYear, selectedPartnerInstitution], () => {
   closeMenu()
@@ -107,37 +88,11 @@ function refreshStudents() {
 }
 
 function closeMenu() {
-  openMenuId.value = null
+  exchangesMenu.close()
 }
 
 function closeActionsMenu() {
-  actionsMenuId.value = null
-}
-
-function toggleMenu(studentId: number, event: MouseEvent) {
-  if (openMenuId.value === studentId) {
-    closeMenu()
-    return
-  }
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  menuPos.value = {
-    top: rect.bottom + 6,
-    left: Math.min(rect.left, window.innerWidth - MENU_WIDTH - 12),
-  }
-  openMenuId.value = studentId
-}
-
-function toggleActionsMenu(studentId: number, event: MouseEvent) {
-  if (actionsMenuId.value === studentId) {
-    closeActionsMenu()
-    return
-  }
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  actionsMenuPos.value = {
-    top: rect.bottom + 6,
-    left: Math.min(rect.left, window.innerWidth - ACTIONS_MENU_WIDTH - 12),
-  }
-  actionsMenuId.value = studentId
+  actionsMenu.close()
 }
 
 function handleOutsideClick(e: MouseEvent) {
@@ -149,10 +104,6 @@ function handleOutsideClick(e: MouseEvent) {
 
 onMounted(() => document.addEventListener('click', handleOutsideClick))
 onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
-
-function rowAriaLabel(student: CoordinatorStudentResponse, primary: ExchangeSummaryResponse): string {
-  return `${student.name} — ${primary.partnerInstitutionName}`
-}
 
 function viewExchange(exchangeGuid: string) {
   closeMenu()
@@ -281,121 +232,17 @@ function onExchangeCreated(exchangeGuid: string) {
           </div>
 
           <div class="divide-y divide-primary/10">
-            <div v-for="student in students" :key="student.id" class="group relative" data-menu-anchor>
-              <!-- Stretched link: click anywhere on the row to open its primary exchange -->
-              <RouterLink
-                v-if="primaryExchangeByStudent.get(student.id)"
-                :to="`/exchange/${primaryExchangeByStudent.get(student.id)!.guid}`"
-                class="absolute inset-0 z-0 rounded-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2"
-                :aria-label="rowAriaLabel(student, primaryExchangeByStudent.get(student.id)!)"
-                @click="closeMenu"
-              />
-              <button
-                v-else
-                type="button"
-                class="absolute inset-0 z-0 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2"
-                :aria-label="`${t('coordinator.createExchange')} — ${student.name}`"
-                @click="openCreateExchange(student.id)"
-              />
-              
-              <div class="coord-row-grid relative pointer-events-none gap-4 px-4 py-3 transition group-hover:bg-dark">
-                <div class="min-w-0">
-                  <p class="truncate text-sm font-semibold text-light">{{ student.name }}</p>
-                  <!-- Metadata line: JMBAG and the not-yet-claimed state share one row so every
-                       student cell is the same height whether or not the badge is present. -->
-                  <div class="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
-                    <span v-if="student.jmbag" class="truncate font-mono text-light/40">{{ student.jmbag }}</span>
-                    <span
-                      v-if="student.isPlaceholder"
-                      class="shrink-0 rounded-full border border-warning-text/35 bg-warning-fill px-2 py-0.5 text-[11px] font-medium text-warning-text"
-                    >
-                      {{ t('coordinator.placeholder') }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="min-w-0">
-                  <template v-if="primaryExchangeByStudent.get(student.id)">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="truncate text-sm text-light">{{ primaryExchangeByStudent.get(student.id)!.partnerInstitutionName }}</span>
-                      <button
-                        v-if="extraExchangeCount(student.id) > 0"
-                        type="button"
-                        class="pointer-events-auto shrink-0 rounded-full bg-fill px-2 py-0.5 text-[11px] font-medium text-light/60 transition hover:bg-primary hover:text-white"
-                        @click.stop="toggleMenu(student.id, $event)"
-                      >
-                        {{ t('coordinator.table.moreExchanges', { n: extraExchangeCount(student.id) }) }}
-                      </button>
-                    </div>
-                    <p class="mt-0.5 truncate text-xs text-light/40">
-                      {{ primaryExchangeByStudent.get(student.id)!.homeProgramName
-                      }}<span v-if="primaryExchangeByStudent.get(student.id)!.homeProfileName"> &middot; {{ primaryExchangeByStudent.get(student.id)!.homeProfileName }}</span>
-                    </p>
-                  </template>
-                  <span v-else class="text-sm text-light/30">{{ t('coordinator.table.none') }}</span>
-                </div>
-
-                <div class="min-w-0 text-center">
-                  <template v-if="primaryExchangeByStudent.get(student.id)">
-                    <p class="truncate text-sm text-light/70">{{ primaryExchangeByStudent.get(student.id)!.academicYear }}</p>
-                    <p class="truncate text-xs text-light/40">{{ t(`exchangeSemester.${primaryExchangeByStudent.get(student.id)!.semesterType}`) }}</p>
-                  </template>
-                  <span v-else class="text-sm text-light/30">{{ t('coordinator.table.none') }}</span>
-                </div>
-
-                <div class="flex justify-center">
-                  <span
-                    v-if="primaryExchangeByStudent.get(student.id)"
-                    class="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-                    :class="statusColorClass[primaryExchangeByStudent.get(student.id)!.learningAgreementStatus]"
-                  >
-                    {{ t(`documentStatus.${primaryExchangeByStudent.get(student.id)!.learningAgreementStatus}`) }}
-                  </span>
-                  <span v-else class="text-sm text-light/30">{{ t('coordinator.table.none') }}</span>
-                </div>
-
-                <div class="flex items-center justify-self-center gap-0.5">
-                  <button
-                    v-if="student.isPlaceholder && primaryExchangeByStudent.get(student.id)"
-                    type="button"
-                    :title="t('exchangeAccess.copyLink')"
-                    class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
-                    @click.stop="copyAccessLink(primaryExchangeByStudent.get(student.id)!.guid)"
-                  >
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
-                      <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
-                    </svg>
-                  </button>
-                  <span v-else class="h-7 w-7 shrink-0"></span>
-
-                  <a
-                    v-if="primaryExchangeByStudent.get(student.id)?.ewpLink"
-                    :href="primaryExchangeByStudent.get(student.id)!.ewpLink!"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    :title="t('exchange.ewpLink')"
-                    class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
-                    @click.stop
-                  >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                      <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-                    </svg>
-                  </a>
-                  <span v-else class="h-7 w-7 shrink-0"></span>
-                </div>
-
-                <button
-                  type="button"
-                  class="pointer-events-auto flex h-7 w-7 items-center justify-center justify-self-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-fill hover:text-light"
-                  :aria-expanded="actionsMenuId === student.id"
-                  aria-haspopup="true"
-                  :aria-label="`${t('coordinator.table.actions')} — ${student.name}`"
-                  @click.stop="toggleActionsMenu(student.id, $event)"
-                >⋯</button>
-              </div>
-            </div>
+            <StudentRow
+              v-for="student in students"
+              :key="student.id"
+              :student="student"
+              :actions-open="actionsMenu.openId.value === student.id"
+              @open-exchanges="exchangesMenu.toggle(student.id, $event)"
+              @open-actions="actionsMenu.toggle(student.id, $event)"
+              @create-exchange="openCreateExchange(student.id)"
+              @copy-link="copyAccessLink"
+              @navigate="exchangesMenu.close()"
+            />
           </div>
         </div>
       </div>
@@ -409,138 +256,24 @@ function onExchangeCreated(exchangeGuid: string) {
         @update:page="studentList.page.value = $event"
       />
 
-      <!-- Exchange switcher menu -->
-      <Teleport to="body">
-        <div
-          v-if="openMenuId"
-          data-menu-anchor
-          class="fixed z-50 w-[380px] rounded-xl border border-primary/20 bg-dark-2 p-1.5 shadow-2xl shadow-black/50"
-          :style="{ top: menuPos.top + 'px', left: menuPos.left + 'px' }"
-        >
-          <p class="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-light/40">
-            {{ t('coordinator.table.exchange') }}
-          </p>
-
-          <div v-if="openMenuExchanges.length === 0" class="px-2.5 py-3 text-center text-xs text-light/40">
-            {{ t('coordinator.noExchanges') }}
-          </div>
-          <div v-else class="space-y-0.5">
-            <div
-              v-for="ex in openMenuExchanges"
-              :key="ex.id"
-              class="flex cursor-pointer items-start justify-between gap-2 rounded-lg px-2 py-1.5 transition hover:bg-fill-soft"
-              @click="viewExchange(ex.guid)"
-            >
-              <div class="flex min-w-0 items-start gap-2">
-                <span class="mt-0.5 w-3 shrink-0 text-center text-xs font-bold text-primary-text">
-                  {{ ex.id === primaryExchangeByStudent.get(openMenuId!)?.id ? '✓' : '' }}
-                </span>
-                <div class="min-w-0">
-                  <p class="text-sm font-medium text-light">{{ ex.partnerInstitutionName }}</p>
-                  <p class="mt-0.5 text-xs text-light/40">
-                    {{ ex.homeProgramName }}<span v-if="ex.homeProfileName"> &middot; {{ ex.homeProfileName }}</span>
-                  </p>
-                  <p class="mt-0.5 flex items-center gap-1.5 text-xs text-light/50">
-                    <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="statusDotClass[ex.learningAgreementStatus]"></span>
-                    <span class="truncate">
-                      {{ ex.academicYear }} &middot; {{ t(`exchangeSemester.${ex.semesterType}`) }}
-                      &middot; {{ t(`documentStatus.${ex.learningAgreementStatus}`) }}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <div class="flex shrink-0 items-center gap-1">
-                <a
-                  v-if="ex.ewpLink"
-                  :href="ex.ewpLink"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  :title="t('exchange.ewpLink')"
-                  class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
-                  @click.stop="closeMenu"
-                >
-                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                    <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-                  </svg>
-                </a>
-                <button
-                  v-if="openMenuStudent?.isPlaceholder"
-                  type="button"
-                  :title="t('exchangeAccess.copyLink')"
-                  class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
-                  @click.stop="copyAccessLink(ex.guid)"
-                >
-                  <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
-                    <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="my-1.5 border-t border-primary/20"></div>
-          <button
-            type="button"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-primary-text transition hover:bg-primary/10"
-            @click="openCreateExchange(openMenuId!)"
-          >
-            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-            </svg>
-            {{ t('coordinator.createExchange') }}
-          </button>
-        </div>
-      </Teleport>
-
-      <!-- Per-row actions menu: teleported for the same reason as the switcher above -->
-      <Teleport to="body">
-        <div
-          v-if="actionsMenuId"
-          data-menu-anchor
-          class="fixed z-50 w-[200px] space-y-0.5 rounded-xl border border-primary/20 bg-dark-2 p-1.5 shadow-2xl shadow-black/50"
-          :style="{ top: actionsMenuPos.top + 'px', left: actionsMenuPos.left + 'px' }"
-        >
-          <button
-            v-if="actionsMenuStudent?.isPlaceholder && actionsMenuStudent?.isMyStudent"
-            type="button"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-light transition hover:bg-fill-soft"
-            @click="openEditStudent(actionsMenuStudent!)"
-          >
-            <svg class="h-3.5 w-3.5 text-light/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            {{ t('common.edit') }}
-          </button>
-          <button
-            v-if="actionsMenuStudent?.isMyStudent"
-            type="button"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-text transition hover:bg-primary/10"
-            @click="openCreateExchange(actionsMenuId!)"
-          >
-            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-            </svg>
-            {{ t('coordinator.createExchange') }}
-          </button>
-          <button
-            v-if="actionsMenuStudent?.isPlaceholder && actionsMenuStudent?.isMyStudent"
-            type="button"
-            class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-danger-text transition hover:bg-danger-fill disabled:opacity-50"
-            :disabled="deletingStudentId === actionsMenuStudent.id"
-            @click="deleteStudent(actionsMenuStudent)"
-          >
-            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            {{ deletingStudentId === actionsMenuStudent.id ? t('common.loading') : t('coordinator.deleteStudent') }}
-          </button>
-          <p v-if="!actionsMenuStudent?.isMyStudent" class="px-2.5 py-1.5 text-xs text-light/40">
-            {{ t('coordinator.table.reassignedNote') }}
-          </p>
-        </div>
-      </Teleport>
+      <ExchangeSwitcherMenu
+        v-if="openMenuStudent"
+        :student="openMenuStudent"
+        :position="exchangesMenu.position.value"
+        @view="viewExchange"
+        @copy-link="copyAccessLink"
+        @create-exchange="openCreateExchange(openMenuStudent.id)"
+        @close="exchangesMenu.close()"
+      />
+      <StudentActionsMenu
+        v-if="actionsMenuStudent"
+        :student="actionsMenuStudent"
+        :position="actionsMenu.position.value"
+        :deleting="deletingStudentId === actionsMenuStudent.id"
+        @edit="openEditStudent(actionsMenuStudent)"
+        @create-exchange="openCreateExchange(actionsMenuStudent.id)"
+        @delete="deleteStudent(actionsMenuStudent)"
+      />
     </section>
 
     <!-- Add/edit student modal -->
@@ -562,11 +295,3 @@ function onExchangeCreated(exchangeGuid: string) {
     />
   </main>
 </template>
-
-<style scoped>
-.coord-row-grid {
-  display: grid;
-  grid-template-columns: minmax(140px, 0.9fr) minmax(200px, 1.6fr) 200px 150px 60px 28px;
-  align-items: center;
-}
-</style>

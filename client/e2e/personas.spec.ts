@@ -25,6 +25,15 @@ test('the coordinator sees their students', async ({ page }) => {
   await expect(page.getByText('Hana History')).toBeVisible()
 })
 
+test("the coordinator opens a student's other exchanges from the row", async ({ page }) => {
+  await loginAs(page, 'ana.coordinator@loom.dev')
+  await page.goto('/coordinator?q=Mia%20Multi')
+  await page.getByRole('button', { name: /\+\s*(2 more|još 2)/ }).click()
+  // The switcher lists all three exchanges of the student.
+  await expect(page.getByText(/Politecnico di Milano/).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /new exchange|nova razmjena/i }).last()).toBeVisible()
+})
+
 test('a coordinator without students sees none of them', async ({ page }) => {
   await loginAs(page, 'ivo.coordinator@loom.dev')
   await page.goto('/coordinator')
