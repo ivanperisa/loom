@@ -5,6 +5,7 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -17,7 +18,23 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: env.VITE_BASE_PATH || '/',
-    plugins: [vue(), tailwindcss(), vueDevTools(), ...(useHttps ? [basicSsl()] : [])],
+    plugins: [
+      vue(),
+      tailwindcss(),
+      vueDevTools(),
+      ...(useHttps ? [basicSsl()] : []),
+      // `pnpm build:analyze` → dist/stats.html (what each dependency adds to the bundle).
+      ...(process.env.ANALYZE ? [visualizer({ filename: 'dist/stats.html', gzipSize: true, template: process.env.ANALYZE === 'json' ? 'raw-data' : 'treemap' })] : []),
+    ],
+    // Compile-time flags: no Options API, no legacy vue-i18n API, no devtools hooks in production builds.
+    define: {
+      __VUE_OPTIONS_API__: 'false',
+      __VUE_PROD_DEVTOOLS__: 'false',
+      __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
+      __VUE_I18N_LEGACY_API__: 'false',
+      __VUE_I18N_FULL_INSTALL__: 'false',
+      __INTLIFY_PROD_DEVTOOLS__: 'false',
+    },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -8,6 +8,7 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
+    "build:analyze": "ANALYZE=1 vite build",
     "test:unit": "vitest run",
     "type-check": "vue-tsc --build",
     "api:types": "openapi-typescript openapi.json -o src/api/schema.d.ts",
@@ -21,7 +22,6 @@
   "dependencies": {
     "@tanstack/vue-query": "^5.104.1",
     "axios": "^1.13.6",
-    "flag-icons": "^7.5.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.29",
     "vue-i18n": "^11.2.8",
@@ -46,6 +46,7 @@
     "openapi-typescript": "^7.13.0",
     "oxlint": "~1.50.0",
     "prettier": "3.8.1",
+    "rollup-plugin-visualizer": "^5.14.0",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",

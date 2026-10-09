@@ -8,6 +8,7 @@ Vue 3 + TypeScript + Vite + Tailwind. Run it with `docker compose up` from the r
 |---|---|
 | `pnpm dev` | Dev server (Vite) |
 | `pnpm build` | Type-check (`vue-tsc`) and build |
+| `pnpm build:analyze` | Build and open `dist/stats.html`: what each dependency adds to the bundle |
 | `pnpm lint:check` | oxlint + ESLint, no fixes (`pnpm lint` fixes) |
 | `pnpm test:unit` | Vitest: composables, the LA draft, error texts, i18n keys |
 | `pnpm e2e` | Playwright against `docker compose up` (seeded personas) |
