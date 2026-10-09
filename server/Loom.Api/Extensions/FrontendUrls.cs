@@ -12,6 +12,8 @@ public sealed class FrontendUrls(IOptions<FrontendOptions> options)
     {
         if (string.IsNullOrWhiteSpace(path)) return "/";
         var normalized = path.Trim();
-        return !normalized.StartsWith('/') || normalized.StartsWith("//") ? "/" : normalized;
+        // "//host" and "/\host" both leave the site (browsers read a backslash as a slash).
+        var leavesSite = !normalized.StartsWith('/') || (normalized.Length > 1 && normalized[1] is '/' or '\\');
+        return leavesSite ? "/" : normalized;
     }
 }

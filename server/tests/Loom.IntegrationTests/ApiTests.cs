@@ -84,6 +84,16 @@ public class ApiTests(DatabaseFixture fixture) : HttpTest(fixture)
         Assert.Equal("session.user@loom.dev", signedIn.GetProperty("user").GetProperty("email").GetString());
     }
 
+    [Theory]
+    [InlineData("/exchange/1", "/exchange/1")]
+    [InlineData("/home?tab=la", "/home?tab=la")]
+    [InlineData("//evil.example", "/")]
+    [InlineData("/\\evil.example", "/")]
+    [InlineData("https://evil.example", "/")]
+    [InlineData("", "/")]
+    public void Return_paths_never_leave_the_site(string path, string expected) =>
+        Assert.Equal(expected, Loom.Api.Extensions.FrontendUrls.NormalizeRelativePath(path));
+
     [Fact]
     public async Task Dev_login_does_not_exist_outside_development()
     {
