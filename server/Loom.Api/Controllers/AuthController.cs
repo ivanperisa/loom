@@ -1,5 +1,6 @@
+using Loom.Application.Common.Security;
 using Loom.Api.Extensions;
-using Loom.Application.Interfaces.Services;
+using Loom.Application.Features.Users;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -8,52 +9,51 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Loom.Api.Controllers;
 
-[ApiController]
-[Route("[controller]")]
+[Route("api/auth")]
 public class AuthController(
-    IConfiguration configuration,
-    IUserService userService) : ApiController
+    FrontendUrls frontend,
+    AccountService accounts,
+    ICurrentActor actor,
+    IAuthenticationSchemeProvider schemes) : ApiController
 {
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
     [HttpGet("login")]
-    public IActionResult Login([FromQuery] string? returnUrl = "/")
+    public async Task<IActionResult> Login([FromQuery] string? returnUrl = "/")
     {
-        var frontendTarget = configuration.BuildFrontendUrl(returnUrl);
+        var frontendTarget = frontend.Build(returnUrl);
+
+        // Local development without Google credentials: use the dev login on the landing page instead.
+        if (await schemes.GetSchemeAsync(AuthenticationSetup.GoogleScheme) is null)
+            return Redirect(frontend.Build("/"));
+
         if (User.Identity?.IsAuthenticated == true)
         {
             return SignOut(
-            new AuthenticationProperties { RedirectUri = $"{Request.PathBase}/auth/login?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}"},
+            new AuthenticationProperties { RedirectUri = $"{Request.PathBase}/api/auth/login?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}"},
             CookieAuthenticationDefaults.AuthenticationScheme);
         }
 
         var authProperties = new AuthenticationProperties { RedirectUri = frontendTarget };
         authProperties.Parameters["prompt"] = "select_account";
 
-        return Challenge(authProperties, "GoogleOidc");
+        return Challenge(authProperties, AuthenticationSetup.GoogleScheme);
     }
 
+    /// <summary>Whether someone is signed in, and who. Always 200, so an anonymous visit is not an error.</summary>
     [AllowAnonymous]
-    [HttpGet("me")]
-    public async Task<IActionResult> Me(CancellationToken ct)
+    [HttpGet("session")]
+    public async Task<ActionResult<SessionResponse>> Session(CancellationToken ct)
     {
-        var userId = TryGetCurrentUserId();
-        if (userId is null)
-        {
-            return Ok(new { IsAuthenticated = false });
-        }
+        if (!actor.IsAuthenticated) return new SessionResponse(false, null);
 
-        var result = await userService.GetCurrentUserAsync(userId.Value, ct);
-        if (result.IsError)
-        {
-            return Ok(new { IsAuthenticated = false });
-        }
-
-        return Ok(result.Value);
+        var result = await accounts.GetAsync(actor.UserId, ct);
+        return result.IsError ? new SessionResponse(false, null) : new SessionResponse(true, result.Value);
     }
 
     [Authorize]
     [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

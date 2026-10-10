@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { coordinatorService } from '@/services/coordinator.service'
-import { useExchangeStore } from '@/stores/exchange.store'
-import { useExchangePermissions } from '@/composables/useExchangePermissions'
-import { exchangeSemester } from '@/utils/exchangeSemester'
-import { extractApiError } from '@/utils/apiError'
+import { useCoordinatorsQuery } from '@/queries/catalog.queries'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useExchangeMutations } from '@/queries/exchange.queries'
+import { useExchangePeriod } from '@/composables/useExchangePeriod'
+import StudySemesterPicker from '@/components/exchange/period/StudySemesterPicker.vue'
+import SemesterTypePicker from '@/components/exchange/period/SemesterTypePicker.vue'
+import { describeApiError } from '@/utils/apiError'
 import { useNotification } from '@/composables/useNotification'
 import type { CoordinatorOption } from '@/types/coordinator.types'
-import type { ExchangeResponse, ExchangeSemester } from '@/types/exchange.types'
+import type { ExchangeResponse } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 
@@ -23,118 +25,41 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const exchangeStore = useExchangeStore()
+const { guest, isApproved } = useExchangeContext()
+const exchangeMutations = useExchangeMutations(() => props.exchange.guid)
 const { notifyError } = useNotification()
-const { isApproved } = useExchangePermissions()
 
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
 // Prefill from the exchange being edited
-const academicYear = ref(props.exchange.academicYear)
-const semesterType = ref<ExchangeSemester>(props.exchange.semesterType)
-const studySemesters = ref<number[]>([...props.exchange.studySemesters])
-const selectedCoordinatorId = ref<string | null>(props.exchange.coordinatorId)
+const period = useExchangePeriod({
+  academicYear: props.exchange.academicYear,
+  semesterType: props.exchange.semesterType,
+  studySemesters: props.exchange.studySemesters,
+  lockedSemesters: () => props.laMappedSemesters,
+})
+const { academicYear, semesterType, studySemesters, academicYearSelectOptions, hasBlockedSemesterType } = period
+const selectedCoordinatorId = ref<number | null>(props.exchange.coordinatorId)
 const mentorInput = ref(props.exchange.mentor ?? '')
 const ewpLinkInput = ref(props.exchange.ewpLink ?? '')
 
-// Academic year options
-const academicYearOptions = computed(() => {
-  const now = new Date()
-  const y = now.getFullYear()
-  const start = now.getMonth() + 1 >= 9 ? y : y - 1
-  const opts = [`${start}/${start + 1}`, `${start + 1}/${start + 2}`]
-  if (!opts.includes(academicYear.value)) opts.unshift(academicYear.value)
-  return opts
-})
-const academicYearSelectOptions = computed(() =>
-  academicYearOptions.value.map((year) => ({ value: year, label: year })),
-)
-
-const allowedSemesters = computed<number[]>(() => {
-  if (semesterType.value === exchangeSemester.Winter) return [1, 3]
-  if (semesterType.value === exchangeSemester.Summer) return [2, 4]
-  return []
-})
-
-const bothPairs = [[1, 2], [3, 4]]
-
-function selectPair(pair: number[]) {
-  const sorted = [...pair].sort((a, b) => a - b)
-  const isSame =
-    studySemesters.value.length === sorted.length &&
-    sorted.every((v, i) => studySemesters.value.slice().sort((a, b) => a - b)[i] === v)
-  studySemesters.value = isSame ? [] : [...sorted]
-}
-
-function isPairSelected(pair: number[]): boolean {
-  const sorted = [...pair].sort((a, b) => a - b)
-  return (
-    studySemesters.value.length === sorted.length &&
-    sorted.every((v, i) => studySemesters.value.slice().sort((a, b) => a - b)[i] === v)
-  )
-}
-
-function toggleStudySemester(s: number) {
-  if (semesterType.value === exchangeSemester.Both) {
-    const idx = studySemesters.value.indexOf(s)
-    if (idx === -1) studySemesters.value.push(s)
-    else studySemesters.value.splice(idx, 1)
-  } else {
-    studySemesters.value = studySemesters.value[0] === s ? [] : [s]
-  }
-}
-
-function canSelectSemesterType(sem: ExchangeSemester): boolean {
-  if (sem === exchangeSemester.Both) return true
-  const allowed = sem === exchangeSemester.Winter ? [1, 3] : [2, 4]
-  return props.laMappedSemesters.every((s) => allowed.includes(s))
-}
-
-const hasBlockedSemesterType = computed(() =>
-  [exchangeSemester.Winter, exchangeSemester.Summer, exchangeSemester.Both].some(
-    (sem) => !canSelectSemesterType(sem),
-  ),
-)
-
-function setSemesterType(sem: ExchangeSemester) {
-  if (!canSelectSemesterType(sem)) return
-  semesterType.value = sem
-  if (sem !== exchangeSemester.Both) {
-    const allowed = sem === exchangeSemester.Winter ? [1, 3] : [2, 4]
-    studySemesters.value = studySemesters.value.filter((s) => allowed.includes(s))
-  }
-}
-
-const coordinators = ref<CoordinatorOption[]>([])
+const coordinatorsQuery = useCoordinatorsQuery(() => !guest.value)
+const coordinators = computed<CoordinatorOption[]>(() => coordinatorsQuery.data.value ?? [])
 const coordinatorOptions = computed(() => [
   { value: null, label: t('exchange.noCoordinator') },
   ...coordinators.value.map((c) => ({ value: c.id, label: c.name })),
 ])
 
-onMounted(async () => {
-  if (exchangeStore.guestMode) return
-  try {
-    coordinators.value = (await coordinatorService.getCoordinators()).data
-  } catch {
-    // non-fatal: coordinator list stays empty, current value still shows via label fallback
-  }
-})
 
 async function submit() {
-  errorMessage.value = null
-  if (!academicYear.value.trim()) {
-    errorMessage.value = t('createExchange.errors.academicYearRequired')
-    return
-  }
-  if (studySemesters.value.length === 0) {
-    errorMessage.value = t('createExchange.errors.studySemesterRequired')
-    return
-  }
+  const missing = period.validate()
+  errorMessage.value = missing ? t(missing) : null
+  if (missing) return
 
   isSubmitting.value = true
   try {
-    await exchangeStore.updateExchange(props.exchange.guid, {
+    await exchangeMutations.update.mutateAsync({
       academicYear: academicYear.value.trim(),
       semesterType: semesterType.value,
       studySemesters: studySemesters.value,
@@ -144,7 +69,7 @@ async function submit() {
     })
     emit('saved')
   } catch (e) {
-    const { title, message } = extractApiError(e)
+    const { title, message } = describeApiError(e)
     errorMessage.value = message ?? title
     notifyError(title, message)
   } finally {
@@ -162,7 +87,7 @@ async function submit() {
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-primary/20 px-8 py-5">
         <h2 id="edit-exchange-title" class="text-xl font-semibold text-light">{{ t('exchange.editExchange') }}</h2>
-        <button type="button" class="text-light/50 transition hover:text-light" @click="emit('close')">
+        <button :aria-label="t('common.close')" type="button" class="text-light/50 transition hover:text-light" @click="emit('close')">
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path
               fill-rule="evenodd"
@@ -189,70 +114,12 @@ async function submit() {
               />
             </div>
 
-            <!-- Study semesters -->
-            <div>
-              <label class="mb-2 block text-sm font-semibold text-primary-text">{{
-                t('exchange.studySemester')
-              }}</label>
-
-              <div v-if="semesterType !== exchangeSemester.Both" class="flex gap-2">
-                <button
-                  v-for="s in allowedSemesters"
-                  :key="s"
-                  type="button"
-                  class="h-10 w-10 rounded-xl border text-sm font-semibold transition"
-                  :class="
-                    studySemesters.includes(s)
-                      ? 'border-primary bg-primary/10 text-primary-on-tint'
-                      : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
-                  "
-                  @click="toggleStudySemester(s)"
-                >
-                  {{ s }}
-                </button>
-              </div>
-
-              <div v-else class="flex gap-3">
-                <button
-                  v-for="pair in bothPairs"
-                  :key="pair.join()"
-                  type="button"
-                  class="rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
-                  :class="
-                    isPairSelected(pair)
-                      ? 'border-primary bg-primary/10 text-primary-on-tint'
-                      : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
-                  "
-                  @click="selectPair(pair)"
-                >
-                  {{ pair.join(' + ') }}
-                </button>
-              </div>
-            </div>
+            <StudySemesterPicker v-model="studySemesters" :semester-type="semesterType" />
           </div>
 
           <!-- Right column: semester type + lock warning -->
           <div>
-            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
-              t('exchange.semester')
-            }}</label>
-            <div class="grid grid-cols-3 gap-2">
-              <button
-                v-for="sem in [exchangeSemester.Winter, exchangeSemester.Summer, exchangeSemester.Both]"
-                :key="sem"
-                type="button"
-                :disabled="!canSelectSemesterType(sem)"
-                class="rounded-xl border py-2.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
-                :class="
-                  semesterType === sem
-                    ? 'border-primary bg-primary/10 text-primary-on-tint'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
-                "
-                @click="setSemesterType(sem)"
-              >
-                {{ t(`exchangeSemester.${sem}`) }}
-              </button>
-            </div>
+            <SemesterTypePicker :model-value="semesterType" :can-select="period.canSelectSemesterType" @update:model-value="period.setSemesterType" />
 
             <div
               v-if="hasBlockedSemesterType"
@@ -271,7 +138,7 @@ async function submit() {
         </div>
 
         <!-- Coordinator -->
-        <div v-if="!exchangeStore.guestMode">
+        <div v-if="!guest">
           <label class="mb-2 block text-sm font-semibold text-primary-text">{{
             t('createExchange.selectCoordinator')
           }}</label>

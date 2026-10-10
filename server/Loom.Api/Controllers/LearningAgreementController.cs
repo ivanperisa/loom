@@ -1,183 +1,65 @@
 using System.Text.Json;
-using Loom.Api.Extensions;
-using Loom.Application.DTOs.Exchange;
-using Loom.Application.DTOs.LearningAgreement;
-using Loom.Application.Helpers;
-using Loom.Application.Interfaces.Services;
+using Loom.Api.Filters;
+using Loom.Application.Common;
+using Loom.Application.Features.Documents;
+using Loom.Application.Features.Exchanges;
+using Loom.Application.Features.Planning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
+/// <summary>Guests (access link) can use every action, for their own exchange.</summary>
 [Route("api/exchanges/{exchangeGuid:guid}/learning-agreement")]
-[Authorize]
-public class LearningAgreementController(ILearningAgreementService learningAgreementService, IExchangeService exchangeService) : ApiController
+[AllowGuest]
+[ExchangeActor]
+public class LearningAgreementController(
+    LearningAgreementService learningAgreements,
+    LearningAgreementWorkflow workflow,
+    LaVersionService versions,
+    LaTransferService transfer) : ApiController
 {
     [HttpGet]
-    public async Task<IActionResult> GetLearningAgreement(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await learningAgreementService.GetLearningAgreementAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<LearningAgreementResponse>> Get(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await learningAgreements.GetAsync(exchangeGuid, ct), Ok);
 
     [HttpPut]
-    public async Task<IActionResult> SaveLearningAgreement(Guid exchangeGuid, [FromBody] SaveLearningAgreementRequest request, CancellationToken ct)
-    {
-        var result = await learningAgreementService.SaveLearningAgreementAsync(exchangeGuid, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPatch("status")]
-    public async Task<IActionResult> UpdateStatus(Guid exchangeGuid, [FromBody] UpdateLearningAgreementStatusRequest request, CancellationToken ct)
-    {
-        var result = await learningAgreementService.UpdateLearningAgreementStatusAsync(exchangeGuid, GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpGet("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement")]
-    public async Task<IActionResult> GetPublicLearningAgreement(Guid exchangeGuid, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await learningAgreementService.GetLearningAgreementAsync(exchangeGuid, studentIdResult.Value, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpPut("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement")]
-    public async Task<IActionResult> SavePublicLearningAgreement(Guid exchangeGuid, [FromBody] SaveLearningAgreementRequest request, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await learningAgreementService.SaveLearningAgreementAsync(exchangeGuid, studentIdResult.Value, request, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpPatch("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement/status")]
-    public async Task<IActionResult> UpdatePublicStatus(Guid exchangeGuid, [FromBody] UpdateLearningAgreementStatusRequest request, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await learningAgreementService.UpdateLearningAgreementStatusAsync(exchangeGuid, studentIdResult.Value, request, ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<LearningAgreementResponse>> Save(Guid exchangeGuid, [FromBody] SaveLearningAgreementRequest request, CancellationToken ct) =>
+        Match(await learningAgreements.SaveAsync(exchangeGuid, request, ct), Ok);
 
     [HttpPatch("message")]
-    public async Task<IActionResult> UpdateLearningAgreementMessage(Guid exchangeGuid, [FromBody] UpdateLaMessageRequest request, CancellationToken ct)
-    {
-        var result = await learningAgreementService.UpdateLearningAgreementMessageAsync(exchangeGuid, GetCurrentUserId(), request.Message, ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<LearningAgreementResponse>> UpdateMessage(Guid exchangeGuid, [FromBody] UpdateLaMessageRequest request, CancellationToken ct) =>
+        Match(await learningAgreements.UpdateMessageAsync(exchangeGuid, request.Message, ct), Ok);
 
-    [AllowAnonymous]
-    [HttpPatch("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement/message")]
-    public async Task<IActionResult> UpdatePublicLearningAgreementMessage(Guid exchangeGuid, [FromBody] UpdateLaMessageRequest request, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
+    [HttpPatch("status")]
+    public async Task<ActionResult<ExchangeResponse>> UpdateStatus(Guid exchangeGuid, [FromBody] UpdateLearningAgreementStatusRequest request, CancellationToken ct) =>
+        Match(await workflow.SetStatusAsync(exchangeGuid, request, ct), Ok);
 
-        var result = await learningAgreementService.UpdateLearningAgreementMessageAsync(exchangeGuid, studentIdResult.Value, request.Message, ct);
-        return Match(result, Ok);
-    }
+    [HttpGet("versions")]
+    public async Task<ActionResult<List<DocumentVersionResponse>>> GetVersions(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await versions.ListAsync(exchangeGuid, ct), Ok);
 
-    [HttpGet("history")]
-    public async Task<IActionResult> GetLearningAgreementHistory(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await learningAgreementService.GetLearningAgreementHistoryAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    /// <summary>Loads a version (approval or backup) into the draft; the status never changes.</summary>
+    [HttpPost("versions/{versionId:int}/restore")]
+    public async Task<ActionResult<RestoreResult>> Restore(Guid exchangeGuid, int versionId, CancellationToken ct) =>
+        Match(await versions.RestoreAsync(exchangeGuid, versionId, ct), Ok);
 
-    [AllowAnonymous]
-    [HttpGet("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement/history")]
-    public async Task<IActionResult> GetPublicLearningAgreementHistory(Guid exchangeGuid, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await learningAgreementService.GetLearningAgreementHistoryAsync(exchangeGuid, studentIdResult.Value, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpGet("snapshots")]
-    public async Task<IActionResult> GetSnapshots(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await learningAgreementService.GetSnapshotsAsync(exchangeGuid, GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpGet("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement/snapshots")]
-    public async Task<IActionResult> GetPublicSnapshots(Guid exchangeGuid, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await learningAgreementService.GetSnapshotsAsync(exchangeGuid, studentIdResult.Value, ct);
-        return Match(result, Ok);
-    }
-
-    [HttpPost("snapshots/{snapshotId:int}/restore")]
-    public async Task<IActionResult> RestoreSnapshot(Guid exchangeGuid, int snapshotId, CancellationToken ct)
-    {
-        var result = await learningAgreementService.RestoreSnapshotAsync(exchangeGuid, snapshotId, GetCurrentUserId(), ct);
-        return Match(result, _ => NoContent());
-    }
-
-    [AllowAnonymous]
-    [HttpPost("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement/snapshots/{snapshotId:int}/restore")]
-    public async Task<IActionResult> RestorePublicSnapshot(Guid exchangeGuid, int snapshotId, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await learningAgreementService.RestoreSnapshotAsync(exchangeGuid, snapshotId, studentIdResult.Value, ct);
-        return Match(result, _ => NoContent());
-    }
-
+    /// <summary>"Export for import": JSON that another exchange (or this one) can import.</summary>
     [HttpGet("export")]
-    public async Task<IActionResult> ExportMappings(Guid exchangeGuid, CancellationToken ct)
-    {
-        var result = await learningAgreementService.ExportMappingsAsync(exchangeGuid, GetCurrentUserId(), ct);
-        if (result.IsError) return result.Errors.ToProblemDetails(this);
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(result.Value, JsonHelper.DefaultOptions);
-        var fileName = $"la-export-{DateTime.UtcNow:yyyy-MM-dd}.json";
-        return File(bytes, "application/json", fileName);
-    }
+    [ProducesResponseType<MappingExportDto>(StatusCodes.Status200OK, "application/json")]
+    public async Task<IActionResult> Export(Guid exchangeGuid, CancellationToken ct) =>
+        Match(await transfer.ExportAsync(exchangeGuid, ct), export => File(
+            JsonSerializer.SerializeToUtf8Bytes(export, JsonHelper.DefaultOptions),
+            "application/json",
+            $"la-export-{DateTime.UtcNow:yyyy-MM-dd}.json"));
 
-    [AllowAnonymous]
-    [HttpGet("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement/export")]
-    public async Task<IActionResult> ExportPublicMappings(Guid exchangeGuid, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
+    /// <summary>What importing the file would change. Nothing is saved.</summary>
+    [HttpPost("import/preview")]
+    public async Task<ActionResult<ImportPreviewResponse>> PreviewImport(Guid exchangeGuid, [FromBody] MappingExportDto file, CancellationToken ct) =>
+        Match(await transfer.PreviewAsync(exchangeGuid, file, ct), Ok);
 
-        var result = await learningAgreementService.ExportMappingsAsync(exchangeGuid, studentIdResult.Value, ct);
-        if (result.IsError) return result.Errors.ToProblemDetails(this);
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(result.Value, JsonHelper.DefaultOptions);
-        var fileName = $"la-export-{DateTime.UtcNow:yyyy-MM-dd}.json";
-        return File(bytes, "application/json", fileName);
-    }
-
+    /// <summary>Replaces the draft with the file (after the same checks as the preview), keeping a backup.</summary>
     [HttpPost("import")]
-    public async Task<IActionResult> ImportMappings(Guid exchangeGuid, [FromBody] MappingExportDto dto, CancellationToken ct)
-    {
-        var result = await learningAgreementService.ImportMappingsAsync(exchangeGuid, GetCurrentUserId(), dto, ct);
-        return Match(result, Ok);
-    }
-
-    [AllowAnonymous]
-    [HttpPost("/api/exchanges/access/{exchangeGuid:guid}/learning-agreement/import")]
-    public async Task<IActionResult> ImportPublicMappings(Guid exchangeGuid, [FromBody] MappingExportDto dto, CancellationToken ct)
-    {
-        var studentIdResult = await exchangeService.ResolveGuestStudentIdAsync(exchangeGuid, ct);
-        if (studentIdResult.IsError) return studentIdResult.Errors.ToProblemDetails(this);
-
-        var result = await learningAgreementService.ImportMappingsAsync(exchangeGuid, studentIdResult.Value, dto, ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<ImportResult>> Import(Guid exchangeGuid, [FromBody] MappingExportDto file, CancellationToken ct) =>
+        Match(await transfer.ApplyAsync(exchangeGuid, file, ct), Ok);
 }

@@ -17,5 +17,15 @@ public class Recognition : AuditableEntity
     public User? SignedByUser { get; set; }
     public DateTime? SignedAt { get; set; }
 
-    public ICollection<RecognitionEntry> Entries { get; set; } = null!;
+    /// <summary>
+    /// "Start final recognition": from here on the LA and the agreed mapping (table 1) are frozen for good; only the
+    /// results (table 2 and the mapping scheme) change. The row itself can exist earlier, for notes.
+    /// </summary>
+    public DateTime? StartedAt { get; set; }
+    public int? StartedById { get; set; }
+    public User? StartedByUser { get; set; }
+
+    public bool IsStarted => StartedAt is not null;
+
+    public ICollection<RecognitionEntry> Entries { get; set; } = [];
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, toRef } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import LearningAgreementPanel from '@/components/exchange/LearningAgreementPanel.vue'
@@ -8,64 +8,68 @@ import MappingSchemePanel from '@/components/exchange/MappingSchemePanel.vue'
 import NotesModal from '@/components/exchange/NotesModal.vue'
 import EditExchangeModal from '@/components/exchange/EditExchangeModal.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import { exchangeService } from '@/services/exchange.service'
-import { useExchangeStore } from '@/stores/exchange.store'
-import { useExchangePermissions } from '@/composables/useExchangePermissions'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
+import TabBar, { tabId, tabPanelId } from '@/components/common/TabBar.vue'
+import { provideExchangeContext } from '@/composables/useExchangeContext'
+import { useExchangeMutations, useLearningAgreementMutations, useRecognitionMutations } from '@/queries/exchange.queries'
 import { useAuthStore } from '@/stores/auth.store'
 import { useConfirm } from '@/composables/useConfirm'
 import { documentStatus } from '@/utils/documentStatus'
-import { buildAccessLink } from '@/utils/accessLink'
-import { useNotification } from '@/composables/useNotification'
+import { toApiError } from '@/utils/apiError'
+import { useCopyAccessLink } from '@/composables/useCopyAccessLink'
 
 const props = withDefaults(
   defineProps<{
     exchangeId: string
-    allowDelete?: boolean
+    /** Opened through an access link, without an account. */
+    guest?: boolean
   }>(),
-  { allowDelete: true },
+  { guest: false },
 )
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
-const exchangeStore = useExchangeStore()
-const { isCoordinator } = useExchangePermissions()
 const authStore = useAuthStore()
 const { confirm } = useConfirm()
-const { notifySuccess, notifyWarning } = useNotification()
+
+const { exchange, learningAgreement, recognition, exchangeQuery, isCoordinator } = provideExchangeContext(
+  toRef(props, 'exchangeId'),
+  toRef(props, 'guest'),
+)
+const exchangeMutations = useExchangeMutations(toRef(props, 'exchangeId'))
+const laMutations = useLearningAgreementMutations(toRef(props, 'exchangeId'))
+const recognitionMutations = useRecognitionMutations(toRef(props, 'exchangeId'))
 
 const VALID_TABS = ['la', 'recognition', 'mappingScheme'] as const
 type ExchangeTab = (typeof VALID_TABS)[number]
 const activeTab = ref<ExchangeTab>(
   VALID_TABS.includes(route.query.tab as ExchangeTab) ? (route.query.tab as ExchangeTab) : 'la',
 )
-const deleting = ref(false)
+watch(activeTab, (tab) => router.replace({ query: { ...route.query, tab } }))
+const tabs = computed(() => [
+  { key: 'la' as const, label: t('exchange.tabs.learningAgreement') },
+  { key: 'recognition' as const, label: t('exchange.tabs.recognition') },
+  { key: 'mappingScheme' as const, label: t('exchange.tabs.mappingScheme') },
+])
+
+const accessLink = useCopyAccessLink()
 
 async function copyAccessLink() {
-  if (!exchangeStore.exchange) return
-  await navigator.clipboard.writeText(buildAccessLink(exchangeStore.exchange.guid))
-  notifySuccess(t('exchangeAccess.linkCopied'))
+  if (exchange.value) await accessLink.copyAccessLink(exchange.value.guid)
 }
 
 const regenerating = ref(false)
 
 async function regenerateAccessLink() {
-  const ex = exchangeStore.exchange
+  const ex = exchange.value
   if (!ex) return
   const ok = await confirm({ title: t('exchangeAccess.regenerateConfirm') })
   if (!ok) return
   regenerating.value = true
   try {
-    const res = await exchangeService.regenerateAccessLink(props.exchangeId)
-    notifySuccess(t('exchangeAccess.regenerated'))
-    // The route is keyed by the old guid; move to the new one. Do this regardless of
-    // clipboard outcome, since the guid is already rotated server-side.
-    router.replace(`/exchange/${res.data.guid}`)
-    try {
-      await navigator.clipboard.writeText(buildAccessLink(res.data.guid))
-    } catch {
-      notifyWarning(t('exchangeAccess.copyFailed'))
-    }
+    // The exchange keeps its id; only the link's secret changes, so the page stays where it is.
+    await accessLink.regenerateAccessLink(ex.guid)
   } finally {
     regenerating.value = false
   }
@@ -73,30 +77,24 @@ async function regenerateAccessLink() {
 
 const showEwpModal = ref(false)
 const ewpLinkInput = ref('')
-const isSavingEwpLink = ref(false)
 
 function openEwpModal() {
-  ewpLinkInput.value = exchangeStore.exchange?.ewpLink ?? ''
+  ewpLinkInput.value = exchange.value?.ewpLink ?? ''
   showEwpModal.value = true
 }
 
 async function saveEwpLink() {
-  const ex = exchangeStore.exchange
+  const ex = exchange.value
   if (!ex) return
-  isSavingEwpLink.value = true
-  try {
-    await exchangeStore.updateExchange(props.exchangeId, {
-      academicYear: ex.academicYear,
-      semesterType: ex.semesterType,
-      studySemesters: ex.studySemesters,
-      coordinatorId: ex.coordinatorId,
-      mentor: ex.mentor,
-      ewpLink: ewpLinkInput.value.trim() || null,
-    })
-    showEwpModal.value = false
-  } finally {
-    isSavingEwpLink.value = false
-  }
+  await exchangeMutations.update.mutateAsync({
+    academicYear: ex.academicYear,
+    semesterType: ex.semesterType,
+    studySemesters: ex.studySemesters,
+    coordinatorId: ex.coordinatorId,
+    mentor: ex.mentor,
+    ewpLink: ewpLinkInput.value.trim() || null,
+  })
+  showEwpModal.value = false
 }
 
 const showActionsMenu = ref(false)
@@ -109,30 +107,30 @@ function handleActionsMenuOutsideClick(e: MouseEvent) {
 onMounted(() => document.addEventListener('click', handleActionsMenuOutsideClick))
 onUnmounted(() => document.removeEventListener('click', handleActionsMenuOutsideClick))
 
+// Only the coordinator hands out the link; guests and others would just get refused.
+const canManageAccessLink = computed(() => isCoordinator.value && !!exchange.value?.studentIsPlaceholder)
+
 const canDelete = computed(
   () =>
-    props.allowDelete &&
-    exchangeStore.exchange &&
-    exchangeStore.serverLearningAgreement?.status === documentStatus.Draft &&
-    exchangeStore.serverRecognition?.status === documentStatus.Draft,
+    !props.guest &&
+    !!exchange.value &&
+    learningAgreement.value?.status === documentStatus.Draft &&
+    recognition.value?.status === documentStatus.Draft,
 )
+
+const homePath = () => (authStore.canActAsCoordinator ? '/coordinator' : '/home')
 
 async function confirmDelete() {
   const ok = await confirm({ title: t('home.deleteConfirm') })
   if (!ok) return
-  deleting.value = true
-  try {
-    await exchangeStore.deleteExchange(props.exchangeId)
-    router.push(authStore.canActAsCoordinator ? '/coordinator' : '/home')
-  } finally {
-    deleting.value = false
-  }
+  await exchangeMutations.remove.mutateAsync()
+  router.push(homePath())
 }
 
 const showEdit = ref(false)
 
 const laMappedSemesters = computed(() => {
-  const la = exchangeStore.serverLearningAgreement
+  const la = learningAgreement.value
   if (!la) return []
   const slotSemester = new Map(la.slots.map((s) => [s.id, s.semester]))
   const semesters = new Set<number>()
@@ -144,49 +142,24 @@ const laMappedSemesters = computed(() => {
   return Array.from(semesters)
 })
 
-async function onExchangeSaved() {
-  showEdit.value = false
-  await exchangeStore.fetchExchange(props.exchangeId)
-}
-
 const showNotes = ref(false)
-const savingNotes = ref(false)
+const savingNotes = computed(() => laMutations.setMessage.isPending.value || recognitionMutations.setMessage.isPending.value)
 
-async function saveNotes(la: string | null, recognition: string | null) {
-  savingNotes.value = true
-  await Promise.all([
-    exchangeStore.updateLaMessage(props.exchangeId, la),
-    exchangeStore.updateRecognitionMessage(props.exchangeId, recognition),
-  ])
-  savingNotes.value = false
+async function saveNotes(la: string | null, rec: string | null) {
+  await Promise.all([laMutations.setMessage.mutateAsync(la), recognitionMutations.setMessage.mutateAsync(rec)])
   showNotes.value = false
 }
 
-watch(
-  () => exchangeStore.error,
-  (err) => {
-    if (err) router.push('/home')
-  },
-)
-
-watch(activeTab, async (tab) => {
-  router.replace({ query: { ...route.query, tab } })
-  if (tab === 'recognition') await exchangeStore.fetchRecognition(props.exchangeId)
-  if (tab === 'mappingScheme') await exchangeStore.fetchMappingScheme(props.exchangeId)
-})
-
-onMounted(async () => {
-  await Promise.all([
-    exchangeStore.fetchExchange(props.exchangeId),
-    exchangeStore.fetchLearningAgreement(props.exchangeId),
-    exchangeStore.fetchRecognition(props.exchangeId),
-  ])
+// Someone else's exchange, or one that is gone: back to the list. Guests stay and see why.
+watch(exchangeQuery.error, (error) => {
+  const status = toApiError(error).status
+  if (error && !props.guest && (status === 403 || status === 404)) router.replace(homePath())
 })
 </script>
 
 <template>
   <!-- Loading skeleton -->
-  <div v-if="exchangeStore.loading && !exchangeStore.exchange" class="space-y-4">
+  <div v-if="exchangeQuery.isPending.value" class="space-y-4">
     <div class="animate-pulse rounded-xl border border-primary/20 bg-dark-2 p-6">
       <div class="h-6 w-64 rounded bg-primary/20"></div>
       <div class="mt-3 h-4 w-96 rounded bg-primary/20"></div>
@@ -199,23 +172,23 @@ onMounted(async () => {
   </div>
 
   <!-- Exchange loaded -->
-  <template v-else-if="exchangeStore.exchange">
+  <template v-else-if="exchange">
     <!-- Exchange header -->
     <div class="rounded-xl border border-primary/20 bg-dark-2">
       <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3">
         <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <div v-if="isCoordinator && exchangeStore.exchange.studentName">
+          <div v-if="isCoordinator && exchange.studentName">
             <p class="text-lg font-bold text-light">
-              {{ exchangeStore.exchange.studentName }}
-              <span v-if="exchangeStore.exchange.studentJmbag" class="ml-1.5 text-xs font-normal text-light/40">{{ exchangeStore.exchange.studentJmbag }}</span>
+              {{ exchange.studentName }}
+              <span v-if="exchange.studentJmbag" class="ml-1.5 text-xs font-normal text-light/40">{{ exchange.studentJmbag }}</span>
             </p>
             <p class="mt-0.5 text-base font-semibold text-primary-text">
-              {{ exchangeStore.exchange.partnerInstitutionName }}
+              {{ exchange.partnerInstitutionName }}
             </p>
           </div>
           <div v-else>
             <p class="text-lg font-bold text-light">
-              {{ exchangeStore.exchange.partnerInstitutionName }}
+              {{ exchange.partnerInstitutionName }}
             </p>
           </div>
 
@@ -223,29 +196,29 @@ onMounted(async () => {
 
           <div class="flex flex-wrap gap-x-6 gap-y-1">
             <div class="text-sm text-light/50">
-              {{ t('exchange.academicYear') }}: <span class="font-semibold text-light">{{ exchangeStore.exchange.academicYear }}</span>
+              {{ t('exchange.academicYear') }}: <span class="font-semibold text-light">{{ exchange.academicYear }}</span>
             </div>
             <div class="text-sm text-light/50">
               {{ t('exchange.semester') }}:
               <span class="font-semibold text-light"
-                >{{ t(`exchangeSemester.${exchangeStore.exchange.semesterType}`) }} ({{
-                  exchangeStore.exchange.studySemesters.slice().sort((a: number, b: number) => a - b).join(', ')
+                >{{ t(`exchangeSemester.${exchange.semesterType}`) }} ({{
+                  exchange.studySemesters.slice().sort((a: number, b: number) => a - b).join(', ')
                 }})</span
               >
             </div>
             <div class="text-sm text-light/50">
-              {{ t('exchange.coordinatorLabel') }}: <span class="font-semibold text-light">{{ exchangeStore.exchange.coordinatorName ?? t('exchange.noCoordinator') }}</span>
+              {{ t('exchange.coordinatorLabel') }}: <span class="font-semibold text-light">{{ exchange.coordinatorName ?? t('exchange.noCoordinator') }}</span>
             </div>
             <div class="text-sm text-light/50">
-              {{ t('exchange.mentor') }}: <span class="font-semibold text-light">{{ exchangeStore.exchange.mentor ?? '-' }}</span>
+              {{ t('exchange.mentor') }}: <span class="font-semibold text-light">{{ exchange.mentor ?? '-' }}</span>
             </div>
           </div>
         </div>
 
         <div class="flex shrink-0 items-center gap-2">
           <a
-            v-if="exchangeStore.exchange.ewpLink"
-            :href="exchangeStore.exchange.ewpLink"
+            v-if="exchange.ewpLink"
+            :href="exchange.ewpLink"
             target="_blank"
             rel="noopener noreferrer"
             class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-medium text-primary-text transition hover:border-primary hover:bg-primary/10"
@@ -265,7 +238,7 @@ onMounted(async () => {
             + {{ t('exchange.ewpLink') }}
           </button>
           <button
-            v-if="exchangeStore.exchange.studentIsPlaceholder"
+            v-if="canManageAccessLink"
             type="button"
             class="inline-flex items-center gap-1.5 rounded-lg bg-primary-strong px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
             @click="copyAccessLink"
@@ -283,6 +256,7 @@ onMounted(async () => {
               class="flex h-8 w-8 items-center justify-center rounded-lg text-lg leading-none text-light/40 transition hover:bg-fill hover:text-light"
               :aria-expanded="showActionsMenu"
               aria-haspopup="true"
+              :aria-label="t('coordinator.table.actions')"
               @click.stop="showActionsMenu = !showActionsMenu"
             >
               &#8942;
@@ -302,7 +276,7 @@ onMounted(async () => {
                 {{ t('common.edit') }}
               </button>
               <button
-                v-if="exchangeStore.exchange.studentIsPlaceholder"
+                v-if="canManageAccessLink"
                 type="button"
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-primary-text transition hover:bg-primary/10 disabled:opacity-50"
                 :disabled="regenerating"
@@ -317,13 +291,13 @@ onMounted(async () => {
                 v-if="canDelete"
                 type="button"
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-danger-text transition hover:bg-danger-fill disabled:opacity-50"
-                :disabled="deleting"
+                :disabled="exchangeMutations.remove.isPending.value"
                 @click="closeActionsMenu(); confirmDelete()"
               >
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                {{ deleting ? t('common.loading') : t('home.deleteExchange') }}
+                {{ exchangeMutations.remove.isPending.value ? t('common.loading') : t('home.deleteExchange') }}
               </button>
             </div>
           </div>
@@ -334,105 +308,62 @@ onMounted(async () => {
 
     <!-- Tabs -->
     <div class="mt-4 flex items-center justify-between border-b border-primary/20">
-      <div class="flex">
-        <button
-          type="button"
-          class="px-4 py-2.5 text-sm font-semibold transition"
-          :class="
-            activeTab === 'la'
-              ? 'border-b-2 border-primary text-primary-active-text'
-              : 'text-light/60 hover:text-primary-text'
-          "
-          @click="activeTab = 'la'"
-        >
-          {{ t('exchange.tabs.learningAgreement') }}
-        </button>
-        <button
-          type="button"
-          class="px-4 py-2.5 text-sm font-semibold transition"
-          :class="
-            activeTab === 'recognition'
-              ? 'border-b-2 border-primary text-primary-active-text'
-              : 'text-light/60 hover:text-primary-text'
-          "
-          @click="activeTab = 'recognition'"
-        >
-          {{ t('exchange.tabs.recognition') }}
-        </button>
-        <button
-          type="button"
-          class="px-4 py-2.5 text-sm font-semibold transition"
-          :class="
-            activeTab === 'mappingScheme'
-              ? 'border-b-2 border-primary text-primary-active-text'
-              : 'text-light/60 hover:text-primary-text'
-          "
-          @click="activeTab = 'mappingScheme'"
-        >
-          {{ t('exchange.tabs.mappingScheme') }}
-        </button>
-      </div>
+      <TabBar v-model="activeTab" id-prefix="exchange" :tabs="tabs" />
       <button
-        v-if="exchangeStore.serverLearningAgreement"
+        v-if="learningAgreement"
         type="button"
         class="relative mb-1 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-light transition hover:bg-primary/20"
         @click="showNotes = true"
       >
         {{ t('exchange.notes') }}
         <span
-          v-if="exchangeStore.serverLearningAgreement?.message || exchangeStore.serverRecognition?.message"
+          v-if="learningAgreement?.message || recognition?.message"
           class="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary"
         ></span>
       </button>
     </div>
 
     <!-- Tab content -->
-    <div class="mt-4">
+    <div :id="tabPanelId('exchange', activeTab)" class="mt-4" role="tabpanel" :aria-labelledby="tabId('exchange', activeTab)">
       <template v-if="activeTab === 'la'">
         <LearningAgreementPanel
           :exchange-id="exchangeId"
-          :home-profile-name="exchangeStore.exchange.homeProfile.name"
+          :home-profile-name="exchange.homeProfile.name"
         />
       </template>
 
       <template v-else-if="activeTab === 'recognition'">
         <RecognitionPanel
           :exchange-id="exchangeId"
-          :home-profile-name="exchangeStore.exchange.homeProfile.name"
+          :home-profile-name="exchange.homeProfile.name"
         />
       </template>
 
       <template v-else-if="activeTab === 'mappingScheme'">
         <MappingSchemePanel
           :exchange-id="exchangeId"
-          :home-profile-name="exchangeStore.exchange.homeProfile.name"
+          :home-profile-name="exchange.homeProfile.name"
         />
       </template>
     </div>
   </template>
 
-  <!-- Error -->
-  <div
-    v-else-if="exchangeStore.error"
-    class="rounded-xl border border-red-400/30 bg-red-900/20 p-6 text-center"
-  >
-    <p class="text-danger-text">{{ exchangeStore.error }}</p>
-  </div>
+  <ErrorAlert v-else-if="exchangeQuery.error.value" :error="exchangeQuery.error.value" @retry="exchangeQuery.refetch()" />
 
   <NotesModal
     v-if="showNotes"
-    :la-message="exchangeStore.serverLearningAgreement?.message ?? null"
-    :recognition-message="exchangeStore.serverRecognition?.message ?? null"
+    :la-message="learningAgreement?.message ?? null"
+    :recognition-message="recognition?.message ?? null"
     :saving="savingNotes"
     @save="saveNotes"
     @close="showNotes = false"
   />
 
   <EditExchangeModal
-    v-if="showEdit && exchangeStore.exchange"
-    :exchange="exchangeStore.exchange"
+    v-if="showEdit && exchange"
+    :exchange="exchange"
     :la-mapped-semesters="laMappedSemesters"
-    @saved="onExchangeSaved"
+    @saved="showEdit = false"
     @close="showEdit = false"
   />
 
@@ -441,7 +372,7 @@ onMounted(async () => {
     <div class="p-6">
       <div class="mb-5 flex items-center justify-between">
         <h2 id="ewp-link-title" class="text-base font-semibold text-light">{{ t('exchange.ewpLink') }}</h2>
-        <button type="button" class="text-light/40 transition hover:text-light" @click="showEwpModal = false">
+        <button :aria-label="t('common.close')" type="button" class="text-light/40 transition hover:text-light" @click="showEwpModal = false">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="2" y1="2" x2="14" y2="14" /><line x1="14" y1="2" x2="2" y2="14" />
           </svg>
@@ -467,10 +398,10 @@ onMounted(async () => {
         <button
           type="button"
           class="rounded-lg bg-primary-strong px-4 py-1.5 text-sm font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-60"
-          :disabled="isSavingEwpLink"
+          :disabled="exchangeMutations.update.isPending.value"
           @click="saveEwpLink"
         >
-          {{ isSavingEwpLink ? t('common.loading') : t('common.save') }}
+          {{ exchangeMutations.update.isPending.value ? t('common.loading') : t('common.save') }}
         </button>
       </div>
     </div>

@@ -1,0 +1,109 @@
+# Local development stack: Postgres + migrations/demo data + API (hot reload) + web (Vite HMR).
+#   docker compose up            → http://localhost:5173 (pick a persona under "Dev login")
+#   docker compose run --rm seed --reset    → wipe the database and reseed
+# Settings live in .env (copy .env.example). See README.md for the persona list.
+
+name: loom
+
+x-dotnet: &dotnet
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  working_dir: /src
+  volumes:
+    - .:/src
+    - nuget:/root/.nuget/packages
+  environment: &dotnet-env
+    ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=loom;Username=loom;Password=loom
+    # Keep container build output out of the host's bin/obj folders.
+    UseArtifactsOutput: "true"
+    ArtifactsPath: /artifacts
+    DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    DOTNET_NOLOGO: "1"
+
+services:
+  db:
+    image: postgres:${POSTGRES_VERSION:-17}
+    environment:
+      POSTGRES_DB: loom
+      POSTGRES_USER: loom
+      POSTGRES_PASSWORD: loom
+    ports:
+      - "${LOOM_DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loom -d loom"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Applies EF migrations, then loads reference + demo data if the database is empty. Exits when done.
+  seed:
+    <<: *dotnet
+    entrypoint: ["dotnet", "run", "--project", "server/Loom.DevSeed", "--"]
+    command: []
+    volumes:
+      - .:/src
+      - nuget:/root/.nuget/packages
+      - seed-artifacts:/artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    <<: *dotnet
+    command: ["dotnet", "watch", "--project", "server/Loom.Api", "run", "--no-launch-profile"]
+    environment:
+      <<: *dotnet-env
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://0.0.0.0:5000
+      DevAuth__Enabled: "true"
+      Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      DOTNET_USE_POLLING_FILE_WATCHER: ${LOOM_FILE_POLLING:-false}
+      DOTNET_WATCH_RESTART_ON_RUDE_EDIT: "true"
+    volumes:
+      - .:/src
+      - nuget:/root/.nuget/packages
+      - api-artifacts:/artifacts
+    ports:
+      - "${LOOM_API_PORT:-5000}:5000"   # Swagger: http://localhost:5000/docs
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: ["sh", "-c", "npm install -g pnpm@10 --silent && pnpm install --frozen-lockfile && pnpm dev --host 0.0.0.0"]
+    environment:
+      VITE_API_URL: ""                 # same origin: Vite proxies /api to the API
+      VITE_BASE_PATH: /
+      VITE_PROXY_TARGET: http://api:5000
+      VITE_DEV_HTTPS: "false"
+      VITE_DEV_LOGIN: "true"
+      VITE_USE_POLLING: ${LOOM_FILE_POLLING:-false}
+    volumes:
+      - ./client:/app
+      - web-node-modules:/app/node_modules
+    ports:
+      - "${LOOM_WEB_PORT:-5173}:5173"
+    depends_on:
+      - api
+
+  # Optional DB browser: docker compose --profile tools up adminer → http://localhost:8081
+  adminer:
+    image: adminer:4
+    profiles: ["tools"]
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "${LOOM_ADMINER_PORT:-8081}:8080"
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
+  nuget:
+  seed-artifacts:
+  api-artifacts:
+  web-node-modules:

@@ -1,24 +1,25 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { institutionService, getAllPartnerInstitutions } from '@/services/institution.service'
-import { coordinatorService } from '@/services/coordinator.service'
-import { useExchangeStore } from '@/stores/exchange.store'
-import { exchangeSemester } from '@/utils/exchangeSemester'
+import { useCoordinatorsQuery, useHomeProgramsQuery, usePartnerInstitutionOptionsQuery } from '@/queries/catalog.queries'
+import { useCreateExchange } from '@/queries/exchange.queries'
+import { describeApiError } from '@/utils/apiError'
+import { useExchangePeriod } from '@/composables/useExchangePeriod'
+import StudySemesterPicker from '@/components/exchange/period/StudySemesterPicker.vue'
+import SemesterTypePicker from '@/components/exchange/period/SemesterTypePicker.vue'
 import type {
   HomeProgramResponse,
   HomeProfileResponse,
   PartnerInstitutionAdminResponse,
 } from '@/types/institution.types'
 import type { CoordinatorOption } from '@/types/coordinator.types'
-import type { ExchangeSemester } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { nWord } from '@/utils/plural'
 import { useAuthStore } from '@/stores/auth.store'
 
 const props = withDefaults(defineProps<{
-  targetStudentId?: string | null
+  targetStudentId?: number | null
 }>(), {
   targetStudentId: null,
 })
@@ -29,7 +30,7 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
-const exchangeStore = useExchangeStore()
+const createExchange = useCreateExchange()
 const authStore = useAuthStore()
 
 function localizedName(item: { name: string; nameHr?: string | null }): string {
@@ -46,10 +47,11 @@ const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
 // Step 1: Home program & profile
-const homePrograms = ref<HomeProgramResponse[]>([])
-const loadingPrograms = ref(true)
-const selectedProgramId = ref<string | null>(null)
-const selectedProfileId = ref<string | null>(null)
+const programsQuery = useHomeProgramsQuery()
+const homePrograms = computed<HomeProgramResponse[]>(() => programsQuery.data.value ?? [])
+const loadingPrograms = computed(() => programsQuery.isPending.value)
+const selectedProgramId = ref<number | null>(null)
+const selectedProfileId = ref<number | null>(null)
 
 const selectedProgram = computed(
   () => homePrograms.value.find((p) => p.id === selectedProgramId.value) ?? null,
@@ -62,9 +64,10 @@ const selectedProfile = computed(
 )
 
 // Step 2: Partner institution
-const partnerInstitutions = ref<PartnerInstitutionAdminResponse[]>([])
-const loadingPartnerInstitutions = ref(true)
-const selectedPartnerInstitutionId = ref<string | null>(null)
+const partnerInstitutionsQuery = usePartnerInstitutionOptionsQuery()
+const partnerInstitutions = computed<PartnerInstitutionAdminResponse[]>(() => partnerInstitutionsQuery.data.value ?? [])
+const loadingPartnerInstitutions = computed(() => partnerInstitutionsQuery.isPending.value)
+const selectedPartnerInstitutionId = ref<number | null>(null)
 const partnerSearch = ref('')
 const selectedCountry = ref<string | null>(null)
 
@@ -103,8 +106,9 @@ const selectedPartnerInstitution = computed(
 )
 
 // Step 3: Coordinator + Mentor
-const coordinators = ref<CoordinatorOption[]>([])
-const selectedCoordinatorId = ref<string | null>(
+const coordinatorsQuery = useCoordinatorsQuery()
+const coordinators = computed<CoordinatorOption[]>(() => coordinatorsQuery.data.value ?? [])
+const selectedCoordinatorId = ref<number | null>(
   props.targetStudentId ? (authStore.user?.id ?? null) : (authStore.user?.coordinatorId ?? null),
 )
 const mentorInput = ref(authStore.user?.mentor ?? '')
@@ -119,83 +123,13 @@ const selectedCoordinator = computed(
 )
 
 // Step 3: Details
-function currentAcademicYearStart(): number {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = now.getMonth() + 1
-  return m >= 9 ? y : y - 1
-}
-
-const academicYearOptions = computed(() => {
-  const start = currentAcademicYearStart()
-  return [`${start}/${start + 1}`, `${start + 1}/${start + 2}`]
-})
-const academicYearSelectOptions = computed(() =>
-  academicYearOptions.value.map((year) => ({ value: year, label: year })),
-)
-
-const academicYear = ref(academicYearOptions.value[0] ?? '')
-const semesterType = ref<ExchangeSemester>(exchangeSemester.Winter)
-const studySemesters = ref<number[]>([])
-
-const allowedSemesters = computed<number[]>(() => {
-  if (semesterType.value === exchangeSemester.Winter) return [1, 3]
-  if (semesterType.value === exchangeSemester.Summer) return [2, 4]
-  return []
-})
-
-const bothPairs = [[1, 2], [3, 4]]
-
-function selectPair(pair: number[]) {
-  const sorted = [...pair].sort((a, b) => a - b)
-  const isSame =
-    studySemesters.value.length === sorted.length &&
-    sorted.every((v, i) => studySemesters.value.slice().sort((a, b) => a - b)[i] === v)
-  studySemesters.value = isSame ? [] : [...sorted]
-}
-
-function isPairSelected(pair: number[]): boolean {
-  const sorted = [...pair].sort((a, b) => a - b)
-  return (
-    studySemesters.value.length === sorted.length &&
-    sorted.every((v, i) => studySemesters.value.slice().sort((a, b) => a - b)[i] === v)
-  )
-}
-
-function toggleStudySemester(s: number) {
-  const isBoth = semesterType.value === exchangeSemester.Both
-  if (isBoth) {
-    const idx = studySemesters.value.indexOf(s)
-    if (idx === -1) studySemesters.value.push(s)
-    else studySemesters.value.splice(idx, 1)
-  } else {
-    studySemesters.value = studySemesters.value[0] === s ? [] : [s]
-  }
-}
-
-watch(semesterType, () => {
-  studySemesters.value = []
-})
+const period = useExchangePeriod()
+const { academicYear, semesterType, studySemesters, academicYearSelectOptions } = period
 
 watch(selectedProgramId, () => {
   selectedProfileId.value = null
 })
 
-onMounted(async () => {
-  const [programsRes, partnerRes, coordRes] = await Promise.allSettled([
-    institutionService.getHomePrograms(),
-    getAllPartnerInstitutions(),
-    coordinatorService.getCoordinators(),
-  ])
-
-  if (programsRes.status === 'fulfilled') homePrograms.value = programsRes.value.data
-  loadingPrograms.value = false
-
-  if (partnerRes.status === 'fulfilled') partnerInstitutions.value = partnerRes.value
-  loadingPartnerInstitutions.value = false
-
-  if (coordRes.status === 'fulfilled') coordinators.value = coordRes.value.data
-})
 
 function validateStep(): boolean {
   errorMessage.value = null
@@ -219,12 +153,9 @@ function validateStep(): boolean {
   }
 
   if (currentStep.value === 3) {
-    if (!academicYear.value.trim()) {
-      errorMessage.value = t('createExchange.errors.academicYearRequired')
-      return false
-    }
-    if (studySemesters.value.length === 0) {
-      errorMessage.value = t('createExchange.errors.studySemesterRequired')
+    const missing = period.validate()
+    if (missing) {
+      errorMessage.value = t(missing)
       return false
     }
   }
@@ -246,7 +177,7 @@ async function submitExchange() {
   errorMessage.value = null
   isSubmitting.value = true
   try {
-    const result = await exchangeStore.createExchange({
+    const result = await createExchange.mutateAsync({
       homeProfileId: selectedProfileId.value!,
       partnerInstitutionId: selectedPartnerInstitutionId.value!,
       academicYear: academicYear.value.trim(),
@@ -256,13 +187,9 @@ async function submitExchange() {
       targetStudentId: props.targetStudentId,
       mentor: mentorInput.value.trim() || null,
     })
-    if (result) {
-      emit('created', result.guid)
-    } else {
-      errorMessage.value = exchangeStore.error ?? t('errors.unexpected')
-    }
-  } catch {
-    errorMessage.value = t('errors.unexpected')
+    emit('created', result.guid)
+  } catch (e) {
+    errorMessage.value = describeApiError(e).message
   } finally {
     isSubmitting.value = false
   }
@@ -285,7 +212,7 @@ const stepKeys = [
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-primary/20 px-8 py-5">
         <h2 id="create-exchange-title" class="text-xl font-semibold text-light">{{ t('createExchange.title') }}</h2>
-        <button
+        <button :aria-label="t('common.close')"
           type="button"
           class="text-light/50 transition hover:text-light"
           @click="emit('close')"
@@ -485,74 +412,10 @@ const stepKeys = [
           </div>
 
           <!-- Semester type -->
-          <div class="col-span-2 sm:col-span-1">
-            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
-              t('exchange.semester')
-            }}</label>
-            <div class="grid grid-cols-3 gap-2">
-              <button
-                v-for="sem in [
-                  exchangeSemester.Winter,
-                  exchangeSemester.Summer,
-                  exchangeSemester.Both,
-                ]"
-                :key="sem"
-                type="button"
-                class="rounded-xl border py-2.5 text-xs font-medium transition"
-                :class="
-                  semesterType === sem
-                    ? 'border-primary bg-primary/10 text-primary-on-tint'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
-                "
-                @click="semesterType = sem"
-              >
-                {{ t(`exchangeSemester.${sem}`) }}
-              </button>
-            </div>
-          </div>
+          <SemesterTypePicker class="col-span-2 sm:col-span-1" :model-value="semesterType" @update:model-value="period.setSemesterType" />
 
           <!-- Study semesters -->
-          <div class="col-span-2">
-            <label class="mb-2 block text-sm font-semibold text-primary-text">{{
-              t('exchange.studySemester')
-            }}</label>
-
-            <!-- Winter / Summer: individual buttons -->
-            <div v-if="semesterType !== exchangeSemester.Both" class="flex gap-2">
-              <button
-                v-for="s in allowedSemesters"
-                :key="s"
-                type="button"
-                class="h-10 w-10 rounded-xl border text-sm font-semibold transition"
-                :class="
-                  studySemesters.includes(s)
-                    ? 'border-primary bg-primary/10 text-primary-on-tint'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
-                "
-                @click="toggleStudySemester(s)"
-              >
-                {{ s }}
-              </button>
-            </div>
-
-            <!-- Both: pair buttons -->
-            <div v-else class="flex gap-3">
-              <button
-                v-for="pair in bothPairs"
-                :key="pair.join()"
-                type="button"
-                class="rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
-                :class="
-                  isPairSelected(pair)
-                    ? 'border-primary bg-primary/10 text-primary-on-tint'
-                    : 'border-hairline bg-dark text-light/60 hover:border-primary/50 hover:text-light'
-                "
-                @click="selectPair(pair)"
-              >
-                {{ pair.join(' + ') }}
-              </button>
-            </div>
-          </div>
+          <StudySemesterPicker v-model="studySemesters" class="col-span-2" :semester-type="semesterType" />
 
           <!-- Coordinator -->
           <div class="col-span-2">

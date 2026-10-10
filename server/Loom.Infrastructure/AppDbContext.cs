@@ -1,7 +1,9 @@
+using Loom.Application.Common.Querying;
 using Loom.Application.Interfaces;
 using Loom.Domain.Common;
 using Loom.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Loom.Infrastructure;
 
@@ -22,13 +24,45 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Recognition> Recognitions => Set<Recognition>();
     public DbSet<RecognitionEntry> RecognitionEntries => Set<RecognitionEntry>();
     public DbSet<MappingSchemeEntry> MappingSchemeEntries => Set<MappingSchemeEntry>();
-    public DbSet<ExchangeSnapshot> ExchangeSnapshots => Set<ExchangeSnapshot>();
+    public DbSet<DocumentVersion> DocumentVersions => Set<DocumentVersion>();
     public DbSet<CoordinatorWhitelist> CoordinatorWhitelist => Set<CoordinatorWhitelist>();
+    public DbSet<ExchangeAccessLink> ExchangeAccessLinks => Set<ExchangeAccessLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        modelBuilder.HasDbFunction(typeof(TextSearch).GetMethod(nameof(TextSearch.Unaccent))!)
+            .HasName("f_unaccent").HasSchema("public");
+        modelBuilder.UseSerialColumns();
+        ApplyPostgresNaming(modelBuilder);
         base.OnModelCreating(modelBuilder);
+    }
+
+    /// <summary>
+    /// Names keys and indexes the way PostgreSQL names them by default (the schema predates EF migrations),
+    /// so migrations can reference existing objects by their real names.
+    /// </summary>
+    private static void ApplyPostgresNaming(ModelBuilder modelBuilder)
+    {
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            var table = entity.GetTableName();
+            if (table is null) continue;
+
+            entity.FindPrimaryKey()?.SetName($"{table}_pkey");
+
+            foreach (var foreignKey in entity.GetForeignKeys())
+            {
+                var columns = string.Join("_", foreignKey.Properties.Select(p => p.GetColumnName()));
+                foreignKey.SetConstraintName($"{table}_{columns}_fkey");
+            }
+
+            foreach (var index in entity.GetIndexes().Where(i => i.FindAnnotation(RelationalAnnotationNames.Name) is null))
+            {
+                var columns = string.Join("_", index.Properties.Select(p => p.GetColumnName()));
+                index.SetDatabaseName($"idx_{table}_{columns}");
+            }
+        }
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

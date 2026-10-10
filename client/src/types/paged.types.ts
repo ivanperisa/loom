@@ -6,12 +6,10 @@ export interface PagedResponse<T> {
   hasDeleted: boolean
 }
 
-export interface PagedParams {
-  page?: number
-  pageSize?: number
+/** What every list endpoint understands (server `ListQuery`): `sort=name` / `sort=-name`. */
+export interface ListParams {
+  page: number
+  pageSize: number
   search?: string
-  sortBy?: string
-  sortDir?: 'asc' | 'desc'
-  academicYear?: string | null
-  partnerInstitution?: string | null
+  sort?: string
 }

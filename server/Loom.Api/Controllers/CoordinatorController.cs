@@ -1,54 +1,38 @@
-using Loom.Application.DTOs.Common;
-using Loom.Application.DTOs.Coordinator;
-using Loom.Application.Interfaces.Services;
+using Loom.Application.Common.Querying;
+using Loom.Application.Features.Coordination;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Loom.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/coordinator")]
 [Authorize]
-public class CoordinatorController(ICoordinatorService coordinatorService) : ApiController
+public class CoordinatorController(CoordinatorDirectoryService directory, StudentService students) : ApiController
 {
+    /// <summary>Everyone selectable as coordinator (used by students too).</summary>
     [HttpGet("/api/coordinators")]
-    public async Task<IActionResult> GetCoordinators(CancellationToken ct)
-    {
-        var result = await coordinatorService.GetCoordinatorsAsync(ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<List<CoordinatorOptionResponse>>> GetCoordinators(CancellationToken ct) =>
+        Ok(await directory.ListAsync(ct));
 
     [HttpGet("students")]
-    public async Task<IActionResult> GetMyStudents([FromQuery] PagedRequest paging, [FromQuery] CoordinatorStudentFilterRequest filter, CancellationToken ct)
-    {
-        var result = await coordinatorService.GetMyStudentsAsync(GetCurrentUserId(), paging, filter, ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<PagedResponse<CoordinatorStudentResponse>>> GetMyStudents([FromQuery] StudentListQuery query, CancellationToken ct) =>
+        Match(await students.ListMineAsync(query, ct), Ok);
 
     [HttpPost("students")]
-    public async Task<IActionResult> CreatePlaceholderStudent([FromBody] CreatePlaceholderStudentRequest request, CancellationToken ct)
-    {
-        var result = await coordinatorService.CreatePlaceholderStudentAsync(GetCurrentUserId(), request, ct);
-        return Match(result, value => CreatedAtAction(nameof(GetMyStudents), value));
-    }
+    [ProducesResponseType<CoordinatorStudentResponse>(StatusCodes.Status201Created)]
+    public async Task<ActionResult<CoordinatorStudentResponse>> CreatePlaceholderStudent([FromBody] PlaceholderStudentRequest request, CancellationToken ct) =>
+        Match(await students.CreatePlaceholderAsync(request, ct), value => CreatedAtAction(nameof(GetMyStudents), value));
 
     [HttpPut("students/{studentId:int}")]
-    public async Task<IActionResult> UpdateStudent(int studentId, [FromBody] UpdateStudentRequest request, CancellationToken ct)
-    {
-        var result = await coordinatorService.UpdateStudentAsync(GetCurrentUserId(), studentId, request, ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<CoordinatorStudentResponse>> UpdateStudent(int studentId, [FromBody] PlaceholderStudentRequest request, CancellationToken ct) =>
+        Match(await students.UpdatePlaceholderAsync(studentId, request, ct), Ok);
 
     [HttpDelete("students/{studentId:int}")]
-    public async Task<IActionResult> DeleteStudent(int studentId, CancellationToken ct)
-    {
-        var result = await coordinatorService.DeleteStudentAsync(GetCurrentUserId(), studentId, ct);
-        return Match(result, _ => NoContent());
-    }
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteStudent(int studentId, CancellationToken ct) =>
+        Match(await students.DeletePlaceholderAsync(studentId, ct), _ => NoContent());
 
-    [HttpGet("students/exchanges")]
-    public async Task<IActionResult> GetMyStudentsExchanges(CancellationToken ct)
-    {
-        var result = await coordinatorService.GetMyStudentsExchangesAsync(GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    [HttpGet("students/filters")]
+    public async Task<ActionResult<StudentFiltersResponse>> GetStudentFilters(CancellationToken ct) =>
+        Match(await students.FiltersAsync(ct), Ok);
 }

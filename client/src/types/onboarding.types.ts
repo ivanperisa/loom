@@ -1,13 +1,4 @@
-export interface CompleteOnboardingRequest {
-  institutionId: string
-  jmbag?: string | null
-  requestCoordinatorRole?: boolean
-}
+import type { Schemas } from '@/api'
 
-export interface UpdateProfileRequest {
-  name: string
-  jmbag: string | null
-  institutionId: string
-  mentor: string | null
-  coordinatorId: string | null
-}
+export type CompleteOnboardingRequest = Schemas['CompleteOnboardingRequest']
+export type UpdateProfileRequest = Schemas['UpdateProfileRequest']

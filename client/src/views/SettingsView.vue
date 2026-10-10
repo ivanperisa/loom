@@ -3,18 +3,17 @@ import { ref, onMounted, computed } from 'vue'
 import { onBeforeRouteUpdate } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
-import { institutionService } from '@/services/institution.service'
-import { coordinatorService } from '@/services/coordinator.service'
-import type { InstitutionResponse } from '@/types/institution.types'
-import type { CoordinatorOption } from '@/types/coordinator.types'
+import { useCoordinatorsQuery, useHomeInstitutionsQuery } from '@/queries/catalog.queries'
 import { userRole } from '../utils/userRole'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
 
-const institutions = ref<InstitutionResponse[]>([])
-const coordinators = ref<CoordinatorOption[]>([])
+const institutionsQuery = useHomeInstitutionsQuery()
+const coordinatorsQuery = useCoordinatorsQuery()
+const institutions = computed(() => institutionsQuery.data.value ?? [])
+const coordinators = computed(() => coordinatorsQuery.data.value ?? [])
 
 const institutionOptions = computed(() =>
   institutions.value.map((i) => ({
@@ -31,9 +30,9 @@ const coordinatorOptions = computed(() => [
 
 const name = ref('')
 const jmbag = ref('')
-const institutionId = ref('')
+const institutionId = ref<number | null>(null)
 const mentor = ref('')
-const coordinatorId = ref<string | null>(null)
+const coordinatorId = ref<number | null>(null)
 const saving = ref(false)
 const success = ref(false)
 const errorMsg = ref<string | null>(null)
@@ -43,19 +42,13 @@ const isStudent = computed(() => authStore.role === userRole.Student)
 const isDirty = computed(() =>
   name.value !== (authStore.user?.name ?? '') ||
   jmbag.value !== (authStore.user?.jmbag ?? '') ||
-  institutionId.value !== (authStore.user?.institutionId ?? '') ||
+  institutionId.value !== (authStore.user?.institutionId ?? null) ||
   mentor.value !== (authStore.user?.mentor ?? '') ||
   coordinatorId.value !== (authStore.user?.coordinatorId ?? null),
 )
 
 async function fetchData() {
-  const [instRes, coordRes] = await Promise.all([
-    institutionService.getHomeInstitutions(),
-    coordinatorService.getCoordinators(),
-    authStore.init(true),
-  ])
-  institutions.value = instRes.data
-  coordinators.value = coordRes.data
+  await authStore.init(true)
   resetForm()
 }
 
@@ -65,7 +58,7 @@ onBeforeRouteUpdate(fetchData)
 function resetForm() {
   name.value = authStore.user?.name ?? ''
   jmbag.value = authStore.user?.jmbag ?? ''
-  institutionId.value = authStore.user?.institutionId ?? ''
+  institutionId.value = authStore.user?.institutionId ?? null
   mentor.value = authStore.user?.mentor ?? ''
   coordinatorId.value = authStore.user?.coordinatorId ?? null
 }
@@ -78,7 +71,7 @@ async function save() {
     await authStore.updateProfile({
       name: name.value.trim(),
       jmbag: jmbag.value.trim() || null,
-      institutionId: institutionId.value,
+      institutionId: institutionId.value!,
       mentor: mentor.value.trim() || null,
       coordinatorId: coordinatorId.value || null,
     })

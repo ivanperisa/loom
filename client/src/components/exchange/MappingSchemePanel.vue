@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useExchangeStore } from '@/stores/exchange.store'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useMappingSchemeQuery, useRecognitionMutations } from '@/queries/exchange.queries'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { useTheme } from '@/composables/useTheme'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
@@ -10,6 +12,7 @@ import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 import type { HomeSlotResponse, SlotMode } from '@/types/learningAgreement.types'
 import type { MappingSchemeEntryResponse } from '@/types/mappingScheme.types'
 import { slotMode } from '@/utils/slotMode'
+import { documentStatus } from '@/utils/documentStatus'
 import { slotDisplayName, slotCodeLabel } from '@/utils/slotDisplay'
 import { ectsIndicatorColor } from '@/utils/ectsIndicator'
 import { useDragAutoScroll } from '@/utils/dragAutoScroll'
@@ -21,36 +24,42 @@ const props = defineProps<{
 }>()
 
 const { t, locale } = useI18n()
-const exchangeStore = useExchangeStore()
+const { learningAgreement, recognition, recognitionQuery } = useExchangeContext()
+const mappingSchemeQuery = useMappingSchemeQuery(() => props.exchangeId)
+const mutations = useRecognitionMutations(() => props.exchangeId)
+const mappingScheme = mappingSchemeQuery.data
 const { theme } = useTheme()
 useDragAutoScroll()
 
-const loading = ref(true)
-const saving = ref(false)
+const loading = computed(() => recognitionQuery.isPending.value || mappingSchemeQuery.isPending.value)
+const loadError = computed(() => recognitionQuery.error.value ?? mappingSchemeQuery.error.value)
+const saving = computed(() => mutations.saveMappingScheme.isPending.value)
 
 const SEMESTERS = DOC_TABLE_SEMESTERS
 const modes: SlotMode[] = [slotMode.AtHome]
 const modeOutlineColor = DOC_TABLE_MODE_OUTLINE_COLOR
 
-// Editable working copy (homeSlotId + enrollmentStatus only).
+// Editable working copy: placements (slot, ECTS) and each course's status.
 const localEntries = ref<MappingSchemeEntryResponse[]>([])
 
 const laModeBySlot = computed(() => {
-  const m = new Map<string, SlotMode>()
-  for (const e of exchangeStore.serverLearningAgreement?.entries ?? []) {
+  const m = new Map<number, SlotMode>()
+  for (const e of learningAgreement.value?.entries ?? []) {
     if (!e.isDeleted) m.set(e.homeSlotId, e.mode)
   }
   return m
 })
 
 function rebuildLocal() {
-  localEntries.value = (exchangeStore.serverMappingScheme?.entries ?? []).map((e) => ({ ...e }))
+  localEntries.value = (mappingScheme.value?.entries ?? []).map((e) => ({ ...e }))
 }
 
-const isActive = computed(() => (exchangeStore.serverMappingScheme?.entries.length ?? 0) > 0)
+const isActive = computed(() => recognition.value?.isStarted ?? false)
+// Approved results are locked until the coordinator sends them back to draft.
+const isLocked = computed(() => recognition.value?.status === documentStatus.Approved)
 
 const isDirty = computed(() => {
-  const server = exchangeStore.serverMappingScheme?.entries ?? []
+  const server = mappingScheme.value?.entries ?? []
   if (server.length !== localEntries.value.length) return true
   const byId = new Map(server.map((e) => [e.id, e]))
   return localEntries.value.some((e) => {
@@ -65,12 +74,12 @@ const isDirty = computed(() => {
 })
 
 function slotsForSemester(sem: number): HomeSlotResponse[] {
-  return exchangeStore.slots
+  return (learningAgreement.value?.slots ?? [])
     .filter((s) => s.semester === sem)
     .sort((a, b) => a.slotPosition - b.slotPosition)
 }
 
-function entriesForSlot(slotId: string): MappingSchemeEntryResponse[] {
+function entriesForSlot(slotId: number): MappingSchemeEntryResponse[] {
   return localEntries.value.filter((e) => e.homeSlotId === slotId)
 }
 
@@ -94,8 +103,8 @@ function ectsColor(slot: HomeSlotResponse): string {
 }
 
 // Drag & drop — drops open a dialog to choose how many ECTS move to the target slot.
-const draggingId = ref<string | null>(null)
-const dragOverSlotId = ref<string | null>(null)
+const draggingId = ref<number | null>(null)
+const dragOverSlotId = ref<number | null>(null)
 const isDragging = computed(() => draggingId.value !== null)
 
 let tempId = -1
@@ -103,7 +112,7 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10
 }
 
-const pendingTransfer = ref<{ entryId: string; toSlotId: string; max: number } | null>(null)
+const pendingTransfer = ref<{ entryId: number; toSlotId: number; max: number } | null>(null)
 const transferEcts = ref(0)
 const transferSource = computed(() =>
   pendingTransfer.value
@@ -112,6 +121,7 @@ const transferSource = computed(() =>
 )
 
 function onDragStart(entry: MappingSchemeEntryResponse) {
+  if (isLocked.value) return
   draggingId.value = entry.id
 }
 function onDragOver(event: DragEvent) {
@@ -140,8 +150,8 @@ function confirmTransfer() {
   const target = localEntries.value.find(
     (e) =>
       e.id !== source.id &&
-      String(e.homeSlotId) === String(p.toSlotId) &&
-      e.partnerCourseCode === source.partnerCourseCode,
+      e.homeSlotId === p.toSlotId &&
+      e.partnerCourseId === source.partnerCourseId,
   )
 
   if (amount >= source.awardedEcts) {
@@ -156,7 +166,7 @@ function confirmTransfer() {
     if (target) {
       target.awardedEcts = round1(target.awardedEcts + amount)
     } else {
-      localEntries.value.push({ ...source, id: String(tempId--), homeSlotId: p.toSlotId, awardedEcts: amount })
+      localEntries.value.push({ ...source, id: tempId--, homeSlotId: p.toSlotId, awardedEcts: amount })
     }
   }
 }
@@ -199,56 +209,45 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
 function isNotPassed(entry: MappingSchemeEntryResponse): boolean {
   return entry.enrollmentStatus === 'NotPassed'
 }
-function entriesForCourse(partnerCourseCode: string): MappingSchemeEntryResponse[] {
-  return localEntries.value.filter((e) => e.partnerCourseCode === partnerCourseCode)
+function entriesForCourse(partnerCourseId: number): MappingSchemeEntryResponse[] {
+  return localEntries.value.filter((e) => e.partnerCourseId === partnerCourseId)
 }
 function markNotPassed(entry: MappingSchemeEntryResponse) {
-  for (const e of entriesForCourse(entry.partnerCourseCode)) e.enrollmentStatus = 'NotPassed'
+  if (isLocked.value) return
+  for (const e of entriesForCourse(entry.partnerCourseId)) e.enrollmentStatus = 'NotPassed'
 }
 function onItemClick(entry: MappingSchemeEntryResponse) {
+  if (isLocked.value) return
   if (isNotPassed(entry)) {
-    for (const e of entriesForCourse(entry.partnerCourseCode)) e.enrollmentStatus = 'Passed'
+    for (const e of entriesForCourse(entry.partnerCourseId)) e.enrollmentStatus = 'Passed'
   }
 }
 
 
-async function save() {
-  saving.value = true
-  try {
-    await exchangeStore.saveMappingScheme(props.exchangeId, {
-      entries: localEntries.value.map((e) => ({
-        id: Number(e.id),
-        homeSlotId: Number(e.homeSlotId),
-        partnerCourseId: e.partnerCourseId === null ? null : Number(e.partnerCourseId),
-        awardedEcts: e.awardedEcts,
-        enrollmentStatus: e.enrollmentStatus || null,
-        originalGrade: e.originalGrade,
-        ectsGrade: e.ectsGrade,
-        hrGrade: e.hrGrade,
-        examDate: e.examDate,
-      })),
-    })
-  } finally {
-    saving.value = false
+function save() {
+  // A status belongs to the course (one result), so send each changed course once.
+  const saved = new Map((mappingScheme.value?.entries ?? []).map((e) => [e.partnerCourseId, e.enrollmentStatus ?? null]))
+  const statuses = new Map<number, string | null>()
+  for (const e of localEntries.value) {
+    if ((saved.get(e.partnerCourseId) ?? null) !== (e.enrollmentStatus ?? null)) statuses.set(e.partnerCourseId, e.enrollmentStatus ?? null)
   }
+  mutations.saveMappingScheme.mutate({
+    entries: localEntries.value.map((e) => ({
+      id: e.id,
+      homeSlotId: e.homeSlotId,
+      partnerCourseId: e.partnerCourseId,
+      awardedEcts: e.awardedEcts,
+    })),
+    statuses: [...statuses].map(([partnerCourseId, enrollmentStatus]) => ({ partnerCourseId, enrollmentStatus })),
+  })
 }
 
 function discard() {
   rebuildLocal()
 }
 
-watch(() => exchangeStore.serverMappingScheme, rebuildLocal, { deep: false })
-
-onMounted(async () => {
-  try {
-    if (!exchangeStore.serverMappingScheme) {
-      await exchangeStore.fetchMappingScheme(props.exchangeId)
-    }
-    rebuildLocal()
-  } finally {
-    loading.value = false
-  }
-})
+// Saved data replaces the local copy (after load and after each save).
+watch(mappingScheme, rebuildLocal, { immediate: true })
 </script>
 
 <template>
@@ -256,6 +255,8 @@ onMounted(async () => {
     <div v-if="loading" class="space-y-3">
       <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded bg-primary/20"></div>
     </div>
+
+    <ErrorAlert v-else-if="loadError" :error="loadError" @retry="recognitionQuery.refetch(); mappingSchemeQuery.refetch()" />
 
     <template v-else>
       <div class="relative mb-4 flex min-h-[38px] items-center justify-center">
@@ -271,7 +272,7 @@ onMounted(async () => {
       </div>
 
       <template v-else>
-      <p class="mb-3 text-xs text-light/60">{{ t('mappingScheme.dragHint') }}</p>
+      <p class="mb-3 text-xs text-light/60">{{ isLocked ? t('mappingScheme.lockedApproved') : t('mappingScheme.dragHint') }}</p>
 
       <UnsavedChangesBar v-if="isDirty" :saving="saving" @save="save" @discard="discard" />
 
@@ -312,7 +313,7 @@ onMounted(async () => {
               :key="entry.id"
               class="ms-mapping-item"
               :class="{ 'ms-mapping-notpassed': isNotPassed(entry) }"
-              draggable="true"
+              :draggable="!isLocked"
               @dragstart="onDragStart(entry)"
               @dragend="draggingId = null"
               @click.stop="onItemClick(entry)"
@@ -331,7 +332,7 @@ onMounted(async () => {
                 <span style="color: #555; font-size: 10px">{{ entry.awardedEcts }} ECTS</span>
               </span>
               <button
-                v-if="!isNotPassed(entry)"
+                v-if="!isNotPassed(entry) && !isLocked"
                 type="button"
                 class="ms-x-btn"
                 :title="t('mappingScheme.markNotPassed')"

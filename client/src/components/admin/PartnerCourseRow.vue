@@ -13,10 +13,10 @@ const props = defineProps<{
   busy: boolean
 }>()
 const emit = defineEmits<{
-  'toggle-select': [courseId: string]
+  'toggle-select': [courseId: number]
   edit: [course: PartnerCourseResponse]
-  delete: [courseId: string]
-  restore: [courseId: string]
+  delete: [courseId: number]
+  restore: [courseId: number]
 }>()
 
 const { t, locale } = useI18n()

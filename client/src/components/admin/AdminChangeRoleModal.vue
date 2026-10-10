@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminService, type UserListResponse } from '@/services/admin.service'
-import { invalidateCoordinators } from '@/services/coordinator.service'
 import { userRole } from '@/utils/userRole'
 import BaseModal from '@/components/common/BaseModal.vue'
 import UserAvatar from '@/components/common/UserAvatar.vue'
@@ -33,7 +32,6 @@ async function save() {
   error.value = null
   try {
     const res = await adminService.setUserRole(props.user.id, selected.value)
-    invalidateCoordinators()
     emit('saved', res.data)
   } catch {
     error.value = t('admin.users.changeRoleError')
@@ -54,7 +52,7 @@ async function save() {
             <p class="truncate text-xs text-light/40">{{ user.email || '—' }}</p>
           </div>
         </div>
-        <button type="button" class="ml-3 text-light/40 transition hover:text-light" @click="emit('close')">
+        <button :aria-label="t('common.close')" type="button" class="ml-3 text-light/40 transition hover:text-light" @click="emit('close')">
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
           </svg>

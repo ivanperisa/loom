@@ -1,6 +1,7 @@
 # TO DO: Define
 #   repository secrets: USERNAME, PASSWORD, DB_USERNAME, DB_PASSWORD, CLIENT_ID, CLIENT_SECRET
-#   optionally repository variables: APPS_PATH, API_PROJECT_FOLDER, SERVER, SSH_PORT
+#   optionally repository variables: APPS_PATH, API_PROJECT_FOLDER, SERVER, SSH_PORT, DB_HOST, DB_PORT, DB_NAME, BACKUP_DIR
+#   on the server: psql, pg_dump, pg_restore (migrations run there before the new API is unpacked)
 
 name: Loom WebApi
 
@@ -13,6 +14,8 @@ env:
   DB_HOST: ${{ vars.DB_HOST || 'localhost' }}
   DB_PORT: ${{ vars.DB_PORT || '5432' }}
   DB_NAME: ${{ vars.DB_NAME || 'ects' }}
+  # Where migrate.sh keeps the backup it takes before migrating (on the server). Empty = ~/loom-backups.
+  BACKUP_DIR: ${{ vars.BACKUP_DIR || '' }}
   FRONTEND_BASE_URL: ${{ vars.FRONTEND_BASE_URL || 'https://zpr-120.fer.hr/loom' }}
   CLIENT_ID: ${{ secrets.CLIENT_ID }}
   CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
@@ -50,6 +53,8 @@ jobs:
     needs: setup-variables
     if: needs.setup-variables.outputs.data-available == 'true'
     runs-on: ubuntu-latest
+    # Add required reviewers to this environment (Settings → Environments) to approve each deploy by hand.
+    environment: production
     steps:
       - uses: actions/checkout@v6
 
@@ -77,6 +82,19 @@ jobs:
       - name: Build
         working-directory: ${{ env.PROJECT_FOLDER }}
         run: dotnet build --configuration Release --no-restore
+
+      # Idempotent and without per-migration transactions: migrate.sh runs it as one transaction on the server.
+      - name: Generate migration script
+        run: |
+          dotnet tool restore
+          dotnet ef migrations script --idempotent --no-transactions --project server/Loom.Infrastructure --startup-project server/Loom.Infrastructure -o migrations.sql
+          ls server/Loom.Infrastructure/Migrations | grep -E '^[0-9]{14}_[A-Za-z0-9]+\.cs$' | sed 's/\.cs$//' > migrations.txt
+
+      - name: Upload migration script
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrations-sql
+          path: migrations.sql
 
       - name: Publish
         working-directory: ${{ env.PROJECT_FOLDER }}
@@ -131,6 +149,11 @@ jobs:
           field: PathBase
           value: /${{ env.APPS_PATH }}
 
+      - name: Add database files
+        run: |
+          mkdir -p '${{ needs.setup-variables.outputs.publish-folder }}/db'
+          cp migrations.sql migrations.txt database/baseline.sql database/backup/backup.sh database/deploy/migrate.sh '${{ needs.setup-variables.outputs.publish-folder }}/db/'
+
       - name: Compress
         run: |
           cd '${{ needs.setup-variables.outputs.publish-folder }}'
@@ -146,15 +169,29 @@ jobs:
           scp_source: ${{ needs.setup-variables.outputs.zip-filename }}
           scp_target: /var/www/apps/${{ env.APPS_PATH }}
 
-      - name: Unpack
+      # Migrate first: if it fails, the step stops before unpacking and the old API keeps running on the
+      # unchanged database (the migration is one transaction). A backup is taken only when something is pending.
+      - name: Migrate database and unpack
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          PGHOST: ${{ env.DB_HOST }}
+          PGPORT: ${{ env.DB_PORT }}
+          PGDATABASE: ${{ env.DB_NAME }}
+          PGUSER: ${{ secrets.DB_USERNAME }}
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+          BACKUP_DIR: ${{ env.BACKUP_DIR }}
         with:
           host: ${{ env.DEPLOY_SERVER }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           port: ${{ env.SSH_PORT }}
+          envs: PGHOST,PGPORT,PGDATABASE,PGUSER,PGPASSWORD,BACKUP_DIR
+          script_stop: true
           script: |
             cd '/var/www/apps/${{ env.APPS_PATH }}'
+            rm -rf db
+            tar -xzf ${{ needs.setup-variables.outputs.zip-filename }} --no-same-owner --no-same-permissions ./db
+            sh db/migrate.sh db "$BACKUP_DIR"
             tar -xvzf ${{ needs.setup-variables.outputs.zip-filename }} --no-overwrite-dir --no-same-owner --no-same-permissions
             rm ${{ needs.setup-variables.outputs.zip-filename }}
             date >> restart_required.txt

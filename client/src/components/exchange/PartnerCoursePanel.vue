@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { institutionService } from '@/services/institution.service'
-import { useExchangeStore } from '@/stores/exchange.store'
+import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useAddPartnerCourse, usePartnerCoursesQuery } from '@/queries/exchange.queries'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
 import PartnerCourseFormModal from '@/components/common/PartnerCourseFormModal.vue'
@@ -10,7 +11,6 @@ import { useDebouncedRef } from '@/composables/useDebouncedRef'
 
 const props = withDefaults(
   defineProps<{
-    partnerInstitutionId: string
     exchangeId: string
     variant?: 'available' | 'mapped' | 'all'
   }>(),
@@ -18,15 +18,18 @@ const props = withDefaults(
 )
 
 const { t } = useI18n()
-const exchangeStore = useExchangeStore()
+const draft = useLaDraftStore()
+const { exchange } = useExchangeContext()
+const coursesQuery = usePartnerCoursesQuery(() => props.exchangeId)
+const addCourse = useAddPartnerCourse(() => props.exchangeId)
 
-const courses = computed(() => exchangeStore.partnerCourses)
-const loading = computed(() => exchangeStore.partnerCoursesLoading)
+const courses = computed(() => coursesQuery.data.value ?? [])
+const loading = computed(() => coursesQuery.isPending.value)
 const searchQuery = ref('')
 const debouncedSearchQuery = useDebouncedRef(searchQuery)
 
 const showAddForm = ref(false)
-const addingCourse = ref(false)
+const addingCourse = computed(() => addCourse.isPending.value)
 const addError = ref<string | null>(null)
 const initialNameForForm = ref('')
 
@@ -40,27 +43,17 @@ async function submitAddCourse(payload: {
   code: string; name: string; nameHr?: string; ects: number; semester: string; level: string
   lecturesH?: number; auditoryH?: number; labH?: number
 }) {
-  addingCourse.value = true
   addError.value = null
   try {
-    await institutionService.createPartnerCourseByInstitution(props.partnerInstitutionId, payload)
-    await exchangeStore.fetchPartnerCourses(props.partnerInstitutionId, true)
+    await addCourse.mutateAsync(payload)
     showAddForm.value = false
   } catch {
     addError.value = t('partnerCourses.saveError')
-  } finally {
-    addingCourse.value = false
   }
 }
 
-watch(
-  () => props.partnerInstitutionId,
-  (id) => { if (id) exchangeStore.fetchPartnerCourses(id) },
-  { immediate: true },
-)
-
 const visibleCourses = computed(() => {
-  const semesterType = exchangeStore.exchange?.semesterType
+  const semesterType = exchange.value?.semesterType
   return courses.value
     .filter((c) => !c.isDeleted)
     .filter(
@@ -74,8 +67,8 @@ const visibleCourses = computed(() => {
 })
 
 const mappedEctsMap = computed(() => {
-  const map = new Map<string, number>()
-  for (const state of exchangeStore.localSlotStates) {
+  const map = new Map<number, number>()
+  for (const state of draft.slotStates) {
     for (const m of state.mappings) {
       map.set(m.partnerCourseId, (map.get(m.partnerCourseId) ?? 0) + m.awardedEcts)
     }
@@ -83,7 +76,7 @@ const mappedEctsMap = computed(() => {
   return map
 })
 
-function mappedEcts(courseId: string): number {
+function mappedEcts(courseId: number): number {
   return mappedEctsMap.value.get(courseId) ?? 0
 }
 
@@ -92,13 +85,13 @@ const mappedCourses = computed(() => {
     .filter((c) => mappedEcts(c.id) > 0)
     .sort((a, b) => a.name.localeCompare(b.name))
   const stagedOnly = visibleCourses.value.filter(
-    (c) => exchangeStore.stagedPartnerCourseIds.has(c.id) && mappedEcts(c.id) === 0,
+    (c) => draft.stagedPartnerCourseIds.has(c.id) && mappedEcts(c.id) === 0,
   )
   return [...withEcts, ...stagedOnly]
 })
 
 const availableCourses = computed(() =>
-  visibleCourses.value.filter((c) => mappedEcts(c.id) === 0 && !exchangeStore.stagedPartnerCourseIds.has(c.id))
+  visibleCourses.value.filter((c) => mappedEcts(c.id) === 0 && !draft.stagedPartnerCourseIds.has(c.id))
 )
 
 const mappedCoursesTotalEcts = computed(() =>
@@ -119,7 +112,7 @@ const searchResults = computed(() => {
 })
 
 function onDragStart(course: PartnerCourseResponse) {
-  exchangeStore.startDrag(course)
+  draft.startDrag(course)
 }
 
 function levelLabel(level: string) {
@@ -167,7 +160,7 @@ function semesterLabel(semester: string) {
           v-if="showAddForm"
           mode="create"
           :initialName="initialNameForForm"
-          :defaultSemester="exchangeStore.exchange?.semesterType"
+          :defaultSemester="exchange?.semesterType"
           :saving="addingCourse"
           :error="addError"
           @submit="submitAddCourse"
@@ -182,15 +175,20 @@ function semesterLabel(semester: string) {
             v-for="course in searchResults"
             :key="course.id"
             draggable="true"
-            class="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
+            role="button"
+            tabindex="0"
+            :aria-pressed="draft.armedCourse?.id === course.id"
+            class="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-grab transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing"
             :class="
-              exchangeStore.draggingCourse?.id === course.id || exchangeStore.armedCourse?.id === course.id
+              draft.draggingCourse?.id === course.id || draft.armedCourse?.id === course.id
                 ? 'border-primary bg-primary/10'
                 : 'border-primary/20 bg-dark-2'
             "
-            @click="exchangeStore.armCourse(course)"
+            @click="draft.armCourse(course)"
+            @keydown.enter.self.prevent="draft.armCourse(course)"
+            @keydown.space.self.prevent="draft.armCourse(course)"
             @dragstart="onDragStart(course)"
-            @dragend="exchangeStore.endDrag()"
+            @dragend="draft.endDrag()"
           >
             <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
               <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
@@ -227,10 +225,10 @@ function semesterLabel(semester: string) {
                 {{ course.ects }} ECTS
               </span>
               <button
-                v-if="!exchangeStore.stagedPartnerCourseIds.has(course.id)"
+                v-if="!draft.stagedPartnerCourseIds.has(course.id)"
                 :title="t('partnerCourses.stageAdd')"
                 class="flex items-center justify-center w-6 h-6 rounded text-light/40 hover:text-primary-strong hover:bg-primary/10 transition"
-                @click.stop="exchangeStore.stagePartnerCourse(course.id)"
+                @click.stop="draft.stagePartnerCourse(course.id)"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="1" y1="6" x2="10" y2="6" /><polyline points="6,2 10,6 6,10" />
@@ -254,15 +252,17 @@ function semesterLabel(semester: string) {
             draggable="true"
             class="flex items-center gap-3 rounded-lg px-4 py-3 cursor-grab transition hover:border-primary active:cursor-grabbing"
             :class="
-              exchangeStore.draggingCourse?.id === course.id || exchangeStore.armedCourse?.id === course.id
+              draft.draggingCourse?.id === course.id || draft.armedCourse?.id === course.id
                 ? 'border border-primary bg-primary/10'
                 : mappedEcts(course.id) === 0
                   ? 'border border-dashed border-light/20 bg-dark-2'
                   : 'border border-success-text/35 bg-success-fill'
             "
-            @click="exchangeStore.armCourse(course)"
+            @click="draft.armCourse(course)"
+            @keydown.enter.self.prevent="draft.armCourse(course)"
+            @keydown.space.self.prevent="draft.armCourse(course)"
             @dragstart="onDragStart(course)"
-            @dragend="exchangeStore.endDrag()"
+            @dragend="draft.endDrag()"
           >
             <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
               <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
@@ -302,8 +302,10 @@ function semesterLabel(semester: string) {
                 "
               >{{ mappedEcts(course.id) }}/{{ course.ects }} ECTS</span>
               <button
+                type="button"
+                :aria-label="`${t('common.remove')}: ${course.code}`"
                 class="flex items-center justify-center w-5 h-5 rounded text-light/40 hover:text-red-400 hover:bg-red-400/10 transition"
-                @click.stop="exchangeStore.localRemoveAllMappingsForCourse(course.id); exchangeStore.unstagePartnerCourse(course.id)"
+                @click.stop="draft.removeAllMappingsForCourse(course.id); draft.unstagePartnerCourse(course.id)"
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                   <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />

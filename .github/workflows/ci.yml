@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server (build + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('server/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore Loom.slnx
+
+      - name: Build
+        run: dotnet build Loom.slnx --configuration Release --no-restore -warnaserror
+
+      # Integration tests run against a real PostgreSQL (Testcontainers, Docker is available on the runner).
+      # Includes the check that every model change has a migration, and a full demo seed run.
+      - name: Test
+        run: dotnet test Loom.slnx --configuration Release --no-build
+
+  client:
+    name: Client (lint + types + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.x"
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint:check
+
+      # src/api/schema.d.ts must match openapi.json (which the server tests keep in sync with the API).
+      - name: API types are generated
+        run: pnpm api:types && git diff --exit-code -- src/api/schema.d.ts
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Type-check and build
+        run: pnpm build

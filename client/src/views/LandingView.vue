@@ -1,31 +1,40 @@
 ﻿<script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { authService } from '@/services/auth.service'
 import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import DevLoginPanel from '@/components/dev/DevLoginPanel.vue'
+import { parseAccessToken } from '@/utils/accessLink'
+import { safeRedirect } from '@/utils/redirect'
+
+const devLogin = import.meta.env.VITE_DEV_LOGIN === 'true'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
+
+/** The API sends a failed or cancelled Google sign-in back here. */
+const loginFailed = route.query.loginFailed !== undefined
 
 const showAccessForm = ref(false)
 const accessCode = ref('')
 const accessError = ref(false)
 
+/** Back to the page that asked for a sign-in, if there was one. */
 function login() {
-  authService.login()
+  authService.login(safeRedirect(route.query.redirect) ?? '/home')
 }
 
 function openAccess() {
-  const value = accessCode.value.trim()
-  const guidMatch = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
-  if (!guidMatch) {
+  const token = parseAccessToken(accessCode.value)
+  if (!token) {
     accessError.value = true
     return
   }
   accessError.value = false
-  router.push(`/access/${guidMatch[0]}`)
+  router.push(`/access/${token}`)
 }
 </script>
 
@@ -43,6 +52,9 @@ function openAccess() {
         <article
           class="landing-card relative w-full max-w-xl bg-dark p-8 pb-12 lg:translate-x-[80px] lg:rounded-[0_30px_30px_0]"
         >
+          <p v-if="loginFailed" role="alert" class="mb-4 rounded-lg border border-danger/30 bg-danger-fill px-3 py-2 text-sm text-danger-text">
+            {{ t('common.signInFailed') }}
+          </p>
           <button
             v-if="!showAccessForm"
             type="button"
@@ -99,6 +111,8 @@ function openAccess() {
             </div>
             <p v-if="accessError" class="mt-2 text-xs text-red-400">{{ t('landing.accessUidError') }}</p>
           </form>
+
+          <DevLoginPanel v-if="devLogin" />
         </article>
       </section>
 
