@@ -142,22 +142,24 @@ Check that no migration is missing (CI runs this too):
 dotnet ef migrations has-pending-model-changes --project server/Loom.Infrastructure --startup-project server/Loom.Infrastructure
 ```
 
-To produce SQL for a production database:
+### Production
+
+Merging into `main` migrates the production database. Before it unpacks the new API, `deploy-server.yml` runs `database/deploy/migrate.sh` on the server. If nothing is pending, it does nothing. Otherwise it:
+
+1. marks `Initial` as applied on a database still on the old `schema.sql` (`database/baseline.sql`),
+2. takes a backup (`database/backup/backup.sh`, into `~/loom-backups` or `BACKUP_DIR`),
+3. applies the idempotent script in a single transaction.
+
+If the migration fails, nothing is applied, the step fails before unpacking and the old API keeps running. The server needs `psql`, `pg_dump` and `pg_restore`. To approve each deploy by hand, add required reviewers to the `production` environment.
+
+To produce the same SQL by hand:
 
 ```sh
-dotnet ef migrations script --idempotent --project server/Loom.Infrastructure --startup-project server/Loom.Infrastructure -o migrations.sql
+dotnet ef migrations script --idempotent --no-transactions --project server/Loom.Infrastructure --startup-project server/Loom.Infrastructure -o migrations.sql
+psql -v ON_ERROR_STOP=1 -1 -f migrations.sql
 ```
 
-### Production baseline (one time)
-
-Step-by-step guide for the first deploy from `main` (Croatian, with a rehearsal on a copy and a rollback plan): [`DEPLOYMENT.md`](DEPLOYMENT.md).
-
-The first migration (`Initial`) describes the schema that production already has (the old `schema.sql`), including constraint and index names. Before the first migration-based deploy:
-
-1. Back up: `database/backup/backup.sh` (see below).
-2. Optionally verify that production matches, by running `database/verify-schema.sql` against production and against a fresh local database, then diffing the two outputs.
-3. Run `database/baseline.sql` once. It marks `Initial` as already applied.
-4. Apply the remaining migrations: `migrations.sql` from above, or an EF migration bundle.
+The first deploy from `main` (with a rehearsal on a copy of production and a rollback plan) is described in [`DEPLOYMENT.md`](DEPLOYMENT.md) (Croatian).
 
 ## Running in production
 
