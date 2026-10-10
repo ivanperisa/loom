@@ -20,7 +20,8 @@ public sealed class OfficialDocumentService(
     ExchangeService exchanges,
     LearningAgreementService learningAgreements,
     RecognitionService recognitions,
-    MappingSchemeService mappingSchemes)
+    MappingSchemeService mappingSchemes,
+    VersionStore versions)
 {
     public async Task<ErrorOr<OfficialDocumentFile>> BuildAsync(Guid exchangeGuid, string? lang, CancellationToken ct)
     {
@@ -75,30 +76,47 @@ public sealed class OfficialDocumentService(
             : !e.IsDeleted;
         bool Removed(LearningAgreementEntry e) => version is int v && e.RemovedInVersion <= v;
 
+        // A reopened draft edits mode and ECTS of the live rows in place, so those come from the approved version itself.
+        var approved = version is null ? null : await ApprovedValuesAsync(exchangeId, ct);
+        (string Mode, decimal? Ects) Shown(LearningAgreementEntry e) =>
+            Live(e) && approved is not null && approved.TryGetValue((e.HomeSlotId, e.PartnerCourseId), out var v)
+                ? v
+                : (e.Mode.ToString(), e.AwardedEcts);
+
         var grid = new Dictionary<int, GridSlot>();
         foreach (var entry in entries.Where(e => Live(e) || Removed(e)))
         {
             if (!grid.TryGetValue(entry.HomeSlotId, out var slot))
                 grid[entry.HomeSlotId] = slot = new GridSlot(null, []);
-            if (Live(entry)) grid[entry.HomeSlotId] = slot = slot with { Mode = entry.Mode.ToString() };
+            if (Live(entry)) grid[entry.HomeSlotId] = slot = slot with { Mode = Shown(entry).Mode };
             if (entry.PartnerCourse is not { } course) continue;
 
             var removed = Removed(entry);
             var note = removed
                 ? $"−{text.Amendment(entry.RemovedInVersion)}"
                 : text.Amendment(entry.AddedInVersion);
-            slot.Lines.Add(new GridLine(course.Code, course.Name, course.NameHr, entry.AwardedEcts ?? 0, removed, note));
+            slot.Lines.Add(new GridLine(course.Code, course.Name, course.NameHr, Shown(entry).Ects ?? 0, removed, note));
         }
 
         var changes = new List<ChangeLine>();
         foreach (var entry in entries.Where(e => e.PartnerCourse is not null))
         {
             if (entry.AddedInVersion is int added and > 1 && (version is null || added <= version))
-                changes.Add(new ChangeLine(text.Amendment(added)!, true, entry.PartnerCourse!.Code, entry.PartnerCourse.Name, entry.AwardedEcts, entry.HomeSlot.Label));
+                changes.Add(new ChangeLine(text.Amendment(added)!, true, entry.PartnerCourse!.Code, entry.PartnerCourse.Name, Shown(entry).Ects, entry.HomeSlot.Label));
             if (Removed(entry))
                 changes.Add(new ChangeLine(text.Amendment(entry.RemovedInVersion)!, false, entry.PartnerCourse!.Code, entry.PartnerCourse.Name, entry.AwardedEcts, entry.HomeSlot.Label));
         }
         return new LaSheet(version, grid, changes.OrderBy(c => c.Amendment.Length).ThenBy(c => c.Amendment).ThenBy(c => c.Added).ToList());
+    }
+
+    /// <summary>Mode and ECTS of each component (slot + course) as the latest approved version has them.</summary>
+    private async Task<Dictionary<(int SlotId, int? CourseId), (string Mode, decimal? Ects)>?> ApprovedValuesAsync(int exchangeId, CancellationToken ct)
+    {
+        var latest = await versions.LatestApprovedAsync(exchangeId, DocumentKind.LearningAgreement, ct);
+        if (latest is null || VersionStore.Deserialize<LaVersionPayload>(latest) is not { } payload) return null;
+        return payload.Entries
+            .GroupBy(e => (e.HomeSlotId, e.PartnerCourseId))
+            .ToDictionary(g => g.Key, g => (g.First().Mode, g.First().AwardedEcts));
     }
 
     /// <summary>The mapping scheme on the same grid; courses marked not passed are struck through. Slot modes come from the LA.</summary>
