@@ -14,6 +14,9 @@ set -eu
 DIR="${1:?Usage: migrate.sh <dir> [backup dir]}"
 BACKUP_DIR="${2:-${BACKUP_DIR:-$HOME/loom-backups}}"
 : "${PGDATABASE:?Set PGDATABASE (and PGHOST, PGUSER, PGPASSWORD)}"
+# The scripts are UTF-8 (the EF script starts with a BOM, which psql skips only in UTF-8). Without this,
+# psql uses the system's encoding, e.g. WIN1250 on Windows, and fails on the first line.
+export PGCLIENTENCODING=UTF8
 
 for tool in psql pg_dump pg_restore; do
   command -v "$tool" > /dev/null || { echo "migrate: $tool is not installed on this server" >&2; exit 1; }

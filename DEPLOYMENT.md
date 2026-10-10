@@ -115,7 +115,7 @@ SQL
 
 # 3. Migracija
 psql -d loom_proba -v ON_ERROR_STOP=1 -f database/baseline.sql
-psql -d loom_proba -v ON_ERROR_STOP=1 -1 -f migrations.sql
+PGCLIENTENCODING=UTF8 psql -d loom_proba -v ON_ERROR_STOP=1 -1 -f migrations.sql   # UTF8: skripta je UTF-8 (važno na Windowsima)
 ```
 
 **Provjera nakon migracije:**
@@ -192,7 +192,7 @@ Planirati kratak prekid rada (oko 10 minuta), po mogućnosti kad nitko ne radi. 
 ```sh
 PGDATABASE=<prod baza> ./database/backup/backup.sh /var/backups/loom
 psql -d <prod baza> -v ON_ERROR_STOP=1 -f database/baseline.sql
-psql -d <prod baza> -v ON_ERROR_STOP=1 -1 -f migrations.sql     # poglavlje 3
+PGCLIENTENCODING=UTF8 psql -d <prod baza> -v ON_ERROR_STOP=1 -1 -f migrations.sql     # poglavlje 3
 ```
 Workflow će nakon toga javiti *database is up to date*.
 
