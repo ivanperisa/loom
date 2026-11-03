@@ -244,21 +244,24 @@ public class InstitutionService(IAppDbContext db, CachedQuery cache) : IInstitut
         if (!Enum.TryParse<StudyProgramLevel>(request.Level, out var level))
             return Error.Validation("INVALID_LEVEL", "Invalid study program level.");
 
-        var course = new PartnerCourse
-        {
-            InstitutionId = institutionId,
-            Code = request.Code.Trim(),
-            Name = request.Name.Trim(),
-            NameHr = string.IsNullOrWhiteSpace(request.NameHr) ? null : request.NameHr.Trim(),
-            Url = string.IsNullOrWhiteSpace(request.Url) ? null : request.Url.Trim(),
-            Ects = request.Ects,
-            LecturesH = request.LecturesH,
-            AuditoryH = request.AuditoryH,
-            LabH = request.LabH,
-            Semester = semester,
-            Level = level,
-        };
-        db.PartnerCourses.Add(course);
+        var code = request.Code.Trim();
+        var existing = await db.PartnerCourses.FirstOrDefaultAsync(c => c.InstitutionId == institutionId && c.Code == code, ct);
+        if (existing is { IsDeleted: false })
+            return Error.Conflict("DUPLICATE_CODE", "A course with this code already exists for the institution.");
+
+        var course = existing ?? db.PartnerCourses.Add(new PartnerCourse { InstitutionId = institutionId, Code = code }).Entity;
+        course.IsDeleted = false;
+        course.DeletedAt = null;
+        course.Name = request.Name.Trim();
+        course.NameHr = string.IsNullOrWhiteSpace(request.NameHr) ? null : request.NameHr.Trim();
+        course.Url = string.IsNullOrWhiteSpace(request.Url) ? null : request.Url.Trim();
+        course.Ects = request.Ects;
+        course.LecturesH = request.LecturesH;
+        course.AuditoryH = request.AuditoryH;
+        course.LabH = request.LabH;
+        course.Semester = semester;
+        course.Level = level;
+
         await db.SaveChangesAsync(ct);
         cache.BumpVersion("partner-courses");
         return course.ToResponse();
