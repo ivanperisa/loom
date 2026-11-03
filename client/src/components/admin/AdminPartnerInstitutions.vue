@@ -193,7 +193,7 @@ function onCourseCountChanged(delta: number) {
         :no-results-label="t('admin.institutions.noResults')"
         class="min-w-[180px] max-w-[260px] flex-none"
       />
-      <ShowDeletedToggle v-if="list.hasDeleted.value || showDeleted" v-model="showDeleted" />
+      <ShowDeletedToggle v-if="list.hasDeleted.value" v-model="showDeleted" />
     </div>
 
     <div v-if="list.isPending.value" class="space-y-3">

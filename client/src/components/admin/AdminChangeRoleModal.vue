@@ -44,7 +44,7 @@ async function save() {
 
 <template>
   <BaseModal max-width="max-w-md" labelled-by="admin-change-role-title" @close="emit('close')">
-    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+    <div>
       <div class="flex items-start justify-between border-b border-primary/20 px-6 py-4">
         <div class="flex min-w-0 items-center gap-3">
           <UserAvatar :name="user.name" :role="user.role" size="md" />

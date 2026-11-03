@@ -165,9 +165,6 @@ async function apply() {
 
 <style scoped>
 .import-dialog {
-  background: var(--color-dark-2);
-  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
-  border-radius: 12px;
   padding: 28px;
   min-width: 520px;
   max-width: 680px;

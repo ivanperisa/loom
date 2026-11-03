@@ -82,7 +82,7 @@ async function submit() {
 <template>
   <BaseModal max-width="max-w-2xl" labelled-by="edit-exchange-title" @close="emit('close')">
     <div
-      class="flex w-full flex-col rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl"
+      class="flex w-full flex-col"
       style="max-height: 90vh"
     >
       <!-- Header -->

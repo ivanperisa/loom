@@ -70,7 +70,7 @@ async function submit() {
 
 <template>
   <BaseModal max-width="max-w-lg" labelled-by="student-form-title" @close="emit('close')">
-    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+    <div>
       <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
         <h3 id="student-form-title" class="font-semibold text-light">
           {{ mode === 'edit' ? t('coordinator.editStudentModal.title') : t('coordinator.addStudentModal.title') }}

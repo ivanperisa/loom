@@ -56,7 +56,7 @@ function submit() {
 
 <template>
   <BaseModal max-width="max-w-2xl" labelled-by="partner-institution-form-title" @close="emit('cancel')">
-    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+    <div>
       <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
         <h3 id="partner-institution-form-title" class="font-semibold text-light">
           {{ institution ? t('admin.institutions.editTitle') : t('admin.institutions.addTitle') }}

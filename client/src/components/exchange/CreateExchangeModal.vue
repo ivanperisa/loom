@@ -207,7 +207,7 @@ const stepKeys = [
 <template>
   <BaseModal max-width="max-w-4xl" labelled-by="create-exchange-title" @close="emit('close')">
     <div
-      class="flex w-full flex-col rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl"
+      class="flex w-full flex-col"
       style="max-height: 90vh"
     >
       <!-- Header -->
