@@ -9,6 +9,6 @@ export const authService = {
   },
   logout: async (): Promise<void> => {
     await api.post('/api/auth/logout')
-    window.location.href = import.meta.env.VITE_BASE_PATH
+    window.location.href = import.meta.env.BASE_URL
   },
 }
