@@ -17,6 +17,7 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import PanelHeaderBar from '@/components/common/PanelHeaderBar.vue'
 import AuditInfo from '@/components/common/AuditInfo.vue'
 import ErrorAlert from '@/components/common/ErrorAlert.vue'
+import { ClockIcon, FileSpreadsheetIcon } from '@lucide/vue'
 
 const props = defineProps<{
   exchangeId: string
@@ -160,11 +161,11 @@ function downloadOfficial() {
           <StatusBadge v-if="isStarted" :status="recognition.status" />
           <div style="display: flex; gap: 6px;">
             <ActionButton :disabled="officialDocument.isPending.value" :title="t('documents.officialHint')" @click="downloadOfficial">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="3" fill="#1D6F42"/><path d="M7.5 7l9 10M16.5 7l-9 10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
+              <FileSpreadsheetIcon :size="12" :stroke-width="2.5" />
               {{ t('documents.official') }}
             </ActionButton>
             <ActionButton v-if="isStarted" @click="showHistory = true">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <ClockIcon :size="12" :stroke-width="2.5" />
               {{ t('recognition.actions.history') }}
             </ActionButton>
           </div>

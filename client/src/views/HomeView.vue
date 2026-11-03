@@ -11,6 +11,7 @@ import { userService } from '@/services/user.service'
 import { statusColorClass } from '@/utils/statusColors'
 import { coordinatorRequestStatus as coordinatorRequestStatusValues } from '@/utils/coordinatorRequestStatus'
 import { useQuerySync } from '@/composables/useQuerySync'
+import { CircleAlertIcon, ExternalLinkIcon } from '@lucide/vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -143,19 +144,7 @@ async function reRequestCoordinatorRole() {
           v-if="filteredSummaries.length === 0"
           class="mt-4 rounded-xl border border-primary/20 bg-dark-2 p-6 text-center"
         >
-          <svg class="mx-auto h-12 w-12 text-light/60" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-              stroke="currentColor"
-              stroke-width="1.5"
-            />
-            <path
-              d="M12 8v4m0 4h.01"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-            />
-          </svg>
+          <CircleAlertIcon class="mx-auto h-12 w-12 text-light/60" />
           <p class="mt-3 text-light/60">{{ t('home.noExchange') }}</p>
         </div>
 
@@ -193,10 +182,7 @@ async function reRequestCoordinatorRole() {
                 class="pointer-events-auto inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-medium text-primary-text transition hover:border-primary hover:bg-primary/10"
                 @click.stop
               >
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                  <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-                </svg>
+                <ExternalLinkIcon :size="11" />
                 {{ t('exchange.ewpLink') }}
               </a>
             </div>
@@ -253,10 +239,7 @@ async function reRequestCoordinatorRole() {
                       class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
                       @click.stop
                     >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                        <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-                      </svg>
+                      <ExternalLinkIcon :size="12" />
                     </a>
                     <span v-else class="h-7 w-7 shrink-0"></span>
                   </div>

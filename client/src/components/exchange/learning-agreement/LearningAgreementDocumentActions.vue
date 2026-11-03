@@ -7,6 +7,7 @@ import ImportPreviewModal from '@/components/exchange/ImportPreviewModal.vue'
 import { useLearningAgreementMutations } from '@/queries/exchange.queries'
 import { useNotification } from '@/composables/useNotification'
 import type { MappingExportDto } from '@/types/learningAgreement.types'
+import { ClockIcon, DownloadIcon, UploadIcon } from '@lucide/vue'
 
 /** The learning agreement's document actions: export/import (JSON) and the version history. */
 const props = defineProps<{
@@ -39,15 +40,15 @@ async function readImportFile(e: Event) {
 <template>
   <div class="flex gap-1.5">
     <ActionButton :disabled="learningAgreementMutations.exportFile.isPending.value" :title="t('learningAgreement.actions.exportHint')" @click="learningAgreementMutations.exportFile.mutate()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <DownloadIcon aria-hidden="true" :size="12" :stroke-width="2.5" />
       {{ t('learningAgreement.actions.export') }}
     </ActionButton>
     <ActionButton :disabled="!editable" :title="editable ? '' : t('learningAgreement.import.lockedHint')" @click="fileInput?.click()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <UploadIcon aria-hidden="true" :size="12" :stroke-width="2.5" />
       {{ t('learningAgreement.actions.import') }}
     </ActionButton>
     <ActionButton @click="showHistory = true">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <ClockIcon aria-hidden="true" :size="12" :stroke-width="2.5" />
       {{ t('learningAgreement.actions.history') }}
     </ActionButton>
 

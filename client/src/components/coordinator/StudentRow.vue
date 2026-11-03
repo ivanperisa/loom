@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { statusColorClass } from '@/utils/statusColors'
 import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
+import { ExternalLinkIcon, LinkIcon } from '@lucide/vue'
 
 /** One student in the coordinator's list, showing their newest exchange (the others are behind "+n"). */
 const props = defineProps<{ student: CoordinatorStudentResponse; actionsOpen: boolean }>()
@@ -101,10 +102,7 @@ const extraCount = computed(() => Math.max(props.student.exchanges.length - 1, 0
           class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
           @click.stop="emit('copyLink', primary!.guid)"
         >
-          <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
-            <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
-          </svg>
+          <LinkIcon class="h-3.5 w-3.5" />
         </button>
         <span v-else class="h-7 w-7 shrink-0"></span>
 
@@ -117,10 +115,7 @@ const extraCount = computed(() => Math.max(props.student.exchanges.length - 1, 0
           class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
           @click.stop
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-            <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-          </svg>
+          <ExternalLinkIcon :size="12" />
         </a>
         <span v-else class="h-7 w-7 shrink-0"></span>
       </div>

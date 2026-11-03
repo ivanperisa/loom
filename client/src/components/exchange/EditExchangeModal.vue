@@ -13,6 +13,7 @@ import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { ExchangeResponse } from '@/types/exchange.types'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import { TriangleAlertIcon, XIcon } from '@lucide/vue'
 
 const props = defineProps<{
   exchange: ExchangeResponse
@@ -88,13 +89,7 @@ async function submit() {
       <div class="flex items-center justify-between border-b border-primary/20 px-8 py-5">
         <h2 id="edit-exchange-title" class="text-xl font-semibold text-light">{{ t('exchange.editExchange') }}</h2>
         <button :aria-label="t('common.close')" type="button" class="text-light/50 transition hover:text-light" @click="emit('close')">
-          <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fill-rule="evenodd"
-              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-              clip-rule="evenodd"
-            />
-          </svg>
+          <XIcon class="h-5 w-5" />
         </button>
       </div>
 
@@ -125,10 +120,7 @@ async function submit() {
               v-if="hasBlockedSemesterType"
               class="mt-3 flex items-start gap-2 rounded-xl border border-amber-400/40 bg-amber-500/15 px-3 py-2.5"
             >
-              <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-400" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
-                <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-              </svg>
+              <TriangleAlertIcon class="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
               <p class="text-xs text-info-text">
                 {{ t('exchange.editLockedByLearningAgreement') }}<br />
                 {{ t('exchange.editLockedByLearningAgreementHint') }}

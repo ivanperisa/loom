@@ -8,6 +8,7 @@ import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
+import { XIcon } from '@lucide/vue'
 
 const props = defineProps<{
   user: UserListResponse
@@ -85,9 +86,7 @@ async function save() {
             <p class="mt-0.5 text-xs text-light/40">{{ user.email }}</p>
           </div>
           <button :aria-label="t('common.close')" type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
-            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
+            <XIcon class="h-5 w-5" />
           </button>
         </div>
 

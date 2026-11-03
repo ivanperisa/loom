@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import SearchInput from '@/components/common/SearchInput.vue'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import ShowDeletedToggle from '@/components/common/ShowDeletedToggle.vue'
+import { MergeIcon } from '@lucide/vue'
 
 defineProps<{
   search: string
@@ -77,10 +78,7 @@ const levelOptions = computed(() => [
         class="flex shrink-0 items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-text transition hover:bg-primary/10"
         @click="emit('start-merge')"
       >
-        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="9" cy="12" r="6" stroke-width="2" />
-          <circle cx="15" cy="12" r="6" stroke-width="2" />
-        </svg>
+        <MergeIcon class="h-3.5 w-3.5" />
         {{ t('admin.institutions.mergeCourses') }}
       </button>
       <template v-else-if="mergeSelecting">

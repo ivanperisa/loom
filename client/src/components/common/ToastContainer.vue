@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useNotification } from '@/composables/useNotification'
 import type { ToastType } from '@/composables/useNotification'
+import { XIcon } from '@lucide/vue'
 
 const { toasts, removeToast } = useNotification()
 
@@ -37,9 +38,7 @@ const icons: Record<ToastType, string> = {
           </div>
 
           <button class="toast__close" aria-label="Close" @click="removeToast(toast.id)">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <XIcon class="h-4 w-4" :stroke-width="2" />
           </button>
         </div>
       </TransitionGroup>

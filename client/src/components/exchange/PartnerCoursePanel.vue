@@ -8,6 +8,7 @@ import type { PartnerCourseResponse } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
 import PartnerCourseFormModal from '@/components/common/PartnerCourseFormModal.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { ArrowRightIcon, CheckIcon, ExternalLinkIcon, GripVerticalIcon, PlusIcon, XIcon } from '@lucide/vue'
 
 const props = withDefaults(
   defineProps<{
@@ -150,9 +151,7 @@ function semesterLabel(semester: string) {
             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 text-light/60 transition hover:border-primary hover:text-primary-text"
             @click="openAddForm"
           >
-            <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <line x1="6" y1="1" x2="6" y2="11" /><line x1="1" y1="6" x2="11" y2="6" />
-            </svg>
+            <PlusIcon :size="14" />
           </button>
         </div>
 
@@ -190,11 +189,7 @@ function semesterLabel(semester: string) {
             @dragstart="onDragStart(course)"
             @dragend="draft.endDrag()"
           >
-            <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
-              <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
-              <circle cx="3" cy="9" r="1.5" /><circle cx="9" cy="9" r="1.5" />
-              <circle cx="3" cy="15" r="1.5" /><circle cx="9" cy="15" r="1.5" />
-            </svg>
+            <GripVerticalIcon class="shrink-0 text-light/60" :size="12" />
             <div class="min-w-0 flex-1">
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
               <div class="text-sm font-medium text-light">{{ course.name }}</div>
@@ -210,10 +205,7 @@ function semesterLabel(semester: string) {
                 class="flex h-6 w-6 items-center justify-center rounded text-blue-400 transition hover:bg-blue-400/10 hover:text-blue-300"
                 @click.stop
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                  <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-                </svg>
+                <ExternalLinkIcon :size="12" />
               </a>
               <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
               <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
@@ -230,14 +222,10 @@ function semesterLabel(semester: string) {
                 class="flex items-center justify-center w-6 h-6 rounded text-light/40 hover:text-primary-strong hover:bg-primary/10 transition"
                 @click.stop="draft.stagePartnerCourse(course.id)"
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="1" y1="6" x2="10" y2="6" /><polyline points="6,2 10,6 6,10" />
-                </svg>
+                <ArrowRightIcon :size="12" />
               </button>
               <span v-else :title="t('partnerCourses.stageAdded')" class="flex items-center justify-center w-6 h-6 rounded text-success-text">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="2,6 5,9 10,3" />
-                </svg>
+                <CheckIcon :size="12" />
               </span>
             </div>
           </div>
@@ -264,11 +252,7 @@ function semesterLabel(semester: string) {
             @dragstart="onDragStart(course)"
             @dragend="draft.endDrag()"
           >
-            <svg class="shrink-0 text-light/60" width="12" height="18" viewBox="0 0 12 18" fill="currentColor">
-              <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
-              <circle cx="3" cy="9" r="1.5" /><circle cx="9" cy="9" r="1.5" />
-              <circle cx="3" cy="15" r="1.5" /><circle cx="9" cy="15" r="1.5" />
-            </svg>
+            <GripVerticalIcon class="shrink-0 text-light/60" :size="12" />
             <div class="min-w-0 flex-1">
               <div class="text-xs font-bold text-light">{{ course.code }}</div>
               <div class="text-sm font-medium text-light">{{ course.name }}</div>
@@ -284,10 +268,7 @@ function semesterLabel(semester: string) {
                 class="flex h-6 w-6 items-center justify-center rounded text-blue-400 transition hover:bg-blue-400/10 hover:text-blue-300"
                 @click.stop
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                  <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-                </svg>
+                <ExternalLinkIcon :size="12" />
               </a>
               <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ semesterLabel(course.semester) }}</span>
               <span class="rounded bg-fill-soft px-1.5 py-0.5 text-[11px] text-light/40">{{ levelLabel(course.level) }}</span>
@@ -307,9 +288,7 @@ function semesterLabel(semester: string) {
                 class="flex items-center justify-center w-5 h-5 rounded text-light/40 hover:text-red-400 hover:bg-red-400/10 transition"
                 @click.stop="draft.removeAllMappingsForCourse(course.id); draft.unstagePartnerCourse(course.id)"
               >
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                  <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
-                </svg>
+                <XIcon :size="10" />
               </button>
             </div>
           </div>

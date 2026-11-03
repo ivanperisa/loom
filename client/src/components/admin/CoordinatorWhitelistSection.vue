@@ -9,6 +9,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { useListQuery } from '@/composables/useListQuery'
 import { queryKeys } from '@/queries/keys'
 import { describeApiError } from '@/utils/apiError'
+import { XIcon } from '@lucide/vue'
 
 /** Emails that become coordinators on their first login. */
 const { t } = useI18n()
@@ -104,9 +105,7 @@ async function removeEmail(email: string) {
         :title="t('admin.whitelist.remove')"
         @click="removeEmail(entry.email)"
       >
-        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        <XIcon class="h-3.5 w-3.5" />
       </button>
     </div>
   </div>

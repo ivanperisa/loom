@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { TriangleAlertIcon } from '@lucide/vue'
 
 const { t } = useI18n()
 
@@ -10,10 +11,7 @@ defineEmits<{ save: []; discard: [] }>()
 <template>
   <div class="mb-4 flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-500/15 px-4 py-3">
     <div class="flex items-center gap-2">
-      <svg class="shrink-0 text-amber-400" width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
+      <TriangleAlertIcon class="shrink-0 text-amber-400" :size="16" />
       <span class="text-sm font-medium text-info-text">{{ t('learningAgreement.unsavedChanges') }}</span>
     </div>
     <div class="flex gap-2">

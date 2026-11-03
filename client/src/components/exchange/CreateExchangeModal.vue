@@ -17,6 +17,7 @@ import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { nWord } from '@/utils/plural'
 import { useAuthStore } from '@/stores/auth.store'
+import { CheckIcon, SearchIcon, XIcon } from '@lucide/vue'
 
 const props = withDefaults(defineProps<{
   targetStudentId?: number | null
@@ -217,13 +218,7 @@ const stepKeys = [
           class="text-light/50 transition hover:text-light"
           @click="emit('close')"
         >
-          <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fill-rule="evenodd"
-              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-              clip-rule="evenodd"
-            />
-          </svg>
+          <XIcon class="h-5 w-5" />
         </button>
       </div>
 
@@ -241,13 +236,7 @@ const stepKeys = [
             "
           >
             <template v-if="index + 1 < currentStep">
-              <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              <CheckIcon class="h-4 w-4" />
             </template>
             <template v-else>{{ index + 1 }}</template>
           </div>
@@ -329,19 +318,7 @@ const stepKeys = [
               class="w-48 flex-shrink-0"
             />
             <div class="relative flex-1">
-              <svg
-                class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+              <SearchIcon class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
               <input
                 v-model="partnerSearch"
                 type="text"

@@ -16,6 +16,7 @@ import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { ISO_COUNTRIES } from '@/constants/countries'
 import PartnerInstitutionFormPanel from '@/components/admin/PartnerInstitutionFormPanel.vue'
 import PartnerCourseList from '@/components/admin/PartnerCourseList.vue'
+import { ChevronLeftIcon, PlusIcon, SquarePenIcon, XIcon } from '@lucide/vue'
 
 const { t } = useI18n()
 const { confirm } = useConfirm()
@@ -139,9 +140,7 @@ function onCourseCountChanged(delta: number) {
 <template>
   <div v-if="openInstitution" class="space-y-4">
     <button type="button" class="flex items-center gap-1.5 text-sm text-light/60 transition hover:text-light" @click="backToInstitutions">
-      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-      </svg>
+      <ChevronLeftIcon class="h-4 w-4" />
       {{ t('admin.institutions.backToInstitutions') }}
     </button>
     <PartnerCourseList
@@ -162,9 +161,7 @@ function onCourseCountChanged(delta: number) {
         class="flex items-center gap-1.5 rounded-xl bg-primary-strong px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
         @click="toggleAddPanel"
       >
-        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-        </svg>
+        <PlusIcon class="h-4 w-4" />
         {{ t('admin.institutions.addButton') }}
       </button>
     </div>
@@ -249,9 +246,7 @@ function onCourseCountChanged(delta: number) {
                     :title="t('admin.institutions.addCourse')"
                     @click="drillInto(inst, true)"
                   >
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                    </svg>
+                    <PlusIcon class="h-3.5 w-3.5" />
                   </button>
                   <button
                     type="button"
@@ -259,9 +254,7 @@ function onCourseCountChanged(delta: number) {
                     :title="t('admin.institutions.editInstitution')"
                     @click="openEditInstitution(inst)"
                   >
-                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
+                    <SquarePenIcon class="h-3.5 w-3.5" />
                   </button>
                   <button
                     type="button"
@@ -270,9 +263,7 @@ function onCourseCountChanged(delta: number) {
                     :title="t('admin.institutions.deleteInstitution')"
                     @click="deleteInstitution(inst.id)"
                   >
-                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <XIcon class="h-3.5 w-3.5" />
                   </button>
                 </template>
                 <button

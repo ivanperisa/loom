@@ -23,6 +23,7 @@ import { useListQuery } from '@/composables/useListQuery'
 import { useHomeInstitutionsQuery } from '@/queries/catalog.queries'
 import { queryKeys } from '@/queries/keys'
 import { isApiError } from '@/utils/apiError'
+import { PlusIcon, UserIcon } from '@lucide/vue'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -173,9 +174,7 @@ function onExchangeCreated(exchangeGuid: string) {
           class="flex items-center gap-2 rounded-lg bg-primary-strong px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
           @click="openAddModal"
         >
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-          </svg>
+          <PlusIcon class="h-4 w-4" />
           {{ t('coordinator.addStudent') }}
         </button>
       </div>
@@ -211,10 +210,7 @@ function onExchangeCreated(exchangeGuid: string) {
       <ErrorAlert v-else-if="studentList.error.value" :error="studentList.error.value" @retry="studentList.refetch()" />
 
       <div v-else-if="students.length === 0" class="rounded-xl border border-primary/20 bg-dark-2 p-8 text-center">
-        <svg class="mx-auto h-12 w-12 text-light/60" viewBox="0 0 24 24" fill="none">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5" />
-        </svg>
+        <UserIcon class="mx-auto h-12 w-12 text-light/60" />
         <p class="mt-3 text-light/60">{{ t('coordinator.noStudents') }}</p>
       </div>
 

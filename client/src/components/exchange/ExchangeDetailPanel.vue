@@ -17,6 +17,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { documentStatus } from '@/utils/documentStatus'
 import { toApiError } from '@/utils/apiError'
 import { useCopyAccessLink } from '@/composables/useCopyAccessLink'
+import { ExternalLinkIcon, LinkIcon, RefreshCwIcon, SquarePenIcon, XIcon } from '@lucide/vue'
 
 const props = withDefaults(
   defineProps<{
@@ -223,10 +224,7 @@ watch(exchangeQuery.error, (error) => {
             rel="noopener noreferrer"
             class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-medium text-primary-text transition hover:border-primary hover:bg-primary/10"
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-              <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-            </svg>
+            <ExternalLinkIcon :size="12" />
             {{ t('exchange.ewpLink') }}
           </a>
           <button
@@ -243,10 +241,7 @@ watch(exchangeQuery.error, (error) => {
             class="inline-flex items-center gap-1.5 rounded-lg bg-primary-strong px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
             @click="copyAccessLink"
           >
-            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
-              <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
-            </svg>
+            <LinkIcon :size="12" />
             {{ t('exchangeAccess.copyLink') }}
           </button>
 
@@ -270,9 +265,7 @@ watch(exchangeQuery.error, (error) => {
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-light transition hover:bg-fill-soft"
                 @click="closeActionsMenu(); showEdit = true"
               >
-                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
+                <SquarePenIcon class="h-3.5 w-3.5" />
                 {{ t('common.edit') }}
               </button>
               <button
@@ -282,9 +275,7 @@ watch(exchangeQuery.error, (error) => {
                 :disabled="regenerating"
                 @click="closeActionsMenu(); regenerateAccessLink()"
               >
-                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                <RefreshCwIcon class="h-3.5 w-3.5" />
                 {{ t('exchangeAccess.regenerate') }}
               </button>
               <button
@@ -294,9 +285,7 @@ watch(exchangeQuery.error, (error) => {
                 :disabled="exchangeMutations.remove.isPending.value"
                 @click="closeActionsMenu(); confirmDelete()"
               >
-                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <XIcon class="h-3.5 w-3.5" />
                 {{ exchangeMutations.remove.isPending.value ? t('common.loading') : t('home.deleteExchange') }}
               </button>
             </div>
@@ -373,9 +362,7 @@ watch(exchangeQuery.error, (error) => {
       <div class="mb-5 flex items-center justify-between">
         <h2 id="ewp-link-title" class="text-base font-semibold text-light">{{ t('exchange.ewpLink') }}</h2>
         <button :aria-label="t('common.close')" type="button" class="text-light/40 transition hover:text-light" @click="showEwpModal = false">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="2" y1="2" x2="14" y2="14" /><line x1="14" y1="2" x2="2" y2="14" />
-          </svg>
+          <XIcon :size="16" />
         </button>
       </div>
 

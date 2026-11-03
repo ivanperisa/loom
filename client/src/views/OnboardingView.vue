@@ -9,6 +9,7 @@ import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { localizedName } from '@/utils/i18n.utils'
 import { userRole } from '../utils/userRole'
+import { CheckIcon, SearchIcon } from '@lucide/vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -173,7 +174,7 @@ async function logout() {
               "
             >
               <template v-if="index + 1 < currentStep">
-                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <CheckIcon class="h-4 w-4" />
               </template>
               <template v-else>{{ index + 1 }}</template>
             </div>
@@ -242,9 +243,7 @@ async function logout() {
 
             <!-- Search -->
             <div class="relative">
-              <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <SearchIcon class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
               <input
                 v-model="institutionSearch"
                 type="text"

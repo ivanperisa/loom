@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import { statusDotClass } from '@/utils/statusColors'
 import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
+import { ExternalLinkIcon, LinkIcon, PlusIcon } from '@lucide/vue'
 
 /** A student's exchanges (newest first, ✓ = the one their row opens), and "new exchange". */
 defineProps<{ student: CoordinatorStudentResponse; position: { top: number; left: number } }>()
@@ -59,10 +60,7 @@ const { t } = useI18n()
               class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
               @click.stop="emit('close')"
             >
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-              </svg>
+              <ExternalLinkIcon :size="11" />
             </a>
             <button
               v-if="student.isPlaceholder"
@@ -71,10 +69,7 @@ const { t } = useI18n()
               class="flex h-6 w-6 items-center justify-center rounded text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
               @click.stop="emit('copyLink', ex.guid)"
             >
-              <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5z" />
-                <path d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5z" />
-              </svg>
+              <LinkIcon class="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -86,9 +81,7 @@ const { t } = useI18n()
         class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-primary-text transition hover:bg-primary/10"
         @click="emit('createExchange')"
       >
-        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-        </svg>
+        <PlusIcon class="h-3.5 w-3.5" />
         {{ t('coordinator.createExchange') }}
       </button>
     </div>

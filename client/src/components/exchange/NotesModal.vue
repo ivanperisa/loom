@@ -3,6 +3,7 @@ import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useConfirm } from '@/composables/useConfirm'
 import BaseModal from '@/components/common/BaseModal.vue'
+import { XIcon } from '@lucide/vue'
 
 const props = defineProps<{
   learningAgreementMessage: string | null
@@ -52,9 +53,7 @@ function save() {
           class="text-light/40 transition hover:text-light"
           @click="tryClose"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="2" y1="2" x2="14" y2="14" /><line x1="14" y1="2" x2="2" y2="14" />
-          </svg>
+          <XIcon :size="16" />
         </button>
       </div>
 
