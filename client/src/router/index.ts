@@ -32,7 +32,7 @@ const router = createRouter({
     {
       path: '/guest/exchange/:exchangeId',
       component: () => import('@/views/GuestExchangeView.vue'),
-      meta: { requiresAuth: false }
+      meta: { requiresAuth: false, wide: true }
     },
     {
       path: '/callback',

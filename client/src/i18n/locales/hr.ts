@@ -297,6 +297,7 @@ export default {
     copyLink: 'Kopiraj poveznicu za pristup',
     linkCopied: 'Poveznica je kopirana u međuspremnik.',
     registerCta: 'Registriraj se',
+    guest: 'Gost',
     regenerate: 'Obnovi poveznicu',
     regenerateConfirm: 'Obnoviti ovu pristupnu poveznicu? Trenutna poveznica odmah prestaje raditi.',
     regenerated: 'Pristupna poveznica obnovljena i kopirana u međuspremnik',
