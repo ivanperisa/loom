@@ -155,8 +155,6 @@ export interface paths {
                     PageSize?: number;
                     Search?: string;
                     Sort?: string;
-                    SortBy?: string;
-                    SortDir?: string;
                     SafePage?: number;
                     SafePageSize?: number;
                     Skip?: number;
@@ -283,8 +281,6 @@ export interface paths {
                     PageSize?: number;
                     Search?: string;
                     Sort?: string;
-                    SortBy?: string;
-                    SortDir?: string;
                     SafePage?: number;
                     SafePageSize?: number;
                     Skip?: number;
@@ -368,8 +364,6 @@ export interface paths {
                     PageSize?: number;
                     Search?: string;
                     Sort?: string;
-                    SortBy?: string;
-                    SortDir?: string;
                     SafePage?: number;
                     SafePageSize?: number;
                     Skip?: number;
@@ -647,8 +641,6 @@ export interface paths {
                     PageSize?: number;
                     Search?: string;
                     Sort?: string;
-                    SortBy?: string;
-                    SortDir?: string;
                     SafePage?: number;
                     SafePageSize?: number;
                     Skip?: number;
@@ -814,8 +806,6 @@ export interface paths {
                     PageSize?: number;
                     Search?: string;
                     Sort?: string;
-                    SortBy?: string;
-                    SortDir?: string;
                     SafePage?: number;
                     SafePageSize?: number;
                     Skip?: number;
@@ -1095,8 +1085,6 @@ export interface paths {
                     PageSize?: number;
                     Search?: string;
                     Sort?: string;
-                    SortBy?: string;
-                    SortDir?: string;
                     SafePage?: number;
                     SafePageSize?: number;
                     Skip?: number;
@@ -1571,8 +1559,6 @@ export interface paths {
                     PageSize?: number;
                     Search?: string;
                     Sort?: string;
-                    SortBy?: string;
-                    SortDir?: string;
                     SafePage?: number;
                     SafePageSize?: number;
                     Skip?: number;

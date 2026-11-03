@@ -174,20 +174,6 @@
             }
           },
           {
-            "name": "SortBy",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortDir",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "SafePage",
             "in": "query",
             "schema": {
@@ -356,20 +342,6 @@
             }
           },
           {
-            "name": "SortBy",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortDir",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "SafePage",
             "in": "query",
             "schema": {
@@ -482,20 +454,6 @@
           },
           {
             "name": "Sort",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortBy",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortDir",
             "in": "query",
             "schema": {
               "type": "string"
@@ -747,20 +705,6 @@
             }
           },
           {
-            "name": "SortBy",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortDir",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "SafePage",
             "in": "query",
             "schema": {
@@ -992,20 +936,6 @@
           },
           {
             "name": "Sort",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortBy",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortDir",
             "in": "query",
             "schema": {
               "type": "string"
@@ -1314,20 +1244,6 @@
           },
           {
             "name": "Sort",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortBy",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortDir",
             "in": "query",
             "schema": {
               "type": "string"
@@ -1848,20 +1764,6 @@
           },
           {
             "name": "Sort",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortBy",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortDir",
             "in": "query",
             "schema": {
               "type": "string"
