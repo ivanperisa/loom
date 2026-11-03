@@ -54,7 +54,7 @@ function logout() {
           {{ t('common.appName') }}
         </RouterLink>
 
-        <nav class="hidden items-center gap-5 md:flex">
+        <nav v-if="!guest && authStore.isOnboarded" class="hidden items-center gap-5 md:flex">
           <RouterLink v-if="!guest && authStore.isStudent" to="/home" class="nav-link">{{ t('nav.home') }}</RouterLink>
           <RouterLink v-if="!guest && authStore.canActAsCoordinator" to="/coordinator" class="nav-link">{{ t('nav.students') }}</RouterLink>
           <RouterLink v-if="!guest" to="/settings" class="nav-link">{{ t('nav.settings') }}</RouterLink>

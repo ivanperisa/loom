@@ -6,8 +6,7 @@ import { accessService } from '@/services/access.service'
 import { useAuthStore } from '@/stores/auth.store'
 import { useNotification } from '@/composables/useNotification'
 import type { AccessLinkPreviewResponse } from '@/types/exchange.types'
-import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
-import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import AppHeader from '@/components/AppHeader.vue'
 
 type State = 'opening' | 'invalid' | 'claim' | 'notForYou'
 
@@ -62,14 +61,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="flex min-h-screen flex-col bg-dark text-light">
-    <header class="flex h-16 items-center justify-between border-b border-primary/40 px-6">
-      <RouterLink to="/" class="text-lg font-bold text-primary-strong">{{ t('common.appName') }}</RouterLink>
-      <div class="flex items-center gap-3">
-        <ThemeToggleButton />
-        <LocaleSwitcher />
-      </div>
-    </header>
+  <AppHeader :guest="!authStore.isLoggedIn" />
+  <main class="flex min-h-[calc(100vh-4rem)] flex-col bg-dark text-light">
 
     <section class="flex flex-1 items-center justify-center px-4 py-12">
       <div class="w-full max-w-lg rounded-2xl border border-hairline bg-dark p-8 shadow-lg" aria-live="polite">

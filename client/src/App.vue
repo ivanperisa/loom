@@ -6,7 +6,7 @@ import ToastContainer from '@/components/common/ToastContainer.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 const route = useRoute()
-const showHeader = computed(() => route.meta.requiresAuth === true && route.path !== '/onboarding')
+const showHeader = computed(() => route.meta.requiresAuth === true)
 </script>
 
 <template>

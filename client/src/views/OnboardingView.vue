@@ -4,8 +4,6 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
 import { useHomeInstitutionsQuery } from '@/queries/catalog.queries'
-import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
-import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { localizedName } from '@/utils/i18n.utils'
 import { userRole } from '../utils/userRole'
@@ -133,31 +131,10 @@ async function finishOnboarding() {
     isSubmitting.value = false
   }
 }
-
-async function logout() {
-  await authStore.logout()
-}
 </script>
 
 <template>
   <main class="min-h-screen bg-dark text-light">
-    <header class="sticky top-0 z-40 w-full border-b border-primary bg-dark">
-      <div class="page-container flex h-16 items-center justify-between !py-0">
-        <span class="text-lg font-bold text-white">{{ t('common.appName') }}</span>
-        <div class="flex items-center gap-3">
-          <ThemeToggleButton />
-          <LocaleSwitcher variant="compact" />
-          <button
-            type="button"
-            class="text-sm font-semibold text-light transition hover:text-danger-text"
-            @click="logout"
-          >
-            {{ t('common.signOut') }}
-          </button>
-        </div>
-      </div>
-    </header>
-
     <section class="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-2xl items-center justify-center px-4 py-10">
       <div class="w-full">
         <!-- Step indicator -->
