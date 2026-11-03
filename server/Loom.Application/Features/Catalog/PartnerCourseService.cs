@@ -42,11 +42,16 @@ public sealed class PartnerCourseService(IAppDbContext db, ExchangeAccess access
         if (!await db.Institutions.AnyAsync(i => i.Id == institutionId && i.Type == InstitutionType.Partner, ct))
             return CommonErrors.InstitutionNotFound;
 
-        var course = new PartnerCourse { InstitutionId = institutionId };
+        var code = request.Code.NullIfBlank();
+        var course = await db.PartnerCourses.FirstOrDefaultAsync(c => c.InstitutionId == institutionId && c.Code == code && c.IsDeleted, ct)
+            ?? new PartnerCourse { InstitutionId = institutionId };
+
         var applied = await ApplyAsync(course, request, ct);
         if (applied.IsError) return applied.Errors;
 
-        db.PartnerCourses.Add(course);
+        if (course.Id == 0) db.PartnerCourses.Add(course);
+        else course.Restore();
+
         await db.SaveChangesAsync(ct);
         return course.ToResponse();
     }
