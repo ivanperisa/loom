@@ -14,7 +14,7 @@ const exchangeId = route.params.exchangeId as string
 <template>
   <main class="min-h-screen bg-dark">
     <header class="sticky top-0 z-50 w-full border-b border-primary/40 bg-dark/95 backdrop-blur">
-      <div class="page-container flex h-16 items-center justify-between !py-0">
+      <div class="page-container page-container--wide flex h-16 items-center justify-between !py-0">
         <RouterLink to="/" class="text-lg font-bold text-primary-strong">{{ t('common.appName') }}</RouterLink>
 
         <div class="flex items-center gap-3">

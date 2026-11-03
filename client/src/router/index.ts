@@ -10,6 +10,8 @@ declare module 'vue-router' {
     requiresOnboarding?: boolean
     requiresCoordinator?: boolean
     requiresAdmin?: boolean
+    /** Page uses the wide container; the header widens to match. */
+    wide?: boolean
   }
 }
 
@@ -56,7 +58,7 @@ const router = createRouter({
     {
       path: '/exchange/:exchangeId',
       component: () => import('@/views/ExchangeView.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true }
+      meta: { requiresAuth: true, requiresOnboarding: true, wide: true }
     },
     {
       path: '/settings',

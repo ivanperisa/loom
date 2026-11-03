@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTheme } from '@/composables/useTheme'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
@@ -10,6 +10,7 @@ import UserAvatar from '@/components/common/UserAvatar.vue'
 const authStore = useAuthStore()
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const { theme, toggleTheme } = useTheme()
 
 const dropdownOpen = ref(false)
@@ -43,7 +44,7 @@ function logout() {
 
 <template>
   <header class="sticky top-0 z-50 w-full border-b border-primary/40 bg-dark/95 backdrop-blur">
-    <div class="page-container flex h-16 items-center justify-between !py-0">
+    <div class="page-container flex h-16 items-center justify-between !py-0" :class="{ 'page-container--wide': route.meta.wide }">
       <div class="flex items-center gap-8">
         <RouterLink :to="homeRoute" class="text-lg font-bold text-primary-strong">
           {{ t('common.appName') }}
