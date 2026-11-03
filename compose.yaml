@@ -1,5 +1,5 @@
 # Local development stack: Postgres + migrations/demo data + API (hot reload) + web (Vite HMR).
-#   docker compose up            → http://localhost:5173 (pick a persona under "Dev login")
+#   docker compose up            → https://localhost:5173 (pick a persona under "Dev login")
 #   docker compose run --rm seed --reset    → wipe the database and reseed
 # Settings live in .env (copy .env.example). See README.md for the persona list.
 
@@ -56,6 +56,8 @@ services:
       <<: *dotnet-env
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:5000
+      # Vite terminates TLS and proxies over the compose network; trust its X-Forwarded-Proto.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       DevAuth__Enabled: "true"
       Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
@@ -79,7 +81,7 @@ services:
       VITE_API_URL: ""                 # same origin: Vite proxies /api to the API
       VITE_BASE_PATH: /
       VITE_PROXY_TARGET: http://api:5000
-      VITE_DEV_HTTPS: "false"
+      VITE_DEV_HTTPS: "true"
       VITE_DEV_LOGIN: "true"
       VITE_USE_POLLING: ${LOOM_FILE_POLLING:-false}
     volumes:

@@ -17,18 +17,20 @@ cp .env.example .env        # optional, defaults work
 docker compose up
 ```
 
-Open http://localhost:5173 and pick a persona under **Dev login** (no Google account needed).
+Open https://localhost:5173 and pick a persona under **Dev login** (no Google account needed).
 
-Real Google login works too: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`, add `http://localhost:5173/signin-oidc` as an authorized redirect URI of that OAuth client in Google Cloud Console, then `docker compose up -d api` to reload them.
+Real Google login works too: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`, add `https://localhost:5173/signin-oidc` as an authorized redirect URI of that OAuth client in Google Cloud Console, then `docker compose up -d api` to reload them.
 
 | What | Where |
 |---|---|
-| Web app | http://localhost:5173 |
+| Web app | https://localhost:5173 |
 | API + Swagger | http://localhost:5000/docs |
 | Postgres | `localhost:5432`, db/user/password `loom` |
 | DB browser (optional) | `docker compose --profile tools up adminer` → http://localhost:8081 |
 
 The first start takes a few minutes (NuGet + pnpm install). After that, both the API (`dotnet watch`) and the web app (Vite) reload on file changes. On Windows/macOS, set `LOOM_FILE_POLLING=true` in `.env` if changes are not picked up.
+
+On Windows the web container is slow (Vite reads every file through the bind mount). `./dev.ps1` keeps the backend in Docker and runs the web app on the host instead.
 
 ### Common commands
 
@@ -51,13 +53,7 @@ docker compose up -d db && docker compose run --rm seed
 ```
 
 - **API:** `dotnet run --project server/Loom.Api`. The launch profile enables dev login (`DevAuth__Enabled=true`). The connection string comes from user secrets or `ConnectionStrings__DefaultConnection`, for example `Host=localhost;Port=5432;Database=loom;Username=loom;Password=loom`.
-- **Client:** `cd client && pnpm install && pnpm dev`. To use the dev login against a local API, create `client/.env.development.local` with:
-  ```
-  VITE_API_URL=
-  VITE_PROXY_TARGET=http://localhost:5000
-  VITE_DEV_HTTPS=false
-  VITE_DEV_LOGIN=true
-  ```
+- **Client:** `cd client && pnpm install && pnpm dev`. `client/.env.development` points the dev proxy at the API on `localhost:5000`.
 
 ## Dev login and personas
 
@@ -74,7 +70,7 @@ All demo data is created through the real application services (`server/Loom.Dev
 | `req.pending@loom.dev` | Student | Pending coordinator request (approve/reject as admin) |
 | `req.rejected@loom.dev` | Student | Rejected coordinator request banner |
 | `fresh.student@loom.dev` | Student | Not onboarded: onboarding wizard |
-| `claim.student@loom.dev` | Student | Not onboarded: sign in, then open http://localhost:5173/access/dev-access-link-14 and claim the exchange |
+| `claim.student@loom.dev` | Student | Not onboarded: sign in, then open https://localhost:5173/access/dev-access-link-14 and claim the exchange |
 | `s.draft.empty@loom.dev` | Student | Empty learning agreement: first mapping, drag & drop |
 | `s.draft.rich@loom.dev` | Student | All slot modes, a course split over two slots, an over-filled slot |
 | `s.draft.message@loom.dev` | Student | Draft with a coordinator message |
@@ -87,11 +83,11 @@ All demo data is created through the real application services (`server/Loom.Dev
 | `s.nocoordinator@loom.dev` | Student | Exchange without a coordinator |
 | `student01…40@loom.dev` | Student | Volume for lists; 01–20 have exchanges with Ana |
 
-**Guest access (placeholder student, no login):** http://localhost:5173/access/dev-access-link-13 (seeded links have readable tokens; real ones are 43 random characters)
+**Guest access (placeholder student, no login):** https://localhost:5173/access/dev-access-link-13 (seeded links have readable tokens; real ones are 43 random characters)
 
 **Catalogue:** 60 partner institutions (one soft-deleted, one without courses). *Universidad Politécnica de Madrid* has 150+ courses and near-duplicate codes to try the merge tool on (`ML101`/`ML-101`, `DB200`/`DB 200`/`DB-200`, `SEC300`/`SEC-300`). The TUM course `IN9999` is soft-deleted.
 
-Exchange links are `http://localhost:5173/exchange/00000000-0000-4000-8000-0000000000NN`:
+Exchange links are `https://localhost:5173/exchange/00000000-0000-4000-8000-0000000000NN`:
 
 | NN | Exchange | NN | Exchange |
 |---|---|---|---|
