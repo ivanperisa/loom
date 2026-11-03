@@ -55,7 +55,7 @@ export default {
     tagline: 'Pojednostavite preslikavanje kolegija za Erasmus',
     description:
       'Preslikajte kolegije s razmjene, pratite ECTS bodove i dobijte odobrenje koordinatora - sve na jednom mjestu.',
-    visualTitle: 'Preslikavanje kolegija jednostavno',
+    visualTitle: 'Jednostavno preslikavanje kolegija',
     accessTab: 'Ili pristupite putem poveznice',
     accessUidLabel: 'Pristupni kod razmjene',
     accessUidPlaceholder: 'Zalijepite svoj pristupni kod ili poveznicu',
@@ -632,7 +632,8 @@ export default {
       city: 'Grad',
       erasmusCode: 'Erasmus kod',
       optional: 'opcionalno',
-      showDeleted: 'Prikaži obrisane',
+      activeOnly: 'Samo aktivne',
+      withDeleted: 'Uključi obrisane',
       restore: 'Aktiviraj',
       deleteInstitution: 'Obriši instituciju',
       deleteConfirm: 'Obrisati ovu instituciju zajedno sa svim programima i predmetima?',
