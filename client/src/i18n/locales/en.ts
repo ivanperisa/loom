@@ -236,8 +236,8 @@ export default {
     },
   },
   documents: {
-    official: 'Official document',
-    officialHint: 'The official xlsx: the approved learning agreement with amendments, the agreed recognition and the results.',
+    official: 'Export to Excel',
+    officialHint: 'Excel file: the approved learning agreement with amendments, the agreed recognition and the results.',
   },
   exchange: {
     title: 'My Exchange',

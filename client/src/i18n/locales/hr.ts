@@ -238,8 +238,8 @@ export default {
     },
   },
   documents: {
-    official: 'Službeni dokument',
-    officialHint: 'Službeni xlsx: odobreni ugovor o učenju s izmjenama, dogovoreno priznavanje i rezultati.',
+    official: 'Izvoz u Excel',
+    officialHint: 'Excel datoteka: odobreni ugovor o učenju s izmjenama, dogovoreno priznavanje i rezultati.',
   },
   exchange: {
     title: 'Moja razmjena',

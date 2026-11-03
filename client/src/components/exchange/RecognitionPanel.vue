@@ -160,7 +160,7 @@ function downloadOfficial() {
           <StatusBadge v-if="isStarted" :status="recognition.status" />
           <div style="display: flex; gap: 6px;">
             <ActionButton :disabled="officialDocument.isPending.value" :title="t('documents.officialHint')" @click="downloadOfficial">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="3" fill="#1D6F42"/><path d="M7.5 7l9 10M16.5 7l-9 10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
               {{ t('documents.official') }}
             </ActionButton>
             <ActionButton v-if="isStarted" @click="showHistory = true">
@@ -221,7 +221,7 @@ function downloadOfficial() {
       <RecognitionTable v-else :entries="agreedEntries" :readonly="true" />
 
       <!-- Before final recognition: the step that starts it -->
-      <section v-if="!isStarted" class="start-card" aria-labelledby="start-final-title">
+      <section v-if="!isStarted && agreedEntries.length > 0" class="start-card" aria-labelledby="start-final-title">
         <h3 id="start-final-title" class="text-sm font-semibold text-light">{{ t('recognition.start.title') }}</h3>
         <p class="mt-1 text-xs text-light/70">{{ t('recognition.start.explanation') }}</p>
         <div class="mt-3 flex flex-wrap items-center gap-3">
@@ -239,7 +239,7 @@ function downloadOfficial() {
       </section>
 
       <!-- After: table 2, the results with grades -->
-      <template v-else>
+      <template v-else-if="isStarted">
         <h3 class="mb-2 mt-8 text-sm font-semibold text-light/80">
           {{ t('recognition.finalRecognitionTitle') }}
           <span class="font-normal text-light/50">
