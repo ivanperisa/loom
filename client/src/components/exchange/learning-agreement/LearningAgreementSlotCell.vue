@@ -14,7 +14,7 @@ import type {
   LocalSlotState,
 } from '@/types/learningAgreement.types'
 
-/** One home slot of the LA grid: its mode, the courses placed in it, and approved courses taken out (struck through). */
+/** One home slot of the learning agreement grid: its mode, the courses placed in it, and approved courses taken out (struck through). */
 const props = defineProps<{
   homeSlot: HomeSlotResponse
   state: LocalSlotState | undefined
@@ -111,7 +111,7 @@ function saveEdit() {
   <td
     :colspan="homeSlot.ects"
     :style="cellStyle"
-    class="la-slot-cell"
+    class="learning-agreement-slot-cell"
     :role="interactive ? 'button' : undefined"
     :tabindex="interactive ? 0 : undefined"
     :aria-label="interactive ? `${slotCodeLabel(homeSlot)} ${slotDisplayName(homeSlot, locale)}`.trim() : undefined"
@@ -123,14 +123,14 @@ function saveEdit() {
     @dragleave="emit('dragleave')"
     @drop.prevent="emit('drop')"
   >
-    <div class="la-cell-head">
+    <div class="learning-agreement-cell-head">
       <div style="min-width: 0">
-        <div class="la-cell-code">{{ slotCodeLabel(homeSlot) }}</div>
-        <div class="la-cell-name">{{ slotDisplayName(homeSlot, locale) }}</div>
+        <div class="learning-agreement-cell-code">{{ slotCodeLabel(homeSlot) }}</div>
+        <div class="learning-agreement-cell-name">{{ slotDisplayName(homeSlot, locale) }}</div>
       </div>
       <span
         v-if="ectsLabel"
-        class="la-cell-ects"
+        class="learning-agreement-cell-ects"
         :style="{
           color: ectsColor,
           border: `1px solid ${ectsColor}`,
@@ -141,45 +141,45 @@ function saveEdit() {
       </span>
     </div>
 
-    <div v-for="entry in removed" :key="`removed-${entry.id}`" class="la-mapping-item la-mapping-removed">
-      <svg class="la-mapping-x" aria-hidden="true" preserveAspectRatio="none">
+    <div v-for="entry in removed" :key="`removed-${entry.id}`" class="learning-agreement-mapping-item learning-agreement-mapping-removed">
+      <svg class="learning-agreement-mapping-x" aria-hidden="true" preserveAspectRatio="none">
         <line x1="0" y1="0" x2="100%" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
         <line x1="100%" y1="0" x2="0" y2="100%" stroke="rgba(204,0,0,0.75)" stroke-width="1.5" />
       </svg>
       <!-- Removed in an earlier amendment, or (still in the approved version) removed by the next one. -->
-      <span v-if="amendment(entry.isDeleted ? entry.amendmentNumber : null) !== null" class="la-mapping-amendment">
-        {{ t('la.amendmentLabel', { n: amendment(entry.isDeleted ? entry.amendmentNumber : null) }) }}
+      <span v-if="amendment(entry.isDeleted ? entry.amendmentNumber : null) !== null" class="learning-agreement-mapping-amendment">
+        {{ t('learningAgreement.amendmentLabel', { n: amendment(entry.isDeleted ? entry.amendmentNumber : null) }) }}
       </span>
-      <span class="la-mapping-text">
-        <span class="la-mapping-code-line">
-          <span class="la-mapping-code">{{ entry.partnerCourseCode }}</span>
+      <span class="learning-agreement-mapping-text">
+        <span class="learning-agreement-mapping-code-line">
+          <span class="learning-agreement-mapping-code">{{ entry.partnerCourseCode }}</span>
           <CourseUrlLink v-if="entry.partnerCourseUrl" block :url="entry.partnerCourseUrl" :title="t('admin.institutions.courseUrl')" />
         </span><br />
-        <span class="la-mapping-name">{{ entry.partnerCourseName }}</span><br />
-        <span class="la-mapping-name-hr">{{ entry.partnerCourseNameHr ?? '-' }}</span><br />
-        <span class="la-mapping-ects">{{ entry.awardedEcts }} ECTS</span>
+        <span class="learning-agreement-mapping-name">{{ entry.partnerCourseName }}</span><br />
+        <span class="learning-agreement-mapping-name-hr">{{ entry.partnerCourseNameHr ?? '-' }}</span><br />
+        <span class="learning-agreement-mapping-ects">{{ entry.awardedEcts }} ECTS</span>
       </span>
     </div>
 
     <div
       v-for="mapping in mappings"
       :key="mapping.localId"
-      class="la-mapping-item"
+      class="learning-agreement-mapping-item"
       :draggable="editable"
       @click.stop
       @dragstart.stop="editable && emit('startDrag', mapping.localId)"
       @dragend.stop="emit('endDrag')"
     >
-      <span v-if="amendment(mapping.amendmentNumber) !== null" class="la-mapping-amendment">
-        {{ t('la.amendmentLabel', { n: amendment(mapping.amendmentNumber) }) }}
+      <span v-if="amendment(mapping.amendmentNumber) !== null" class="learning-agreement-mapping-amendment">
+        {{ t('learningAgreement.amendmentLabel', { n: amendment(mapping.amendmentNumber) }) }}
       </span>
-      <span class="la-mapping-text">
-        <span class="la-mapping-code-line">
-          <span class="la-mapping-code">{{ mapping.partnerCourseCode }}</span>
+      <span class="learning-agreement-mapping-text">
+        <span class="learning-agreement-mapping-code-line">
+          <span class="learning-agreement-mapping-code">{{ mapping.partnerCourseCode }}</span>
           <CourseUrlLink v-if="mapping.partnerCourseUrl" block :url="mapping.partnerCourseUrl" :title="t('admin.institutions.courseUrl')" />
         </span><br />
-        <span class="la-mapping-name">{{ mapping.partnerCourseName }}</span><br />
-        <span class="la-mapping-name-hr">{{ mapping.partnerCourseNameHr ?? '-' }}</span><br />
+        <span class="learning-agreement-mapping-name">{{ mapping.partnerCourseName }}</span><br />
+        <span class="learning-agreement-mapping-name-hr">{{ mapping.partnerCourseNameHr ?? '-' }}</span><br />
         <template v-if="editingId === mapping.localId">
           <input
             :ref="setEctsInput"
@@ -187,30 +187,30 @@ function saveEdit() {
             type="number"
             min="0.5"
             step="0.5"
-            class="la-ects-input"
-            :aria-label="t('la.clickToEditEcts')"
+            class="learning-agreement-ects-input"
+            :aria-label="t('learningAgreement.clickToEditEcts')"
             @blur="saveEdit()"
             @keydown.enter.prevent="saveEdit()"
             @keydown.escape.prevent="editingId = null"
             @click.stop
           />
-          <span class="la-mapping-ects" style="margin-left: 2px">ECTS</span>
+          <span class="learning-agreement-mapping-ects" style="margin-left: 2px">ECTS</span>
         </template>
         <button
           v-else-if="editable"
           type="button"
-          class="la-mapping-ects la-mapping-ects--editable"
-          :title="t('la.clickToEditEcts')"
+          class="learning-agreement-mapping-ects learning-agreement-mapping-ects--editable"
+          :title="t('learningAgreement.clickToEditEcts')"
           @click.stop="startEdit(mapping)"
         >
           {{ mapping.awardedEcts }} ECTS
         </button>
-        <span v-else class="la-mapping-ects">{{ mapping.awardedEcts }} ECTS</span>
+        <span v-else class="learning-agreement-mapping-ects">{{ mapping.awardedEcts }} ECTS</span>
       </span>
       <button
         v-if="editable"
         type="button"
-        class="la-mapping-remove"
+        class="learning-agreement-mapping-remove"
         :aria-label="`${t('common.remove')}: ${mapping.partnerCourseCode}`"
         @click.stop="emit('remove', mapping.localId)"
       >
@@ -221,32 +221,32 @@ function saveEdit() {
 </template>
 
 <style scoped>
-.la-slot-cell {
+.learning-agreement-slot-cell {
   border: 1px solid #aaa;
   vertical-align: top;
   padding: 8px;
 }
 
-.la-slot-cell:focus-visible {
+.learning-agreement-slot-cell:focus-visible {
   outline: 2px solid var(--color-primary) !important;
   outline-offset: -2px !important;
 }
 
-.la-cell-head {
+.learning-agreement-cell-head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 4px;
 }
 
-.la-cell-name {
+.learning-agreement-cell-name {
   font-size: 11px;
   font-weight: 700;
   color: #000;
   line-height: 1.3;
 }
 
-.la-cell-code {
+.learning-agreement-cell-code {
   font-size: 13px;
   font-weight: 400;
   color: #222;
@@ -254,7 +254,7 @@ function saveEdit() {
   margin-top: 1px;
 }
 
-.la-cell-ects {
+.learning-agreement-cell-ects {
   display: inline-block;
   flex-shrink: 0;
   font-size: 10px;
@@ -264,7 +264,7 @@ function saveEdit() {
   white-space: nowrap;
 }
 
-.la-mapping-item {
+.learning-agreement-mapping-item {
   position: relative;
   margin-top: 3px;
   display: flex;
@@ -275,38 +275,38 @@ function saveEdit() {
   font-size: 11px;
 }
 
-.la-mapping-text {
+.learning-agreement-mapping-text {
   color: #000;
   line-height: 1.3;
 }
 
-.la-mapping-code-line {
+.learning-agreement-mapping-code-line {
   display: inline-flex;
   align-items: center;
   gap: 3px;
 }
 
-.la-mapping-code {
+.learning-agreement-mapping-code {
   font-size: 10px;
   color: #333;
 }
 
-.la-mapping-name {
+.learning-agreement-mapping-name {
   font-weight: 700;
   color: #000;
 }
 
-.la-mapping-name-hr {
+.learning-agreement-mapping-name-hr {
   font-size: 10px;
   color: #777;
 }
 
-.la-mapping-ects {
+.learning-agreement-mapping-ects {
   color: #555;
   font-size: 10px;
 }
 
-.la-mapping-ects--editable {
+.learning-agreement-mapping-ects--editable {
   background: none;
   border: none;
   padding: 0;
@@ -314,7 +314,7 @@ function saveEdit() {
   text-decoration: underline dotted;
 }
 
-.la-ects-input {
+.learning-agreement-ects-input {
   width: 52px;
   font-size: 11px;
   padding: 1px 3px;
@@ -324,7 +324,7 @@ function saveEdit() {
   border-radius: 3px;
 }
 
-.la-mapping-remove {
+.learning-agreement-mapping-remove {
   color: #cc0000;
   font-size: 14px;
   line-height: 1;
@@ -335,13 +335,13 @@ function saveEdit() {
   margin-left: 4px;
 }
 
-.la-mapping-removed {
+.learning-agreement-mapping-removed {
   position: relative;
   opacity: 0.65;
   pointer-events: none;
 }
 
-.la-mapping-x {
+.learning-agreement-mapping-x {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -350,7 +350,7 @@ function saveEdit() {
   overflow: hidden;
 }
 
-.la-mapping-amendment {
+.learning-agreement-mapping-amendment {
   position: absolute;
   top: 4px;
   left: 50%;

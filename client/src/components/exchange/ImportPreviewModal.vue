@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useExchangeContext } from '@/composables/useExchangeContext'
-import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useLearningAgreementDraftStore } from '@/stores/learningAgreementDraft.store'
 import { useLearningAgreementMutations } from '@/queries/exchange.queries'
 import { useNotification } from '@/composables/useNotification'
 import { describeApiError, describeCode } from '@/utils/apiError'
@@ -19,8 +19,8 @@ const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
 const { learningAgreement } = useExchangeContext()
-const draft = useLaDraftStore()
-const laMutations = useLearningAgreementMutations(() => props.exchangeId)
+const draft = useLearningAgreementDraftStore()
+const learningAgreementMutations = useLearningAgreementMutations(() => props.exchangeId)
 const { notifySuccess, notifyError } = useNotification()
 
 const preview = ref<ImportPreviewResponse | null>(null)
@@ -30,7 +30,7 @@ const applying = ref(false)
 // The server matches the file to this exchange (slots by id, courses by id or code) and runs the save validation.
 onMounted(async () => {
   try {
-    preview.value = await laMutations.previewImport.mutateAsync(props.dto)
+    preview.value = await learningAgreementMutations.previewImport.mutateAsync(props.dto)
   } catch (error) {
     const { title, message } = describeApiError(error)
     loadError.value = message ?? title
@@ -50,14 +50,14 @@ function rowLabel(row: ImportRow): string {
 async function apply() {
   applying.value = true
   try {
-    const result = await laMutations.importFile.mutateAsync(props.dto)
+    const result = await learningAgreementMutations.importFile.mutateAsync(props.dto)
     // The imported draft replaces whatever was being edited.
     if (learningAgreement.value) draft.load(props.exchangeId, learningAgreement.value)
-    notifySuccess(t('la.import.successTitle'), t('la.import.successMessage', { added: result.added, removed: result.removed, changed: result.changed }))
+    notifySuccess(t('learningAgreement.import.successTitle'), t('learningAgreement.import.successMessage', { added: result.added, removed: result.removed, changed: result.changed }))
     emit('close')
   } catch (error) {
     const { title, message } = describeApiError(error)
-    notifyError(t('la.import.errorTitle'), message ?? title)
+    notifyError(t('learningAgreement.import.errorTitle'), message ?? title)
   } finally {
     applying.value = false
   }
@@ -68,45 +68,45 @@ async function apply() {
   <BaseModal max-width="max-w-2xl" z-class="z-[60]" labelled-by="import-preview-title" @close="emit('close')">
     <div class="import-dialog">
       <div class="import-header">
-        <h2 id="import-preview-title" class="import-title">{{ t('la.import.title') }}</h2>
+        <h2 id="import-preview-title" class="import-title">{{ t('learningAgreement.import.title') }}</h2>
         <button type="button" class="import-close" :aria-label="t('common.close')" @click="emit('close')">&times;</button>
       </div>
 
       <div class="import-context">
         <div class="import-context__row">
-          <span class="import-context__label">{{ t('la.import.source') }}</span>
+          <span class="import-context__label">{{ t('learningAgreement.import.source') }}</span>
           <span class="import-context__value"><strong>{{ dto.exportedByName }}</strong></span>
         </div>
         <div class="import-context__row">
-          <span class="import-context__label">{{ t('la.import.contextPartner') }}</span>
+          <span class="import-context__label">{{ t('learningAgreement.import.contextPartner') }}</span>
           <span class="import-context__value">{{ dto.institution?.name }}<span v-if="dto.institution?.erasmusCode" class="import-context__code"> ({{ dto.institution.erasmusCode }})</span></span>
         </div>
         <div v-if="dto.home" class="import-context__row">
-          <span class="import-context__label">{{ t('la.import.contextProfile') }}</span>
+          <span class="import-context__label">{{ t('learningAgreement.import.contextProfile') }}</span>
           <span class="import-context__value">{{ dto.home.profileName }}</span>
         </div>
       </div>
 
-      <p class="import-note">{{ t('la.import.replaceNote') }}</p>
+      <p class="import-note">{{ t('learningAgreement.import.replaceNote') }}</p>
 
       <p v-if="loadError" class="import-blocked">{{ loadError }}</p>
       <p v-else-if="!preview" class="import-note">{{ t('common.loading') }}</p>
 
       <template v-else>
         <div v-if="preview.contextWarnings.length > 0" class="import-mismatch">
-          <div class="import-mismatch__title">{{ t('la.import.mismatchTitle') }}</div>
+          <div class="import-mismatch__title">{{ t('learningAgreement.import.mismatchTitle') }}</div>
           <div v-for="w in preview.contextWarnings" :key="w.field" class="import-mismatch__item">
-            <div class="import-mismatch__field">{{ t(`la.import.mismatch.${w.field}`) }}</div>
+            <div class="import-mismatch__field">{{ t(`learningAgreement.import.mismatch.${w.field}`) }}</div>
             <div class="import-mismatch__row">
-              <span class="import-mismatch__side">{{ t('la.import.mismatchFromFile') }}</span>
+              <span class="import-mismatch__side">{{ t('learningAgreement.import.mismatchFromFile') }}</span>
               <span class="import-mismatch__val import-mismatch__val--bad">{{ w.fromFile }}</span>
             </div>
             <div class="import-mismatch__row">
-              <span class="import-mismatch__side">{{ t('la.import.mismatchInExchange') }}</span>
+              <span class="import-mismatch__side">{{ t('learningAgreement.import.mismatchInExchange') }}</span>
               <span class="import-mismatch__val">{{ w.inExchange }}</span>
             </div>
           </div>
-          <div class="import-mismatch__hint">{{ t('la.import.mismatchHint') }}</div>
+          <div class="import-mismatch__hint">{{ t('learningAgreement.import.mismatchHint') }}</div>
         </div>
 
         <p v-if="!preview.canApply" class="import-blocked">{{ describeCode(preview.blockingCode, preview.blockingParams ?? {}, preview.blockingMessage) }}</p>
@@ -115,48 +115,48 @@ async function apply() {
           <table class="import-table">
             <thead>
               <tr>
-                <th>{{ t('la.import.colChange') }}</th>
-                <th>{{ t('la.import.colHomeCourse') }}</th>
-                <th>{{ t('la.import.colPartnerCourse') }}</th>
+                <th>{{ t('learningAgreement.import.colChange') }}</th>
+                <th>{{ t('learningAgreement.import.colHomeCourse') }}</th>
+                <th>{{ t('learningAgreement.import.colPartnerCourse') }}</th>
                 <th>ECTS</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="row in preview.added" :key="`a-${row.homeSlotId}-${row.partnerCourseId}`" class="import-row--added">
-                <td>{{ t('la.import.added') }}</td>
+                <td>{{ t('learningAgreement.import.added') }}</td>
                 <td>{{ row.homeSlotLabel }}</td>
                 <td>{{ rowLabel(row) }}</td>
                 <td>{{ row.awardedEcts ?? '—' }}</td>
               </tr>
               <tr v-for="row in preview.changed" :key="`c-${row.homeSlotId}-${row.partnerCourseId}`" class="import-row--changed">
-                <td>{{ t('la.import.changed') }}</td>
+                <td>{{ t('learningAgreement.import.changed') }}</td>
                 <td>{{ row.homeSlotLabel }}</td>
                 <td>{{ rowLabel(row) }}</td>
                 <td>{{ row.previousEcts ?? '—' }} → {{ row.awardedEcts ?? '—' }}</td>
               </tr>
               <tr v-for="row in preview.removed" :key="`r-${row.homeSlotId}-${row.partnerCourseId}`" class="import-row--removed">
-                <td>{{ t('la.import.removed') }}</td>
+                <td>{{ t('learningAgreement.import.removed') }}</td>
                 <td>{{ row.homeSlotLabel }}</td>
                 <td>{{ rowLabel(row) }}</td>
                 <td>{{ row.awardedEcts ?? '—' }}</td>
               </tr>
               <tr v-for="(skip, i) in preview.skipped" :key="`s-${i}`" class="import-row--skipped">
-                <td>{{ t('la.import.skipped') }}</td>
+                <td>{{ t('learningAgreement.import.skipped') }}</td>
                 <td>{{ skip.homeSlotLabel }}</td>
                 <td>{{ skip.partnerCourseCode ?? '—' }}</td>
-                <td>{{ t(`la.import.skipReason.${skip.reason}`) }}</td>
+                <td>{{ t(`learningAgreement.import.skipReason.${skip.reason}`) }}</td>
               </tr>
             </tbody>
           </table>
-          <p v-if="changeCount === 0 && preview.canApply" class="import-note">{{ t('la.import.nothingToChange') }}</p>
-          <p v-if="preview.unchanged > 0" class="import-note">{{ t('la.import.unchanged', { n: preview.unchanged }) }}</p>
+          <p v-if="changeCount === 0 && preview.canApply" class="import-note">{{ t('learningAgreement.import.nothingToChange') }}</p>
+          <p v-if="preview.unchanged > 0" class="import-note">{{ t('learningAgreement.import.unchanged', { n: preview.unchanged }) }}</p>
         </div>
       </template>
 
       <div class="import-footer">
         <ActionButton size="md" @click="emit('close')">{{ t('common.cancel') }}</ActionButton>
         <ActionButton size="md" variant="solid" :disabled="!canApply" @click="apply">
-          {{ t('la.import.apply', { n: changeCount }) }}
+          {{ t('learningAgreement.import.apply', { n: changeCount }) }}
         </ActionButton>
       </div>
     </div>

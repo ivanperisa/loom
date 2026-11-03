@@ -56,7 +56,7 @@ public class ApiTests(DatabaseFixture fixture) : HttpTest(fixture)
         var student = await NewUser();
         var coordinator = await NewUser(UserRole.Coordinator);
         var exchange = await NewExchange(student, partner, coordinator);
-        await SaveLa(exchange, student, AtExchange(Slot1, courses["A"], 5));
+        await SaveLearningAgreement(exchange, student, AtExchange(Slot1, courses["A"], 5));
         await Approve(exchange, coordinator);
         var client = await LoggedIn(factory, await Db(db => db.Users.Where(u => u.Id == student).Select(u => u.Email).SingleAsync(Ct)));
 
@@ -86,7 +86,7 @@ public class ApiTests(DatabaseFixture fixture) : HttpTest(fixture)
 
     [Theory]
     [InlineData("/exchange/1", "/exchange/1")]
-    [InlineData("/home?tab=la", "/home?tab=la")]
+    [InlineData("/home?tab=learningAgreement", "/home?tab=learningAgreement")]
     [InlineData("//evil.example", "/")]
     [InlineData("/\\evil.example", "/")]
     [InlineData("https://evil.example", "/")]

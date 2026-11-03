@@ -30,7 +30,7 @@ internal sealed class OfficialText(string lang)
         ["notes3"] = ("Poveznice zamijeniti stvarnim poveznicama na strane/domaće kolegije", "Replace links with actual links to partner/home courses"),
         ["sheetResults"] = ("Priznavanje", "Recognition"),
         ["sheetAgreed"] = ("Dogovoreno priznavanje", "Agreed recognition"),
-        ["sheetLa"] = ("Ugovor o učenju", "Learning agreement"),
+        ["sheetLearningAgreement"] = ("Ugovor o učenju", "Learning agreement"),
         ["sheetScheme"] = ("Shema priznavanja", "Mapping scheme"),
         ["sheetInfo"] = ("Potpisi", "Signatures"),
         ["colPartnerCode"] = ("Šifra predmeta", "Course code"),
@@ -55,8 +55,8 @@ internal sealed class OfficialText(string lang)
         ["NotPassed"] = ("Nepoloženo", "Not passed"),
         ["atHome"] = ("Položeno na FER-u", "Taken at the home institution"),
         ["semesterHeader"] = ("Semestar", "Semester"),
-        ["laTitleVersion"] = ("Ugovor o učenju, odobrena verzija {0}", "Learning agreement, approved version {0}"),
-        ["laTitleDraft"] = ("Ugovor o učenju — NACRT (još nije odobren)", "Learning agreement — DRAFT (not approved yet)"),
+        ["learningAgreementTitleVersion"] = ("Ugovor o učenju, odobrena verzija {0}", "Learning agreement, approved version {0}"),
+        ["learningAgreementTitleDraft"] = ("Ugovor o učenju — NACRT (još nije odobren)", "Learning agreement — DRAFT (not approved yet)"),
         ["original"] = ("izvorni ugovor", "original agreement"),
         ["removedIn"] = ("uklonjeno u {0}", "removed in {0}"),
         ["changesTitle"] = ("Izmjene ugovora o učenju", "Changes to the learning agreement"),
@@ -77,7 +77,7 @@ internal sealed class OfficialText(string lang)
         ["infoStarted"] = ("Završno priznavanje započeto", "Final recognition started"),
         ["infoGenerated"] = ("Izrađeno", "Generated"),
         ["infoCoordinator"] = ("Koordinator", "Coordinator"),
-        ["la"] = ("Ugovor o učenju", "Learning agreement"),
+        ["learningAgreement"] = ("Ugovor o učenju", "Learning agreement"),
         ["recognition"] = ("Priznavanje", "Recognition"),
         ["notStarted"] = ("nije započeto", "not started"),
     };
@@ -86,6 +86,6 @@ internal sealed class OfficialText(string lang)
 
     public string Format(string key, object value) => string.Format(this[key], value);
 
-    /// <summary>Amendment n of the LA (version n+1): "I1" in Croatian (izmjena), "A1" in English. Null for the original.</summary>
+    /// <summary>Amendment n of the learning agreement (version n+1): "I1" in Croatian (izmjena), "A1" in English. Null for the original.</summary>
     public string? Amendment(int? versionNo) => versionNo is > 1 ? $"{(IsEnglish ? "A" : "I")}{versionNo - 1}" : null;
 }

@@ -6,7 +6,7 @@ namespace Loom.Application.Features.Planning;
 /// </summary>
 public record ImportPreviewResponse(
     bool CanApply,
-    /// <summary>Why it cannot be applied (an error code such as LA_LOCKED or ECTS_EXCEEDED), with a message.</summary>
+    /// <summary>Why it cannot be applied (an error code such as LEARNING_AGREEMENT_LOCKED or ECTS_EXCEEDED), with a message.</summary>
     string? BlockingCode,
     string? BlockingMessage,
     Dictionary<string, object>? BlockingParams,

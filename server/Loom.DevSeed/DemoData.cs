@@ -187,7 +187,7 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         // 2. Draft, rich: all modes, a course split across slots, an over-filled slot
         var s2 = await Student("s.draft.rich@loom.dev", "Rene Rich", "0036100002");
         var g2 = await NewExchange(2, s2, tum, coordinator: _ana);
-        await SaveLa(g2, s2,
+        await SaveLearningAgreement(g2, s2,
             AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5), AtExchange(SlotElective3, c["IN2064"], 3),
             AtExchange(SlotFree1, c["IN2097"], 5), AtExchange(SlotFree1, c["IN2259"], 5),
             Mode(SlotFree2, SlotMode.AfterExchange), Mode(SlotSeminar, SlotMode.AtHome), AtExchange(SlotTransversal, c["IN2107"], 2));
@@ -195,40 +195,40 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         // 3. Draft with a coordinator message
         var s3 = await Student("s.draft.message@loom.dev", "Marko Message", "0036100003");
         var g3 = await NewExchange(3, s3, tum, coordinator: _ana);
-        await SaveLa(g3, s3, AtExchange(SlotElective1, c["IN2121"], 5), AtExchange(SlotElective2, c["IN2346"], 5));
+        await SaveLearningAgreement(g3, s3, AtExchange(SlotElective1, c["IN2121"], 5), AtExchange(SlotElective2, c["IN2346"], 5));
         await Call<ExchangeService, ExchangeResponse>(s => s.UpdateCoordinatorMessageAsync(g3,
             "IN2121 is only offered in summer, please pick a winter course for this slot.", default), actor: _ana);
 
         // 4. Approved, ready for "Start final recognition"
         var s4 = await Student("s.approved@loom.dev", "Ana Approved", "0036100004");
         var g4 = await NewExchange(4, s4, tum, coordinator: _ana);
-        await SaveLa(g4, s4, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5), AtExchange(SlotFree1, c["IN2211"], 5));
-        await SetLaStatus(g4, DocumentStatus.Approved);
+        await SaveLearningAgreement(g4, s4, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5), AtExchange(SlotFree1, c["IN2211"], 5));
+        await SetLearningAgreementStatus(g4, DocumentStatus.Approved);
 
         // 5. Approved, then reopened by the coordinator for an amendment (draft again)
         var s5 = await Student("s.reopened@loom.dev", "Roko Reopened", "0036100005");
         var g5 = await NewExchange(5, s5, tum, coordinator: _ana);
-        await SaveLa(g5, s5, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5));
-        await SetLaStatus(g5, DocumentStatus.Approved);
-        await SetLaStatus(g5, DocumentStatus.Draft);
-        await SaveLa(g5, s5, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2346"], 5));
+        await SaveLearningAgreement(g5, s5, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5));
+        await SetLearningAgreementStatus(g5, DocumentStatus.Approved);
+        await SetLearningAgreementStatus(g5, DocumentStatus.Draft);
+        await SaveLearningAgreement(g5, s5, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2346"], 5));
 
         // 6. History: three approved versions, removed courses, one backup from a restore
         var s6 = await Student("s.history@loom.dev", "Hana History", "0036100006");
         var g6 = await NewExchange(6, s6, tum, coordinator: _ana);
-        await SaveLa(g6, s6, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5), AtExchange(SlotElective3, c["IN2121"], 5));
-        await SetLaStatus(g6, DocumentStatus.Approved);                                                   // v1
-        await SetLaStatus(g6, DocumentStatus.Draft);
-        await SaveLa(g6, s6, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5),
+        await SaveLearningAgreement(g6, s6, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5), AtExchange(SlotElective3, c["IN2121"], 5));
+        await SetLearningAgreementStatus(g6, DocumentStatus.Approved);                                                   // v1
+        await SetLearningAgreementStatus(g6, DocumentStatus.Draft);
+        await SaveLearningAgreement(g6, s6, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5),
             AtExchange(SlotElective3, c["IN2346"], 5), AtExchange(SlotFree1, c["IN2211"], 5));
-        await SetLaStatus(g6, DocumentStatus.Approved);                                                   // v2
-        await SetLaStatus(g6, DocumentStatus.Draft);
-        var firstApproval = (await Call<LaVersionService, List<DocumentVersionResponse>>(s => s.ListAsync(g6, default), actor: s6))
+        await SetLearningAgreementStatus(g6, DocumentStatus.Approved);                                                   // v2
+        await SetLearningAgreementStatus(g6, DocumentStatus.Draft);
+        var firstApproval = (await Call<LearningAgreementVersionService, List<DocumentVersionResponse>>(s => s.ListAsync(g6, default), actor: s6))
             .Single(x => x.VersionNo == 1);
-        await Call<LaVersionService, RestoreResult>(s => s.RestoreAsync(g6, firstApproval.Id, default), actor: s6);   // creates a backup
-        await SaveLa(g6, s6, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2259"], 5),
+        await Call<LearningAgreementVersionService, RestoreResult>(s => s.RestoreAsync(g6, firstApproval.Id, default), actor: s6);   // creates a backup
+        await SaveLearningAgreement(g6, s6, AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2259"], 5),
             AtExchange(SlotElective3, c["IN2346"], 5), AtExchange(SlotFree1, c["IN2211"], 5));
-        await SetLaStatus(g6, DocumentStatus.Approved);                                                   // v3
+        await SetLearningAgreementStatus(g6, DocumentStatus.Approved);                                                   // v3
 
         // 7. Recognition in progress: grades partly entered, mapping scheme rearranged, one course not passed
         var s7 = await Student("s.recognition.draft@loom.dev", "Rea Recognition", "0036100007");
@@ -253,7 +253,7 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
         // 13. Placeholder student created by the coordinator; opened through the access link (guest)
         var guest = await Placeholder("Gita Guest", "0036999001");
         var g13 = await NewExchange(13, guest, tum, coordinator: _ana, requester: _ana);
-        await SaveLa(g13, guest, AtExchange(SlotElective1, c["IN2064"], 5));
+        await SaveLearningAgreement(g13, guest, AtExchange(SlotElective1, c["IN2064"], 5));
         await AccessLink(13);
 
         // 14. Placeholder that claim.student@loom.dev takes over by opening its access link while signed in
@@ -267,12 +267,12 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
     private async Task RecognitionScenario(Guid exchange, int student, bool finish)
     {
         var c = _courses;
-        await SaveLa(exchange, student,
+        await SaveLearningAgreement(exchange, student,
             AtExchange(SlotElective1, c["IN2064"], 5), AtExchange(SlotElective2, c["IN2003"], 5),
             AtExchange(SlotElective3, c["IN2064"], 3), AtExchange(SlotFree1, c["IN2121"], 5));
-        await SetLaStatus(exchange, DocumentStatus.Approved);
+        await SetLearningAgreementStatus(exchange, DocumentStatus.Approved);
 
-        // "Start final recognition": freezes the LA and table 1, creates the results from the approved version.
+        // "Start final recognition": freezes the learning agreement and table 1, creates the results from the approved version.
         await Call<RecognitionService, RecognitionResponse>(s => s.StartAsync(exchange, default), actor: student);
 
         CourseGradesRequest Grade(string code, string status, string original, string ects, string hr) =>
@@ -371,11 +371,11 @@ public sealed class DemoData(IServiceProvider services, ILogger log)
 
     private static LearningAgreementEntryUpsertDto Mode(int slot, SlotMode mode) => new(slot, mode.ToString(), null, null);
 
-    private Task SaveLa(Guid exchange, int requester, params LearningAgreementEntryUpsertDto[] entries) =>
+    private Task SaveLearningAgreement(Guid exchange, int requester, params LearningAgreementEntryUpsertDto[] entries) =>
         Call<LearningAgreementService, LearningAgreementResponse>(s =>
             s.SaveAsync(exchange, new SaveLearningAgreementRequest([.. entries]), default), actor: requester);
 
-    private Task SetLaStatus(Guid exchange, DocumentStatus status) =>
+    private Task SetLearningAgreementStatus(Guid exchange, DocumentStatus status) =>
         Call<LearningAgreementWorkflow, ExchangeResponse>(s =>
             s.SetStatusAsync(exchange, new UpdateLearningAgreementStatusRequest(status.ToString()), default), actor: _ana);
 

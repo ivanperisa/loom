@@ -24,7 +24,7 @@ internal sealed class OfficialWorkbook(OfficialDocumentData data, OfficialText t
         if (data.Results is { } results)
             RecognitionSheet(workbook.AddWorksheet(t["sheetResults"]), results.Lines, t["sectionResults"], withGrades: true);
         RecognitionSheet(workbook.AddWorksheet(t["sheetAgreed"]), data.Agreed, t["sectionAgreed"], withGrades: false);
-        LaSheet(workbook.AddWorksheet(t["sheetLa"]));
+        LearningAgreementSheet(workbook.AddWorksheet(t["sheetLearningAgreement"]));
         if (data.Results is { } scheme)
             GridSheet(workbook.AddWorksheet(t["sheetScheme"]), t["schemeTitle"], scheme.Grid);
         InfoSheet(workbook.AddWorksheet(t["sheetInfo"]));
@@ -189,18 +189,18 @@ internal sealed class OfficialWorkbook(OfficialDocumentData data, OfficialText t
 
     // ---------------------------------------------------------------- learning agreement
 
-    private void LaSheet(IXLWorksheet ws)
+    private void LearningAgreementSheet(IXLWorksheet ws)
     {
-        var la = data.LearningAgreement;
-        var title = la.VersionNo is int v
-            ? t.Format("laTitleVersion", t.Amendment(v) is { } label ? $"{v} ({label})" : $"{v} ({t["original"]})")
-            : t["laTitleDraft"];
-        var row = GridSheet(ws, title, la.Grid);
+        var learningAgreement = data.LearningAgreement;
+        var title = learningAgreement.VersionNo is int v
+            ? t.Format("learningAgreementTitleVersion", t.Amendment(v) is { } label ? $"{v} ({label})" : $"{v} ({t["original"]})")
+            : t["learningAgreementTitleDraft"];
+        var row = GridSheet(ws, title, learningAgreement.Grid);
 
         row += 2;
         Cell(ws.Cell(row, 1), t["changesTitle"], bold: true, size: 11, borders: false);
         row++;
-        if (la.Changes.Count == 0)
+        if (learningAgreement.Changes.Count == 0)
         {
             Cell(ws.Cell(row, 1), t["noChanges"], italic: true, borders: false);
             ws.Range(row, 1, row, 8).Merge();
@@ -213,7 +213,7 @@ internal sealed class OfficialWorkbook(OfficialDocumentData data, OfficialText t
             Cell(ws.Cell(row, from), t[key], bold: true, bg: HeaderBg, halign: XLAlignmentHorizontalValues.Center);
             ws.Range(row, from, row, to).Merge().Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
         }
-        foreach (var change in la.Changes)
+        foreach (var change in learningAgreement.Changes)
         {
             row++;
             string?[] values = [change.Amendment, change.Added ? t["added"] : t["removed"], change.Code, change.Name, change.Ects?.ToString("0.#"), change.SlotLabel];

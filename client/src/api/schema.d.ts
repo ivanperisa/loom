@@ -1716,7 +1716,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["UpdateLaMessageRequest"];
+                    "application/json": components["schemas"]["UpdateLearningAgreementMessageRequest"];
                 };
             };
             responses: {
@@ -3094,7 +3094,7 @@ export interface components {
             mentor?: string | null;
             ewpLink?: string | null;
         };
-        UpdateLaMessageRequest: {
+        UpdateLearningAgreementMessageRequest: {
             message?: string | null;
         };
         UpdateLearningAgreementStatusRequest: {

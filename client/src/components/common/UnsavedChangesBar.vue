@@ -14,7 +14,7 @@ defineEmits<{ save: []; discard: [] }>()
         <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
         <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span class="text-sm font-medium text-info-text">{{ t('la.unsavedChanges') }}</span>
+      <span class="text-sm font-medium text-info-text">{{ t('learningAgreement.unsavedChanges') }}</span>
     </div>
     <div class="flex gap-2">
       <button
@@ -23,7 +23,7 @@ defineEmits<{ save: []; discard: [] }>()
         :disabled="saving"
         @click="$emit('discard')"
       >
-        {{ t('la.discard') }}
+        {{ t('learningAgreement.discard') }}
       </button>
       <button
         type="button"
@@ -31,7 +31,7 @@ defineEmits<{ save: []; discard: [] }>()
         :disabled="saving"
         @click="$emit('save')"
       >
-        {{ saving ? t('common.loading') : t('la.save') }}
+        {{ saving ? t('common.loading') : t('learningAgreement.save') }}
       </button>
     </div>
   </div>

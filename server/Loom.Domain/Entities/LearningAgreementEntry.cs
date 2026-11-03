@@ -16,7 +16,7 @@ public class LearningAgreementEntry : EntityBase
 
     /// <summary>
     /// Taken out after it was approved: marked for removal in the current draft, or removed in <see cref="RemovedInVersion"/>.
-    /// The row stays so the LA keeps its history (shown struck through with "removed in An").
+    /// The row stays so the learning agreement keeps its history (shown struck through with "removed in An").
     /// </summary>
     public bool IsDeleted { get; set; }
 

@@ -107,7 +107,7 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
         var student = await NewUser();
         var (partner, courses) = await NewPartner();
         var exchange = await NewExchange(student, partner, coordinator: null);
-        await SaveLa(exchange, student, AtExchange(Slot1, courses["A"], 5), AtExchange(Slot2, courses["C"], 5));
+        await SaveLearningAgreement(exchange, student, AtExchange(Slot1, courses["A"], 5), AtExchange(Slot2, courses["C"], 5));
         await Db(async db =>
         {
             var exchangeId = await db.Exchanges.Where(e => e.Guid == exchange).Select(e => e.Id).SingleAsync(Ct);
@@ -132,7 +132,7 @@ public class CatalogAndAccountTests(DatabaseFixture fixture) : IntegrationTest(f
         var student = await NewUser();
         var (partner, courses) = await NewPartner();
         var exchange = await NewExchange(student, partner, coordinator: null);
-        await SaveLa(exchange, student, AtExchange(Slot1, courses["A"], 3), AtExchange(Slot1, courses["D"], 2));
+        await SaveLearningAgreement(exchange, student, AtExchange(Slot1, courses["A"], 3), AtExchange(Slot1, courses["D"], 2));
 
         var result = await Call<CourseMergeService, PartnerCourseResponse>(s => s.MergeAsync(new MergePartnerCoursesRequest(courses["A"], [courses["D"]]), Ct));
 

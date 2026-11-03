@@ -1,12 +1,12 @@
 namespace Loom.Application.Features.Planning;
 
 /// <summary>
-/// What an LA version stores: ids (what restore uses) plus display copies (what history shows, even after courses
+/// What a learning agreement version stores: ids (what restore uses) plus display copies (what history shows, even after courses
 /// are renamed). Property names match the old snapshot JSON, so carried-over versions read the same way.
 /// </summary>
-public record LaVersionPayload(List<LaVersionEntry> Entries);
+public record LearningAgreementVersionPayload(List<LearningAgreementVersionEntry> Entries);
 
-public record LaVersionEntry(
+public record LearningAgreementVersionEntry(
     int HomeSlotId,
     string HomeSlotLabel,
     int HomeSlotSemester,

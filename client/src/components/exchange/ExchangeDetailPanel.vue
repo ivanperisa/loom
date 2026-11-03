@@ -38,17 +38,17 @@ const { exchange, learningAgreement, recognition, exchangeQuery, isCoordinator }
   toRef(props, 'guest'),
 )
 const exchangeMutations = useExchangeMutations(toRef(props, 'exchangeId'))
-const laMutations = useLearningAgreementMutations(toRef(props, 'exchangeId'))
+const learningAgreementMutations = useLearningAgreementMutations(toRef(props, 'exchangeId'))
 const recognitionMutations = useRecognitionMutations(toRef(props, 'exchangeId'))
 
-const VALID_TABS = ['la', 'recognition', 'mappingScheme'] as const
+const VALID_TABS = ['learningAgreement', 'recognition', 'mappingScheme'] as const
 type ExchangeTab = (typeof VALID_TABS)[number]
 const activeTab = ref<ExchangeTab>(
-  VALID_TABS.includes(route.query.tab as ExchangeTab) ? (route.query.tab as ExchangeTab) : 'la',
+  VALID_TABS.includes(route.query.tab as ExchangeTab) ? (route.query.tab as ExchangeTab) : 'learningAgreement',
 )
 watch(activeTab, (tab) => router.replace({ query: { ...route.query, tab } }))
 const tabs = computed(() => [
-  { key: 'la' as const, label: t('exchange.tabs.learningAgreement') },
+  { key: 'learningAgreement' as const, label: t('exchange.tabs.learningAgreement') },
   { key: 'recognition' as const, label: t('exchange.tabs.recognition') },
   { key: 'mappingScheme' as const, label: t('exchange.tabs.mappingScheme') },
 ])
@@ -129,12 +129,12 @@ async function confirmDelete() {
 
 const showEdit = ref(false)
 
-const laMappedSemesters = computed(() => {
-  const la = learningAgreement.value
-  if (!la) return []
-  const slotSemester = new Map(la.slots.map((s) => [s.id, s.semester]))
+const learningAgreementMappedSemesters = computed(() => {
+  const agreement = learningAgreement.value
+  if (!agreement) return []
+  const slotSemester = new Map(agreement.slots.map((s) => [s.id, s.semester]))
   const semesters = new Set<number>()
-  for (const entry of la.entries) {
+  for (const entry of agreement.entries) {
     if (entry.isDeleted || entry.partnerCourseId === null) continue
     const sem = slotSemester.get(entry.homeSlotId)
     if (sem !== undefined) semesters.add(sem)
@@ -143,10 +143,10 @@ const laMappedSemesters = computed(() => {
 })
 
 const showNotes = ref(false)
-const savingNotes = computed(() => laMutations.setMessage.isPending.value || recognitionMutations.setMessage.isPending.value)
+const savingNotes = computed(() => learningAgreementMutations.setMessage.isPending.value || recognitionMutations.setMessage.isPending.value)
 
-async function saveNotes(la: string | null, rec: string | null) {
-  await Promise.all([laMutations.setMessage.mutateAsync(la), recognitionMutations.setMessage.mutateAsync(rec)])
+async function saveNotes(learningAgreementMessage: string | null, rec: string | null) {
+  await Promise.all([learningAgreementMutations.setMessage.mutateAsync(learningAgreementMessage), recognitionMutations.setMessage.mutateAsync(rec)])
   showNotes.value = false
 }
 
@@ -325,7 +325,7 @@ watch(exchangeQuery.error, (error) => {
 
     <!-- Tab content -->
     <div :id="tabPanelId('exchange', activeTab)" class="mt-4" role="tabpanel" :aria-labelledby="tabId('exchange', activeTab)">
-      <template v-if="activeTab === 'la'">
+      <template v-if="activeTab === 'learningAgreement'">
         <LearningAgreementPanel
           :exchange-id="exchangeId"
           :home-profile-name="exchange.homeProfile.name"
@@ -352,7 +352,7 @@ watch(exchangeQuery.error, (error) => {
 
   <NotesModal
     v-if="showNotes"
-    :la-message="learningAgreement?.message ?? null"
+    :learning-agreement-message="learningAgreement?.message ?? null"
     :recognition-message="recognition?.message ?? null"
     :saving="savingNotes"
     @save="saveNotes"
@@ -362,7 +362,7 @@ watch(exchangeQuery.error, (error) => {
   <EditExchangeModal
     v-if="showEdit && exchange"
     :exchange="exchange"
-    :la-mapped-semesters="laMappedSemesters"
+    :learning-agreement-mapped-semesters="learningAgreementMappedSemesters"
     @saved="showEdit = false"
     @close="showEdit = false"
   />

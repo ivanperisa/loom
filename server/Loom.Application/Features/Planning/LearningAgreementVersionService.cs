@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Loom.Application.Features.Planning;
 
-/// <summary>The LA's history (approvals with what changed, and backups) and restoring a version into the draft.</summary>
-public sealed class LaVersionService(
-    IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LaEntryWriter writer, LaContent content, VersionStore versions)
+/// <summary>The learning agreement's history (approvals with what changed, and backups) and restoring a version into the draft.</summary>
+public sealed class LearningAgreementVersionService(
+    IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LearningAgreementEntryWriter writer, LearningAgreementContent content, VersionStore versions)
 {
     public async Task<ErrorOr<List<DocumentVersionResponse>>> ListAsync(Guid exchangeGuid, CancellationToken ct)
     {
@@ -25,14 +25,14 @@ public sealed class LaVersionService(
             .ToListAsync(ct);
 
         var result = new List<DocumentVersionResponse>();
-        var previous = new LaVersionPayload([]);
+        var previous = new LearningAgreementVersionPayload([]);
         foreach (var version in all)
         {
-            var payload = VersionStore.Deserialize<LaVersionPayload>(version) ?? new LaVersionPayload([]);
+            var payload = VersionStore.Deserialize<LearningAgreementVersionPayload>(version) ?? new LearningAgreementVersionPayload([]);
             List<DocumentChange>? changes = null;
             if (version.Kind == VersionKind.Approved)
             {
-                changes = DocumentDiff.Compare(LaContent.DiffRows(previous), LaContent.DiffRows(payload));
+                changes = DocumentDiff.Compare(LearningAgreementContent.DiffRows(previous), LearningAgreementContent.DiffRows(payload));
                 previous = payload;
             }
             result.Add(new DocumentVersionResponse(
@@ -44,7 +44,7 @@ public sealed class LaVersionService(
     }
 
     /// <summary>
-    /// Loads a version (approval or backup) into the draft. Never changes the status; only while the LA is an editable
+    /// Loads a version (approval or backup) into the draft. Never changes the status; only while the learning agreement is an editable
     /// draft. Courses are matched by id only: anything that no longer exists is reported, not replaced by a look-alike.
     /// The current draft is kept as a backup first.
     /// </summary>
@@ -57,7 +57,7 @@ public sealed class LaVersionService(
         var version = await db.DocumentVersions.AsNoTracking().FirstOrDefaultAsync(
             v => v.Id == versionId && v.ExchangeId == exchange.ExchangeId && v.Document == DocumentKind.LearningAgreement, ct);
         if (version is null) return PlanningErrors.VersionNotFound;
-        if (VersionStore.Deserialize<LaVersionPayload>(version) is not { } payload) return PlanningErrors.VersionUnreadable;
+        if (VersionStore.Deserialize<LearningAgreementVersionPayload>(version) is not { } payload) return PlanningErrors.VersionUnreadable;
 
         var editable = await writer.CheckEditableAsync(exchange.ExchangeId, ct);
         if (editable.IsError) return editable.Errors;
@@ -67,8 +67,8 @@ public sealed class LaVersionService(
         if (valid.IsError) return valid.Errors;
 
         var current = await content.CaptureAsync(exchange.ExchangeId, ct);
-        var currentHash = LaContent.Hash(current);
-        if (currentHash != LaContent.Hash(request))
+        var currentHash = LearningAgreementContent.Hash(current);
+        if (currentHash != LearningAgreementContent.Hash(request))
         {
             await versions.AddBackupAsync(exchange.ExchangeId, DocumentKind.LearningAgreement, VersionStore.Serialize(current), currentHash,
                 current.Entries.Count == 0, actor.UserId, ct);
@@ -81,7 +81,7 @@ public sealed class LaVersionService(
         return new RestoreResult(request.Entries.Count(e => e.PartnerCourseId is not null), missing);
     }
 
-    private async Task<(SaveLearningAgreementRequest, List<RestoreMissing>)> ResolveAsync(LaVersionPayload payload, ExchangeContext exchange, CancellationToken ct)
+    private async Task<(SaveLearningAgreementRequest, List<RestoreMissing>)> ResolveAsync(LearningAgreementVersionPayload payload, ExchangeContext exchange, CancellationToken ct)
     {
         var profileSlotIds = await db.HomeSlots.Where(s => s.ProfileId == exchange.HomeProfileId).Select(s => s.Id).ToHashSetAsync(ct);
         var courseIds = payload.Entries.Where(e => e.PartnerCourseId.HasValue).Select(e => e.PartnerCourseId!.Value).ToList();
@@ -104,6 +104,6 @@ public sealed class LaVersionService(
         return (new SaveLearningAgreementRequest(entries), missing);
     }
 
-    private static RestoreMissing Missing(LaVersionEntry entry, string reason) =>
+    private static RestoreMissing Missing(LearningAgreementVersionEntry entry, string reason) =>
         new(entry.HomeSlotId, entry.HomeSlotLabel, entry.PartnerCourseCode, entry.PartnerCourseName, reason);
 }

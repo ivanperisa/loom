@@ -9,7 +9,7 @@ namespace Loom.Api.Controllers;
 [ExchangeActor]
 public class DocumentController(OfficialDocumentService documents) : ApiController
 {
-    /// <summary>The official document (xlsx): LA with amendments, agreed recognition, results and mapping scheme, signatures.</summary>
+    /// <summary>The official document (xlsx): learning agreement with amendments, agreed recognition, results and mapping scheme, signatures.</summary>
     [HttpGet("official")]
     [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
     public async Task<IActionResult> Official(Guid exchangeGuid, [FromQuery] string? lang, CancellationToken ct) =>

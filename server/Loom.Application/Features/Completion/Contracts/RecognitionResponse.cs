@@ -3,7 +3,7 @@ using Loom.Domain.Enums;
 namespace Loom.Application.Features.Completion;
 
 /// <summary>
-/// The recognition document. Table 1 (<see cref="Agreed"/>) is the latest approved LA version shown as a recognition
+/// The recognition document. Table 1 (<see cref="Agreed"/>) is the latest approved learning agreement version shown as a recognition
 /// table: computed, never stored, so it cannot drift. Table 2 (results and grades) is the mapping scheme's data.
 /// </summary>
 public record RecognitionResponse(
@@ -14,9 +14,9 @@ public record RecognitionResponse(
     bool IsStarted,
     DateTime? StartedAt,
     string? StartedByName,
-    /// <summary>Start is possible now: the LA is approved and final recognition has not started.</summary>
+    /// <summary>Start is possible now: the learning agreement is approved and final recognition has not started.</summary>
     bool CanStart,
-    /// <summary>The LA version table 1 shows (null before the first approval).</summary>
+    /// <summary>The learning agreement version table 1 shows (null before the first approval).</summary>
     int? AgreedVersionNo,
     List<AgreedEntryResponse> Agreed,
     DateTime? LastModifiedAt,
@@ -25,7 +25,7 @@ public record RecognitionResponse(
     string? SignedByName,
     int ApprovedVersionCount);
 
-/// <summary>A row of table 1: one agreed course placement from the approved LA.</summary>
+/// <summary>A row of table 1: one agreed course placement from the approved learning agreement.</summary>
 public record AgreedEntryResponse(
     string Id,
     int HomeSlotId,

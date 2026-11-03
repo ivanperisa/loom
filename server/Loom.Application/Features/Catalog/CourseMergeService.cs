@@ -23,7 +23,7 @@ public sealed class CourseMergeService(IAppDbContext db)
         var mergedIds = duplicateIds.Append(primary.Id).ToList();
 
         // Merging must not put two of the merged courses into the same slot of one document.
-        var laConflict = await db.LearningAgreementEntries
+        var learningAgreementConflict = await db.LearningAgreementEntries
             .Where(e => e.PartnerCourseId != null && mergedIds.Contains(e.PartnerCourseId.Value))
             .GroupBy(e => new { e.LearningAgreementId, e.HomeSlotId })
             .AnyAsync(g => g.Count() > 1, ct);
@@ -32,12 +32,12 @@ public sealed class CourseMergeService(IAppDbContext db)
             .Where(e => mergedIds.Contains(e.PartnerCourseId))
             .GroupBy(e => e.RecognitionId)
             .AnyAsync(g => g.Count() > 1, ct);
-        if (laConflict || resultsConflict) return CatalogErrors.MergeConflict;
+        if (learningAgreementConflict || resultsConflict) return CatalogErrors.MergeConflict;
 
-        var laEntries = await db.LearningAgreementEntries
+        var learningAgreementEntries = await db.LearningAgreementEntries
             .Where(e => e.PartnerCourseId != null && duplicateIds.Contains(e.PartnerCourseId.Value)).ToListAsync(ct);
         var results = await db.RecognitionEntries.Where(e => duplicateIds.Contains(e.PartnerCourseId)).ToListAsync(ct);
-        laEntries.ForEach(e => e.PartnerCourseId = primary.Id);
+        learningAgreementEntries.ForEach(e => e.PartnerCourseId = primary.Id);
         results.ForEach(e => e.PartnerCourseId = primary.Id);
 
         db.PartnerCourses.RemoveRange(duplicates);

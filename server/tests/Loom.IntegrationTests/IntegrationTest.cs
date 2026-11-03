@@ -69,23 +69,23 @@ public abstract class IntegrationTest(DatabaseFixture fixture)
         return created.Guid;
     }
 
-    protected Task SaveLa(Guid exchange, int requester, params LearningAgreementEntryUpsertDto[] entries) =>
+    protected Task SaveLearningAgreement(Guid exchange, int requester, params LearningAgreementEntryUpsertDto[] entries) =>
         Ok<LearningAgreementService, LearningAgreementResponse>(s =>
             s.SaveAsync(exchange, new SaveLearningAgreementRequest([.. entries]), Ct), actor: requester);
 
-    protected Task<ErrorOr<ExchangeResponse>> SetLaStatus(Guid exchange, int requester, string status) =>
+    protected Task<ErrorOr<ExchangeResponse>> SetLearningAgreementStatus(Guid exchange, int requester, string status) =>
         Call<LearningAgreementWorkflow, ExchangeResponse>(s =>
             s.SetStatusAsync(exchange, new UpdateLearningAgreementStatusRequest(status), Ct), actor: requester);
 
     protected async Task Approve(Guid exchange, int coordinator)
     {
-        var result = await SetLaStatus(exchange, coordinator, "Approved");
+        var result = await SetLearningAgreementStatus(exchange, coordinator, "Approved");
         Assert.False(result.IsError, result.IsError ? result.FirstError.Code : null);
     }
 
     protected async Task Reopen(Guid exchange, int coordinator)
     {
-        var result = await SetLaStatus(exchange, coordinator, "Draft");
+        var result = await SetLearningAgreementStatus(exchange, coordinator, "Draft");
         Assert.False(result.IsError, result.IsError ? result.FirstError.Code : null);
     }
 

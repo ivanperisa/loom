@@ -15,7 +15,7 @@ public class RecognitionController(RecognitionService recognitions) : ApiControl
     public async Task<ActionResult<RecognitionResponse>> Get(Guid exchangeGuid, CancellationToken ct) =>
         Match(await recognitions.GetAsync(exchangeGuid, ct), Ok);
 
-    /// <summary>"Start final recognition": freezes the LA and table 1 for good and creates the results.</summary>
+    /// <summary>"Start final recognition": freezes the learning agreement and table 1 for good and creates the results.</summary>
     [HttpPost("start")]
     public async Task<ActionResult<RecognitionResponse>> Start(Guid exchangeGuid, CancellationToken ct) =>
         Match(await recognitions.StartAsync(exchangeGuid, ct), Ok);

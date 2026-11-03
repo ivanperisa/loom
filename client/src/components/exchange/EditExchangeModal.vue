@@ -16,7 +16,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps<{
   exchange: ExchangeResponse
-  laMappedSemesters: number[]
+  learningAgreementMappedSemesters: number[]
 }>()
 
 const emit = defineEmits<{
@@ -37,7 +37,7 @@ const period = useExchangePeriod({
   academicYear: props.exchange.academicYear,
   semesterType: props.exchange.semesterType,
   studySemesters: props.exchange.studySemesters,
-  lockedSemesters: () => props.laMappedSemesters,
+  lockedSemesters: () => props.learningAgreementMappedSemesters,
 })
 const { academicYear, semesterType, studySemesters, academicYearSelectOptions, hasBlockedSemesterType } = period
 const selectedCoordinatorId = ref<number | null>(props.exchange.coordinatorId)
@@ -130,8 +130,8 @@ async function submit() {
                 <path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               </svg>
               <p class="text-xs text-info-text">
-                {{ t('exchange.editLockedByLa') }}<br />
-                {{ t('exchange.editLockedByLaHint') }}
+                {{ t('exchange.editLockedByLearningAgreement') }}<br />
+                {{ t('exchange.editLockedByLearningAgreementHint') }}
               </p>
             </div>
           </div>

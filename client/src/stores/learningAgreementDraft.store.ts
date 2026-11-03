@@ -12,9 +12,9 @@ import type { PartnerCourseResponse } from '@/types/institution.types'
 
 const round1 = (n: number) => Math.round(n * 10) / 10
 
-function slotStatesFrom(la: LearningAgreementResponse): LocalSlotState[] {
+function slotStatesFrom(agreement: LearningAgreementResponse): LocalSlotState[] {
   const map = new Map<number, LocalSlotState>()
-  for (const entry of la.entries) {
+  for (const entry of agreement.entries) {
     if (entry.isDeleted) continue
     let state = map.get(entry.homeSlotId)
     if (!state) {
@@ -51,11 +51,11 @@ function readStaged(exchangeId: string): Set<number> {
 }
 
 /**
- * The learning agreement being edited: client-owned state only. The saved LA comes from vue-query
+ * The learning agreement being edited: client-owned state only. The saved learning agreement comes from vue-query
  * (`useLearningAgreementQuery`); this holds the unsaved copy, drag and drop, and the courses staged
  * in the "mapped" list.
  */
-export const useLaDraftStore = defineStore('laDraft', () => {
+export const useLearningAgreementDraftStore = defineStore('learningAgreementDraft', () => {
   const exchangeId = ref<string | null>(null)
   const slotStates = ref<LocalSlotState[]>([])
   const isDirty = ref(false)
@@ -64,15 +64,15 @@ export const useLaDraftStore = defineStore('laDraft', () => {
   const armedCourse = ref<PartnerCourseResponse | null>(null)
   const stagedPartnerCourseIds = ref<Set<number>>(new Set())
 
-  /** Starts over from the saved LA (first load, after a save, or on discard). */
-  function load(id: string, la: LearningAgreementResponse) {
+  /** Starts over from the saved learning agreement (first load, after a save, or on discard). */
+  function load(id: string, agreement: LearningAgreementResponse) {
     if (exchangeId.value !== id) {
       stagedPartnerCourseIds.value = readStaged(id)
       endDrag()
       armedCourse.value = null
     }
     exchangeId.value = id
-    slotStates.value = slotStatesFrom(la)
+    slotStates.value = slotStatesFrom(agreement)
     isDirty.value = false
   }
 

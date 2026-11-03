@@ -15,7 +15,7 @@ interface ProblemDetails {
 export interface ApiError {
   /** HTTP status, or null when the request never got an answer (offline, CORS, timeout). */
   status: number | null
-  /** The API error code (e.g. `LA_LOCKED`), or null when the server sent none. */
+  /** The API error code (e.g. `LEARNING_AGREEMENT_LOCKED`), or null when the server sent none. */
   code: string | null
   params: Record<string, unknown>
   /** The server's own (English) description, used only when the code has no translation. */

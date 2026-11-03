@@ -7,13 +7,13 @@ namespace Loom.Application.Features.Documents.Official;
 public sealed record OfficialDocumentData(
     ExchangeResponse Exchange,
     List<HomeSlotResponse> Slots,
-    LaSheet LearningAgreement,
+    LearningAgreementSheet LearningAgreement,
     List<ResultLine> Agreed,
     ResultsSheet? Results,
     List<SignatureLine> Signatures);
 
-/// <summary>The LA as of its latest approved version (or the draft, marked as such, before the first approval).</summary>
-public sealed record LaSheet(int? VersionNo, Dictionary<int, GridSlot> Grid, List<ChangeLine> Changes);
+/// <summary>The learning agreement as of its latest approved version (or the draft, marked as such, before the first approval).</summary>
+public sealed record LearningAgreementSheet(int? VersionNo, Dictionary<int, GridSlot> Grid, List<ChangeLine> Changes);
 
 /// <summary>Table 2 and the mapping scheme, present once final recognition started.</summary>
 public sealed record ResultsSheet(List<ResultLine> Lines, Dictionary<int, GridSlot> Grid);

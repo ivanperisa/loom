@@ -42,7 +42,7 @@ const modeOutlineColor = DOC_TABLE_MODE_OUTLINE_COLOR
 // Editable working copy: placements (slot, ECTS) and each course's status.
 const localEntries = ref<MappingSchemeEntryResponse[]>([])
 
-const laModeBySlot = computed(() => {
+const learningAgreementModeBySlot = computed(() => {
   const m = new Map<number, SlotMode>()
   for (const e of learningAgreement.value?.entries ?? []) {
     if (!e.isDeleted) m.set(e.homeSlotId, e.mode)
@@ -196,7 +196,7 @@ function cellStyle(slot: HomeSlotResponse): Record<string, string> {
   }
 
   const hasEntries = entriesForSlot(slot.id).length > 0
-  const mode: SlotMode | undefined = hasEntries ? slotMode.AtExchange : laModeBySlot.value.get(slot.id)
+  const mode: SlotMode | undefined = hasEntries ? slotMode.AtExchange : learningAgreementModeBySlot.value.get(slot.id)
   const showOutline = mode === slotMode.AtHome
   const outline = showOutline ? `3px solid ${modeOutlineColor.AtHome}` : '1px solid #aaa'
   return {

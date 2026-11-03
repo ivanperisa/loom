@@ -3,7 +3,7 @@ import { safeRedirect } from '@/utils/redirect'
 
 describe('safeRedirect', () => {
   it('keeps paths inside the app', () => {
-    expect(safeRedirect('/exchange/abc?tab=la')).toBe('/exchange/abc?tab=la')
+    expect(safeRedirect('/exchange/abc?tab=learningAgreement')).toBe('/exchange/abc?tab=learningAgreement')
   })
 
   it.each(['//evil.example', '/\\evil.example', 'https://evil.example', 'exchange', '', null, ['/home']])(

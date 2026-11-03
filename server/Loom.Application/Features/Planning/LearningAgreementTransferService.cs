@@ -11,8 +11,8 @@ namespace Loom.Application.Features.Planning;
 /// "Export for import" (JSON) and importing such a file. Import replaces the draft with the file's mappings, after a
 /// preview of exactly what will be added, removed and changed. It goes through the same writer as a normal save.
 /// </summary>
-public sealed class LaTransferService(
-    IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LaEntryWriter writer, LaContent content, VersionStore versions)
+public sealed class LearningAgreementTransferService(
+    IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LearningAgreementEntryWriter writer, LearningAgreementContent content, VersionStore versions)
 {
     public async Task<ErrorOr<MappingExportDto>> ExportAsync(Guid exchangeGuid, CancellationToken ct)
     {
@@ -61,7 +61,7 @@ public sealed class LaTransferService(
         {
             var current = await content.CaptureAsync(exchange.ExchangeId, ct);
             await versions.AddBackupAsync(exchange.ExchangeId, DocumentKind.LearningAgreement, VersionStore.Serialize(current),
-                LaContent.Hash(current), current.Entries.Count == 0, actor.UserId, ct);
+                LearningAgreementContent.Hash(current), current.Entries.Count == 0, actor.UserId, ct);
 
             var learningAgreement = await writer.GetOrCreateAsync(exchange.ExchangeId, ct);
             await writer.ApplyAsync(learningAgreement.Id, plan.Value.Request, ct);

@@ -5,27 +5,27 @@ import { useConfirm } from '@/composables/useConfirm'
 import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps<{
-  laMessage: string | null
+  learningAgreementMessage: string | null
   recognitionMessage: string | null
   saving?: boolean
 }>()
 
 const emit = defineEmits<{
-  save: [la: string | null, recognition: string | null]
+  save: [learningAgreement: string | null, recognition: string | null]
   close: []
 }>()
 
 const { t } = useI18n()
 const { confirm } = useConfirm()
 
-const laDraft = ref(props.laMessage ?? '')
+const learningAgreementDraft = ref(props.learningAgreementMessage ?? '')
 const recognitionDraft = ref(props.recognitionMessage ?? '')
 
-watch(() => props.laMessage, (v) => { laDraft.value = v ?? '' })
+watch(() => props.learningAgreementMessage, (v) => { learningAgreementDraft.value = v ?? '' })
 watch(() => props.recognitionMessage, (v) => { recognitionDraft.value = v ?? '' })
 
 const isDirty = computed(() =>
-  (laDraft.value.trim() || null) !== (props.laMessage ?? null) ||
+  (learningAgreementDraft.value.trim() || null) !== (props.learningAgreementMessage ?? null) ||
   (recognitionDraft.value.trim() || null) !== (props.recognitionMessage ?? null),
 )
 
@@ -38,7 +38,7 @@ async function tryClose() {
 }
 
 function save() {
-  emit('save', laDraft.value.trim() || null, recognitionDraft.value.trim() || null)
+  emit('save', learningAgreementDraft.value.trim() || null, recognitionDraft.value.trim() || null)
 }
 </script>
 
@@ -64,10 +64,10 @@ function save() {
             {{ t('exchange.tabs.learningAgreement') }}
           </label>
           <textarea
-            v-model="laDraft"
+            v-model="learningAgreementDraft"
             rows="4"
             class="w-full rounded-lg border border-primary/20 bg-dark-2 px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
-            :placeholder="t('la.messagePlaceholder')"
+            :placeholder="t('learningAgreement.messagePlaceholder')"
           ></textarea>
         </div>
 

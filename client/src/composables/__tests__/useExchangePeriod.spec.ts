@@ -26,7 +26,7 @@ describe('useExchangePeriod', () => {
     expect(period.studySemesters.value).toEqual([3, 4])
   })
 
-  it('does not offer a type that would drop semesters the LA already uses', () => {
+  it('does not offer a type that would drop semesters the learning agreement already uses', () => {
     const period = useExchangePeriod({ semesterType: 'Both', studySemesters: [1, 2], lockedSemesters: [2] })
     expect(period.canSelectSemesterType('Winter')).toBe(false)
     expect(period.canSelectSemesterType('Summer')).toBe(true)

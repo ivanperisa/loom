@@ -14,7 +14,7 @@ public record LearningAgreementResponse(
     string? SignedByName,
     /// <summary>Number of approved versions (1 = original only, 2 = up to A1, …).</summary>
     int SignedCount,
-    /// <summary>"Start final recognition" was pressed: the LA and table 1 can never change again.</summary>
+    /// <summary>"Start final recognition" was pressed: the learning agreement and table 1 can never change again.</summary>
     bool IsConcluded,
     DateTime? ConcludedAt,
     string? ConcludedByName);

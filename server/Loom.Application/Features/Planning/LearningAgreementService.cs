@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Loom.Application.Features.Planning;
 
 /// <summary>Reading and editing the learning agreement (slot ↔ partner course mapping) while it is a draft.</summary>
-public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LaEntryWriter writer, VersionStore versions)
+public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LearningAgreementEntryWriter writer, VersionStore versions)
 {
     public async Task<ErrorOr<LearningAgreementResponse>> GetAsync(Guid exchangeGuid, CancellationToken ct)
     {
@@ -71,7 +71,7 @@ public sealed class LearningAgreementService(IAppDbContext db, ExchangeAccess ac
             .Include(l => l.Exchange).ThenInclude(e => e.Recognition!).ThenInclude(r => r.StartedByUser)
             .FirstOrDefaultAsync(l => l.ExchangeId == exchange.ExchangeId, ct);
 
-        // The LA is concluded (frozen for good) once final recognition starts.
+        // The learning agreement is concluded (frozen for good) once final recognition starts.
         var started = learningAgreement?.Exchange.Recognition;
         var entries = learningAgreement?.Entries
             .OrderBy(e => e.HomeSlotId).ThenBy(e => e.Id)

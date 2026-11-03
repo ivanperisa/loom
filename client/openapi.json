@@ -2047,7 +2047,7 @@
               "schema": {
                 "allOf": [
                   {
-                    "$ref": "#/components/schemas/UpdateLaMessageRequest"
+                    "$ref": "#/components/schemas/UpdateLearningAgreementMessageRequest"
                   }
                 ]
               }
@@ -5255,7 +5255,7 @@
         },
         "additionalProperties": false
       },
-      "UpdateLaMessageRequest": {
+      "UpdateLearningAgreementMessageRequest": {
         "type": "object",
         "properties": {
           "message": {

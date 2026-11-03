@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useExchangeContext } from '@/composables/useExchangeContext'
-import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useLearningAgreementDraftStore } from '@/stores/learningAgreementDraft.store'
 import { useDocumentVersionsQuery, useLearningAgreementMutations } from '@/queries/exchange.queries'
 import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { useConfirm } from '@/composables/useConfirm'
@@ -15,8 +15,8 @@ import type { DocumentChange, DocumentVersionResponse, FieldChange } from '@/typ
 
 const props = defineProps<{
   exchangeId: string
-  document: 'la' | 'recognition'
-  /** Restore loads a version into the LA draft; only while the LA can be edited. */
+  document: 'learningAgreement' | 'recognition'
+  /** Restore loads a version into the learning agreement draft; only while the learning agreement can be edited. */
   canRestore: boolean
 }>()
 
@@ -24,9 +24,9 @@ const emit = defineEmits<{ close: [] }>()
 
 const { t, locale } = useI18n()
 const { learningAgreement } = useExchangeContext()
-const draft = useLaDraftStore()
+const draft = useLearningAgreementDraftStore()
 const versionsQuery = useDocumentVersionsQuery(() => props.exchangeId, props.document)
-const laMutations = useLearningAgreementMutations(() => props.exchangeId)
+const learningAgreementMutations = useLearningAgreementMutations(() => props.exchangeId)
 const { confirm } = useConfirm()
 const { notifySuccess, notifyWarning, notifyError } = useNotification()
 
@@ -37,7 +37,7 @@ const loading = computed(() => versionsQuery.isPending.value)
 
 const approvals = computed(() => versions.value.filter((v) => v.kind === 'Approved'))
 const backups = computed(() => versions.value.filter((v) => v.kind === 'Backup'))
-const isLa = computed(() => props.document === 'la')
+const isLearningAgreement = computed(() => props.document === 'learningAgreement')
 
 
 function toggleExpand(id: number) {
@@ -48,7 +48,7 @@ function toggleExpand(id: number) {
 function versionTitle(v: DocumentVersionResponse): string {
   if (v.versionNo === null) return t('history.backup')
   return v.versionNo > 1
-    ? t('history.amendment', { n: v.versionNo, label: t('la.amendmentLabel', { n: v.versionNo - 1 }) })
+    ? t('history.amendment', { n: v.versionNo, label: t('learningAgreement.amendmentLabel', { n: v.versionNo - 1 }) })
     : t('history.original', { n: v.versionNo })
 }
 
@@ -75,7 +75,7 @@ async function restore(version: DocumentVersionResponse) {
   })
   if (!ok) return
   try {
-    const result = await laMutations.restore.mutateAsync(version.id)
+    const result = await learningAgreementMutations.restore.mutateAsync(version.id)
     // The restored draft replaces whatever was being edited.
     if (learningAgreement.value) draft.load(props.exchangeId, learningAgreement.value)
     if (result.missing.length === 0) {
@@ -99,12 +99,12 @@ async function restore(version: DocumentVersionResponse) {
     <div class="drawer">
       <div class="drawer-header">
         <h2 id="history-drawer-title" class="drawer-title">
-          {{ isLa ? t('history.titleLa') : t('history.titleRecognition') }}
+          {{ isLearningAgreement ? t('history.titleLearningAgreement') : t('history.titleRecognition') }}
         </h2>
         <button type="button" class="drawer-close" :aria-label="t('common.close')" @click="emit('close')">&times;</button>
       </div>
 
-      <div v-if="isLa" class="drawer-tabs" role="tablist">
+      <div v-if="isLearningAgreement" class="drawer-tabs" role="tablist">
         <button
           type="button"
           role="tab"
@@ -162,7 +162,7 @@ async function restore(version: DocumentVersionResponse) {
                 {{ expandedIds.has(item.id) ? `▲ ${t('history.hide')}` : `▼ ${t('history.details')}` }}
               </button>
               <p v-else-if="item.changes === null" class="snapshot-card__meta">{{ t('history.noDetails') }}</p>
-              <ActionButton v-if="isLa && canRestore" @click="restore(item)">{{ t('history.restore') }}</ActionButton>
+              <ActionButton v-if="isLearningAgreement && canRestore" @click="restore(item)">{{ t('history.restore') }}</ActionButton>
             </div>
 
             <ul v-if="item.changes && expandedIds.has(item.id)" class="diff-list">
@@ -201,7 +201,7 @@ async function restore(version: DocumentVersionResponse) {
           </div>
         </template>
 
-        <p v-if="isLa && !canRestore && versions.length > 0" class="drawer-hint">{{ t('history.restoreLocked') }}</p>
+        <p v-if="isLearningAgreement && !canRestore && versions.length > 0" class="drawer-hint">{{ t('history.restoreLocked') }}</p>
       </div>
     </div>
   </BaseModal>

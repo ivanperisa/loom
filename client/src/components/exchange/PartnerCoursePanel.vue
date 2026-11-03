@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useLearningAgreementDraftStore } from '@/stores/learningAgreementDraft.store'
 import { useExchangeContext } from '@/composables/useExchangeContext'
 import { useAddPartnerCourse, usePartnerCoursesQuery } from '@/queries/exchange.queries'
 import type { PartnerCourseResponse } from '@/types/institution.types'
@@ -18,7 +18,7 @@ const props = withDefaults(
 )
 
 const { t } = useI18n()
-const draft = useLaDraftStore()
+const draft = useLearningAgreementDraftStore()
 const { exchange } = useExchangeContext()
 const coursesQuery = usePartnerCoursesQuery(() => props.exchangeId)
 const addCourse = useAddPartnerCourse(() => props.exchangeId)

@@ -13,10 +13,10 @@ public class OfficialDocumentTests(DatabaseFixture fixture) : IntegrationTest(fi
         var coordinator = await NewUser(UserRole.Coordinator);
         var (partner, courses) = await NewPartner();
         var exchange = await NewExchange(student, partner, coordinator);
-        await SaveLa(exchange, student, AtExchange(Slot1, courses["A"], 5));
+        await SaveLearningAgreement(exchange, student, AtExchange(Slot1, courses["A"], 5));
         await Approve(exchange, coordinator);
         await Reopen(exchange, coordinator);
-        await SaveLa(exchange, student, AtExchange(Slot1, courses["A"], 2));
+        await SaveLearningAgreement(exchange, student, AtExchange(Slot1, courses["A"], 2));
 
         var file = await Ok<OfficialDocumentService, OfficialDocumentFile>(x => x.BuildAsync(exchange, "en", Ct), actor: student);
 

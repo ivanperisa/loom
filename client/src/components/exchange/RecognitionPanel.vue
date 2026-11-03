@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useLearningAgreementDraftStore } from '@/stores/learningAgreementDraft.store'
 import { useExchangeContext } from '@/composables/useExchangeContext'
 import { useMappingSchemeQuery, useOfficialDocument, useRecognitionMutations } from '@/queries/exchange.queries'
 import { useConfirm } from '@/composables/useConfirm'
@@ -24,13 +24,13 @@ const props = defineProps<{
 }>()
 
 const { t, locale } = useI18n()
-const draft = useLaDraftStore()
+const draft = useLearningAgreementDraftStore()
 const { recognition, recognitionQuery, isCoordinator } = useExchangeContext()
 const mappingSchemeQuery = useMappingSchemeQuery(() => props.exchangeId)
 const mutations = useRecognitionMutations(() => props.exchangeId)
 const officialDocument = useOfficialDocument(() => props.exchangeId)
-/** Unsaved LA changes would be left out of the frozen version, so starting waits for them. */
-const laHasUnsavedChanges = computed(() => draft.exchangeId === props.exchangeId && draft.isDirty)
+/** Unsaved learning agreement changes would be left out of the frozen version, so starting waits for them. */
+const learningAgreementHasUnsavedChanges = computed(() => draft.exchangeId === props.exchangeId && draft.isDirty)
 const { confirm } = useConfirm()
 const { notifySuccess } = useNotification()
 
@@ -55,7 +55,7 @@ function byCourseName<T extends { partnerCourseName: string | null }>(entries: T
   return entries.slice().sort((a, b) => (a.partnerCourseName ?? '').localeCompare(b.partnerCourseName ?? ''))
 }
 
-// Table 1: the latest approved LA version (computed by the server, never the draft).
+// Table 1: the latest approved learning agreement version (computed by the server, never the draft).
 const agreedEntries = computed(() => byCourseName(recognition.value?.agreed ?? []).map((e) => ({ ...e, enrollmentStatus: null })))
 
 // Table 2: one result per partner course; the mapping scheme's placements carry it.
@@ -228,13 +228,13 @@ function downloadOfficial() {
           <button
             type="button"
             class="rounded-lg bg-primary-strong px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark disabled:cursor-not-allowed disabled:opacity-50"
-            :disabled="!recognition.canStart || starting || laHasUnsavedChanges"
+            :disabled="!recognition.canStart || starting || learningAgreementHasUnsavedChanges"
             @click="startFinalRecognition"
           >
             {{ t('recognition.start.button') }}
           </button>
           <span v-if="!recognition.canStart" class="text-xs text-light/60">{{ t('recognition.start.needsApproval') }}</span>
-          <span v-else-if="laHasUnsavedChanges" class="text-xs text-light/60">{{ t('recognition.start.unsavedLa') }}</span>
+          <span v-else-if="learningAgreementHasUnsavedChanges" class="text-xs text-light/60">{{ t('recognition.start.unsavedLearningAgreement') }}</span>
         </div>
       </section>
 

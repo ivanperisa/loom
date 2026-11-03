@@ -4,9 +4,9 @@ namespace Loom.Application.Features.Planning;
 
 public static class PlanningErrors
 {
-    public static Error Locked => Error.Conflict("LA_LOCKED", "The learning agreement is approved. The coordinator has to send it back to draft before it can change.");
-    public static Error Concluded => Error.Conflict("LA_CONCLUDED", "Final recognition has started: the learning agreement can no longer change.");
-    public static Error NotFound => Error.NotFound("LA_NOT_FOUND", "Learning agreement not found.");
+    public static Error Locked => Error.Conflict("LEARNING_AGREEMENT_LOCKED", "The learning agreement is approved. The coordinator has to send it back to draft before it can change.");
+    public static Error Concluded => Error.Conflict("LEARNING_AGREEMENT_CONCLUDED", "Final recognition has started: the learning agreement can no longer change.");
+    public static Error NotFound => Error.NotFound("LEARNING_AGREEMENT_NOT_FOUND", "Learning agreement not found.");
     public static Error InvalidStatus => Error.Validation("INVALID_STATUS", "Status must be Draft or Approved.");
     public static Error NotAssignedCoordinator => Error.Forbidden("FORBIDDEN", "Only the assigned coordinator can approve or reopen the learning agreement.");
     public static Error StatusUnchanged(object status) => Error.Conflict("STATUS_UNCHANGED", $"Learning agreement is already {status}.");

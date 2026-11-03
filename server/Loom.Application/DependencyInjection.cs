@@ -42,17 +42,17 @@ public static class DependencyInjection
         services.AddScoped<ExchangeService>();
         services.AddScoped<AccessLinkService>();
 
-        // Documents (versions shared by the LA and the recognition)
+        // Documents (versions shared by the learning agreement and the recognition)
         services.AddScoped<VersionStore>();
         services.AddScoped<OfficialDocumentService>();
 
         // Planning (learning agreement)
-        services.AddScoped<LaEntryWriter>();
-        services.AddScoped<LaContent>();
+        services.AddScoped<LearningAgreementEntryWriter>();
+        services.AddScoped<LearningAgreementContent>();
         services.AddScoped<LearningAgreementService>();
         services.AddScoped<LearningAgreementWorkflow>();
-        services.AddScoped<LaVersionService>();
-        services.AddScoped<LaTransferService>();
+        services.AddScoped<LearningAgreementVersionService>();
+        services.AddScoped<LearningAgreementTransferService>();
 
         // Completion (recognition, mapping scheme)
         services.AddScoped<ResultsGuard>();

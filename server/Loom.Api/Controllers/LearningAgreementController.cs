@@ -16,8 +16,8 @@ namespace Loom.Api.Controllers;
 public class LearningAgreementController(
     LearningAgreementService learningAgreements,
     LearningAgreementWorkflow workflow,
-    LaVersionService versions,
-    LaTransferService transfer) : ApiController
+    LearningAgreementVersionService versions,
+    LearningAgreementTransferService transfer) : ApiController
 {
     [HttpGet]
     public async Task<ActionResult<LearningAgreementResponse>> Get(Guid exchangeGuid, CancellationToken ct) =>
@@ -28,7 +28,7 @@ public class LearningAgreementController(
         Match(await learningAgreements.SaveAsync(exchangeGuid, request, ct), Ok);
 
     [HttpPatch("message")]
-    public async Task<ActionResult<LearningAgreementResponse>> UpdateMessage(Guid exchangeGuid, [FromBody] UpdateLaMessageRequest request, CancellationToken ct) =>
+    public async Task<ActionResult<LearningAgreementResponse>> UpdateMessage(Guid exchangeGuid, [FromBody] UpdateLearningAgreementMessageRequest request, CancellationToken ct) =>
         Match(await learningAgreements.UpdateMessageAsync(exchangeGuid, request.Message, ct), Ok);
 
     [HttpPatch("status")]
@@ -51,7 +51,7 @@ public class LearningAgreementController(
         Match(await transfer.ExportAsync(exchangeGuid, ct), export => File(
             JsonSerializer.SerializeToUtf8Bytes(export, JsonHelper.DefaultOptions),
             "application/json",
-            $"la-export-{DateTime.UtcNow:yyyy-MM-dd}.json"));
+            $"learning-agreement-export-{DateTime.UtcNow:yyyy-MM-dd}.json"));
 
     /// <summary>What importing the file would change. Nothing is saved.</summary>
     [HttpPost("import/preview")]

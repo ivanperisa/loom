@@ -5,19 +5,19 @@ using Loom.Domain.Enums;
 
 namespace Loom.IntegrationTests;
 
-/// <summary>"Start final recognition", table 1 from the approved LA, results (grades + mapping scheme), approval.</summary>
+/// <summary>"Start final recognition", table 1 from the approved learning agreement, results (grades + mapping scheme), approval.</summary>
 public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture)
 {
     private sealed record Setup(int Student, int Coordinator, Guid Exchange, Dictionary<string, int> Courses);
 
-    /// <summary>LA with A (5) and B (6, split over two slots: 3 + 3), approved.</summary>
+    /// <summary>Learning agreement with A (5) and B (6, split over two slots: 3 + 3), approved.</summary>
     private async Task<Setup> ApprovedExchange()
     {
         var student = await NewUser();
         var coordinator = await NewUser(UserRole.Coordinator);
         var (partner, courses) = await NewPartner();
         var exchange = await NewExchange(student, partner, coordinator);
-        await SaveLa(exchange, student, AtExchange(Slot1, courses["A"], 5), AtExchange(Slot2, courses["B"], 3), AtExchange(Slot3, courses["B"], 3));
+        await SaveLearningAgreement(exchange, student, AtExchange(Slot1, courses["A"], 5), AtExchange(Slot2, courses["B"], 3), AtExchange(Slot3, courses["B"], 3));
         await Approve(exchange, coordinator);
         return new Setup(student, coordinator, exchange, courses);
     }
@@ -50,10 +50,10 @@ public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture
         var coordinator = await NewUser(UserRole.Coordinator);
         var (partner, courses) = await NewPartner();
         var exchange = await NewExchange(student, partner, coordinator);
-        await SaveLa(exchange, student, AtExchange(Slot1, courses["A"], 5));
+        await SaveLearningAgreement(exchange, student, AtExchange(Slot1, courses["A"], 5));
 
         var early = await Call<RecognitionService, RecognitionResponse>(x => x.StartAsync(exchange, Ct), actor: student);
-        Assert.Equal("LA_NOT_APPROVED", early.FirstError.Code);
+        Assert.Equal("LEARNING_AGREEMENT_NOT_APPROVED", early.FirstError.Code);
 
         await Approve(exchange, coordinator);
         var started = await Ok<RecognitionService, RecognitionResponse>(x => x.StartAsync(exchange, Ct), actor: student);
@@ -69,13 +69,13 @@ public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture
     {
         var s = await ApprovedExchange();
         await Reopen(s.Exchange, s.Coordinator);
-        await SaveLa(s.Exchange, s.Student, AtExchange(Slot1, s.Courses["C"], 5));
+        await SaveLearningAgreement(s.Exchange, s.Student, AtExchange(Slot1, s.Courses["C"], 5));
 
         var recognition = await Get(s);
 
         Assert.Equal(1, recognition.AgreedVersionNo);
         Assert.Equal(["A", "B", "B"], recognition.Agreed.Select(e => e.PartnerCourseCode).Order());
-        Assert.False(recognition.CanStart);   // the LA is a draft again
+        Assert.False(recognition.CanStart);   // the learning agreement is a draft again
     }
 
     [Fact]
@@ -88,8 +88,8 @@ public class RecognitionTests(DatabaseFixture fixture) : IntegrationTest(fixture
 
         var save = await Call<LearningAgreementService, LearningAgreementResponse>(x =>
             x.SaveAsync(s.Exchange, new SaveLearningAgreementRequest([AtExchange(Slot1, s.Courses["A"], 5)]), Ct), actor: s.Student);
-        Assert.Equal("LA_CONCLUDED", save.FirstError.Code);
-        Assert.Equal("LA_CONCLUDED", (await SetLaStatus(s.Exchange, s.Coordinator, "Draft")).FirstError.Code);
+        Assert.Equal("LEARNING_AGREEMENT_CONCLUDED", save.FirstError.Code);
+        Assert.Equal("LEARNING_AGREEMENT_CONCLUDED", (await SetLearningAgreementStatus(s.Exchange, s.Coordinator, "Draft")).FirstError.Code);
         Assert.True((await Ok<LearningAgreementService, LearningAgreementResponse>(x => x.GetAsync(s.Exchange, Ct), actor: s.Student)).IsConcluded);
     }
 

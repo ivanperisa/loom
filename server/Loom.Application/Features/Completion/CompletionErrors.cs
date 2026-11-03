@@ -6,7 +6,7 @@ public static class CompletionErrors
 {
     public static Error NotStarted => Error.Conflict("RECOGNITION_NOT_STARTED", "Final recognition has not started yet.");
     public static Error AlreadyStarted => Error.Conflict("RECOGNITION_ALREADY_STARTED", "Final recognition has already started.");
-    public static Error LaNotApproved => Error.Conflict("LA_NOT_APPROVED", "The learning agreement must be approved first.");
+    public static Error LearningAgreementNotApproved => Error.Conflict("LEARNING_AGREEMENT_NOT_APPROVED", "The learning agreement must be approved first.");
     public static Error Locked => Error.Conflict("RECOGNITION_LOCKED", "The recognition is approved. The coordinator has to send it back to draft before it can change.");
     public static Error InvalidStatus => Error.Validation("INVALID_STATUS", "Status must be Draft or Approved.");
     public static Error StatusUnchanged(object status) => Error.Conflict("STATUS_UNCHANGED", $"Recognition is already {status}.");

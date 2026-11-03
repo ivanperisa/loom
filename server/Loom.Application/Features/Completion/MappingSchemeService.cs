@@ -9,7 +9,7 @@ namespace Loom.Application.Features.Completion;
 
 /// <summary>
 /// The mapping scheme: where each course's result is finally recognised (moving between slots, splitting ECTS, marking a
-/// course not passed). The placements belong to table 2's results. May drift from the frozen LA; that is the point of it.
+/// course not passed). The placements belong to table 2's results. May drift from the frozen learning agreement; that is the point of it.
 /// </summary>
 public sealed class MappingSchemeService(IAppDbContext db, ExchangeAccess access, ResultsGuard guard, ICurrentActor actor)
 {

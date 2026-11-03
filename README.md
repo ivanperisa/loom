@@ -78,7 +78,7 @@ All demo data is created through the real application services (`server/Loom.Dev
 | `s.draft.empty@loom.dev` | Student | Empty learning agreement: first mapping, drag & drop |
 | `s.draft.rich@loom.dev` | Student | All slot modes, a course split over two slots, an over-filled slot |
 | `s.draft.message@loom.dev` | Student | Draft with a coordinator message |
-| `s.approved@loom.dev` | Student | Approved LA (locked: save, import and restore are refused); ready for **Start final recognition** in the Recognition tab |
+| `s.approved@loom.dev` | Student | Approved learning agreement (locked: save, import and restore are refused); ready for **Start final recognition** in the Recognition tab |
 | `s.reopened@loom.dev` | Student | Approved, then reopened by the coordinator and changed |
 | `s.history@loom.dev` | Student | Three approved versions (original, A1, A2), removed courses struck through, a backup from a restore |
 | `s.recognition.draft@loom.dev` | Student | Final recognition started: grades, mapping scheme moved/split, a failed course; the coordinator can approve |
@@ -107,7 +107,7 @@ Exchange links are `http://localhost:5173/exchange/00000000-0000-4000-8000-00000
 
 ```sh
 dotnet test Loom.slnx          # integration tests: real PostgreSQL via Testcontainers (needs Docker)
-cd client && pnpm lint:check && pnpm type-check && pnpm test:unit   # unit tests: Vitest (composables, LA draft, error texts, i18n keys)
+cd client && pnpm lint:check && pnpm type-check && pnpm test:unit   # unit tests: Vitest (composables, learning agreement draft, error texts, i18n keys)
 cd client && pnpm exec playwright install chromium && pnpm e2e   # browser smoke tests against `docker compose up`
 ```
 
@@ -122,7 +122,7 @@ LOOM_UPDATE_OPENAPI=1 dotnet test Loom.slnx --filter ApiContract   # API changed
 cd client && pnpm api:types                                         # openapi.json → src/api/schema.d.ts
 ```
 
-Commit both files. CI fails when either is stale. `client/src/types/*.ts` only gives the generated types their familiar names (`ExchangeResponse = Schemas['ExchangeResponse']`); client-only types (the LA draft, list params) live there too.
+Commit both files. CI fails when either is stale. `client/src/types/*.ts` only gives the generated types their familiar names (`ExchangeResponse = Schemas['ExchangeResponse']`); client-only types (the learning agreement draft, list params) live there too.
 
 ## Database migrations
 
@@ -201,4 +201,4 @@ No personal data is sent: no cookies, headers, request bodies or emails. Access-
 
 ### Performance
 
-Checked on generated data (20k students, 24k partner courses, 20k exchanges, 120k LA entries): every page's requests answer in 10–50 ms once warm, and the official xlsx takes about 200 ms. `QueryBudgetTests` fail if a page starts running a query per row. To look at the client bundle, run `pnpm build:analyze` in `client/`.
+Checked on generated data (20k students, 24k partner courses, 20k exchanges, 120k learning agreement entries): every page's requests answer in 10–50 ms once warm, and the official xlsx takes about 200 ms. `QueryBudgetTests` fail if a page starts running a query per row. To look at the client bundle, run `pnpm build:analyze` in `client/`.

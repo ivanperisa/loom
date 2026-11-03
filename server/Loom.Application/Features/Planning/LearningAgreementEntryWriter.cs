@@ -11,9 +11,9 @@ namespace Loom.Application.Features.Planning;
 /// The one place that checks and writes learning agreement entries. Save, import and restore all go through it,
 /// so they follow the same rules: editable only as a draft before final recognition, same validation, same history.
 /// </summary>
-public sealed class LaEntryWriter(IAppDbContext db)
+public sealed class LearningAgreementEntryWriter(IAppDbContext db)
 {
-    /// <summary>The LA can change only while it is a draft and final recognition has not started.</summary>
+    /// <summary>The learning agreement can change only while it is a draft and final recognition has not started.</summary>
     public async Task<ErrorOr<Success>> CheckEditableAsync(int exchangeId, CancellationToken ct)
     {
         var state = await db.LearningAgreements
@@ -68,7 +68,7 @@ public sealed class LaEntryWriter(IAppDbContext db)
 
     public async Task<LearningAgreement> GetOrCreateAsync(int exchangeId, CancellationToken ct)
     {
-        var learningAgreement = await db.LearningAgreements.FirstOrDefaultAsync(la => la.ExchangeId == exchangeId, ct);
+        var learningAgreement = await db.LearningAgreements.FirstOrDefaultAsync(agreement => agreement.ExchangeId == exchangeId, ct);
         if (learningAgreement is not null) return learningAgreement;
 
         learningAgreement = new LearningAgreement { ExchangeId = exchangeId, Status = DocumentStatus.Draft };

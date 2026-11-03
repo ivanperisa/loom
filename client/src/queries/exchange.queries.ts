@@ -68,11 +68,11 @@ export function usePartnerCoursesQuery(guid: Guid) {
   })
 }
 
-export function useDocumentVersionsQuery(guid: Guid, document: 'la' | 'recognition') {
+export function useDocumentVersionsQuery(guid: Guid, document: 'learningAgreement' | 'recognition') {
   return useQuery({
     queryKey: computed(() => queryKeys.versions(toValue(guid), document)),
     queryFn: async ({ signal }) =>
-      (document === 'la'
+      (document === 'learningAgreement'
         ? await learningAgreementService.getVersions(toValue(guid), signal)
         : await recognitionService.getVersions(toValue(guid), signal)
       ).data,
@@ -135,12 +135,12 @@ export function useCreateExchange() {
 export function useLearningAgreementMutations(guid: Guid) {
   const client = useQueryClient()
   const id = () => toValue(guid)
-  const setLa = (data: LearningAgreementResponse) => client.setQueryData(queryKeys.learningAgreement(id()), data)
+  const setLearningAgreement = (data: LearningAgreementResponse) => client.setQueryData(queryKeys.learningAgreement(id()), data)
 
   const save = useMutation({
     mutationFn: async (request: SaveLearningAgreementRequest) => (await learningAgreementService.save(id(), request)).data,
     onSuccess: (data) => {
-      setLa(data)
+      setLearningAgreement(data)
       return invalidateExchange(client, id())
     },
   })
@@ -157,7 +157,7 @@ export function useLearningAgreementMutations(guid: Guid) {
 
   const setMessage = useMutation({
     mutationFn: async (message: string | null) => (await learningAgreementService.updateMessage(id(), message)).data,
-    onSuccess: setLa,
+    onSuccess: setLearningAgreement,
   })
 
   const importFile = useMutation({
@@ -179,7 +179,7 @@ export function useLearningAgreementMutations(guid: Guid) {
   const exportFile = useMutation({
     mutationFn: async () => {
       const res = await learningAgreementService.exportMappings(id())
-      saveBlob(new Blob([res.data], { type: 'application/json' }), `la-export-${new Date().toISOString().slice(0, 10)}.json`)
+      saveBlob(new Blob([res.data], { type: 'application/json' }), `learning-agreement-export-${new Date().toISOString().slice(0, 10)}.json`)
     },
   })
 
@@ -191,7 +191,7 @@ export function useRecognitionMutations(guid: Guid) {
   const id = () => toValue(guid)
   const setRecognition = (data: RecognitionResponse) => client.setQueryData(queryKeys.recognition(id()), data)
 
-  /** "Start final recognition": the LA and table 1 freeze; results and the mapping scheme appear. */
+  /** "Start final recognition": the learning agreement and table 1 freeze; results and the mapping scheme appear. */
   const start = useMutation({
     mutationFn: async () => (await recognitionService.start(id())).data,
     onSuccess: (data) => {

@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useLearningAgreementDraftStore } from '@/stores/learningAgreementDraft.store'
 import { slotMode } from '@/utils/slotMode'
 import type { HomeSlotResponse } from '@/types/learningAgreement.types'
 import type { PartnerCourseResponse } from '@/types/institution.types'
@@ -8,11 +8,11 @@ const round1 = (n: number) => Math.round(n * 10) / 10
 const MIN_ECTS = 0.5
 
 /**
- * Placing courses on the LA grid: a course dropped (or clicked while armed) on a slot, or a placed course
+ * Placing courses on the learning agreement grid: a course dropped (or clicked while armed) on a slot, or a placed course
  * dragged to another slot, first asks how many ECTS. The dialogs read `pendingDrop` / `pendingMove`.
  */
-export function useLaDropFlow() {
-  const draft = useLaDraftStore()
+export function useLearningAgreementDropFlow() {
+  const draft = useLearningAgreementDraftStore()
 
   const pendingDrop = ref<{ slot: HomeSlotResponse; course: PartnerCourseResponse } | null>(null)
   const pendingEcts = ref(0)

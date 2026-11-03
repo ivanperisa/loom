@@ -18,7 +18,7 @@ public class Recognition : AuditableEntity
     public DateTime? SignedAt { get; set; }
 
     /// <summary>
-    /// "Start final recognition": from here on the LA and the agreed mapping (table 1) are frozen for good; only the
+    /// "Start final recognition": from here on the learning agreement and the agreed mapping (table 1) are frozen for good; only the
     /// results (table 2 and the mapping scheme) change. The row itself can exist earlier, for notes.
     /// </summary>
     public DateTime? StartedAt { get; set; }

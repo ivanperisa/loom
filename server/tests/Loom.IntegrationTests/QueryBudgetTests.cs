@@ -106,23 +106,23 @@ public class QueryBudgetTests(DatabaseFixture fixture) : HttpTest(fixture)
             await Queries(client, counter, $"/api/exchanges/{exchange}/learning-agreement/versions"),
         ];
 
-        var shortLa = await NewExchange(student, partner, coordinator);
-        await SaveLa(shortLa, student, AtExchange(Slot1, courses["A"], 5));
-        await Approve(shortLa, coordinator);
+        var shortLearningAgreement = await NewExchange(student, partner, coordinator);
+        await SaveLearningAgreement(shortLearningAgreement, student, AtExchange(Slot1, courses["A"], 5));
+        await Approve(shortLearningAgreement, coordinator);
 
-        var longLa = await NewExchange(student, partner, coordinator);
-        await SaveLa(longLa, student, AtExchange(Slot1, courses["A"], 5), AtExchange(Slot2, courses["B"], 5),
+        var longLearningAgreement = await NewExchange(student, partner, coordinator);
+        await SaveLearningAgreement(longLearningAgreement, student, AtExchange(Slot1, courses["A"], 5), AtExchange(Slot2, courses["B"], 5),
             AtExchange(Slot3, courses["C"], 5), AtExchange(Slot3, courses["D"], 1));
-        await Approve(longLa, coordinator);
-        await Reopen(longLa, coordinator);
-        await SaveLa(longLa, student, AtExchange(Slot1, courses["A"], 5), AtExchange(Slot2, courses["B"], 5));
-        await Approve(longLa, coordinator);
+        await Approve(longLearningAgreement, coordinator);
+        await Reopen(longLearningAgreement, coordinator);
+        await SaveLearningAgreement(longLearningAgreement, student, AtExchange(Slot1, courses["A"], 5), AtExchange(Slot2, courses["B"], 5));
+        await Approve(longLearningAgreement, coordinator);
 
-        var few = await OpenExchange(shortLa);
-        var many = await OpenExchange(longLa);
+        var few = await OpenExchange(shortLearningAgreement);
+        var many = await OpenExchange(longLearningAgreement);
 
         Assert.Equal(few, many);
-        // exchange, LA, recognition, mapping scheme, versions: small indexed lookups, none per row.
+        // exchange, learning agreement, recognition, mapping scheme, versions: small indexed lookups, none per row.
         int[] budget = [2, 4, 7, 2, 2];
         Assert.All(many.Zip(budget), pair => Assert.InRange(pair.First, 1, pair.Second));
     }

@@ -11,10 +11,10 @@ namespace Loom.Application.Features.Planning;
 
 /// <summary>
 /// Draft ⇄ Approved, decided by the exchange's assigned coordinator. Students never change the status.
-/// Approving signs the LA and, when the content changed, creates the next numbered version: version 1 is the original
+/// Approving signs the learning agreement and, when the content changed, creates the next numbered version: version 1 is the original
 /// agreement, version n is amendment A(n-1). Reopening (back to Draft) allows an amendment, until final recognition starts.
 /// </summary>
-public sealed class LearningAgreementWorkflow(IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LaContent content, VersionStore versions)
+public sealed class LearningAgreementWorkflow(IAppDbContext db, ExchangeAccess access, ICurrentActor actor, LearningAgreementContent content, VersionStore versions)
 {
     public async Task<ErrorOr<ExchangeResponse>> SetStatusAsync(Guid exchangeGuid, UpdateLearningAgreementStatusRequest request, CancellationToken ct)
     {
@@ -59,7 +59,7 @@ public sealed class LearningAgreementWorkflow(IAppDbContext db, ExchangeAccess a
     private async Task RecordVersionAsync(int exchangeId, int learningAgreementId, CancellationToken ct)
     {
         var payload = await content.CaptureAsync(exchangeId, ct);
-        var hash = LaContent.Hash(payload);
+        var hash = LearningAgreementContent.Hash(payload);
         var latest = await versions.LatestApprovedAsync(exchangeId, DocumentKind.LearningAgreement, ct);
         var pending = await db.LearningAgreementEntries
             .Where(e => e.LearningAgreementId == learningAgreementId

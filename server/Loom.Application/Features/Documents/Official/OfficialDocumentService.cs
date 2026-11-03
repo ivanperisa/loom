@@ -12,7 +12,7 @@ namespace Loom.Application.Features.Documents.Official;
 public sealed record OfficialDocumentFile(byte[] Content, string FileName);
 
 /// <summary>
-/// The official xlsx, generated on the server from what is stored (never from unsaved screen state): the LA as of its
+/// The official xlsx, generated on the server from what is stored (never from unsaved screen state): the learning agreement as of its
 /// latest approved version, table 1, and (after final recognition started) table 2 and the mapping scheme.
 /// </summary>
 public sealed class OfficialDocumentService(
@@ -27,8 +27,8 @@ public sealed class OfficialDocumentService(
     {
         var exchange = await exchanges.GetAsync(exchangeGuid, ct);   // also the access check
         if (exchange.IsError) return exchange.Errors;
-        var la = await learningAgreements.GetAsync(exchangeGuid, ct);
-        if (la.IsError) return la.Errors;
+        var learningAgreement = await learningAgreements.GetAsync(exchangeGuid, ct);
+        if (learningAgreement.IsError) return learningAgreement.Errors;
         var recognition = await recognitions.GetAsync(exchangeGuid, ct);
         if (recognition.IsError) return recognition.Errors;
 
@@ -37,17 +37,17 @@ public sealed class OfficialDocumentService(
         {
             var scheme = await mappingSchemes.GetAsync(exchangeGuid, ct);
             if (scheme.IsError) return scheme.Errors;
-            results = new ResultsSheet(scheme.Value.Entries.Select(ToLine).ToList(), SchemeGrid(scheme.Value, la.Value));
+            results = new ResultsSheet(scheme.Value.Entries.Select(ToLine).ToList(), SchemeGrid(scheme.Value, learningAgreement.Value));
         }
 
         var text = new OfficialText(lang == "en" ? "en" : "hr");
         var data = new OfficialDocumentData(
             exchange.Value,
-            la.Value.Slots,
-            await LaSheetAsync(exchange.Value.Id, la.Value, text, ct),
+            learningAgreement.Value.Slots,
+            await LearningAgreementSheetAsync(exchange.Value.Id, learningAgreement.Value, text, ct),
             recognition.Value.Agreed.Select(ToLine).ToList(),
             results,
-            Signatures(la.Value, recognition.Value));
+            Signatures(learningAgreement.Value, recognition.Value));
 
         var content = new OfficialWorkbook(data, text).Build();
         var student = string.Join('_', exchange.Value.StudentName.Split(' ', StringSplitOptions.RemoveEmptyEntries));
@@ -59,9 +59,9 @@ public sealed class OfficialDocumentService(
     /// Components as of the latest approved version v: live in v (added ≤ v, not removed by v), plus those removed in an
     /// earlier amendment, struck through. Before the first approval: the draft.
     /// </summary>
-    private async Task<LaSheet> LaSheetAsync(int exchangeId, LearningAgreementResponse la, OfficialText text, CancellationToken ct)
+    private async Task<LearningAgreementSheet> LearningAgreementSheetAsync(int exchangeId, LearningAgreementResponse learningAgreement, OfficialText text, CancellationToken ct)
     {
-        int? version = la.SignedCount > 0 ? la.SignedCount : null;
+        int? version = learningAgreement.SignedCount > 0 ? learningAgreement.SignedCount : null;
         var entries = await db.LearningAgreementEntries
             .AsNoTracking()
             .Include(e => e.PartnerCourse)
@@ -106,23 +106,23 @@ public sealed class OfficialDocumentService(
             if (Removed(entry))
                 changes.Add(new ChangeLine(text.Amendment(entry.RemovedInVersion)!, false, entry.PartnerCourse!.Code, entry.PartnerCourse.Name, entry.AwardedEcts, entry.HomeSlot.Label));
         }
-        return new LaSheet(version, grid, changes.OrderBy(c => c.Amendment.Length).ThenBy(c => c.Amendment).ThenBy(c => c.Added).ToList());
+        return new LearningAgreementSheet(version, grid, changes.OrderBy(c => c.Amendment.Length).ThenBy(c => c.Amendment).ThenBy(c => c.Added).ToList());
     }
 
     /// <summary>Mode and ECTS of each component (slot + course) as the latest approved version has them.</summary>
     private async Task<Dictionary<(int SlotId, int? CourseId), (string Mode, decimal? Ects)>?> ApprovedValuesAsync(int exchangeId, CancellationToken ct)
     {
         var latest = await versions.LatestApprovedAsync(exchangeId, DocumentKind.LearningAgreement, ct);
-        if (latest is null || VersionStore.Deserialize<LaVersionPayload>(latest) is not { } payload) return null;
+        if (latest is null || VersionStore.Deserialize<LearningAgreementVersionPayload>(latest) is not { } payload) return null;
         return payload.Entries
             .GroupBy(e => (e.HomeSlotId, e.PartnerCourseId))
             .ToDictionary(g => g.Key, g => (g.First().Mode, g.First().AwardedEcts));
     }
 
-    /// <summary>The mapping scheme on the same grid; courses marked not passed are struck through. Slot modes come from the LA.</summary>
-    private static Dictionary<int, GridSlot> SchemeGrid(MappingSchemeResponse scheme, LearningAgreementResponse la)
+    /// <summary>The mapping scheme on the same grid; courses marked not passed are struck through. Slot modes come from the learning agreement.</summary>
+    private static Dictionary<int, GridSlot> SchemeGrid(MappingSchemeResponse scheme, LearningAgreementResponse learningAgreement)
     {
-        var grid = la.Entries
+        var grid = learningAgreement.Entries
             .Where(e => !e.IsDeleted)
             .GroupBy(e => e.HomeSlotId)
             .ToDictionary(g => g.Key, g => new GridSlot(g.First().Mode.ToString(), []));
@@ -136,9 +136,9 @@ public sealed class OfficialDocumentService(
         return grid;
     }
 
-    private static List<SignatureLine> Signatures(LearningAgreementResponse la, RecognitionResponse recognition) =>
+    private static List<SignatureLine> Signatures(LearningAgreementResponse learningAgreement, RecognitionResponse recognition) =>
     [
-        new("la", la.SignedCount > 0 ? la.SignedCount : null, la.Status.ToString(), la.SignedByName, la.SignedAt),
+        new("learningAgreement", learningAgreement.SignedCount > 0 ? learningAgreement.SignedCount : null, learningAgreement.Status.ToString(), learningAgreement.SignedByName, learningAgreement.SignedAt),
         new("recognition", recognition.ApprovedVersionCount > 0 ? recognition.ApprovedVersionCount : null,
             recognition.IsStarted ? recognition.Status.ToString() : "notStarted", recognition.SignedByName, recognition.SignedAt),
     ];

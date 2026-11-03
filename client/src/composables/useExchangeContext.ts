@@ -19,9 +19,9 @@ export interface ExchangeContext {
   /** The signed-in user is this exchange's coordinator. */
   isCoordinator: ComputedRef<boolean>
   isApproved: ComputedRef<boolean>
-  /** Final recognition started: the LA and table 1 are frozen for good. */
+  /** Final recognition started: the learning agreement and table 1 are frozen for good. */
   isConcluded: ComputedRef<boolean>
-  /** The LA can be edited: a draft, before final recognition. */
+  /** The learning agreement can be edited: a draft, before final recognition. */
   isEditable: ComputedRef<boolean>
 }
 

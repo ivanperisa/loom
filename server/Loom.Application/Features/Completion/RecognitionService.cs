@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Loom.Application.Features.Completion;
 
 /// <summary>
-/// Recognition after the exchange. "Start final recognition" freezes the LA and table 1 and creates the results
-/// (table 2 + mapping scheme) from the latest approved LA version. From then on only the results change: grades here,
+/// Recognition after the exchange. "Start final recognition" freezes the learning agreement and table 1 and creates the results
+/// (table 2 + mapping scheme) from the latest approved learning agreement version. From then on only the results change: grades here,
 /// placement in the mapping scheme. The coordinator approves the results; each approval with changes is a version.
 /// </summary>
 public sealed class RecognitionService(
@@ -27,8 +27,8 @@ public sealed class RecognitionService(
     }
 
     /// <summary>
-    /// Anyone who can edit the exchange may start it, once the LA is approved. It cannot be undone: the LA and table 1
-    /// are frozen for good, and the results start as a copy of the latest approved LA version.
+    /// Anyone who can edit the exchange may start it, once the learning agreement is approved. It cannot be undone: the learning agreement and table 1
+    /// are frozen for good, and the results start as a copy of the latest approved learning agreement version.
     /// </summary>
     public async Task<ErrorOr<RecognitionResponse>> StartAsync(Guid exchangeGuid, CancellationToken ct)
     {
@@ -38,9 +38,9 @@ public sealed class RecognitionService(
 
         var recognition = await db.Recognitions.Include(r => r.Entries).FirstOrDefaultAsync(r => r.ExchangeId == exchangeId, ct);
         if (recognition?.IsStarted == true) return CompletionErrors.AlreadyStarted;
-        if (!await db.LearningAgreements.AnyAsync(l => l.ExchangeId == exchangeId && l.Status == DocumentStatus.Approved, ct)) return CompletionErrors.LaNotApproved;
+        if (!await db.LearningAgreements.AnyAsync(l => l.ExchangeId == exchangeId && l.Status == DocumentStatus.Approved, ct)) return CompletionErrors.LearningAgreementNotApproved;
         var agreed = await versions.LatestApprovedAsync(exchangeId, DocumentKind.LearningAgreement, ct);
-        if (agreed is null || VersionStore.Deserialize<LaVersionPayload>(agreed) is not { } payload) return CompletionErrors.LaNotApproved;
+        if (agreed is null || VersionStore.Deserialize<LearningAgreementVersionPayload>(agreed) is not { } payload) return CompletionErrors.LearningAgreementNotApproved;
 
         if (recognition is null)
         {
@@ -51,7 +51,7 @@ public sealed class RecognitionService(
         recognition.StartedById = actor.UserId;
         recognition.LastModifiedById = actor.UserId;
 
-        // One result per course, placed where the LA put it. Exchanges from before this step may already have results; keep them.
+        // One result per course, placed where the learning agreement put it. Exchanges from before this step may already have results; keep them.
         if (recognition.Entries.Count == 0)
         {
             var courseIds = payload.Entries.Where(e => e.PartnerCourseId.HasValue).Select(e => e.PartnerCourseId!.Value).ToList();
@@ -205,7 +205,7 @@ public sealed class RecognitionService(
 
     private async Task<RecognitionResponse> BuildResponseAsync(int exchangeId, CancellationToken ct)
     {
-        var laStatus = await db.LearningAgreements
+        var learningAgreementStatus = await db.LearningAgreements
             .Where(l => l.ExchangeId == exchangeId)
             .Select(l => (DocumentStatus?)l.Status)
             .FirstOrDefaultAsync(ct);
@@ -225,7 +225,7 @@ public sealed class RecognitionService(
             isStarted,
             recognition?.StartedAt,
             recognition?.StartedByUser?.Name,
-            CanStart: !isStarted && laStatus == DocumentStatus.Approved && agreed is not null,
+            CanStart: !isStarted && learningAgreementStatus == DocumentStatus.Approved && agreed is not null,
             agreed?.VersionNo,
             agreed is null ? [] : await AgreedEntriesAsync(agreed, ct),
             recognition?.UpdatedAt,
@@ -235,10 +235,10 @@ public sealed class RecognitionService(
             await versions.ApprovedCountAsync(exchangeId, DocumentKind.Recognition, ct));
     }
 
-    /// <summary>Table 1: the approved LA version's courses, with today's slot and course details (falling back to the stored copy).</summary>
+    /// <summary>Table 1: the approved learning agreement version's courses, with today's slot and course details (falling back to the stored copy).</summary>
     private async Task<List<AgreedEntryResponse>> AgreedEntriesAsync(DocumentVersion agreed, CancellationToken ct)
     {
-        var payload = VersionStore.Deserialize<LaVersionPayload>(agreed);
+        var payload = VersionStore.Deserialize<LearningAgreementVersionPayload>(agreed);
         if (payload is null) return [];
         var rows = payload.Entries.Where(e => e.PartnerCourseId.HasValue).ToList();
 

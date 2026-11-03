@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { exchangeSemester } from '@/utils/exchangeSemester'
 import type { ExchangeSemester } from '@/types/exchange.types'
 
-/** Winter, summer or both. A type that would drop study semesters already used by the LA is disabled. */
+/** Winter, summer or both. A type that would drop study semesters already used by the learning agreement is disabled. */
 const props = withDefaults(defineProps<{ modelValue: ExchangeSemester; canSelect?: (type: ExchangeSemester) => boolean }>(), {
   canSelect: () => true,
 })

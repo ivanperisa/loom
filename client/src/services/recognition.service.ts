@@ -6,7 +6,7 @@ const base = (exchangeId: string) => `/api/exchanges/${exchangeId}/recognition`
 
 export const recognitionService = {
   get: (exchangeId: string, signal?: AbortSignal) => api.get<RecognitionResponse>(base(exchangeId), { signal }),
-  /** "Start final recognition": freezes the LA and table 1 for good. */
+  /** "Start final recognition": freezes the learning agreement and table 1 for good. */
   start: (exchangeId: string) => api.post<RecognitionResponse>(`${base(exchangeId)}/start`),
   saveGrades: (exchangeId: string, request: SaveGradesRequest) => api.put<RecognitionResponse>(`${base(exchangeId)}/grades`, request),
   updateStatus: (exchangeId: string, request: UpdateRecognitionStatusRequest) =>

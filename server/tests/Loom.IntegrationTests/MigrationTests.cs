@@ -93,9 +93,9 @@ public class MigrationTests(DatabaseFixture fixture) : IntegrationTest(fixture)
         await db.Database.ExecuteSqlAsync($"""
             INSERT INTO exchange.learning_agreement (exchange_id, status) VALUES ({planned.Id}, 'Submitted'), ({graded.Id}, 'Approved');
             INSERT INTO exchange.learning_agreement_entry (learning_agreement_id, home_slot_id, mode, partner_course_id, awarded_ects)
-            SELECT la.id, v.slot, 'AtExchange', v.course, 5 FROM exchange.learning_agreement la,
+            SELECT agreement.id, v.slot, 'AtExchange', v.course, 5 FROM exchange.learning_agreement agreement,
                    (VALUES (214, {a}, {planned.Id}), (216, {d}, {planned.Id}), (214, {a}, {graded.Id}), (215, {b}, {graded.Id})) v(slot, course, ex)
-            WHERE la.exchange_id = v.ex;
+            WHERE agreement.exchange_id = v.ex;
             INSERT INTO exchange.snapshot (exchange_id, changed_by_id, phase, type, snapshot, created_at) VALUES
                 ({planned.Id}, {coordinator.Id}, 'LearningAgreement', 'Auto', {Snapshot((214, a), (215, b))}::jsonb, now() - interval '3 days'),
                 ({planned.Id}, {student.Id}, 'LearningAgreement', 'PreImport', {Snapshot((214, a))}::jsonb, now() - interval '2 days'),
@@ -104,8 +104,8 @@ public class MigrationTests(DatabaseFixture fixture) : IntegrationTest(fixture)
             INSERT INTO exchange.recognition (exchange_id, status) VALUES ({graded.Id}, 'Rejected');
             INSERT INTO exchange.recognition_entry (recognition_id, learning_agreement_entry_id, enrollment_status, original_grade, ects_grade)
             SELECT r.id, le.id, 'Passed', '1.3', 'A'
-            FROM exchange.recognition r JOIN exchange.learning_agreement la ON la.exchange_id = r.exchange_id
-            JOIN exchange.learning_agreement_entry le ON le.learning_agreement_id = la.id AND le.partner_course_id = {a}
+            FROM exchange.recognition r JOIN exchange.learning_agreement agreement ON agreement.exchange_id = r.exchange_id
+            JOIN exchange.learning_agreement_entry le ON le.learning_agreement_id = agreement.id AND le.partner_course_id = {a}
             WHERE r.exchange_id = {graded.Id};
             """, Ct);
         // Split: results already in the mapping scheme, course A over two slots with the grade on one row only, two rows
@@ -125,8 +125,8 @@ public class MigrationTests(DatabaseFixture fixture) : IntegrationTest(fixture)
         var versions = await db.DocumentVersions.Where(v => v.ExchangeId == planned.Id).OrderBy(v => v.CreatedAt).ToListAsync(Ct);
         Assert.Equal([(VersionKind.Approved, (int?)1), (VersionKind.Backup, null), (VersionKind.Approved, 2)], versions.Select(v => (v.Kind, v.VersionNo)));
         // The SQL hash equals the application's, so approving unchanged content later does not add a version.
-        var v2 = JsonSerializer.Deserialize<LaVersionPayload>(versions[2].Payload, JsonHelper.DefaultOptions)!;
-        Assert.Equal(LaContent.Hash(v2), versions[2].ContentHash);
+        var v2 = JsonSerializer.Deserialize<LearningAgreementVersionPayload>(versions[2].Payload, JsonHelper.DefaultOptions)!;
+        Assert.Equal(LearningAgreementContent.Hash(v2), versions[2].ContentHash);
 
         var entries = await db.LearningAgreementEntries.Where(e => e.LearningAgreement.ExchangeId == planned.Id)
             .Select(e => new { Course = e.PartnerCourseId!.Value, e.IsDeleted, e.AddedInVersion, e.RemovedInVersion })

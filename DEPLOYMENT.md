@@ -105,7 +105,7 @@ PGDATABASE=<prod baza> ./database/backup/backup.sh ./backup-proba
 # 2. Brojke prije migracije (spremiti izlaz)
 psql -d loom_proba -f - <<'SQL'
 SELECT 'exchanges', count(*) FROM exchange.exchange
-UNION ALL SELECT 'la entries', count(*) FROM exchange.learning_agreement_entry
+UNION ALL SELECT 'learning agreement entries', count(*) FROM exchange.learning_agreement_entry
 UNION ALL SELECT 'snapshots', count(*) FROM exchange.snapshot
 UNION ALL SELECT 'scheme rows', count(*) FROM exchange.mapping_scheme_entry
 UNION ALL SELECT 'scheme rows bez kolegija', count(*) FROM exchange.mapping_scheme_entry WHERE partner_course_id IS NULL
@@ -132,7 +132,7 @@ UNION ALL SELECT 'started', count(*) FROM exchange.recognition WHERE started_at 
 - **`results`** može biti veći od "kolegiji s rezultatom". To su razmjene čije su ocjene bile samo u staroj `recognition_entry`.
 - **`placements`** je manji samo ako je bilo duplih redaka (isti kolegij na istom mjestu).
 
-**Klikanje po aplikaciji na kopiji (preporučeno):** pokrenuti API lokalno na `loom_proba` i otvoriti nekoliko stvarnih razmjena (LA, povijest verzija, priznavanje, mapping scheme, službeni xlsx):
+**Klikanje po aplikaciji na kopiji (preporučeno):** pokrenuti API lokalno na `loom_proba` i otvoriti nekoliko stvarnih razmjena (ugovor o učenju, povijest verzija, priznavanje, mapping scheme, službeni xlsx):
 
 ```sh
 ConnectionStrings__DefaultConnection="Host=<host>;Database=loom_proba;Username=<user>;Password=<pass>" \
@@ -178,7 +178,7 @@ Planirati kratak prekid rada (oko 10 minuta), po mogućnosti kad nitko ne radi. 
 5. **Provjera:** isti upiti kao u probi (poglavlje 4). Brojke trebaju odgovarati probi.
 6. **Provjera u pregledniku:**
    - Prijava preko Googlea radi.
-   - Otvara se nekoliko razmjena: LA, povijest verzija, priznavanje (tablica 1 i 2), mapping scheme.
+   - Otvara se nekoliko razmjena: ugovor o učenju, povijest verzija, priznavanje (tablica 1 i 2), mapping scheme.
    - Generira se službeni xlsx.
    - Koordinator vidi listu studenata, a admin listu korisnika.
    - U `logs/loom-errors-<datum>.log` nema novih grešaka.

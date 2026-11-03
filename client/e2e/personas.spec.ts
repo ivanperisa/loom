@@ -97,28 +97,28 @@ test('starting final recognition warns, then freezes the learning agreement', as
 
 test('a student changes the draft, saves it, and the change is kept', async ({ page }) => {
   await loginAs(page, 's.draft.empty@loom.dev')
-  const laUrl = `/api/exchanges/${exchangeUrl(1).split('/').pop()}/learning-agreement`
-  const entriesBefore = (await (await page.request.get(laUrl)).json()).entries.length
+  const learningAgreementUrl = `/api/exchanges/${exchangeUrl(1).split('/').pop()}/learning-agreement`
+  const entriesBefore = (await (await page.request.get(learningAgreementUrl)).json()).entries.length
 
   await page.goto(exchangeUrl(1))
   // Clicking a slot marks it "taken at home" (or clears it); either way the draft changes.
-  await page.locator('.la-slot-cell').first().click()
+  await page.locator('.learning-agreement-slot-cell').first().click()
   const save = page.getByRole('button', { name: /^(save|spremi)$/i })
   await expect(save).toBeVisible()
   await Promise.all([
-    page.waitForResponse((r) => r.url().endsWith(laUrl) && r.request().method() === 'PUT' && r.ok()),
+    page.waitForResponse((r) => r.url().endsWith(learningAgreementUrl) && r.request().method() === 'PUT' && r.ok()),
     save.click(),
   ])
   await expect(save).toBeHidden()
 
-  const entriesAfter = (await (await page.request.get(laUrl)).json()).entries.length
+  const entriesAfter = (await (await page.request.get(learningAgreementUrl)).json()).entries.length
   expect(entriesAfter).not.toBe(entriesBefore)
 })
 
 test('a course is placed on a slot by clicking it, then clicking the slot', async ({ page }) => {
   await loginAs(page, 's.draft.message@loom.dev')
   await page.goto(exchangeUrl(3))
-  const course = page.locator('[aria-labelledby="la-available-courses"] [draggable="true"]').first()
+  const course = page.locator('[aria-labelledby="learning-agreement-available-courses"] [draggable="true"]').first()
   await course.click()
   await expect(course).toHaveAttribute('aria-pressed', 'true')
   await page.locator('td[role="button"]').first().click()
@@ -130,7 +130,7 @@ test('a course is placed on a slot by clicking it, then clicking the slot', asyn
 test('discarding the draft brings back the saved learning agreement', async ({ page }) => {
   await loginAs(page, 's.draft.empty@loom.dev')
   await page.goto(exchangeUrl(1))
-  await page.locator('.la-slot-cell').nth(1).click()
+  await page.locator('.learning-agreement-slot-cell').nth(1).click()
   await page.getByRole('button', { name: /^(discard|odbaci)/i }).click()
   await expect(page.getByRole('button', { name: /^(save|spremi)$/i })).toBeHidden()
 })

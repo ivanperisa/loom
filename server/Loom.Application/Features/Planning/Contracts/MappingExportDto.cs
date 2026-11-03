@@ -1,7 +1,7 @@
 namespace Loom.Application.Features.Planning;
 
 /// <summary>
-/// "Export for import": the LA's mappings with enough context to import them into another exchange.
+/// "Export for import": the learning agreement's mappings with enough context to import them into another exchange.
 /// Version 2 (current) and version 1 (older exports) have the same shape.
 /// </summary>
 public record MappingExportDto(

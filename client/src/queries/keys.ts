@@ -9,7 +9,7 @@ export const queryKeys = {
   recognition: (guid: string) => [...queryKeys.exchange(guid), 'recognition'] as const,
   mappingScheme: (guid: string) => [...queryKeys.exchange(guid), 'mapping-scheme'] as const,
   partnerCourses: (guid: string) => [...queryKeys.exchange(guid), 'partner-courses'] as const,
-  versions: (guid: string, document: 'la' | 'recognition') => [...queryKeys.exchange(guid), 'versions', document] as const,
+  versions: (guid: string, document: 'learningAgreement' | 'recognition') => [...queryKeys.exchange(guid), 'versions', document] as const,
 
   myExchanges: ['exchanges', 'mine'] as const,
   coordinatorStudents: ['coordinator', 'students'] as const,

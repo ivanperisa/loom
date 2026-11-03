@@ -3,16 +3,16 @@ import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PartnerCoursePanel from '@/components/exchange/PartnerCoursePanel.vue'
 import DocTableGrid from '@/components/exchange/DocTableGrid.vue'
-import LaSlotCell from '@/components/exchange/la/LaSlotCell.vue'
-import LaDocumentActions from '@/components/exchange/la/LaDocumentActions.vue'
+import LearningAgreementSlotCell from '@/components/exchange/learning-agreement/LearningAgreementSlotCell.vue'
+import LearningAgreementDocumentActions from '@/components/exchange/learning-agreement/LearningAgreementDocumentActions.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import EctsAmountDialog from '@/components/common/EctsAmountDialog.vue'
 import PanelHeaderBar from '@/components/common/PanelHeaderBar.vue'
 import AuditInfo from '@/components/common/AuditInfo.vue'
-import { useLaDraftStore } from '@/stores/laDraft.store'
+import { useLearningAgreementDraftStore } from '@/stores/learningAgreementDraft.store'
 import { useExchangeContext } from '@/composables/useExchangeContext'
-import { useLaDropFlow } from '@/composables/useLaDropFlow'
+import { useLearningAgreementDropFlow } from '@/composables/useLearningAgreementDropFlow'
 import { useLearningAgreementMutations } from '@/queries/exchange.queries'
 import { describeApiError } from '@/utils/apiError'
 import { formatDate } from '@/utils/formatDate'
@@ -31,20 +31,20 @@ const props = defineProps<{
 }>()
 
 const { t, locale } = useI18n()
-const draft = useLaDraftStore()
+const draft = useLearningAgreementDraftStore()
 const { exchange, learningAgreement, isCoordinator, isEditable, isConcluded } = useExchangeContext()
-const laMutations = useLearningAgreementMutations(() => props.exchangeId)
-const dropFlow = useLaDropFlow()
+const learningAgreementMutations = useLearningAgreementMutations(() => props.exchangeId)
+const dropFlow = useLearningAgreementDropFlow()
 const { pendingDrop, pendingEcts, remainingEcts, pendingMove, moveEcts } = dropFlow
 const { confirm } = useConfirm()
 const { notifyError } = useNotification()
 useDragAutoScroll()
 
-// The draft follows the saved LA, unless it holds unsaved changes for this exchange.
+// The draft follows the saved learning agreement, unless it holds unsaved changes for this exchange.
 watch(
   learningAgreement,
-  (la) => {
-    if (la && draft.canReload(props.exchangeId)) draft.load(props.exchangeId, la)
+  (agreement) => {
+    if (agreement && draft.canReload(props.exchangeId)) draft.load(props.exchangeId, agreement)
   },
   { immediate: true },
 )
@@ -67,9 +67,9 @@ function slotLabel(id: number) {
   return slot ? `${slotCodeLabel(slot)} ${slotDisplayName(slot, locale.value)}`.trim() : undefined
 }
 
-async function saveLa() {
+async function saveLearningAgreement() {
   try {
-    draft.load(props.exchangeId, await laMutations.save.mutateAsync(draft.toRequest()))
+    draft.load(props.exchangeId, await learningAgreementMutations.save.mutateAsync(draft.toRequest()))
   } catch (error) {
     // Name the course or slot the server refers to (the save does not toast by itself).
     const { title, message } = describeApiError(error, { course: courseLabel, slot: slotLabel })
@@ -77,19 +77,19 @@ async function saveLa() {
   }
 }
 
-function discardLa() {
+function discardLearningAgreement() {
   if (learningAgreement.value) draft.load(props.exchangeId, learningAgreement.value)
 }
 
 function setStatus(status: typeof documentStatus.Draft | typeof documentStatus.Approved) {
-  laMutations.setStatus.mutate({ status })
+  learningAgreementMutations.setStatus.mutate({ status })
 }
 
 /** "A1": the amendment being prepared (draft after an approval) or the latest one (approved). */
 const amendmentBadge = computed<number | null>(() => {
-  const la = learningAgreement.value
-  if (!la || la.signedCount < 1) return null
-  const n = la.status === documentStatus.Approved ? la.signedCount - 1 : la.signedCount
+  const agreement = learningAgreement.value
+  if (!agreement || agreement.signedCount < 1) return null
+  const n = agreement.status === documentStatus.Approved ? agreement.signedCount - 1 : agreement.signedCount
   return n >= 1 ? n : null
 })
 
@@ -97,7 +97,7 @@ const amendmentBadge = computed<number | null>(() => {
 
 const modes: SlotMode[] = [slotMode.AtHome]
 
-/** Slots per semester row, in position order. Computed once per LA, not on every render. */
+/** Slots per semester row, in position order. Computed once per learning agreement, not on every render. */
 const slotsBySemester = computed(() => {
   const rows = new Map<number, HomeSlotResponse[]>()
   for (const sem of DOC_TABLE_SEMESTERS) rows.set(sem, [])
@@ -110,11 +110,11 @@ const stateBySlot = computed(() => new Map(draft.slotStates.map((s) => [s.homeSl
 
 /** Approved courses no longer in the draft, per slot: shown struck through ("removed in An"). */
 const removedBySlot = computed(() => {
-  const la = learningAgreement.value
-  const rows = new Map<number, NonNullable<typeof la>['entries']>()
-  if (!la) return rows
-  const wasApproved = la.signedCount > 0
-  for (const entry of la.entries) {
+  const agreement = learningAgreement.value
+  const rows = new Map<number, NonNullable<typeof agreement>['entries']>()
+  if (!agreement) return rows
+  const wasApproved = agreement.signedCount > 0
+  for (const entry of agreement.entries) {
     if (entry.partnerCourseId === null || !(entry.isDeleted || wasApproved)) continue
     const stillPlaced = stateBySlot.value.get(entry.homeSlotId)?.mappings.some((m) => m.partnerCourseId === entry.partnerCourseId)
     if (stillPlaced) continue
@@ -134,7 +134,7 @@ async function activateSlot(slot: HomeSlotResponse) {
     return
   }
   const state = stateBySlot.value.get(slot.id)
-  if (state && state.mappings.length > 0 && !(await confirm({ title: t('la.cycleModeConfirm') }))) return
+  if (state && state.mappings.length > 0 && !(await confirm({ title: t('learningAgreement.cycleModeConfirm') }))) return
   if (state) draft.removeSlotState(slot.id)
   else draft.setSlotMode(slot.id, slotMode.AtHome)
 }
@@ -169,8 +169,8 @@ const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(n
         <span
           v-if="amendmentBadge !== null"
           class="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary-text"
-        >{{ t('la.amendmentLabel', { n: amendmentBadge }) }}</span>
-        <LaDocumentActions :exchange-id="exchangeId" :editable="isEditable" />
+        >{{ t('learningAgreement.amendmentLabel', { n: amendmentBadge }) }}</span>
+        <LearningAgreementDocumentActions :exchange-id="exchangeId" :editable="isEditable" />
       </template>
       <template #right>
         <template v-if="isCoordinator && !isConcluded">
@@ -178,8 +178,8 @@ const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(n
             v-if="learningAgreement?.status === documentStatus.Draft"
             type="button"
             class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500 disabled:opacity-60"
-            :disabled="laMutations.setStatus.isPending.value || draft.isDirty"
-            :title="draft.isDirty ? t('la.unsavedChanges') : undefined"
+            :disabled="learningAgreementMutations.setStatus.isPending.value || draft.isDirty"
+            :title="draft.isDirty ? t('learningAgreement.unsavedChanges') : undefined"
             @click="setStatus(documentStatus.Approved)"
           >
             {{ t('exchange.actions.sign') }}
@@ -188,7 +188,7 @@ const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(n
             v-else-if="learningAgreement?.status === documentStatus.Approved"
             type="button"
             class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-medium text-muted transition hover:bg-slate-700/40 disabled:opacity-60"
-            :disabled="laMutations.setStatus.isPending.value"
+            :disabled="learningAgreementMutations.setStatus.isPending.value"
             @click="setStatus(documentStatus.Draft)"
           >
             {{ t('exchange.actions.backToDraft') }}
@@ -203,17 +203,17 @@ const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(n
       :signed-at="learningAgreement?.signedAt"
       :signed-by-name="learningAgreement?.signedByName"
     />
-    <p v-if="isConcluded" class="la-concluded" role="status">
-      {{ t('la.concluded', {
+    <p v-if="isConcluded" class="learning-agreement-concluded" role="status">
+      {{ t('learningAgreement.concluded', {
         date: formatDate(learningAgreement?.concludedAt ?? '', locale),
         name: learningAgreement?.concludedByName ?? '—',
       }) }}
     </p>
     <UnsavedChangesBar
       v-if="isEditable && draft.isDirty"
-      :saving="laMutations.save.isPending.value"
-      @save="saveLa"
-      @discard="discardLa"
+      :saving="learningAgreementMutations.save.isPending.value"
+      @save="saveLearningAgreement"
+      @discard="discardLearningAgreement"
     />
 
     <!-- Armed course: click a slot to place it -->
@@ -239,8 +239,8 @@ const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(n
 
     <DocTableGrid v-if="learningAgreement">
       <tr v-for="sem in DOC_TABLE_SEMESTERS" :key="sem" :style="{ height: sem === 4 ? '50px' : '90px' }">
-        <th scope="row" class="la-semester-cell">{{ sem }}</th>
-        <LaSlotCell
+        <th scope="row" class="learning-agreement-semester-cell">{{ sem }}</th>
+        <LearningAgreementSlotCell
           v-for="slot in slotsBySemester.get(sem)"
           :key="slot.id"
           :home-slot="slot"
@@ -297,15 +297,15 @@ const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(n
 
     <!-- Course lists (editable only) -->
     <div v-if="isEditable && exchange" class="mt-6 flex items-start gap-6">
-      <section class="min-w-0 basis-[60%] rounded-xl border border-primary/20 bg-dark-2 p-4" aria-labelledby="la-available-courses">
-        <h3 id="la-available-courses" class="mb-2 text-sm font-semibold text-primary-text">
+      <section class="min-w-0 basis-[60%] rounded-xl border border-primary/20 bg-dark-2 p-4" aria-labelledby="learning-agreement-available-courses">
+        <h3 id="learning-agreement-available-courses" class="mb-2 text-sm font-semibold text-primary-text">
           {{ t('partnerCourses.availableCourses') }}
         </h3>
         <p class="mb-3 text-xs text-light/60">{{ t('partnerCourses.dragHint') }}</p>
         <PartnerCoursePanel :exchange-id="exchangeId" variant="available" />
       </section>
-      <section class="min-w-0 basis-[40%] rounded-xl border border-primary/20 bg-dark-2 p-4" aria-labelledby="la-mapped-courses">
-        <h3 id="la-mapped-courses" class="mb-2 flex items-center justify-between text-sm font-semibold text-success-text">
+      <section class="min-w-0 basis-[40%] rounded-xl border border-primary/20 bg-dark-2 p-4" aria-labelledby="learning-agreement-mapped-courses">
+        <h3 id="learning-agreement-mapped-courses" class="mb-2 flex items-center justify-between text-sm font-semibold text-success-text">
           <span>{{ t('partnerCourses.mappedCourses') }}</span>
           <span class="text-xs font-normal text-light/60">{{ totalAwardedEcts }} / {{ mappedCoursesPanel?.mappedCoursesTotalEcts ?? 0 }} ECTS</span>
         </h3>
@@ -316,7 +316,7 @@ const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(n
 </template>
 
 <style scoped>
-.la-semester-cell {
+.learning-agreement-semester-cell {
   border: 1px solid #aaa;
   background: #f2f2f2;
   text-align: center;
@@ -327,7 +327,7 @@ const mappedCoursesPanel = ref<InstanceType<typeof PartnerCoursePanel> | null>(n
   vertical-align: middle;
 }
 
-.la-concluded {
+.learning-agreement-concluded {
   margin: 0 0 12px;
   padding: 8px 12px;
   border-radius: 8px;

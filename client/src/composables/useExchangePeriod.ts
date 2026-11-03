@@ -19,7 +19,7 @@ export interface ExchangePeriodInit {
   academicYear?: string
   semesterType?: ExchangeSemester
   studySemesters?: number[]
-  /** Study semesters that already have courses in the LA: a semester type that drops them is not offered. */
+  /** Study semesters that already have courses in the learning agreement: a semester type that drops them is not offered. */
   lockedSemesters?: MaybeRefOrGetter<number[]>
 }
 
