@@ -7,6 +7,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { localizedName } from '@/utils/i18n.utils'
+import { useNotification } from '@/composables/useNotification'
 import { XIcon } from '@lucide/vue'
 
 const props = defineProps<{
@@ -21,6 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { notifySuccess } = useNotification()
 
 const name = ref(props.student?.name ?? '')
 const jmbag = ref(props.student?.jmbag ?? '')
@@ -58,6 +60,7 @@ async function submit() {
     const res = props.mode === 'edit' && props.student
       ? await coordinatorService.updateStudent(props.student.id, payload)
       : await coordinatorService.createPlaceholderStudent(payload)
+    if (props.mode !== 'edit') notifySuccess(t('common.created.student'))
     emit('saved', res.data)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { detail?: string } } }

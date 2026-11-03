@@ -24,6 +24,13 @@ export default {
     Turkey: 'Turska',
   },
   common: {
+    created: {
+      institution: 'Ustanova je dodana',
+      course: 'Kolegij je dodan',
+      student: 'Student je dodan',
+      exchange: 'Razmjena je kreirana',
+      whitelist: 'E-mail je dodan na popis',
+    },
     close: 'Zatvori',
     toggleTheme: 'Promijeni svijetlu/tamnu temu',
     remove: 'Ukloni',

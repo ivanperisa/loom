@@ -5,6 +5,7 @@ import { useCoordinatorsQuery, useHomeProgramsQuery, usePartnerInstitutionOption
 import { useCreateExchange } from '@/queries/exchange.queries'
 import { describeApiError } from '@/utils/apiError'
 import { useExchangePeriod } from '@/composables/useExchangePeriod'
+import { useNotification } from '@/composables/useNotification'
 import StudySemesterPicker from '@/components/exchange/period/StudySemesterPicker.vue'
 import SemesterTypePicker from '@/components/exchange/period/SemesterTypePicker.vue'
 import type {
@@ -32,6 +33,7 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 const createExchange = useCreateExchange()
+const { notifySuccess } = useNotification()
 const authStore = useAuthStore()
 
 function localizedName(item: { name: string; nameHr?: string | null }): string {
@@ -188,6 +190,7 @@ async function submitExchange() {
       targetStudentId: props.targetStudentId,
       mentor: mentorInput.value.trim() || null,
     })
+    notifySuccess(t('common.created.exchange'))
     emit('created', result.guid)
   } catch (e) {
     errorMessage.value = describeApiError(e).message

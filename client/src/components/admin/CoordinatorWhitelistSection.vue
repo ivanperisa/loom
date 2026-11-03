@@ -6,6 +6,7 @@ import { adminService, type CoordinatorWhitelistEntryResponse } from '@/services
 import Pagination from '@/components/common/Pagination.vue'
 import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { useConfirm } from '@/composables/useConfirm'
+import { useNotification } from '@/composables/useNotification'
 import { useListQuery } from '@/composables/useListQuery'
 import { queryKeys } from '@/queries/keys'
 import { describeApiError } from '@/utils/apiError'
@@ -14,6 +15,7 @@ import { describeApiError } from '@/utils/apiError'
 /** Emails that become coordinators on their first login. */
 const { t } = useI18n()
 const { confirm } = useConfirm()
+const { notifySuccess } = useNotification()
 const queryClient = useQueryClient()
 
 const newEmail = ref('')
@@ -38,6 +40,7 @@ async function addEmail() {
   addingEmail.value = true
   try {
     await adminService.addToWhitelist(email)
+    notifySuccess(t('common.created.whitelist'))
     newEmail.value = ''
     await refreshWhitelist()
   } catch (e: unknown) {

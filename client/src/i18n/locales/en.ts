@@ -22,6 +22,13 @@ export default {
     Turkey: 'Turkey',
   },
   common: {
+    created: {
+      institution: 'Institution added',
+      course: 'Course added',
+      student: 'Student added',
+      exchange: 'Exchange created',
+      whitelist: 'Email added to the list',
+    },
     close: 'Close',
     toggleTheme: 'Switch light/dark theme',
     remove: 'Remove',

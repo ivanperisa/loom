@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useI18n } from 'vue-i18n'
+import { useNotification } from '@/composables/useNotification'
 import { institutionService } from '@/services/institution.service'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 import PartnerCourseFormModal from '@/components/common/PartnerCourseFormModal.vue'
@@ -19,6 +20,7 @@ const props = defineProps<{ institutionId: number; institutionName: string; inst
 const emit = defineEmits<{ 'count-changed': [delta: number] }>()
 
 const { t } = useI18n()
+const { notifySuccess } = useNotification()
 const { confirm } = useConfirm()
 
 const queryClient = useQueryClient()
@@ -93,6 +95,7 @@ async function submitCourse(payload: {
     } else {
       await institutionService.createPartnerCourseByInstitution(props.institutionId, payload)
       emit('count-changed', 1)
+      notifySuccess(t('common.created.course'))
     }
     await refresh()
     courseModal.value = null

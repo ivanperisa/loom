@@ -10,6 +10,7 @@ import ShowDeletedToggle from '@/components/common/ShowDeletedToggle.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import SortableHeader from '@/components/common/SortableHeader.vue'
 import { useConfirm } from '@/composables/useConfirm'
+import { useNotification } from '@/composables/useNotification'
 import { useListQuery } from '@/composables/useListQuery'
 import { queryKeys } from '@/queries/keys'
 import ErrorAlert from '@/components/common/ErrorAlert.vue'
@@ -20,6 +21,7 @@ import PartnerCourseList from '@/components/admin/PartnerCourseList.vue'
 
 const { t } = useI18n()
 const { confirm } = useConfirm()
+const { notifySuccess } = useNotification()
 
 const queryClient = useQueryClient()
 /** An action that failed (the list itself shows its own load error). */
@@ -93,6 +95,7 @@ async function submitInstitutionForm(payload: { name: string; nameHr: string; co
       await institutionService.updatePartnerInstitution(editingInstitutionId.value, payload)
     } else {
       await institutionService.createPartnerInstitution(payload)
+      notifySuccess(t('common.created.institution'))
     }
     await refresh()
     closeInstitutionForm()

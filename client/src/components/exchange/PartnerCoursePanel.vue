@@ -8,6 +8,7 @@ import type { PartnerCourseResponse } from '@/types/institution.types'
 import SearchInput from '@/components/common/SearchInput.vue'
 import PartnerCourseFormModal from '@/components/common/PartnerCourseFormModal.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { useNotification } from '@/composables/useNotification'
 import { ArrowRightIcon, CheckIcon, ExternalLinkIcon, GripVerticalIcon, PlusIcon, XIcon } from '@lucide/vue'
 
 const props = withDefaults(
@@ -23,6 +24,7 @@ const draft = useLearningAgreementDraftStore()
 const { exchange } = useExchangeContext()
 const coursesQuery = usePartnerCoursesQuery(() => props.exchangeId)
 const addCourse = useAddPartnerCourse(() => props.exchangeId)
+const { notifySuccess } = useNotification()
 
 const courses = computed(() => coursesQuery.data.value ?? [])
 const loading = computed(() => coursesQuery.isPending.value)
@@ -47,6 +49,7 @@ async function submitAddCourse(payload: {
   addError.value = null
   try {
     await addCourse.mutateAsync(payload)
+    notifySuccess(t('common.created.course'))
     showAddForm.value = false
   } catch {
     addError.value = t('partnerCourses.saveError')
