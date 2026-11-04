@@ -92,7 +92,7 @@ onBeforeUnmount(() => {
         aria-modal="true"
         :aria-labelledby="labelledBy"
         tabindex="-1"
-        class="w-full rounded-xl border border-primary/30 bg-dark shadow-xl focus:outline-none"
+        class="w-full rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl focus:outline-none"
         :class="maxWidth"
       >
         <slot />

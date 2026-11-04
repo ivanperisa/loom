@@ -1,66 +1,30 @@
 import { api } from './api'
-import type { PagedParams, PagedResponse } from '@/types/paged.types'
+import type { Schemas } from '@/api'
+import type { ListParams, PagedResponse } from '@/types/paged.types'
 
-export interface UserListResponse {
-  id: string
-  name: string
-  email: string
-  role: string
-  institutionName: string | null
-  institutionCity: string | null
-  institutionId: string | null
-  coordinatorRequestStatus: string | null
-  isOnboarded: boolean
-  jmbag: string | null
-  mentor: string | null
-  coordinatorId: string | null
-  coordinatorName: string | null
-}
-
-export interface AdminUpdateUserRequest {
-  name: string
-  jmbag: string | null
-  mentor: string | null
-  coordinatorId: string | null
-  institutionId: string | null
-}
-
-export interface CoordinatorRequestResponse {
-  id: string
-  name: string
-  email: string
-  institutionName: string | null
-}
-
-export interface CoordinatorWhitelistEntryResponse {
-  id: string
-  email: string
-  createdAt: string
-}
+export type UserListResponse = Schemas['UserListResponse']
+export type AdminUpdateUserRequest = Schemas['AdminUpdateUserRequest']
+export type CoordinatorRequestResponse = Schemas['CoordinatorRequestResponse']
+export type CoordinatorWhitelistEntryResponse = Schemas['CoordinatorWhitelistEntryResponse']
 
 export const adminService = {
   getAllUsers: (
-    params: PagedParams & {
-      role?: string | null
-      institutionId?: string | null
-      registered?: boolean | null
-      sortBy?: string
-    } = {},
+    params: ListParams & { role?: string | null; institutionId?: number | null; registered?: boolean | null },
     signal?: AbortSignal,
-  ) =>
-    api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params, signal }),
+  ) => api.get<PagedResponse<UserListResponse>>('/api/admin/users', { params, signal }),
 
-  getCoordinatorRequests: () =>
-    api.get<CoordinatorRequestResponse[]>('/api/admin/coordinator-requests'),
+  getCoordinatorRequests: (params: ListParams, signal?: AbortSignal) =>
+    api.get<PagedResponse<CoordinatorRequestResponse>>('/api/admin/coordinator-requests', { params, signal }),
 
-  setUserRole: (userId: string, role: string) =>
+  setUserRole: (userId: number, role: string) =>
     api.patch<UserListResponse>(`/api/admin/users/${userId}/role`, { role }),
 
-  rejectCoordinatorRequest: (userId: string) =>
-    api.patch(`/api/admin/users/${userId}/reject-coordinator-request`),
+  /** Approving makes the student a coordinator; rejecting lets them ask again later. */
+  decideCoordinatorRequest: (userId: number, status: 'Approved' | 'Rejected') =>
+    api.patch(`/api/admin/coordinator-requests/${userId}`, { status }),
 
-  getCoordinatorWhitelist: () =>
-    api.get<CoordinatorWhitelistEntryResponse[]>('/api/admin/coordinator-whitelist'),
+  getCoordinatorWhitelist: (params: ListParams, signal?: AbortSignal) =>
+    api.get<PagedResponse<CoordinatorWhitelistEntryResponse>>('/api/admin/coordinator-whitelist', { params, signal }),
 
   addToWhitelist: (email: string) =>
     api.post<CoordinatorWhitelistEntryResponse>('/api/admin/coordinator-whitelist', { email }),
@@ -68,6 +32,6 @@ export const adminService = {
   removeFromWhitelist: (email: string) =>
     api.delete(`/api/admin/coordinator-whitelist/${encodeURIComponent(email)}`),
 
-  updateUser: (userId: string, data: AdminUpdateUserRequest) =>
+  updateUser: (userId: number, data: AdminUpdateUserRequest) =>
     api.put<UserListResponse>(`/api/admin/users/${userId}`, data),
 }

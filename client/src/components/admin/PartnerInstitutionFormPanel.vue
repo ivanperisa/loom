@@ -5,6 +5,7 @@ import type { PartnerInstitutionAdminResponse } from '@/types/institution.types'
 import SearchableSelect, { type SelectOption } from '@/components/common/SearchableSelect.vue'
 import { ISO_COUNTRIES } from '@/constants/countries'
 import BaseModal from '@/components/common/BaseModal.vue'
+import { XIcon } from '@lucide/vue'
 
 const { t } = useI18n()
 
@@ -55,15 +56,13 @@ function submit() {
 
 <template>
   <BaseModal max-width="max-w-2xl" labelled-by="partner-institution-form-title" @close="emit('cancel')">
-    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+    <div>
       <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
         <h3 id="partner-institution-form-title" class="font-semibold text-light">
           {{ institution ? t('admin.institutions.editTitle') : t('admin.institutions.addTitle') }}
         </h3>
-        <button type="button" class="text-light/40 transition hover:text-light" @click="emit('cancel')">
-          <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-          </svg>
+        <button :aria-label="t('common.close')" type="button" class="text-light/40 transition hover:text-light" @click="emit('cancel')">
+          <XIcon class="h-5 w-5" />
         </button>
       </div>
       <div class="space-y-4 px-6 py-5">

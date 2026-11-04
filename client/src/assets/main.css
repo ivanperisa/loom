@@ -107,3 +107,10 @@
   width: 96%;
   max-width: 1900px;
 }
+
+/* Coordinator student list: header and rows share these columns. */
+.coord-row-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.9fr) minmax(200px, 1.6fr) 200px 150px 60px 28px;
+  align-items: center;
+}

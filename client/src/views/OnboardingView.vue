@@ -1,19 +1,17 @@
 ﻿<script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { onBeforeRouteUpdate, useRouter } from 'vue-router'
+import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
-import { institutionService } from '@/services/institution.service'
-import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
-import { useTheme } from '@/composables/useTheme'
+import { useHomeInstitutionsQuery } from '@/queries/catalog.queries'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { localizedName } from '@/utils/i18n.utils'
 import { userRole } from '../utils/userRole'
+import { CheckIcon, SearchIcon } from '@lucide/vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const { t } = useI18n()
-const { theme, toggleTheme } = useTheme()
 
 const isCoordinatorOrAdmin = computed(() => authStore.canActAsCoordinator)
 
@@ -37,13 +35,14 @@ const steps = computed(() => {
 const totalSteps = computed(() => steps.value.length)
 
 const currentStep = ref(1)
-const selectedInstitutionId = ref<string | null>(null)
+const selectedInstitutionId = ref<number | null>(null)
 const jmbag = ref('')
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
-const institutions = ref<InstitutionResponse[]>([])
-const loadingInstitutions = ref(true)
+const institutionsQuery = useHomeInstitutionsQuery()
+const institutions = computed<InstitutionResponse[]>(() => institutionsQuery.data.value ?? [])
+const loadingInstitutions = computed(() => institutionsQuery.isPending.value)
 const institutionSearch = ref('')
 
 const filteredInstitutions = computed(() => {
@@ -64,20 +63,6 @@ const isJmbagValid = computed(() => /^\d{10}$/.test(jmbag.value))
 const institutionStep = computed(() => (isCoordinatorOrAdmin.value ? 1 : 2))
 const jmbagStep = computed(() => (isCoordinatorOrAdmin.value ? -1 : 3))
 
-async function fetchInstitutions() {
-  loadingInstitutions.value = true
-  try {
-    const res = await institutionService.getHomeInstitutions()
-    institutions.value = res.data
-  } catch {
-    // keep empty
-  } finally {
-    loadingInstitutions.value = false
-  }
-}
-
-onMounted(fetchInstitutions)
-onBeforeRouteUpdate(fetchInstitutions)
 
 function goNext() {
   errorMessage.value = null
@@ -137,7 +122,7 @@ async function finishOnboarding() {
     await authStore.completeOnboarding({
       institutionId: selectedInstitutionId.value!,
       jmbag: isRequestingCoordinator || isCoordinatorOrAdmin.value ? undefined : jmbag.value.trim(),
-      requestCoordinatorRole: isRequestingCoordinator || undefined,
+      requestCoordinatorRole: isRequestingCoordinator,
     })
     await router.push('/home')
   } catch {
@@ -146,44 +131,10 @@ async function finishOnboarding() {
     isSubmitting.value = false
   }
 }
-
-async function logout() {
-  await authStore.logout()
-}
 </script>
 
 <template>
   <main class="min-h-screen bg-dark text-light">
-    <header class="sticky top-0 z-40 w-full border-b border-primary bg-dark">
-      <div class="page-container flex h-16 items-center justify-between !py-0">
-        <span class="text-lg font-bold text-white">{{ t('common.appName') }}</span>
-        <div class="flex items-center gap-3">
-          <button
-            type="button"
-            class="flex h-9 w-9 items-center justify-center rounded-lg text-light/70 transition hover:bg-fill-soft hover:text-light"
-            @click="toggleTheme"
-          >
-            <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-            </svg>
-            <svg v-else class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-            </svg>
-          </button>
-          <LocaleSwitcher variant="compact" />
-          <button
-            type="button"
-            class="text-sm font-semibold text-light transition hover:text-danger-text"
-            @click="logout"
-          >
-            {{ t('common.signOut') }}
-          </button>
-        </div>
-      </div>
-    </header>
-
     <section class="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-2xl items-center justify-center px-4 py-10">
       <div class="w-full">
         <!-- Step indicator -->
@@ -200,7 +151,7 @@ async function logout() {
               "
             >
               <template v-if="index + 1 < currentStep">
-                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <CheckIcon class="h-4 w-4" />
               </template>
               <template v-else>{{ index + 1 }}</template>
             </div>
@@ -269,9 +220,7 @@ async function logout() {
 
             <!-- Search -->
             <div class="relative">
-              <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <SearchIcon class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
               <input
                 v-model="institutionSearch"
                 type="text"

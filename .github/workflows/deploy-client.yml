@@ -4,6 +4,8 @@ env:
   VITE_API_URL: ${{ vars.VITE_API_URL || 'https://zpr-120.fer.hr/loom-api' }}
   VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH || '/loom/' }}
   VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+  # Optional browser error tracking (Sentry/GlitchTip); unset = off.
+  VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
   PROJECT_FOLDER: client
   SSH_PORT: ${{ vars.SSH_PORT || '22' }}
   WWW_PATH: ${{ vars.WWW_PATH || 'loom' }}

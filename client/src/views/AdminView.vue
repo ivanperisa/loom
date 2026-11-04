@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import AdminUsersTab from '@/components/admin/AdminUsersTab.vue'
 import AdminInstitutionsTab from '@/components/admin/AdminInstitutionsTab.vue'
+import TabBar, { tabId, tabPanelId } from '@/components/common/TabBar.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -30,21 +31,12 @@ watch(activeTab, (tab) => {
     <section class="page-container space-y-8">
       <h1 class="text-3xl font-bold text-light">{{ t('admin.title') }}</h1>
 
-      <div class="flex gap-1 rounded-xl border border-primary/20 bg-dark-2 p-1">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          type="button"
-          class="flex-1 rounded-lg px-4 py-2 text-sm font-medium transition"
-          :class="activeTab === tab.key ? 'bg-primary-strong text-white' : 'text-light/60 hover:text-light'"
-          @click="activeTab = tab.key"
-        >
-          {{ tab.label() }}
-        </button>
-      </div>
+      <TabBar v-model="activeTab" id-prefix="admin" variant="pill" :tabs="tabs.map((tab) => ({ key: tab.key, label: tab.label() }))" />
 
-      <AdminUsersTab v-if="activeTab === 'users'" />
-      <AdminInstitutionsTab v-if="activeTab === 'institutions'" />
+      <div :id="tabPanelId('admin', activeTab)" role="tabpanel" :aria-labelledby="tabId('admin', activeTab)">
+        <AdminUsersTab v-if="activeTab === 'users'" />
+        <AdminInstitutionsTab v-if="activeTab === 'institutions'" />
+      </div>
     </section>
   </main>
 </template>

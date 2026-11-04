@@ -7,6 +7,8 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import type { CoordinatorStudentResponse } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
 import { localizedName } from '@/utils/i18n.utils'
+import { useNotification } from '@/composables/useNotification'
+import { XIcon } from '@lucide/vue'
 
 const props = defineProps<{
   mode: 'create' | 'edit'
@@ -20,10 +22,11 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { notifySuccess } = useNotification()
 
 const name = ref(props.student?.name ?? '')
 const jmbag = ref(props.student?.jmbag ?? '')
-const institutionId = ref<string | null>(props.student?.institutionId ?? null)
+const institutionId = ref<number | null>(props.student?.institutionId ?? null)
 const error = ref<string | null>(null)
 const submitting = ref(false)
 
@@ -57,6 +60,7 @@ async function submit() {
     const res = props.mode === 'edit' && props.student
       ? await coordinatorService.updateStudent(props.student.id, payload)
       : await coordinatorService.createPlaceholderStudent(payload)
+    if (props.mode !== 'edit') notifySuccess(t('common.created.student'))
     emit('saved', res.data)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { detail?: string } } }
@@ -69,15 +73,13 @@ async function submit() {
 
 <template>
   <BaseModal max-width="max-w-lg" labelled-by="student-form-title" @close="emit('close')">
-    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+    <div>
       <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
         <h3 id="student-form-title" class="font-semibold text-light">
           {{ mode === 'edit' ? t('coordinator.editStudentModal.title') : t('coordinator.addStudentModal.title') }}
         </h3>
-          <button type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
-            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
+          <button :aria-label="t('common.close')" type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
+            <XIcon class="h-5 w-5" />
           </button>
         </div>
 

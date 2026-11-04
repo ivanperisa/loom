@@ -1,78 +1,65 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useExchangeStore } from '@/stores/exchange.store'
+import { useExchangeContext } from '@/composables/useExchangeContext'
+import { useLearningAgreementDraftStore } from '@/stores/learningAgreementDraft.store'
+import { useLearningAgreementMutations } from '@/queries/exchange.queries'
 import { useNotification } from '@/composables/useNotification'
+import { describeApiError, describeCode } from '@/utils/apiError'
 import ActionButton from '@/components/common/ActionButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import type { MappingExportDto, MappingImportResult } from '@/types/learningAgreement.types'
+import type { ImportPreviewResponse, ImportRow, MappingExportDto } from '@/types/learningAgreement.types'
 
 const props = defineProps<{
   dto: MappingExportDto
   exchangeId: string
 }>()
 
-const emit = defineEmits<{
-  close: []
-  imported: [result: MappingImportResult]
-}>()
+const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n()
-const exchangeStore = useExchangeStore()
+const { learningAgreement } = useExchangeContext()
+const draft = useLearningAgreementDraftStore()
+const learningAgreementMutations = useLearningAgreementMutations(() => props.exchangeId)
 const { notifySuccess, notifyError } = useNotification()
 
-interface Mismatch {
-  field: string
-  fromFile: string
-  inExchange: string
+const preview = ref<ImportPreviewResponse | null>(null)
+const loadError = ref<string | null>(null)
+const applying = ref(false)
+
+// The server matches the file to this exchange (slots by id, courses by id or code) and runs the save validation.
+onMounted(async () => {
+  try {
+    preview.value = await learningAgreementMutations.previewImport.mutateAsync(props.dto)
+  } catch (error) {
+    const { title, message } = describeApiError(error)
+    loadError.value = message ?? title
+  }
+})
+
+const changeCount = computed(() =>
+  preview.value ? preview.value.added.length + preview.value.removed.length + preview.value.changed.length : 0,
+)
+const canApply = computed(() => !!preview.value?.canApply && changeCount.value > 0 && !applying.value)
+
+function rowLabel(row: ImportRow): string {
+  if (row.partnerCourseCode) return `${row.partnerCourseCode} ${row.partnerCourseName ?? ''}`.trim()
+  return t(`slotMode.${row.mode}`)
 }
 
-const mismatches = computed((): Mismatch[] => {
-  const ex = exchangeStore.exchange
-  if (!ex || !props.dto.home) return []
-  const norm = (s: string) => s.trim().toLowerCase()
-  const result: Mismatch[] = []
-
-  if (norm(props.dto.institution.name) !== norm(ex.partnerInstitutionName)) {
-    const fileVal = props.dto.institution.erasmusCode
-      ? `${props.dto.institution.name} (${props.dto.institution.erasmusCode})`
-      : props.dto.institution.name
-    result.push({ field: t('la.import.mismatchPartner'), fromFile: fileVal, inExchange: ex.partnerInstitutionName })
-  }
-
-  if (props.dto.home.institutionName && norm(props.dto.home.institutionName) !== norm(ex.homeInstitutionName)) {
-    result.push({ field: t('la.import.mismatchInstitution'), fromFile: props.dto.home.institutionName, inExchange: ex.homeInstitutionName })
-  }
-
-  if (props.dto.home.programName && norm(props.dto.home.programName) !== norm(ex.homeProgramName)) {
-    result.push({ field: t('la.import.mismatchProgram'), fromFile: props.dto.home.programName, inExchange: ex.homeProgramName })
-  }
-
-  if (norm(props.dto.home.profileName) !== norm(ex.homeProfile.name)) {
-    result.push({ field: t('la.import.mismatchProfile'), fromFile: props.dto.home.profileName, inExchange: ex.homeProfile.name })
-  }
-
-  return result
-})
-
-const applicableCount = computed(() => {
-  const ids = new Set(
-    props.dto.mappings
-      .filter((m) => m.partnerCourse !== null)
-      .map((m) => m.partnerCourse!.id),
-  )
-  return ids.size
-})
-
-
 async function apply() {
+  applying.value = true
   try {
-    const result = await exchangeStore.importMappings(props.exchangeId, props.dto)
-    notifySuccess(t('la.import.successTitle'), t('la.import.successMessage', { count: result.appliedCount }))
-    emit('imported', result)
+    const result = await learningAgreementMutations.importFile.mutateAsync(props.dto)
+    // The imported draft replaces whatever was being edited.
+    if (learningAgreement.value) draft.load(props.exchangeId, learningAgreement.value)
+    notifySuccess(t('learningAgreement.import.successTitle'), t('learningAgreement.import.successMessage', { added: result.added, removed: result.removed, changed: result.changed }))
     emit('close')
-  } catch {
-    notifyError(t('la.import.errorTitle'))
+  } catch (error) {
+    const { title, message } = describeApiError(error)
+    notifyError(t('learningAgreement.import.errorTitle'), message ?? title)
+  } finally {
+    applying.value = false
   }
 }
 </script>
@@ -81,87 +68,96 @@ async function apply() {
   <BaseModal max-width="max-w-2xl" z-class="z-[60]" labelled-by="import-preview-title" @close="emit('close')">
     <div class="import-dialog">
       <div class="import-header">
-        <h2 id="import-preview-title" class="import-title">{{ t('la.import.title') }}</h2>
-        <button type="button" class="import-close" @click="emit('close')">&times;</button>
+        <h2 id="import-preview-title" class="import-title">{{ t('learningAgreement.import.title') }}</h2>
+        <button type="button" class="import-close" :aria-label="t('common.close')" @click="emit('close')">&times;</button>
       </div>
 
-        <div class="import-context">
-          <div class="import-context__row">
-            <span class="import-context__label">{{ t('la.import.source') }}</span>
-            <span class="import-context__value"><strong>{{ dto.exportedByName }}</strong></span>
+      <div class="import-context">
+        <div class="import-context__row">
+          <span class="import-context__label">{{ t('learningAgreement.import.source') }}</span>
+          <span class="import-context__value"><strong>{{ dto.exportedByName }}</strong></span>
+        </div>
+        <div class="import-context__row">
+          <span class="import-context__label">{{ t('learningAgreement.import.contextPartner') }}</span>
+          <span class="import-context__value">{{ dto.institution?.name }}<span v-if="dto.institution?.erasmusCode" class="import-context__code"> ({{ dto.institution.erasmusCode }})</span></span>
+        </div>
+        <div v-if="dto.home" class="import-context__row">
+          <span class="import-context__label">{{ t('learningAgreement.import.contextProfile') }}</span>
+          <span class="import-context__value">{{ dto.home.profileName }}</span>
+        </div>
+      </div>
+
+      <p class="import-note">{{ t('learningAgreement.import.replaceNote') }}</p>
+
+      <p v-if="loadError" class="import-blocked">{{ loadError }}</p>
+      <p v-else-if="!preview" class="import-note">{{ t('common.loading') }}</p>
+
+      <template v-else>
+        <div v-if="preview.contextWarnings.length > 0" class="import-mismatch">
+          <div class="import-mismatch__title">{{ t('learningAgreement.import.mismatchTitle') }}</div>
+          <div v-for="w in preview.contextWarnings" :key="w.field" class="import-mismatch__item">
+            <div class="import-mismatch__field">{{ t(`learningAgreement.import.mismatch.${w.field}`) }}</div>
+            <div class="import-mismatch__row">
+              <span class="import-mismatch__side">{{ t('learningAgreement.import.mismatchFromFile') }}</span>
+              <span class="import-mismatch__val import-mismatch__val--bad">{{ w.fromFile }}</span>
+            </div>
+            <div class="import-mismatch__row">
+              <span class="import-mismatch__side">{{ t('learningAgreement.import.mismatchInExchange') }}</span>
+              <span class="import-mismatch__val">{{ w.inExchange }}</span>
+            </div>
           </div>
-          <div class="import-context__row">
-            <span class="import-context__label">{{ t('la.import.contextPartner') }}</span>
-            <span class="import-context__value">{{ dto.institution.name }}<span v-if="dto.institution.erasmusCode" class="import-context__code"> ({{ dto.institution.erasmusCode }})</span></span>
-          </div>
-          <template v-if="dto.home">
-            <div class="import-context__row">
-              <span class="import-context__label">{{ t('la.import.contextInstitution') }}</span>
-              <span class="import-context__value">{{ dto.home.institutionName }}</span>
-            </div>
-            <div class="import-context__row">
-              <span class="import-context__label">{{ t('la.import.contextProgram') }}</span>
-              <span class="import-context__value">{{ dto.home.programName }}</span>
-            </div>
-            <div class="import-context__row">
-              <span class="import-context__label">{{ t('la.import.contextProfile') }}</span>
-              <span class="import-context__value">{{ dto.home.profileName }}</span>
-            </div>
-          </template>
+          <div class="import-mismatch__hint">{{ t('learningAgreement.import.mismatchHint') }}</div>
         </div>
 
-        <div v-if="mismatches.length > 0" class="import-mismatch">
-          <div class="import-mismatch__title">{{ t('la.import.mismatchTitle') }}</div>
-          <div v-for="m in mismatches" :key="m.field" class="import-mismatch__item">
-            <div class="import-mismatch__field">{{ m.field }}</div>
-            <div class="import-mismatch__row">
-              <span class="import-mismatch__side">{{ t('la.import.mismatchFromFile') }}</span>
-              <span class="import-mismatch__val import-mismatch__val--bad">{{ m.fromFile }}</span>
-            </div>
-            <div class="import-mismatch__row">
-              <span class="import-mismatch__side">{{ t('la.import.mismatchInExchange') }}</span>
-              <span class="import-mismatch__val">{{ m.inExchange }}</span>
-            </div>
-          </div>
-        </div>
+        <p v-if="!preview.canApply" class="import-blocked">{{ describeCode(preview.blockingCode, preview.blockingParams ?? {}, preview.blockingMessage) }}</p>
 
         <div class="import-table-wrap">
           <table class="import-table">
             <thead>
               <tr>
-                <th>{{ t('la.import.colHomeCourse') }}</th>
-                <th>{{ t('la.import.colPartnerCourse') }}</th>
+                <th>{{ t('learningAgreement.import.colChange') }}</th>
+                <th>{{ t('learningAgreement.import.colHomeCourse') }}</th>
+                <th>{{ t('learningAgreement.import.colPartnerCourse') }}</th>
+                <th>ECTS</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="entry in dto.mappings" :key="entry.homeSlotId">
-                <td>
-                  {{ entry.homeSlotLabel }}
-                  <span class="import-ects"> · {{ entry.homeSlotEcts }} ECTS</span>
-                </td>
-                <td>
-                  <template v-if="entry.partnerCourse">
-                    {{ entry.partnerCourse.code }} — {{ entry.partnerCourse.name }}
-                    <span class="import-ects"> ({{ entry.partnerCourse.ects }} ECTS)</span>
-                  </template>
-                  <span v-else class="import-empty">—</span>
-                </td>
+              <tr v-for="row in preview.added" :key="`a-${row.homeSlotId}-${row.partnerCourseId}`" class="import-row--added">
+                <td>{{ t('learningAgreement.import.added') }}</td>
+                <td>{{ row.homeSlotLabel }}</td>
+                <td>{{ rowLabel(row) }}</td>
+                <td>{{ row.awardedEcts ?? '—' }}</td>
+              </tr>
+              <tr v-for="row in preview.changed" :key="`c-${row.homeSlotId}-${row.partnerCourseId}`" class="import-row--changed">
+                <td>{{ t('learningAgreement.import.changed') }}</td>
+                <td>{{ row.homeSlotLabel }}</td>
+                <td>{{ rowLabel(row) }}</td>
+                <td>{{ row.previousEcts ?? '—' }} → {{ row.awardedEcts ?? '—' }}</td>
+              </tr>
+              <tr v-for="row in preview.removed" :key="`r-${row.homeSlotId}-${row.partnerCourseId}`" class="import-row--removed">
+                <td>{{ t('learningAgreement.import.removed') }}</td>
+                <td>{{ row.homeSlotLabel }}</td>
+                <td>{{ rowLabel(row) }}</td>
+                <td>{{ row.awardedEcts ?? '—' }}</td>
+              </tr>
+              <tr v-for="(skip, i) in preview.skipped" :key="`s-${i}`" class="import-row--skipped">
+                <td>{{ t('learningAgreement.import.skipped') }}</td>
+                <td>{{ skip.homeSlotLabel }}</td>
+                <td>{{ skip.partnerCourseCode ?? '—' }}</td>
+                <td>{{ t(`learningAgreement.import.skipReason.${skip.reason}`) }}</td>
               </tr>
             </tbody>
           </table>
+          <p v-if="changeCount === 0 && preview.canApply" class="import-note">{{ t('learningAgreement.import.nothingToChange') }}</p>
+          <p v-if="preview.unchanged > 0" class="import-note">{{ t('learningAgreement.import.unchanged', { n: preview.unchanged }) }}</p>
         </div>
+      </template>
 
-        <div class="import-footer">
-          <ActionButton size="md" @click="emit('close')">{{ t('common.cancel') }}</ActionButton>
-          <ActionButton
-            size="md"
-            variant="solid"
-            :disabled="applicableCount === 0 || mismatches.length > 0"
-            :style="(applicableCount === 0 || mismatches.length > 0) ? 'opacity: 0.4; cursor: not-allowed;' : ''"
-            @click="apply"
-          >
-            {{ t('la.import.apply') }}
-          </ActionButton>
+      <div class="import-footer">
+        <ActionButton size="md" @click="emit('close')">{{ t('common.cancel') }}</ActionButton>
+        <ActionButton size="md" variant="solid" :disabled="!canApply" @click="apply">
+          {{ t('learningAgreement.import.apply', { n: changeCount }) }}
+        </ActionButton>
       </div>
     </div>
   </BaseModal>
@@ -169,9 +165,6 @@ async function apply() {
 
 <style scoped>
 .import-dialog {
-  background: var(--color-dark-2);
-  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
-  border-radius: 12px;
   padding: 28px;
   min-width: 520px;
   max-width: 680px;
@@ -354,4 +347,37 @@ async function apply() {
   border-top: 1px solid color-mix(in srgb, var(--color-light) 10%, transparent);
 }
 
+
+.import-note {
+  color: var(--color-light);
+  opacity: 0.6;
+  font-size: 12px;
+  margin: 0;
+}
+
+.import-blocked {
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
+}
+:global([data-theme='light']) .import-blocked { color: var(--color-danger-text); }
+
+.import-mismatch__hint {
+  font-size: 11px;
+  color: var(--color-light);
+  opacity: 0.7;
+}
+
+.import-row--added td:first-child { color: #16a34a; font-weight: 600; }
+.import-row--changed td:first-child { color: #d97706; font-weight: 600; }
+.import-row--removed td:first-child { color: #dc2626; font-weight: 600; }
+.import-row--skipped td { opacity: 0.55; }
+:global([data-theme='light']) .import-row--added td:first-child { color: var(--color-success-text); }
+:global([data-theme='light']) .import-row--changed td:first-child { color: var(--color-warning-text); }
+:global([data-theme='light']) .import-row--removed td:first-child { color: var(--color-danger-text); }
+
+@media (max-width: 640px) {
+  .import-dialog { min-width: 0; padding: 20px 16px; }
+}
 </style>

@@ -1,48 +1,52 @@
-# client
+# Loom client
 
-This template should help get you started developing with Vue 3 in Vite.
+Vue 3 + TypeScript + Vite + Tailwind. Run it with `docker compose up` from the repository root (see `../README.md`), or `pnpm dev` against a running API.
 
-## Recommended IDE Setup
+## Commands
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Dev server (Vite) |
+| `pnpm build` | Type-check (`vue-tsc`) and build |
+| `pnpm build:analyze` | Build and open `dist/stats.html`: what each dependency adds to the bundle |
+| `pnpm lint:check` | oxlint + ESLint, no fixes (`pnpm lint` fixes) |
+| `pnpm test:unit` | Vitest: composables, the LA draft, error texts, i18n keys |
+| `pnpm e2e` | Playwright against `docker compose up` (seeded personas) |
+| `pnpm api:types` | `openapi.json` → `src/api/schema.d.ts` |
 
-## Recommended Browser Setup
+## Where things live
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+| Folder | What lives there |
+|---|---|
+| `api/` | Generated API types (`schema.d.ts`, never edited by hand) and the `Schemas` alias |
+| `types/` | Familiar names for the generated types (`ExchangeResponse = Schemas['ExchangeResponse']`) and client-only types (the LA draft) |
+| `services/` | Thin axios calls, one per endpoint. No state, no caching. |
+| `queries/` | vue-query: query keys, read hooks (`useExchangeQuery`, …) and mutations that update the cache |
+| `stores/` | Pinia, only for state the client owns: the signed-in user (`auth`) and the LA being edited (`laDraft`) |
+| `composables/` | Reusable logic: `useListQuery`, `useExchangeContext`, `useExchangePeriod`, `useLaDropFlow`, … |
+| `components/` | `common/` primitives (`TabBar`, `ErrorAlert`, `SearchableSelect`, `BaseModal`, …) and feature folders |
 
-## Type Support for `.vue` Imports in TS
+## Conventions
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+**Server state is vue-query, not Pinia.** Read with a query hook; change with a mutation from `queries/`. A mutation stores what the server answered and marks the rest stale (everything about one exchange sits under `['exchange', guid]`). Never copy query data into a store.
 
-## Customize configuration
+**One exchange page, one context.** `ExchangeDetailPanel` calls `provideExchangeContext(guid, guest)`; every panel below calls `useExchangeContext()` for the exchange, its documents and the permissions (`isCoordinator`, `isEditable`, `isConcluded`). Guest mode (an access link) is just `guest: true`.
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+**The LA draft** (`stores/laDraft.store.ts`) holds unsaved edits and drag and drop. It reloads from the saved LA whenever it has no unsaved changes; import and restore replace it on purpose.
 
-## Project Setup
+**Lists** use `useListQuery({ key, fetch, filters, defaultSort, syncToUrl })`: page, debounced search, sort and typed filters, the previous page kept on screen while the next loads, stale requests aborted, state mirrored in the address bar. The server side is `ListQuery`/`ListSpec` (see `../server/README.md`).
 
-```sh
-pnpm install
-```
+**Errors.** The API answers with an error `code` (+ `params`); `utils/apiError.ts` turns it into a message in the current language (`apiErrors.codes.*`). Failed reads show `<ErrorAlert>` where the data would be; failed actions get a toast from the axios interceptor (`errorToast: false` when a screen shows the error itself). A test fails when a server error code has no translation.
 
-### Compile and Hot-Reload for Development
+**Types come from the API.** Change the server, refresh `openapi.json` (`LOOM_UPDATE_OPENAPI=1 dotnet test --filter ApiContract`), run `pnpm api:types`. Ids are numbers, exchange guids strings, statuses and modes string unions.
 
-```sh
-pnpm dev
-```
+**i18n.** `en.ts` is the reference; `hr.ts` must have exactly the same keys (`satisfies MessageSchema`, so `vue-tsc` fails otherwise). A unit test checks every `t('…')` with a fixed key.
 
-### Type-Check, Compile and Minify for Production
+**Accessibility.** Icon-only buttons get an `aria-label`; tabs use `TabBar` (arrow keys); selects use `SearchableSelect` (listbox, arrow keys, Escape); clickable grid cells are buttons with keyboard support.
 
-```sh
-pnpm build
-```
+## Adding a screen that reads data
 
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-pnpm lint
-```
+1. Endpoint first (server), then `pnpm api:types`.
+2. A service call in `services/`, a query hook in `queries/` with a key from `queries/keys.ts` (`useListQuery` for a list).
+3. In the component: loading skeleton, `<ErrorAlert>` with retry, then the data.
+4. Strings in both `en.ts` and `hr.ts`; an E2E step in `e2e/personas.spec.ts` for a new flow.

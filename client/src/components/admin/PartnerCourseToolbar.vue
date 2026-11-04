@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import SearchInput from '@/components/common/SearchInput.vue'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import ShowDeletedToggle from '@/components/common/ShowDeletedToggle.vue'
+import { MergeIcon } from '@lucide/vue'
 
 defineProps<{
   search: string
@@ -69,24 +70,21 @@ const levelOptions = computed(() => [
       />
     </div>
 
-    <div class="flex shrink-0 items-center gap-3">
+    <div class="flex shrink-0 items-center gap-2">
       <ShowDeletedToggle v-if="hasDeleted" :model-value="showDeleted" @update:model-value="emit('update:showDeleted', $event)" />
       <button
         v-if="!mergeSelecting && canMerge"
         type="button"
-        class="flex shrink-0 items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary-text transition hover:bg-primary/10"
+        class="flex shrink-0 items-center gap-1.5 rounded-lg border border-primary/30 px-3 py-2 text-sm font-medium text-primary-text transition hover:bg-primary/10"
         @click="emit('start-merge')"
       >
-        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="9" cy="12" r="6" stroke-width="2" />
-          <circle cx="15" cy="12" r="6" stroke-width="2" />
-        </svg>
+        <MergeIcon class="h-4 w-4" />
         {{ t('admin.institutions.mergeCourses') }}
       </button>
       <template v-else-if="mergeSelecting">
         <button
           type="button"
-          class="shrink-0 rounded-lg bg-primary-strong px-3 py-1.5 text-xs font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-40"
+          class="shrink-0 rounded-lg bg-primary-strong px-3 py-2 text-sm font-medium text-white transition hover:bg-primary-light hover:text-dark disabled:opacity-40"
           :disabled="selectedCount < 2"
           @click="emit('confirm-merge')"
         >
@@ -94,7 +92,7 @@ const levelOptions = computed(() => [
         </button>
         <button
           type="button"
-          class="shrink-0 rounded-lg border border-hairline px-3 py-1.5 text-xs text-light/60 transition hover:text-light"
+          class="shrink-0 rounded-lg border border-hairline px-3 py-2 text-sm text-light/60 transition hover:text-light"
           @click="emit('cancel-merge')"
         >
           {{ t('admin.institutions.cancel') }}

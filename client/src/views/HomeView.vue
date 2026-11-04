@@ -1,19 +1,22 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CreateExchangeModal from '@/components/exchange/CreateExchangeModal.vue'
 import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import { useAuthStore } from '@/stores/auth.store'
-import { useExchangeStore } from '@/stores/exchange.store'
+import { useMyExchangesQuery } from '@/queries/exchange.queries'
+import ErrorAlert from '@/components/common/ErrorAlert.vue'
 import { userService } from '@/services/user.service'
 import { statusColorClass } from '@/utils/statusColors'
-import { documentStatus } from '@/utils/documentStatus'
+import { coordinatorRequestStatus as coordinatorRequestStatusValues } from '@/utils/coordinatorRequestStatus'
 import { useQuerySync } from '@/composables/useQuerySync'
+import { CircleAlertIcon, ExternalLinkIcon } from '@lucide/vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const exchangeStore = useExchangeStore()
+const exchangesQuery = useMyExchangesQuery()
+const summaries = computed(() => exchangesQuery.data.value ?? [])
 const { t } = useI18n()
 
 const showCreateModal = ref(false)
@@ -22,14 +25,14 @@ const requestingCoordinator = ref(false)
 const displayName = computed(() => authStore.name?.trim() || t('common.user'))
 const coordinatorRequestStatus = computed(() => authStore.user?.coordinatorRequestStatus ?? null)
 
-const loading = ref(true)
+const loading = computed(() => exchangesQuery.isPending.value)
 
 const selectedAcademicYear = ref<string | null>(null)
 
 useQuerySync({ year: selectedAcademicYear })
 
 const academicYears = computed(() => {
-  const years = new Set(exchangeStore.summaries.map((ex) => ex.academicYear))
+  const years = new Set(summaries.value.map((ex) => ex.academicYear))
   return Array.from(years).sort().reverse()
 })
 
@@ -39,21 +42,14 @@ const academicYearFilterOptions = computed(() => [
 ])
 
 const filteredSummaries = computed(() => {
-  if (!selectedAcademicYear.value) return exchangeStore.summaries
-  return exchangeStore.summaries.filter((ex) => ex.academicYear === selectedAcademicYear.value)
+  if (!selectedAcademicYear.value) return summaries.value
+  return summaries.value.filter((ex) => ex.academicYear === selectedAcademicYear.value)
 })
 
 const soleExchange = computed(() =>
   filteredSummaries.value.length === 1 ? filteredSummaries.value[0] : null,
 )
 
-async function fetchData() {
-  loading.value = true
-  await exchangeStore.fetchMySummaries()
-  loading.value = false
-}
-
-onMounted(fetchData)
 
 function openCreateModal() {
   showCreateModal.value = true
@@ -92,7 +88,7 @@ async function reRequestCoordinatorRole() {
 
       <!-- Rejected coordinator request banner -->
       <div
-        v-if="coordinatorRequestStatus === documentStatus.Rejected"
+        v-if="coordinatorRequestStatus === coordinatorRequestStatusValues.Rejected"
         class="mt-6 flex items-center justify-between rounded-lg border border-danger-text/35 bg-danger-fill px-4 py-3"
       >
         <span class="text-sm text-danger-text">{{ t('home.coordinatorRequestRejected') }}</span>
@@ -118,6 +114,8 @@ async function reRequestCoordinatorRole() {
           <div class="h-10 w-36 rounded bg-primary/20"></div>
         </div>
       </div>
+
+      <ErrorAlert v-else-if="exchangesQuery.error.value" class="mt-8" :error="exchangesQuery.error.value" @retry="exchangesQuery.refetch()" />
 
       <template v-else>
         <!-- Header with title + create button -->
@@ -146,19 +144,7 @@ async function reRequestCoordinatorRole() {
           v-if="filteredSummaries.length === 0"
           class="mt-4 rounded-xl border border-primary/20 bg-dark-2 p-6 text-center"
         >
-          <svg class="mx-auto h-12 w-12 text-light/60" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-              stroke="currentColor"
-              stroke-width="1.5"
-            />
-            <path
-              d="M12 8v4m0 4h.01"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-            />
-          </svg>
+          <CircleAlertIcon class="mx-auto h-12 w-12 text-light/60" />
           <p class="mt-3 text-light/60">{{ t('home.noExchange') }}</p>
         </div>
 
@@ -196,10 +182,7 @@ async function reRequestCoordinatorRole() {
                 class="pointer-events-auto inline-flex items-center gap-1.5 rounded-lg border border-primary/30 px-2.5 py-1 text-xs font-medium text-primary-text transition hover:border-primary hover:bg-primary/10"
                 @click.stop
               >
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                  <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-                </svg>
+                <ExternalLinkIcon :size="11" />
                 {{ t('exchange.ewpLink') }}
               </a>
             </div>
@@ -256,10 +239,7 @@ async function reRequestCoordinatorRole() {
                       class="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-light/40 transition hover:bg-primary/10 hover:text-primary-text"
                       @click.stop
                     >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
-                        <path d="M8 1h3v3" /><line x1="11" y1="1" x2="5" y2="7" />
-                      </svg>
+                      <ExternalLinkIcon :size="12" />
                     </a>
                     <span v-else class="h-7 w-7 shrink-0"></span>
                   </div>

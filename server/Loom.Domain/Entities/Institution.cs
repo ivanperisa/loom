@@ -3,7 +3,7 @@ using Loom.Domain.Enums;
 
 namespace Loom.Domain.Entities;
 
-public class Institution : EntityBase
+public class Institution : EntityBase, ISoftDeletable
 {
     public string Name { get; set; } = string.Empty;
     public string? NameHr { get; set; }

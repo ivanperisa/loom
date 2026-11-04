@@ -18,4 +18,7 @@ public class HomeSlot : EntityBase
 
     public int? CourseGroupId { get; set; }
     public HomeCourseGroup? CourseGroup { get; set; }
+
+    /// <summary>Display name: the course, the course group, or a fallback. Needs Course/CourseGroup loaded.</summary>
+    public string Label => Course?.Name ?? CourseGroup?.Name ?? $"Slot {Id}";
 }

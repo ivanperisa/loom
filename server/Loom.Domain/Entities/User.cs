@@ -19,9 +19,12 @@ public class User : EntityBase
     public int? CoordinatorId { get; set; }
     public User? Coordinator { get; set; }
 
-    public string? CoordinatorRequestStatus { get; set; }
+    public CoordinatorRequestStatus? CoordinatorRequestStatus { get; set; }
 
     public ICollection<Exchange> StudentExchanges { get; set; } = [];
+
+    /// <summary>Created by a coordinator for a student who has no account yet (reached through an access link).</summary>
+    public bool IsPlaceholder => Email.Length == 0;
 
     public bool CanActAsCoordinator() => Role == UserRole.Coordinator || Role == UserRole.Admin;
 

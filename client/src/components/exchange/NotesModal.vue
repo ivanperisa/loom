@@ -3,29 +3,30 @@ import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useConfirm } from '@/composables/useConfirm'
 import BaseModal from '@/components/common/BaseModal.vue'
+import { XIcon } from '@lucide/vue'
 
 const props = defineProps<{
-  laMessage: string | null
+  learningAgreementMessage: string | null
   recognitionMessage: string | null
   saving?: boolean
 }>()
 
 const emit = defineEmits<{
-  save: [la: string | null, recognition: string | null]
+  save: [learningAgreement: string | null, recognition: string | null]
   close: []
 }>()
 
 const { t } = useI18n()
 const { confirm } = useConfirm()
 
-const laDraft = ref(props.laMessage ?? '')
+const learningAgreementDraft = ref(props.learningAgreementMessage ?? '')
 const recognitionDraft = ref(props.recognitionMessage ?? '')
 
-watch(() => props.laMessage, (v) => { laDraft.value = v ?? '' })
+watch(() => props.learningAgreementMessage, (v) => { learningAgreementDraft.value = v ?? '' })
 watch(() => props.recognitionMessage, (v) => { recognitionDraft.value = v ?? '' })
 
 const isDirty = computed(() =>
-  (laDraft.value.trim() || null) !== (props.laMessage ?? null) ||
+  (learningAgreementDraft.value.trim() || null) !== (props.learningAgreementMessage ?? null) ||
   (recognitionDraft.value.trim() || null) !== (props.recognitionMessage ?? null),
 )
 
@@ -38,7 +39,7 @@ async function tryClose() {
 }
 
 function save() {
-  emit('save', laDraft.value.trim() || null, recognitionDraft.value.trim() || null)
+  emit('save', learningAgreementDraft.value.trim() || null, recognitionDraft.value.trim() || null)
 }
 </script>
 
@@ -47,14 +48,12 @@ function save() {
     <div class="p-6">
       <div class="mb-5 flex items-center justify-between">
         <h2 id="notes-modal-title" class="text-base font-semibold text-light">{{ t('exchange.notes') }}</h2>
-        <button
+        <button :aria-label="t('common.close')"
           type="button"
           class="text-light/40 transition hover:text-light"
           @click="tryClose"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="2" y1="2" x2="14" y2="14" /><line x1="14" y1="2" x2="2" y2="14" />
-          </svg>
+          <XIcon :size="16" />
         </button>
       </div>
 
@@ -64,10 +63,10 @@ function save() {
             {{ t('exchange.tabs.learningAgreement') }}
           </label>
           <textarea
-            v-model="laDraft"
+            v-model="learningAgreementDraft"
             rows="4"
             class="w-full rounded-lg border border-primary/20 bg-dark-2 px-3 py-2 text-sm text-light placeholder:text-light/40 focus:border-primary focus:outline-none"
-            :placeholder="t('la.messagePlaceholder')"
+            :placeholder="t('learningAgreement.messagePlaceholder')"
           ></textarea>
         </div>
 

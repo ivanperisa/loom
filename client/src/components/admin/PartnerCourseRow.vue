@@ -5,6 +5,7 @@ import { institutionService } from '@/services/institution.service'
 import CourseUrlLink from '@/components/common/CourseUrlLink.vue'
 import type { PartnerCourseResponse, PartnerCourseUsage } from '@/types/institution.types'
 import { nWord } from '@/utils/plural'
+import { CheckIcon, SquarePenIcon, XIcon } from '@lucide/vue'
 
 const props = defineProps<{
   course: PartnerCourseResponse
@@ -13,10 +14,10 @@ const props = defineProps<{
   busy: boolean
 }>()
 const emit = defineEmits<{
-  'toggle-select': [courseId: string]
+  'toggle-select': [courseId: number]
   edit: [course: PartnerCourseResponse]
-  delete: [courseId: string]
-  restore: [courseId: string]
+  delete: [courseId: number]
+  restore: [courseId: number]
 }>()
 
 const { t, locale } = useI18n()
@@ -67,9 +68,7 @@ function semesterLabel(semester: string) {
         class="flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors"
         :class="selected ? 'border-primary bg-primary' : 'border-hairline bg-fill-soft'"
       >
-        <svg v-if="selected" class="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.415l-7.5 7.5a1 1 0 01-1.414 0l-3.5-3.5a1 1 0 111.414-1.414l2.793 2.793 6.793-6.793a1 1 0 011.414 0z" clip-rule="evenodd" />
-        </svg>
+        <CheckIcon v-if="selected" class="h-3 w-3 text-white" />
       </span>
 
       <span class="min-w-0">
@@ -108,9 +107,7 @@ function semesterLabel(semester: string) {
             :title="t('admin.institutions.editCourse')"
             @click="emit('edit', course)"
           >
-            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
+            <SquarePenIcon class="h-3 w-3" />
           </button>
           <button
             type="button"
@@ -119,9 +116,7 @@ function semesterLabel(semester: string) {
             :title="t('admin.institutions.deleteCourse')"
             @click="emit('delete', course.id)"
           >
-            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <XIcon class="h-3 w-3" />
           </button>
         </template>
       </div>

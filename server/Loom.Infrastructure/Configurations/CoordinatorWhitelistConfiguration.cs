@@ -1,4 +1,5 @@
 using Loom.Domain.Entities;
+using Loom.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,7 +14,7 @@ public class CoordinatorWhitelistConfiguration : IEntityTypeConfiguration<Coordi
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(x => x.Email).HasColumnName("email").HasMaxLength(255).IsRequired();
         builder.Property(x => x.InstitutionId).HasColumnName("institution_id");
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()").IsRequired();
+        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()").IsRequired();
 
         builder.HasOne(x => x.Institution)
             .WithMany()
@@ -21,6 +22,6 @@ public class CoordinatorWhitelistConfiguration : IEntityTypeConfiguration<Coordi
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasIndex(x => x.Email).IsUnique();
+        builder.HasIndex(x => x.Email).IsUnique().HasDatabaseName("coordinator_whitelist_email_key");
     }
 }

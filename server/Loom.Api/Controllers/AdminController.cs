@@ -1,8 +1,6 @@
-using Loom.Application.DTOs.Admin;
-using Loom.Application.DTOs.Common;
-using Loom.Application.Interfaces.Services;
+using Loom.Application.Common.Querying;
+using Loom.Application.Features.Admin;
 using Loom.Domain.Constants;
-using Loom.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,69 +8,44 @@ namespace Loom.Api.Controllers;
 
 [Route("api/admin")]
 [Authorize(Roles = Roles.Admin)]
-public class AdminController(IAdminService adminService) : ApiController
+public class AdminController(
+    AdminUserService users,
+    CoordinatorRequestService coordinatorRequests,
+    CoordinatorWhitelistService whitelist) : ApiController
 {
-    #region Users
-
     [HttpGet("users")]
-    public async Task<IActionResult> GetAllUsers([FromQuery] PagedRequest paging, [FromQuery] UserRole? role, [FromQuery] int? institutionId, [FromQuery] bool? registered, [FromQuery] string? sortBy, CancellationToken ct)
-    {
-        var result = await adminService.GetAllUsersAsync(GetCurrentUserId(), paging, role, institutionId, registered, sortBy, ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<PagedResponse<UserListResponse>>> GetUsers([FromQuery] UserListQuery query, CancellationToken ct) =>
+        Ok(await users.ListAsync(query, ct));
 
     [HttpPut("users/{userId:int}")]
-    public async Task<IActionResult> UpdateUser(int userId, [FromBody] AdminUpdateUserRequest request, CancellationToken ct)
-    {
-        var result = await adminService.UpdateUserAsync(GetCurrentUserId(), userId, request, ct);
-        return Match(result, Ok);
-    }
-
-    #endregion
-
-    #region Coordinator Requests & Whitelist
-
-    [HttpGet("coordinator-requests")]
-    public async Task<IActionResult> GetCoordinatorRequests(CancellationToken ct)
-    {
-        var result = await adminService.GetCoordinatorRequestsAsync(GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<UserListResponse>> UpdateUser(int userId, [FromBody] AdminUpdateUserRequest request, CancellationToken ct) =>
+        Match(await users.UpdateAsync(userId, request, ct), Ok);
 
     [HttpPatch("users/{userId:int}/role")]
-    public async Task<IActionResult> SetUserRole(int userId, [FromBody] AdminSetRoleRequest request, CancellationToken ct)
-    {
-        var result = await adminService.SetUserRoleAsync(GetCurrentUserId(), userId, request.Role, ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<UserListResponse>> SetUserRole(int userId, [FromBody] AdminSetRoleRequest request, CancellationToken ct) =>
+        Match(await users.SetRoleAsync(userId, request.Role, ct), Ok);
 
-    [HttpPatch("users/{userId:int}/reject-coordinator-request")]
-    public async Task<IActionResult> RejectCoordinatorRequest(int userId, CancellationToken ct)
-    {
-        var result = await adminService.RejectCoordinatorRequestAsync(GetCurrentUserId(), userId, ct);
-        return Match(result, Ok);
-    }
+    [HttpGet("coordinator-requests")]
+    public async Task<ActionResult<PagedResponse<CoordinatorRequestResponse>>> GetCoordinatorRequests([FromQuery] ListQuery query, CancellationToken ct) =>
+        Ok(await coordinatorRequests.ListPendingAsync(query, ct));
+
+    /// <summary>Approve or reject a student's request to become a coordinator.</summary>
+    [HttpPatch("coordinator-requests/{userId:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DecideCoordinatorRequest(int userId, [FromBody] DecideCoordinatorRequestRequest request, CancellationToken ct) =>
+        Match(await coordinatorRequests.DecideAsync(userId, request.Status, ct), _ => NoContent());
 
     [HttpGet("coordinator-whitelist")]
-    public async Task<IActionResult> GetCoordinatorWhitelist(CancellationToken ct)
-    {
-        var result = await adminService.GetCoordinatorWhitelistAsync(GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<PagedResponse<CoordinatorWhitelistEntryResponse>>> GetCoordinatorWhitelist([FromQuery] ListQuery query, CancellationToken ct) =>
+        Ok(await whitelist.ListAsync(query, ct));
 
     [HttpPost("coordinator-whitelist")]
-    public async Task<IActionResult> AddToCoordinatorWhitelist([FromBody] AddToWhitelistRequest request, CancellationToken ct)
-    {
-        var result = await adminService.AddToCoordinatorWhitelistAsync(GetCurrentUserId(), request.Email, ct);
-        return Match(result, entry => CreatedAtAction(nameof(GetCoordinatorWhitelist), entry));
-    }
+    [ProducesResponseType<CoordinatorWhitelistEntryResponse>(StatusCodes.Status201Created)]
+    public async Task<ActionResult<CoordinatorWhitelistEntryResponse>> AddToCoordinatorWhitelist([FromBody] AddToWhitelistRequest request, CancellationToken ct) =>
+        Match(await whitelist.AddAsync(request.Email, ct), entry => CreatedAtAction(nameof(GetCoordinatorWhitelist), entry));
 
     [HttpDelete("coordinator-whitelist/{email}")]
-    public async Task<IActionResult> RemoveFromCoordinatorWhitelist(string email, CancellationToken ct)
-    {
-        var result = await adminService.RemoveFromCoordinatorWhitelistAsync(GetCurrentUserId(), Uri.UnescapeDataString(email), ct);
-        return Match(result, _ => NoContent());
-    }
-
-    #endregion
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RemoveFromCoordinatorWhitelist(string email, CancellationToken ct) =>
+        Match(await whitelist.RemoveAsync(Uri.UnescapeDataString(email), ct), _ => NoContent());
 }

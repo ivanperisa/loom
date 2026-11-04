@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTheme } from '@/composables/useTheme'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import UserAvatar from '@/components/common/UserAvatar.vue'
+import { ExternalLinkIcon, LogOutIcon, MoonIcon, SettingsIcon, SunIcon } from '@lucide/vue'
+
+/** Someone on an access link: no account, so the menu offers sign-up instead of the account actions. */
+const props = defineProps<{ guest?: boolean }>()
 
 const authStore = useAuthStore()
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const { theme, toggleTheme } = useTheme()
 
 const dropdownOpen = ref(false)
@@ -22,9 +27,9 @@ function onDocClick(e: MouseEvent) {
 onMounted(() => document.addEventListener('mousedown', onDocClick))
 onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
 
-const displayName = computed(() => authStore.user?.name?.trim() || t('common.user'))
-const displayEmail = computed(() => authStore.user?.email?.trim() || t('common.na'))
-const homeRoute = computed(() => authStore.canActAsCoordinator ? '/coordinator' : '/home')
+const displayName = computed(() => props.guest ? t('exchangeAccess.guest') : authStore.user?.name?.trim() || t('common.user'))
+const displayEmail = computed(() => props.guest ? t('exchangeAccess.readOnlyNotice') : authStore.user?.email?.trim() || t('common.na'))
+const homeRoute = computed(() => props.guest ? '/' : authStore.canActAsCoordinator ? '/coordinator' : '/home')
 
 function toggleDropdown() {
   dropdownOpen.value = !dropdownOpen.value
@@ -43,16 +48,16 @@ function logout() {
 
 <template>
   <header class="sticky top-0 z-50 w-full border-b border-primary/40 bg-dark/95 backdrop-blur">
-    <div class="page-container flex h-16 items-center justify-between !py-0">
+    <div class="page-container flex h-16 items-center justify-between !py-0" :class="{ 'page-container--wide': route.meta.wide }">
       <div class="flex items-center gap-8">
         <RouterLink :to="homeRoute" class="text-lg font-bold text-primary-strong">
           {{ t('common.appName') }}
         </RouterLink>
 
-        <nav class="hidden items-center gap-5 md:flex">
-          <RouterLink v-if="authStore.isStudent" to="/home" class="nav-link">{{ t('nav.home') }}</RouterLink>
-          <RouterLink v-if="authStore.canActAsCoordinator" to="/coordinator" class="nav-link">{{ t('nav.students') }}</RouterLink>
-          <RouterLink to="/settings" class="nav-link">{{ t('nav.settings') }}</RouterLink>
+        <nav v-if="!guest && authStore.isOnboarded" class="hidden items-center gap-5 md:flex">
+          <RouterLink v-if="!guest && authStore.isStudent" to="/home" class="nav-link">{{ t('nav.home') }}</RouterLink>
+          <RouterLink v-if="!guest && authStore.canActAsCoordinator" to="/coordinator" class="nav-link">{{ t('nav.students') }}</RouterLink>
+          <RouterLink v-if="!guest" to="/settings" class="nav-link">{{ t('nav.settings') }}</RouterLink>
           <a
             href="https://ewp-dashboard.eu/"
             target="_blank"
@@ -60,9 +65,7 @@ function logout() {
             class="nav-link flex items-center gap-1"
           >
             {{ t('nav.erasmusDashboard') }}
-            <svg class="h-3 w-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
+            <ExternalLinkIcon class="h-3 w-3 opacity-60" />
           </a>
         </nav>
       </div>
@@ -74,9 +77,11 @@ function logout() {
             type="button"
             class="rounded-full transition hover:ring-2 hover:ring-primary/40"
             :aria-expanded="dropdownOpen"
+            aria-haspopup="true"
+            :aria-label="displayName"
             @click="toggleDropdown"
           >
-            <UserAvatar :name="displayName" :role="authStore.role ?? ''" size="md" />
+            <UserAvatar :name="displayName" :role="guest ? '' : authStore.role ?? ''" size="md" />
           </button>
 
           <div
@@ -84,7 +89,7 @@ function logout() {
             class="absolute right-0 top-12 w-56 rounded-xl border border-primary/40 bg-dark p-3 text-sm text-light shadow-lg shadow-black/40"
           >
             <p class="font-semibold text-light">{{ displayName }}</p>
-            <p class="truncate text-xs text-primary-text">{{ displayEmail }}</p>
+            <p class="text-xs text-primary-text" :class="{ truncate: !guest }">{{ displayEmail }}</p>
 
             <div class="my-2 border-t border-hairline"></div>
 
@@ -97,40 +102,35 @@ function logout() {
               class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-fill-soft hover:text-light"
               @click="toggleTheme"
             >
-              <svg v-if="theme === 'dark'" class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-              </svg>
-              <svg v-else class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-              </svg>
+              <SunIcon v-if="theme === 'dark'" class="h-4 w-4 text-primary-strong" />
+              <MoonIcon v-else class="h-4 w-4 text-primary-strong" />
               {{ theme === 'dark' ? t('common.lightTheme') : t('common.darkTheme') }}
             </button>
 
             <button
-              v-if="authStore.isAdmin"
+              v-if="!guest && authStore.isAdmin"
               type="button"
               class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-light/80 transition hover:bg-fill-soft hover:text-light"
               @click="goAdmin"
             >
-              <svg class="h-4 w-4 text-primary-strong" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+              <SettingsIcon class="h-4 w-4 text-primary-strong" />
               {{ t('admin.title') }}
             </button>
 
+            <RouterLink
+              v-if="guest"
+              to="/"
+              class="mt-1 flex w-full items-center justify-center rounded-lg bg-primary-strong px-2 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-light hover:text-dark"
+            >
+              {{ t('exchangeAccess.registerCta') }}
+            </RouterLink>
             <button
+              v-else
               type="button"
               class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-danger-text transition hover:bg-danger-fill"
               @click="logout"
             >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
+              <LogOutIcon class="h-4 w-4" />
               {{ t('common.signOut') }}
             </button>
           </div>

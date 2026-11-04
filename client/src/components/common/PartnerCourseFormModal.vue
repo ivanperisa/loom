@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import type { PartnerCourseResponse } from '@/types/institution.types'
 
 import BaseModal from '@/components/common/BaseModal.vue'
+import { XIcon } from '@lucide/vue'
 
 const props = withDefaults(
   defineProps<{
@@ -90,16 +91,14 @@ function submit() {
 
 <template>
   <BaseModal max-width="max-w-2xl" labelled-by="partner-course-form-title" @close="emit('close')">
-    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+    <div>
       <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
         <div>
           <h3 id="partner-course-form-title" class="font-semibold text-light">{{ mode === 'edit' ? t('admin.institutions.editCourse') : t('admin.institutions.addCourse') }}</h3>
             <p v-if="institutionName" class="mt-0.5 text-xs text-light/40">{{ institutionName }}</p>
           </div>
-          <button type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
-            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
+          <button :aria-label="t('common.close')" type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
+            <XIcon class="h-5 w-5" />
           </button>
         </div>
         <div class="space-y-4 px-6 py-5">

@@ -1,22 +1,7 @@
-export interface CoordinatorStudentResponse {
-  id: string
-  name: string
-  jmbag: string | null
-  institutionName: string | null
-  isPlaceholder: boolean
-  institutionId: string | null
-  isMyStudent: boolean
-}
+import type { Schemas } from '@/api'
 
-export interface CreatePlaceholderStudentRequest {
-  name: string
-  jmbag: string
-  institutionId: string
-}
-
-export type UpdateStudentRequest = CreatePlaceholderStudentRequest
-
-export interface CoordinatorOption {
-  id: string
-  name: string
-}
+export type CoordinatorStudentResponse = Schemas['CoordinatorStudentResponse']
+export type StudentFiltersResponse = Schemas['StudentFiltersResponse']
+export type CreatePlaceholderStudentRequest = Schemas['PlaceholderStudentRequest']
+export type UpdateStudentRequest = Schemas['PlaceholderStudentRequest']
+export type CoordinatorOption = Schemas['CoordinatorOptionResponse']

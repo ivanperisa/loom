@@ -1,18 +1,5 @@
-import { userRole } from "../utils/userRole"
+import type { Schemas } from '@/api'
 
-export interface AuthMeResponse {
-  id: string
-  email: string
-  name: string
-  jmbag: string | null
-  mentor: string | null
-  role: UserRole
-  isOnboarded: boolean
-  institutionId: string | null
-  institutionName: string | null
-  coordinatorId: string | null
-  coordinatorName: string | null
-  coordinatorRequestStatus: 'Pending' | 'Rejected' | null
-}
-
-export type UserRole = (typeof userRole)[keyof typeof userRole]
+export type AuthMeResponse = Schemas['AuthMeResponse']
+export type SessionResponse = Schemas['SessionResponse']
+export type UserRole = Schemas['UserRole']

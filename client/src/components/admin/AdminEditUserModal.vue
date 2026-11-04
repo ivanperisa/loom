@@ -8,6 +8,7 @@ import SearchableSelect from '@/components/common/SearchableSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { CoordinatorOption } from '@/types/coordinator.types'
 import type { InstitutionResponse } from '@/types/institution.types'
+import { XIcon } from '@lucide/vue'
 
 const props = defineProps<{
   user: UserListResponse
@@ -28,8 +29,8 @@ const form = ref({
   name: props.user.name,
   jmbag: props.user.jmbag ?? '',
   mentor: props.user.mentor ?? '',
-  coordinatorId: props.user.coordinatorId as string | null,
-  institutionId: props.user.institutionId as string | null,
+  coordinatorId: props.user.coordinatorId,
+  institutionId: props.user.institutionId,
 })
 
 const saving = ref(false)
@@ -72,7 +73,7 @@ async function save() {
 
 <template>
   <BaseModal max-width="max-w-lg" labelled-by="admin-edit-user-title" @close="emit('close')">
-    <div class="rounded-2xl border border-primary/20 bg-dark-2 shadow-2xl">
+    <div>
       <div class="flex items-center justify-between border-b border-primary/20 px-6 py-4">
         <div>
           <div class="flex items-center gap-2">
@@ -84,10 +85,8 @@ async function save() {
             </div>
             <p class="mt-0.5 text-xs text-light/40">{{ user.email }}</p>
           </div>
-          <button type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
-            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
+          <button :aria-label="t('common.close')" type="button" class="text-light/40 transition hover:text-light" @click="emit('close')">
+            <XIcon class="h-5 w-5" />
           </button>
         </div>
 

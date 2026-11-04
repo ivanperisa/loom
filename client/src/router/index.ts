@@ -1,5 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
+import { safeRedirect } from '@/utils/redirect'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    /** Signed-in users only; others go to the landing page and come back after signing in. */
+    requiresAuth: boolean
+    /** Only after onboarding (role, institution, JMBAG). */
+    requiresOnboarding?: boolean
+    requiresCoordinator?: boolean
+    requiresAdmin?: boolean
+    /** Page uses the wide container; the header widens to match. */
+    wide?: boolean
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -10,9 +24,15 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
-      path: '/access/:guid',
-      component: () => import('@/views/ExchangeAccessView.vue'),
+      // Opens an access link; works signed in (claim) or not (guest session).
+      path: '/access/:token',
+      component: () => import('@/views/AccessLinkView.vue'),
       meta: { requiresAuth: false }
+    },
+    {
+      path: '/guest/exchange/:exchangeId',
+      component: () => import('@/views/GuestExchangeView.vue'),
+      meta: { requiresAuth: false, wide: true }
     },
     {
       path: '/callback',
@@ -38,7 +58,7 @@ const router = createRouter({
     {
       path: '/exchange/:exchangeId',
       component: () => import('@/views/ExchangeView.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true }
+      meta: { requiresAuth: true, requiresOnboarding: true, wide: true }
     },
     {
       path: '/settings',
@@ -54,6 +74,11 @@ const router = createRouter({
       path: '/admin',
       component: () => import('@/views/AdminView.vue'),
       meta: { requiresAuth: true, requiresOnboarding: true, requiresAdmin: true }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      component: () => import('@/views/NotFoundView.vue'),
+      meta: { requiresAuth: false }
     }
   ]
 })
@@ -63,11 +88,11 @@ router.beforeEach(async (to) => {
   await authStore.init()
 
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    return '/'
+    return { path: '/', query: { redirect: to.fullPath } }
   }
 
   if (to.path === '/' && authStore.isLoggedIn) {
-    return '/home'
+    return safeRedirect(to.query.redirect) ?? '/home'
   }
 
   if (to.meta.requiresOnboarding && !authStore.isOnboarded) {

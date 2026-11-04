@@ -1,5 +1,4 @@
-using Loom.Application.DTOs.User;
-using Loom.Application.Interfaces.Services;
+using Loom.Application.Features.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,37 +6,21 @@ namespace Loom.Api.Controllers;
 
 [Route("api/users")]
 [Authorize]
-public class UserController(IUserService userService) : ApiController
+public class UserController(AccountService accounts) : ApiController
 {
     [HttpGet("me")]
-    public async Task<IActionResult> GetMe(CancellationToken ct)
-    {
-        var result = await userService.GetCurrentUserAsync(GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<AuthMeResponse>> GetMe(CancellationToken ct) =>
+        Match(await accounts.GetMeAsync(ct), Ok);
 
     [HttpPost("me/onboarding")]
-    public async Task<IActionResult> CompleteOnboarding(
-        [FromBody] CompleteOnboardingRequest request,
-        CancellationToken ct)
-    {
-        var result = await userService.CompleteOnboardingAsync(GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<AuthMeResponse>> CompleteOnboarding([FromBody] CompleteOnboardingRequest request, CancellationToken ct) =>
+        Match(await accounts.CompleteOnboardingAsync(request, ct), Ok);
 
     [HttpPost("me/coordinator-request")]
-    public async Task<IActionResult> RequestCoordinatorRole(CancellationToken ct)
-    {
-        var result = await userService.RequestCoordinatorRoleAsync(GetCurrentUserId(), ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<AuthMeResponse>> RequestCoordinatorRole(CancellationToken ct) =>
+        Match(await accounts.RequestCoordinatorRoleAsync(ct), Ok);
 
     [HttpPut("me")]
-    public async Task<IActionResult> UpdateProfile(
-        [FromBody] UpdateProfileRequest request,
-        CancellationToken ct)
-    {
-        var result = await userService.UpdateProfileAsync(GetCurrentUserId(), request, ct);
-        return Match(result, Ok);
-    }
+    public async Task<ActionResult<AuthMeResponse>> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken ct) =>
+        Match(await accounts.UpdateProfileAsync(request, ct), Ok);
 }
